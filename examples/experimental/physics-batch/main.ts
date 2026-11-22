@@ -8,6 +8,7 @@ import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {runBatchBenchmark, type BatchBenchmarkScene} from './batch-benchmark';
 import {runTerrainStreamingBenchmark} from './batch-terrain';
 import {runEnsembleRecoveryStress, type RecoveryStep} from './batch-recovery';
+import {runEventBurst} from './batch-events';
 import {runCollisionScan} from './batch-casts';
 
 const diagnostics = new GPUGraphDiagnostics();
@@ -27,8 +28,13 @@ const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 /** Workload selector shared by validation and control visibility. */
 const scenarioControl = document.querySelector<HTMLSelectElement>('#scene')!;
+scenarioControl.add(new Option('Event burst', 'event-burst'));
 /** Display only the controls that affect this workload. */
 function updateScenarioControls(): void {
+  /** The burst uses one fixed step and its own group and ring sizes. */
+  const eventBurst = scenarioControl.value === 'event-burst';
+  for (const label of document.querySelectorAll<HTMLLabelElement>('label[data-event-burst]'))
+    label.hidden = !eventBurst;
   /** Recovery uses a fixed body fixture and schedules all healthy worlds. */
   const independentRecovery = scenarioControl.value === 'independent-recovery';
   /** The scan uses one world, so it only needs collider and sampling controls. */
@@ -50,6 +56,7 @@ function updateScenarioControls(): void {
       else if (id === 'bodies') label.hidden = independentRecovery;
       else if (id === 'worlds' || id === 'frames' || id === 'submission') label.hidden = scan;
       else label.hidden = scan || independentRecovery;
+      if (eventBurst) label.hidden = true;
     }
   }
   document.querySelector('#body-label')!.textContent = scan ? 'Colliders' : 'Bodies per world';
@@ -60,6 +67,7 @@ let report:
   | Awaited<ReturnType<typeof runBatchBenchmark>>
   | Awaited<ReturnType<typeof runTerrainStreamingBenchmark>>
   | Awaited<ReturnType<typeof runEnsembleRecoveryStress>>
+  | Awaited<ReturnType<typeof runEventBurst>>
   | Awaited<ReturnType<typeof runCollisionScan>>
   | undefined;
 const device = await luma.createDevice({
@@ -92,6 +100,25 @@ Matched ${scan.sampleCount}-cast sample
   Batched: ${scan.sampleBatchMilliseconds.toFixed(2)} ms
   Sequential: ${scan.sampleScalarMilliseconds.toFixed(2)} ms`;
       paintCollisionScan(scan);
+      exportButton.disabled = false;
+      return;
+    }
+    if (scenario === 'event-burst') {
+      /** Run a bounded burst and retain the two event payloads for export. */
+      const burst = await runEventBurst(
+        device,
+        number('event-groups'),
+        number('event-capacity'),
+        diagnostics
+      );
+      report = burst;
+      canvas.width = innerWidth * devicePixelRatio;
+      canvas.height = innerHeight * devicePixelRatio;
+      status.textContent = `Complete: ${burst.complete}
+Matches expected events: ${burst.matchesExpected}
+Contact events retained / dropped: ${burst.contacts.events.length} / ${burst.contacts.dropped}
+Trigger events retained / dropped: ${burst.triggers.events.length} / ${burst.triggers.dropped}
+Full step: ${burst.stepMilliseconds.toFixed(2)} ms`;
       exportButton.disabled = false;
       return;
     }

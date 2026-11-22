@@ -96,6 +96,7 @@ import {
   getRigidBodyEventShader,
   type GPURigidBodyContactBatch
 } from './rigid-body-events';
+import {addRigidBodyEventCompaction} from './rigid-body-event-compaction';
 import {
   RIGID_BODY_QUERY_SHADER,
   RIGID_BODY_BATCH_CAST_SHADER,
@@ -2190,8 +2191,18 @@ export class GPURigidBodyWorld {
           )
         }))
       ];
-      const properties = {
+      /** The classify and scatter passes use the same committed manifold and history buffers. */
+      const contactResources = eventBindings.map(({name, resource, location}) => ({
+        name,
+        resource,
+        location,
+        readOnly: name === 'bodies' || name === 'eventStatistics'
+      }));
+      addRigidBodyEventCompaction(graph, {
         id: `${this.id}-contact-events`,
+        rowCount: this.maximumPairs,
+        capacity: this.props.eventCapacity,
+        ring: 'contactEvents',
         source:
           source +
           getRigidBodyEventShader(
@@ -2200,43 +2211,15 @@ export class GPURigidBodyWorld {
             this.props.failurePolicy === 'rollback',
             this.props.ensemblePairsPerInstance
           ),
-        entryPoint: 'recordContacts',
-        shaderLayout: {
-          bindings: eventBindings.map(({name, location}) => ({
-            name,
-            location,
-            group: 0,
-            type: ['bodies', 'eventStatistics'].includes(name)
-              ? ('read-only-storage' as const)
-              : ('storage' as const)
-          }))
-        }
-      };
-      const executable = (
-        computation: BoundKernel
-      ): GPUCommandGraphComputeExecutable<Parameters> => ({
-        encode: ({computePass, getBuffer}) => {
-          Object.assign(
-            computation.bindings,
-            Object.fromEntries(
-              eventBindings.map(binding => [binding.name, getBuffer(binding.resource)])
-            )
-          );
-          computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1});
-        },
-        destroy: () => computation.kernel.destroy()
-      });
-      graph.addComputePass({
-        id: properties.id,
-        description: 'Compare contact history and publish contact begin, persist, and end events.',
-        resources: eventBindings.map(binding => ({
-          buffer: binding.resource,
-          usage: ['bodies', 'eventStatistics'].includes(binding.name)
-            ? ('storage-read' as const)
-            : ('storage-read-write' as const)
-        })),
-        compile: () => executable(createBoundKernel(graph.device, properties)),
-        compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
+        classify: contactResources.filter(
+          binding => !['bodies', 'contactEvents'].includes(binding.name)
+        ),
+        commit: contactResources.filter(binding =>
+          ['eventStatistics', 'contactEvents'].includes(binding.name)
+        ),
+        publish: contactResources.filter(
+          binding => !['eventStatistics', 'ensemble'].includes(binding.name)
+        )
       });
     }
     if (this.props.enableQueries) {

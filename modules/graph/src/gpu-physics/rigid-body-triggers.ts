@@ -17,6 +17,7 @@ import type {
 } from '../gpu-core/gpu-command-graph';
 import type {GPURigidBodyCollider} from './rigid-body-properties';
 import {RIGID_BODY_QUERY_GEOMETRY_SHADER} from './rigid-body-query-geometry';
+import {addRigidBodyEventCompaction} from './rigid-body-event-compaction';
 
 export type GPURigidBodyTrigger = {
   /** Union of sensor colliders; one enter/exit state per target body. */
@@ -237,22 +238,43 @@ struct TriggerRing {sequence:u32,step:u32,saturated:u32,reserved:u32,entries:arr
  }
  triggerSamples[index]=vec4u(select(0u,1u,overlapping)|select(0u,2u,crossed)|select(0u,4u,incomplete),selected,0u);
 }
-fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
- if(triggerEvents.sequence==0xffffffffu){triggerEvents.saturated=1u;return;}
- let slot=triggerEvents.sequence%${capacity}u;triggerEvents.sequence++;
- triggerEvents.entries[slot]=TriggerRecord(vec4u(triggerEvents.sequence,triggerEvents.step,phase,swept),vec4u(group.x,group.y,pair));
+`;
+  /** Geometry sampling and ordered publication compile as separate entry point families. */
+  const eventShader =
+    shader +
+    /* wgsl */ `
+const TRIGGER_ENTER:u32=1u;
+const TRIGGER_EXIT:u32=2u;
+const TRIGGER_SWEPT:u32=4u;
+fn eventCommit()->bool{return triggerStatistics[1]==0u&&triggerStatistics[15]==0u;}
+fn eventClassify(index:u32)->u32{
+ let sample=triggerSamples[index];let previous=triggerHistory[index];
+ let overlapping=(sample.x&1u)!=0u;let prior=(previous.x&1u)!=0u;
+ if(overlapping&&!prior){return TRIGGER_ENTER;}
+ if(!overlapping&&prior){return TRIGGER_EXIT;}
+ if(!overlapping&&!prior&&(sample.x&2u)!=0u){return TRIGGER_ENTER|TRIGGER_EXIT|TRIGGER_SWEPT;}
+ return 0u;
 }
-@compute @workgroup_size(1) fn publishTriggers(){
- if(triggerStatistics[1]!=0u||triggerStatistics[15]!=0u){return;}
- if(triggerEvents.step==0xffffffffu){triggerEvents.saturated=1u;return;}triggerEvents.step++;
- for(var index=0u;index<${layout.count}u;index++){
-  let sample=triggerSamples[index];let previous=triggerHistory[index];let group=triggerGroups[index];
-  let overlapping=(sample.x&1u)!=0u;let prior=(previous.x&1u)!=0u;
-  if(overlapping&&!prior){emitTrigger(group,sample.yz,0u,0u);}
-  if(!overlapping&&prior){emitTrigger(group,previous.yz,1u,0u);}
-  if(!overlapping&&!prior&&(sample.x&2u)!=0u){emitTrigger(group,sample.yz,0u,1u);emitTrigger(group,sample.yz,1u,1u);}
-  triggerHistory[index]=sample;
+fn eventCount(flags:u32)->u32{return countOneBits(flags&3u);}
+fn emitTrigger(sequence:u32,step:u32,group:vec4u,pair:vec2u,phase:u32,swept:u32){
+ let slot=(sequence-1u)%${capacity}u;
+ triggerEvents.entries[slot]=TriggerRecord(vec4u(sequence,step,phase,swept),vec4u(group.x,group.y,pair));
+}
+fn eventPublish(index:u32,flags:u32,offset:u32,reservation:vec3u){
+ let sample=triggerSamples[index];
+ let swept=select(0u,1u,(flags&TRIGGER_SWEPT)!=0u);
+ if((flags&TRIGGER_ENTER)!=0u){
+  let sequence=retainedEventSequence(reservation,offset);
+  if(sequence!=0u){emitTrigger(sequence,reservation.z,triggerGroups[index],sample.yz,0u,swept);}
  }
+ if((flags&TRIGGER_EXIT)!=0u){
+  let sequence=retainedEventSequence(reservation,offset+swept);
+  if(sequence!=0u){
+   let pair=select(triggerHistory[index].yz,sample.yz,swept!=0u);
+   emitTrigger(sequence,reservation.z,triggerGroups[index],pair,1u,swept);
+  }
+ }
+ triggerHistory[index]=sample;
 }
 `;
   const addStage = (entryPoint: string, names: string[], count: number) => {
@@ -324,11 +346,32 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
         ],
         layout.count
       ),
-    publish: () =>
-      addStage(
-        'publishTriggers',
-        ['triggerStatistics', 'triggerGroups', 'triggerSamples', 'triggerHistory', 'triggerEvents'],
-        1
-      )
+    publish: () => {
+      /** Select only the storage declarations reached by each compaction stage. */
+      const resources = [...extras, statistics].map(({name, resource, location}) => ({
+        name,
+        resource,
+        location,
+        readOnly: name === 'triggerGroups' || name === 'triggerStatistics'
+      }));
+      addRigidBodyEventCompaction(graph, {
+        id: `${id}-trigger-events`,
+        rowCount: layout.count,
+        capacity,
+        ring: 'triggerEvents',
+        source: eventShader,
+        classify: resources.filter(binding =>
+          ['triggerSamples', 'triggerHistory'].includes(binding.name)
+        ),
+        commit: resources.filter(binding =>
+          ['triggerEvents', 'triggerStatistics'].includes(binding.name)
+        ),
+        publish: resources.filter(binding =>
+          ['triggerGroups', 'triggerSamples', 'triggerHistory', 'triggerEvents'].includes(
+            binding.name
+          )
+        )
+      });
+    }
   };
 }
