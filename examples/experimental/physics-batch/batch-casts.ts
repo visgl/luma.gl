@@ -74,13 +74,15 @@ export async function runCollisionScan(device: Device, options: CollisionScanOpt
   const width = Math.ceil(Math.sqrt(options.casts));
   /** All probe centers are evaluated at the center of their image pixel. */
   const height = Math.ceil(options.casts / width);
+  /** A border avoids aligning every sample with a collider center when the grids match. */
+  const margin = 1.5;
   /** Start above the tallest collider and allow the probe to travel below the sample volume. */
   const probeHeight = 6;
   /** Input ordering matches the output image and exported nearest distances. */
   const commands: GPURigidBodyBatchCast[] = Array.from({length: options.casts}, (_, index) => ({
     origin: [
-      (((index % width) + 0.5) / width) * extent,
-      ((Math.floor(index / width) + 0.5) / height) * extent,
+      (((index % width) + 0.5) / width) * (extent + 2 * margin) - margin,
+      ((Math.floor(index / width) + 0.5) / height) * (extent + 2 * margin) - margin,
       probeHeight
     ],
     direction: [0, 0, -1],
@@ -92,20 +94,48 @@ export async function runCollisionScan(device: Device, options: CollisionScanOpt
     bodies,
     enableQueries: true,
     queryBatchCapacity: options.casts,
+    queryBatchIndex: true,
     broadPhase: 'hierarchical-grid',
     maximumPairs: 64
   });
   try {
     world.addToGraph(new GPUCommandGraph(device));
-    /** Warm the query pipeline before measuring fence-completed host turnaround. */
-    await world.castBatch(commands.slice(0, 1));
+    /** Warm both paths before measuring fence-completed host turnaround. */
+    await world.castBatch(commands.slice(0, 1), {strategy: 'indexed'});
+    await world.castBatch(commands.slice(0, 1), {strategy: 'scan'});
     await castScalar(world, commands[0]);
-    /** Timestamp immediately before submitting the full scan. */
-    const start = performance.now();
-    /** The batch reads back one compact result for every requested pixel. */
-    const scan = await world.castBatch(commands);
-    /** Includes host packing, GPU execution and compact readback. */
-    const scanMilliseconds = performance.now() - start;
+
+    /** Time the same commands and GPU pose snapshot on each path. */
+    async function measure(strategy: 'scan' | 'indexed') {
+      /** Start before CPU packing and stop after compact GPU readback. */
+      const start = performance.now();
+      /** Preserve all rows for full-result parity and the depth image. */
+      const results = await world.castBatch(commands, {strategy});
+      return {results, milliseconds: performance.now() - start};
+    }
+    /** Alternate path order and report medians to reduce warm-cache and scheduling bias. */
+    const indexedTimes: number[] = [];
+    /** Direct scan measures the same case without any index work. */
+    const scanTimes: number[] = [];
+    /** Keep one result set per path for full parity. */
+    let indexed: GPURigidBodyQueryResult[] = [];
+    /** Direct-scan reference for all pixels. */
+    let scan: GPURigidBodyQueryResult[] = [];
+    for (const first of ['indexed', 'scan', 'indexed'] as const) {
+      for (const strategy of [first, first === 'indexed' ? 'scan' : 'indexed'] as const) {
+        /** Capture the current repetition's result and completed host timing. */
+        const {results, milliseconds} = await measure(strategy);
+        if (strategy === 'indexed') {
+          indexed = results;
+          indexedTimes.push(milliseconds);
+        } else {
+          scan = results;
+          scanTimes.push(milliseconds);
+        }
+      }
+    }
+    indexedTimes.sort((first, second) => first - second);
+    scanTimes.sort((first, second) => first - second);
 
     /** Sample across the full scan while keeping scalar readbacks affordable. */
     const sampleCount = Math.min(16, options.casts);
@@ -118,7 +148,7 @@ export async function runCollisionScan(device: Device, options: CollisionScanOpt
     /** Start before a single batch for the matched subset. */
     const batchStart = performance.now();
     /** Preserve input order for a direct comparison. */
-    const sampleBatch = await world.castBatch(sampleCommands);
+    const sampleBatch = await world.castBatch(sampleCommands, {strategy: 'indexed'});
     /** Host turnaround for the matched batched subset. */
     const sampleBatchMilliseconds = performance.now() - batchStart;
     /** Start before submitting scalar commands one at a time. */
@@ -132,20 +162,22 @@ export async function runCollisionScan(device: Device, options: CollisionScanOpt
     const matchesScalar = scalar.every(
       (result, index) =>
         JSON.stringify(result) === JSON.stringify(sampleBatch[index]) &&
-        JSON.stringify(result) === JSON.stringify(scan[indices[index]])
+        JSON.stringify(result) === JSON.stringify(indexed[indices[index]])
     );
     return {
       options,
       width,
       height,
-      hitCount: scan.filter(result => result.hits.length).length,
-      complete: scan.every(result => result.complete),
+      hitCount: indexed.filter(result => result.hits.length).length,
+      complete: indexed.every(result => result.complete),
       matchesScalar,
-      scanMilliseconds,
+      matchesScan: JSON.stringify(indexed) === JSON.stringify(scan),
+      indexedMilliseconds: indexedTimes[1],
+      scanMilliseconds: scanTimes[1],
       sampleCount,
       sampleBatchMilliseconds,
       sampleScalarMilliseconds,
-      distances: scan.map(result => result.hits[0]?.distance ?? null)
+      distances: indexed.map(result => result.hits[0]?.distance ?? null)
     };
   } finally {
     world.destroy();

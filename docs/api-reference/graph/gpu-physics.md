@@ -470,7 +470,8 @@ bounded traversal of another collider did not finish.
 const world = new GPURigidBodyWorld({
   bodies,
   enableQueries: true,
-  queryBatchCapacity: 4096
+  queryBatchCapacity: 4096,
+  queryBatchIndex: true
 });
 world.addToGraph(commands);
 
@@ -486,18 +487,34 @@ with `excludeBody`. Distances use world units regardless of input direction
 length. At equal distances the lower global collider index wins, matching the
 scalar queries. A command without a radius uses the ray path.
 
-Submit any previously encoded simulation work before querying. The batch uses
-one GPU dispatch and one compact readback, with 48 input bytes and 64 result
-bytes per reserved command. Results and CPU staging scale with command count.
-GPU intersection work still scales with the number of casts times the number of
-selected colliders. Each mesh uses its existing local traversal budget. The
-batch and scalar methods share a staging lock, so await one call before starting
-another or restoring the world. Oversized batches reject before submission.
+Submit any previously encoded simulation work before querying. Both paths use
+one submission and one compact readback, with 48 input bytes and 64 result bytes
+per reserved command. The batch and scalar methods share a staging lock. Await
+each call before starting another or restoring the world. Oversized batches
+reject before submission.
 
-Select **Collision scan (batched)** in Physics Batch Lab to scan a field of
-spheres and rotated boxes, see the returned depth image, and compare a matched
-subset against sequential scalar queries. Set the sweep radius to zero for
-rays. The reported times include staging, submission, and readback.
+By default a world uses a direct scan with one GPU dispatch. Set
+`queryBatchIndex: true` to use a GPU bounding-volume hierarchy (BVH) for sphere
+and box colliders. Leaf order follows the authored positions, and the GPU refits
+bounds from current poses for each indexed submission. Traversal inflates bounds
+by the sweep radius and retains exact intersection tests for candidate leaves.
+All hit colliders contribute to the count. Extended geometry, including meshes
+and planes, uses the existing direct path so it retains the same results and
+completion flags under its local traversal budgets.
+
+The index uses linear GPU scratch in the configured primitive count and refits
+in multiple compute passes. `getCapacityInfo().queryIndexScratchBytes` reports
+a conservative pre-attachment bound and the actual scratch allocation after
+attachment. Batch and ensemble residency budgets include this scratch.
+Large spatially localized batches benefit the most.
+Small or dense batches, and scenes where objects have moved far from their
+authored neighborhoods, may favor `{strategy: 'scan'}`.
+
+Select **Collision scan (GPU index)** in Physics Batch Lab to scan a field of
+spheres and rotated boxes. The example checks every row against the direct GPU
+scan and samples scalar queries, displays the depth image, and reports matched
+host timings including refit, submission, and readback. Set the sweep radius to
+zero for rays.
 
 ## Terrain from math.gl geometry
 

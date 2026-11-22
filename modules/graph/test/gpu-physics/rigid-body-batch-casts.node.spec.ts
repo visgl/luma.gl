@@ -22,9 +22,36 @@ it('only reserves bounded command and result buffers when batch capacity is enab
   );
   for (const queryBatchCapacity of [-1, 1.5, 65536, Infinity])
     expect(() => new GPURigidBodyWorld({...fixture, queryBatchCapacity})).toThrow('batch capacity');
+  expect(() => new GPURigidBodyWorld({...fixture, queryBatchIndex: true})).toThrow(
+    'batch capacity'
+  );
   expect(
     () => new GPURigidBodyWorld({...fixture, enableQueries: false, queryBatchCapacity: 8})
   ).toThrow('batch capacity');
+});
+
+it('preflights only indexable colliders and keeps scratch out of world-owned buffers', () => {
+  /** Keep staging constant so the private graph is the only difference. */
+  const definition: GPURigidBodyWorldProps = {
+    ...fixture,
+    queryBatchCapacity: 17,
+    bodies: [
+      fixture.bodies[0],
+      {position: [3, 0, 0], mass: 0, shape: {type: 'box', halfExtents: [1, 1, 1]}},
+      {
+        position: [0, 5, 0],
+        mass: 0,
+        shape: {type: 'capsule', radiusBottom: 1, radiusTop: 1, height: 2}
+      }
+    ]
+  };
+  /** Direct scans reserve no graph scratch. */
+  const direct = new GPURigidBodyWorld(definition).getCapacityInfo();
+  /** Two selected leaves fit a three-node tree. */
+  const indexed = new GPURigidBodyWorld({...definition, queryBatchIndex: true}).getCapacityInfo();
+  expect(direct.queryIndexScratchBytes).toBe(0);
+  expect(indexed.queryIndexScratchBytes).toBe(2 * 24 + 3 * 32 + 2 * 4 + 8);
+  expect(indexed.ownedBufferBytes).toBe(direct.ownedBufferBytes);
 });
 
 it('packs directions, query kinds and per-row exclusions in the WGSL layout', () => {
@@ -35,14 +62,15 @@ it('packs directions, query kinds and per-row exclusions in the WGSL layout', ()
       {origin: [0, 1, 0], direction: [0, 0, 6], maximumDistance: 10, radius: 0.5, excludeBody: 2}
     ],
     5,
-    9
+    9,
+    6
   );
   /** Query uniforms and batch records share their float and integer lanes. */
   const floats = new Float32Array(bytes.buffer);
   /** Integer lanes include the common selection count. */
   const words = new Uint32Array(bytes.buffer);
   expect([...floats.slice(0, 8)]).toEqual([3, 2, 1, 0, 0, -1, 0, 20]);
-  expect([...words.slice(8, 12)]).toEqual([0, 1, 0xffffffff, 9]);
+  expect([...words.slice(8, 12)]).toEqual([0, 6, 0xffffffff, 9]);
   expect([...floats.slice(12, 20)]).toEqual([0, 1, 0, 0.5, 0, 0, 1, 10]);
-  expect([...words.slice(20, 24)]).toEqual([2, 1, 2, 9]);
+  expect([...words.slice(20, 24)]).toEqual([2, 6, 2, 9]);
 });

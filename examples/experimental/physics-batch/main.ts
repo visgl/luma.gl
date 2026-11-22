@@ -47,19 +47,19 @@ function updateScenarioControls(): void {
     'frames',
     'submission',
     'casts',
-    'scan-radius'
+    'scan-radius',
+    'scan-colliders'
   ]) {
     /** Hide the associated label and control together. */
     const label = document.querySelector(`#${id}`)?.closest('label');
     if (label) {
-      if (id === 'casts' || id === 'scan-radius') label.hidden = !scan;
-      else if (id === 'bodies') label.hidden = independentRecovery;
+      if (id === 'casts' || id === 'scan-radius' || id === 'scan-colliders') label.hidden = !scan;
+      else if (id === 'bodies') label.hidden = scan || independentRecovery;
       else if (id === 'worlds' || id === 'frames' || id === 'submission') label.hidden = scan;
       else label.hidden = scan || independentRecovery;
       if (eventBurst) label.hidden = true;
     }
   }
-  document.querySelector('#body-label')!.textContent = scan ? 'Colliders' : 'Bodies per world';
 }
 scenarioControl.addEventListener('change', updateScenarioControls);
 updateScenarioControls();
@@ -87,17 +87,20 @@ button.onclick = async () => {
     if (scenario === 'collision-scan') {
       /** Keep the complete scan result available for export. */
       const scan = await runCollisionScan(device, {
-        colliders: number('bodies'),
+        colliders: number('scan-colliders'),
         casts: number('casts'),
         radius: number('scan-radius')
       });
       report = scan;
       status.textContent = `Complete: ${scan.complete}
 Hits: ${scan.hitCount}/${scan.options.casts}
+Matches full scan: ${scan.matchesScan}
 Matches scalar sample: ${scan.matchesScalar}
-Full scan: ${scan.scanMilliseconds.toFixed(2)} ms
+${scan.options.casts} casts · median of three
+  Indexed: ${scan.indexedMilliseconds.toFixed(2)} ms
+  Direct scan: ${scan.scanMilliseconds.toFixed(2)} ms
 Matched ${scan.sampleCount}-cast sample
-  Batched: ${scan.sampleBatchMilliseconds.toFixed(2)} ms
+  Indexed: ${scan.sampleBatchMilliseconds.toFixed(2)} ms
   Sequential: ${scan.sampleScalarMilliseconds.toFixed(2)} ms`;
       paintCollisionScan(scan);
       exportButton.disabled = false;

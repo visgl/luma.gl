@@ -439,6 +439,8 @@ export type {
 
 export {GPUBVH} from './gpu-bvh';
 export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats, GPUBVHStrategy} from './gpu-bvh';
+export {packGPUBVHBounds} from './gpu-bvh-bounds';
+export type {GPUBVHBoundsInput, GPUBVHPackedBounds} from './gpu-bvh-bounds';
 export {GPUSegmentedBVH} from './gpu-segmented-bvh';
 export type {GPUBVHSegment, GPUSegmentedBVHProps} from './gpu-segmented-bvh';
 

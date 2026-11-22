@@ -169,9 +169,11 @@ export class GPUPhysicsEnsemble {
         Math.min(device.limits.maxBufferSize, device.limits.maxStorageBufferBindingSize)
       )
         throw new Error('Ensemble terrain atlas exceeds device limits');
+      /** Reserve the private query graph along with the solver's owned buffers. */
+      const capacity = ensemble.world.getCapacityInfo();
       if (
         ensemble.minimumTerrainBytes > props.maximumResidentBytes ||
-        ensemble.world.getCapacityInfo().ownedBufferBytes > props.maximumResidentBytes
+        capacity.ownedBufferBytes + capacity.queryIndexScratchBytes > props.maximumResidentBytes
       )
         throw new Error('Ensemble residency budget exhausted');
       const commands = new GPUCommandGraph<undefined>(device);
@@ -338,8 +340,11 @@ export class GPUPhysicsEnsemble {
   }
 
   getStats() {
-    const worldBufferBytes = this.world.getCapacityInfo().ownedBufferBytes;
-    const graphTransientBytes = this.graph.stats.physicalTransientResourceBytes;
+    /** Include query scratch in the same residency total as solver graph scratch. */
+    const {ownedBufferBytes: worldBufferBytes, queryIndexScratchBytes} =
+      this.world.getCapacityInfo();
+    const graphTransientBytes =
+      this.graph.stats.physicalTransientResourceBytes + queryIndexScratchBytes;
     return {
       instances: this.instances,
       bodies: this.world.count,
