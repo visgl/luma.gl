@@ -288,6 +288,10 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   // },
 
   // COLOR STATE
+  if (parameters.colorMask !== undefined) {
+    const mask = parameters.colorMask;
+    gl.colorMask(Boolean(mask & 1), Boolean(mask & 2), Boolean(mask & 4), Boolean(mask & 8));
+  }
   switch (parameters.blend) {
     case true:
       gl.enable(GL.BLEND);

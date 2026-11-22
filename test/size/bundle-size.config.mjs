@@ -103,7 +103,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Scalar setters and deletion tracking together measure 141,425 B / 39,931 B gzip.
     // Resnapshotting native state on reattachment adds about 0.15 KB minified.
     // Clip control, depth clamp and polygon offset clamp together measure 142,944 B / 40,366 B gzip.
-    maximum: {minified: 142_950, gzip: 40_400, brotli: 34_600},
+    maximum: {minified: 142_980, gzip: 40_400, brotli: 34_600},
     targetGzip: 30_000
   },
   {

@@ -6,6 +6,8 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 A depth attachment stores a depth value per framebuffer sample. For overlapping opaque draws, the depth comparison decides which surface is visible. The projection, render pass and pipeline must agree on which end of the depth range is closer.
 
+For masks and per-sample tags, see [Stencil buffers](/docs/api-guide/gpu/stencil-buffers).
+
 ## Configure opaque rendering
 
 This example creates an offscreen target. Supply the model with a conventional projection for the backend and color output compatible with the target.
