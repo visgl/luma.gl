@@ -641,6 +641,116 @@ it('GPUSQL aggregates only observed dictionary pairs across Arrow batches', asyn
   }
 });
 
+it('GPUSQL groups nullable dictionary pairs across batches without confusing null with code zero', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const categoryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 21);
+  const serviceType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 22);
+  const fields = [
+    new arrow.Field('category', categoryType, true),
+    new arrow.Field('service', serviceType, true),
+    new arrow.Field('fare', new arrow.Float32(), true),
+    new arrow.Field('identifier', new arrow.Uint32(), false)
+  ];
+  const schema = new arrow.Schema(fields);
+  const vectors = [
+    arrow.vectorFromArray(['economy', null, null, 'premium', null, 'economy', null], categoryType),
+    arrow.vectorFromArray(['basic', null, null, null, 'basic', 'basic', 'plus'], serviceType),
+    arrow.vectorFromArray([2, null, 4, 8, 16, null, 32], new arrow.Float32()),
+    arrow.vectorFromArray([0, 1, 2, 3, 4, 5, 6], new arrow.Uint32())
+  ];
+  const input = new arrow.Table(
+    schema,
+    [
+      [0, 2],
+      [2, 2],
+      [2, 5],
+      [5, 7]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(fields),
+            length: end - start,
+            children: vectors.map(vector => vector.slice(start, end).data[0])
+          })
+        )
+    )
+  );
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, input),
+    ownership: 'owned'
+  });
+  try {
+    const result = new GPUSQLContext({trips: frame})
+      .query(
+        'SELECT service AS kind, COUNT(*) AS trips, category, COUNT(fare) AS known, SUM(fare) AS total FROM trips WHERE identifier >= :minimum GROUP BY category, kind',
+        {parameters: {minimum: 0}}
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      for (const minimum of [0, 2, 7, 0]) {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder, {minimum});
+        device.submit(encoder.finish());
+        const rows = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        const expected = new Map<
+          string,
+          {
+            kind: string | null;
+            category: string | null;
+            trips: number;
+            known: number;
+            total: number | null;
+          }
+        >();
+        for (const {service, category, identifier, fare} of input) {
+          if (identifier < minimum) continue;
+          const key = JSON.stringify([service, category]);
+          const group = expected.get(key) ?? {
+            kind: service,
+            category,
+            trips: 0,
+            known: 0,
+            total: null
+          };
+          group.trips++;
+          if (fare !== null) {
+            group.known++;
+            group.total = (group.total ?? 0) + fare;
+          }
+          expected.set(key, group);
+        }
+
+        expect(rows.schema.fields.map(field => [field.name, field.nullable])).toEqual([
+          ['kind', true],
+          ['trips', false],
+          ['category', true],
+          ['known', false],
+          ['total', true]
+        ]);
+        expect(rows.getChild('kind')?.type).toBeInstanceOf(arrow.Dictionary);
+        expect(rows.getChild('category')?.type).toBeInstanceOf(arrow.Dictionary);
+        expect(rows.numRows).toBe(expected.size);
+        for (const row of rows) {
+          expect(row.toJSON()).toEqual(expected.get(JSON.stringify([row.kind, row.category])));
+        }
+      }
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL returns an empty observed group table for an empty Arrow source', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

@@ -286,8 +286,8 @@ function buildGPUSQLPlan(
       if (keys.length === 2) {
         for (const {source} of keys) {
           const field = frame.schema.fields.find(field => field.name === source);
-          if (field?.nullable || !frame.dictionaries[source] || field?.format !== 'uint32') {
-            throw new Error('GPUSQL two-key GROUP BY requires non-null uint32 dictionary columns');
+          if (!frame.dictionaries[source] || field?.format !== 'uint32') {
+            throw new Error('GPUSQL two-key GROUP BY requires uint32 dictionary columns');
           }
         }
         return {
