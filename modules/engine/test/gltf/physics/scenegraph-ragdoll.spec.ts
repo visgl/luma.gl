@@ -154,3 +154,61 @@ test('keeps an ordered scenegraph joint through an all-kinematic pose and dynami
     await session.destroy();
   }
 });
+
+test('tracks a sampled joint angle under a torque cap while its body remains dynamic', async context => {
+  /** Native backend for the ordered joint solver. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  /** The fixed support and the driven spherical link share an anchor. */
+  const support = new GroupNode();
+  const link = new GroupNode();
+  const root = new GroupNode({children: [support, link]});
+  /** Target 0.5 radians about Z from an initially neutral physical body. */
+  link.setMatrix(new Matrix4().rotateZ(0.5));
+  const session = await ScenegraphPhysicsSession.create(device, {
+    roots: [root],
+    definition: {
+      bodies: new Map([
+        [support, 0],
+        [link, 1]
+      ]),
+      world: {
+        timeStep: 1 / 60,
+        gravity: [0, 0, 0],
+        bodies: [
+          {mode: 'static', position: [0, 0, 0], colliders: []},
+          {mass: 1, position: [0, 0, 0], shape: {type: 'sphere', radius: 0.2}}
+        ],
+        joints: [
+          {type: 'general', first: 0, second: 1, axes: [0, 1, 2], maximum: 0},
+          {
+            type: 'general',
+            first: 0,
+            second: 1,
+            angular: true,
+            axes: [2],
+            drive: {stiffness: 5, damping: 0.5, maximumForce: 0.2}
+          }
+        ]
+      }
+    }
+  });
+  try {
+    /** Sample once, then let the held target converge over two simulated seconds. */
+    const encoder = device.createCommandEncoder();
+    session.encode(encoder, {angularDriveRows: [1]});
+    device.submit(encoder.finish());
+    const initial = (await session.world.readState())[1];
+    // A solid sphere has inertia 2mr²/5; the cap bounds its first angular impulse.
+    expect(Math.abs(initial.angularVelocity[2]) * 0.016 * 60).toBeLessThanOrEqual(0.201);
+    const remaining = device.createCommandEncoder();
+    session.encode(remaining, {steps: 120});
+    device.submit(remaining.finish());
+    const result = (await session.world.readState())[1];
+    expect(session.world.getBodyMode(1)).toBe('dynamic');
+    expect(2 * Math.atan2(result.orientation[2], result.orientation[3])).toBeCloseTo(0.5, 2);
+    expect(Math.hypot(...result.position)).toBeLessThan(0.01);
+  } finally {
+    await session.destroy();
+  }
+});

@@ -54,6 +54,10 @@ type Puppet = {
     height: number;
   }[];
   button: HTMLButtonElement;
+  /** Authored angular drive rows, independent for each puppet. */
+  driveRows: number[];
+  /** Hold the release pose with torque-limited dynamic joints. */
+  recovering: boolean;
   released: boolean;
   resetting: boolean;
   animationTime: number;
@@ -63,7 +67,7 @@ type Puppet = {
 export default class MarionetteTheater extends AnimationLoopTemplate {
   /** Example description used by the gallery info box. */
   static info =
-    '<p>Two instances of one glTF puppet. Release a puppet to see GPU joints and skinning take over while its partner keeps dancing.</p>';
+    '<p>Two instances of one glTF puppet. Release a puppet, then select Recover pose to ease its limbs back toward their release pose. Its partner keeps dancing.</p>';
   /** Owned asset instances and scenegraph resources. */
   private composition?: GLTFSceneComposition;
   /** Independently timed puppet and physics instances. */
@@ -164,6 +168,15 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
       {
         solver: 'ordered',
         timeStep: TIMESTEP,
+        linearDamping: 0.55,
+        angularDamping: 3,
+        // Gentle penetration correction avoids kicking resting links back off the stage.
+        penetrationRecoveryFraction: 0.08,
+        maximumRecoverySpeed: 0.25,
+        contactSlop: 0.006,
+        sleepAfter: 0.3,
+        sleepLinearSpeed: 0.18,
+        sleepAngularSpeed: 0.9,
         iterations: 24
       }
     );
@@ -209,12 +222,21 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
       strings,
       animatedNodes,
       button,
+      driveRows: (rig.definition.world.joints ?? []).flatMap((joint, index) =>
+        joint.type === 'general' && joint.angular && joint.drive ? [index] : []
+      ),
+      recovering: false,
       released: false,
       resetting: false,
       animationTime: this.puppets.length * 790
     };
     button.onclick = () => {
-      if (puppet.released) {
+      if (puppet.released && !puppet.recovering) {
+        puppet.recovering = true;
+        for (const row of puppet.driveRows) puppet.session.world.setJointEnabled(row, true);
+        button.textContent = `Reset ${instance.mount!.id}`;
+        this.updateStatus();
+      } else if (puppet.released) {
         puppet.resetting = true;
         button.disabled = true;
         void this.resetPuppet(puppet)
@@ -227,8 +249,9 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
           });
       } else {
         puppet.released = true;
+        for (const row of puppet.driveRows) puppet.session.world.setJointEnabled(row, false);
         for (const {node} of puppet.strings) node.display = false;
-        button.textContent = `Reset ${instance.mount!.id}`;
+        button.textContent = `Recover pose · ${instance.mount!.id}`;
         this.updateStatus();
       }
     };
@@ -242,6 +265,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     if (this.finalized) return;
     puppet.ragdoll.reset();
     puppet.released = false;
+    puppet.recovering = false;
     puppet.instance.scenegraphs.animator.setTime(puppet.animationTime);
     this.updateStrings(puppet);
     puppet.button.textContent = `Release ${puppet.instance.mount!.id}`;
@@ -253,7 +277,8 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     if (!this.status) return;
     this.status.textContent = this.puppets
       .map(
-        puppet => `${puppet.instance.mount!.id} · ${puppet.released ? 'GPU ragdoll' : 'Dancing'}`
+        puppet =>
+          `${puppet.instance.mount!.id} · ${puppet.recovering ? 'Driven pose' : puppet.released ? 'GPU ragdoll' : 'Dancing'}`
       )
       .join('  |  ');
     this.status.dataset['ready'] = String(this.puppets.length === 2);
@@ -294,6 +319,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
           this.updateStrings(puppet);
         }
         puppet.session.encode(encoder, {
+          angularDriveRows: puppet.recovering ? puppet.driveRows : undefined,
           animatedNodes: puppet.released ? undefined : puppet.animatedNodes
         });
         if (puppet.released) {

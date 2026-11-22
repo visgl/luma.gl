@@ -42,7 +42,7 @@ scenegraph metadata.
 
 Marionette Theater uses the same glTF-authored joints and skins as the engine, with
 two independent physics sessions. A fixed-step animation release feeds live pose
-matrices to the standard skin palette on the GPU. Active ragdolls, progressive asset
+matrices to the standard skin palette on the GPU. The G9 active-ragdoll checkpoint adds torque-limited animation tracking to dynamic joints. Marionette Theater can release, recover its relative pose on the stage, and reset either puppet independently. Reduced-coordinate articulations, balance control, progressive asset
 materialization, broader draft conformance, and cross-device limits remain open.
 
 ## G7 glTF physics qualification checkpoint

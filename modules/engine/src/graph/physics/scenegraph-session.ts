@@ -141,8 +141,11 @@ export class ScenegraphPhysicsSession {
       steps = 1,
       animatedNodes = new Set<ScenegraphNode>(),
       excludedNodes,
-      targetNodes
+      targetNodes,
+      angularDriveRows
     }: {
+      /** Angular joint drive rows that follow the current scene pose while their bodies remain dynamic. */
+      angularDriveRows?: readonly number[];
       steps?: number;
       animatedNodes?: ReadonlySet<ScenegraphNode>;
       excludedNodes?: ReadonlySet<ScenegraphNode>;
@@ -154,7 +157,7 @@ export class ScenegraphPhysicsSession {
     // Validate the batch before mutating animation ownership or targets.
     assert(Number.isSafeInteger(steps) && steps > 0);
     this.motion.setAnimatedNodes(animatedNodes, {excludedNodes, targetNodes});
-    this.motion.update();
+    this.motion.update(angularDriveRows);
     this.publication.update();
     this.instance.encode(encoder, steps);
   }

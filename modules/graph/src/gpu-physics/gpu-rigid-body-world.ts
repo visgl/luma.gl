@@ -3265,6 +3265,40 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return structuredClone(joint);
   }
 
+  /** Retarget authored angular drive rows between steps while preserving the other joints' settings. */
+  setAngularDriveTargets(targets: ReadonlyMap<number, number>): void {
+    /** Validate the entire batch before publishing writes to the GPU. */
+    const joints = [...(this.props.joints ?? [])];
+    if (!this.targets || !this.sleepStates || this.destroyed) throw new Error('Inactive world');
+    for (const [index, angle] of targets) {
+      const joint = joints[index];
+      if (
+        joint?.type !== 'general' ||
+        !joint.angular ||
+        !joint.drive ||
+        !Number.isFinite(Math.fround(angle))
+      ) {
+        throw new Error('Invalid angular drive target');
+      }
+      if (Math.fround(joint.drive.positionTarget ?? 0) === Math.fround(angle)) continue;
+      joints[index] = {...joint, drive: {...joint.drive, positionTarget: angle}};
+    }
+    const drivenBodies = new Set<number>();
+    for (const [index, angle] of targets) {
+      if (joints[index] === this.props.joints?.[index]) continue;
+      drivenBodies.add(joints[index].first);
+      drivenBodies.add(joints[index].second);
+      // Word 40 is general.drive.x in packRigidBodyJointState.
+      this.targets.write(
+        new Float32Array([angle]),
+        this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES + 40 * 4
+      );
+    }
+    this.props.joints = joints;
+    // Wake the endpoints while preserving warm starts for contacts already at rest.
+    for (const body of drivenBodies) this.sleepStates.write(new Float32Array(2), body * 16);
+  }
+
   /** Update an existing constraint's response without recompiling or changing attachment topology. */
   setJointParameters(index: number, parameters: GPURigidBodyJoint): void {
     this.setJointParameterEdits([{index, parameters}]);

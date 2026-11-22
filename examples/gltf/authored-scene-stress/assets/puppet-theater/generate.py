@@ -149,7 +149,7 @@ parts = []
 shapes = []
 root_nodes = robot.json['scenes'][0]['nodes']
 joint_definitions = []
-materials = [{'staticFriction': 0.78, 'dynamicFriction': 0.54, 'restitution': 0.07}]
+materials = [{'staticFriction': 0.78, 'dynamicFriction': 0.54, 'restitution': 0.0}]
 
 
 def add_shape(size):
@@ -181,7 +181,10 @@ def limb(name, parent, position, size, offset, mass, swing=None):
         limits.extend({'angularAxes': [axis], 'min': -bound, 'max': bound}
                       for axis, bound in enumerate(swing))
         joint_index = len(joint_definitions)
-        joint_definitions.append({'limits': limits})
+        joint_definitions.append({'limits': limits, 'drives': [
+            {'type': 'angular', 'axis': axis, 'mode': 'force', 'positionTarget': 0, 'velocityTarget': 0,
+             'stiffness': 9, 'damping': 2, 'maxForce': 1.5} for axis in range(3)
+        ]})
         anchor = robot.node(name + ' parent anchor', translation=position)
         robot.json['nodes'][bones[parent]]['children'].append(anchor)
         socket = robot.node(name + ' joint', extensions={PHYSICS: {
