@@ -55,7 +55,7 @@ experimental as a module.
 | Scalable rigid-body discovery | Available | Hierarchical discovery and sparse contact storage; all-pairs reference for small scenes | Dense scenes and mixed-size extremes still require capacity and performance qualification |
 | Parallel rigid-body solving | Experimental | Opt-in parallel contact response, GPU contact compaction/indirect work, persistent manifolds, coupled friction and island sleep/wake | Ordered solving remains the default; deep stacks and extreme mass ratios need broader evidence |
 | Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer sphere/static-surface CCD and opt-in moving-convex CCD with swept queues, angular bounds, friction and rollback; jointed/nonconvex continuous coverage remains open |
-| Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Ordered GPU compaction scans pair capacity in parallel. Lost records require consumer resynchronization |
+| Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Ordered GPU compaction scans pair capacity in parallel. Snapshot recovery restores current active pairs after loss |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
 | Trigger volumes | Partial | Step-local compound sensors, per-collider glTF events, bounded general geometry and swept sphere crossings | Curved trajectories and general swept sensor geometry remain work |
 | Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Static-anchored distance joints can alternate with parallel contacts; dynamic-to-dynamic parallel scheduling, breakage and articulations remain planned |
@@ -168,7 +168,7 @@ their bounded rings. Events retain pair-slot or trigger-slot order within each a
 step, with a swept trigger enter preceding its exit. A fused ensemble omits events from
 rejected instances. The publisher writes the newest records that fit, while sequence numbers
 also account for the overwritten records. A nonzero `dropped` count means the consumer
-needs to resynchronize any state derived from the missing transitions. Sequence and step
+can rebuild its current active set with a snapshot. Sequence and step
 counters saturate instead of wrapping.
 
 Publishers with up to 64 input slots publish with one workgroup. Larger workloads classify
@@ -177,6 +177,21 @@ The input scan still scales with configured pair or trigger slots. Temporary sto
 owned by the simulation graph and counted in batch residency. In Physics Batch Lab,
 **Event burst** checks counts, ordered trigger pairs and retained ring suffixes under
 deliberate overflow. The GPU Graph inspector shows the publication stages.
+
+Use `await world.resyncContactEvents()` or `await world.resyncTriggerEvents()` when
+recovering state after a loss or attaching a new stateful consumer. Each call copies the
+ring header and active history in one queued snapshot, returns the full active set, and
+advances the corresponding incremental read cursor to that sequence. Subsequent calls
+to the usual event reader yield newer transitions. The cursor is shared by the world
+and its consumers. A pending recovery read blocks checkpoint or origin changes.
+
+Contact recovery returns body and collider pairs. Trigger recovery respects the
+authored per-body union or per-collider grouping and returns the current representative
+sensor/target pair. A swept crossing that ended within the step contributes no overlap.
+Recovery restores current state. Gameplay that must handle every historical transition
+still needs sufficient ring capacity and timely reads. A saturated stream requires world
+reconstruction to resume recording. Snapshot readback scales with configured history
+slots and transfers no poses or manifolds.
 
 The **Physics Stress Lab** exposes recovery counters, buffer capacities, completion
 p50/p95 and JSON reports. Independent GPU qualification tests cover rotated-box slab

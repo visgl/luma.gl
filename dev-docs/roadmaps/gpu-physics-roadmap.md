@@ -381,7 +381,9 @@ Rigid-body contact and trigger publication now uses deterministic tiled GPU
 compaction. The ring keeps event order and reports overwritten sequences even
 during a burst larger than the ring, without running the whole publication
 loop in one invocation. The Batch Lab exercises both publishers in one step.
-Capacity-wide classification and consumer state recovery after loss remain open.
+Contact and trigger snapshots now restore the active set and its matching cursor
+after ring loss. Capacity-wide classification, scalable readback, and qualification
+for consumers that require every historic transition remain open.
 
 Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
 produce correct payloads and ordering without whole-world readback per operation.
@@ -573,6 +575,9 @@ Stabilize API ownership, mutation and disposal contracts; version cooked assets;
 capture/replay and solver diagnostics; define device-loss and capacity-failure behavior.
 Maintain continuous correctness and performance coverage across integrated/discrete GPUs
 and a declared mobile envelope. Publish reproducible benchmarks and known limitations.
+
+Contact and trigger recovery snapshots establish a coherent cursor under ring overflow
+and preserve queued-step ordering across asynchronous reads and checkpoint restore.
 
 Exit: a versioned supported-feature contract, end-to-end rendering integration, release
 regression gates and reproducible competitive evidence. SOTA status is evaluated per

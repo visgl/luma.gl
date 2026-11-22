@@ -116,6 +116,7 @@ Matched ${scan.sampleCount}-cast sample
       canvas.height = innerHeight * devicePixelRatio;
       status.textContent = `Complete: ${burst.complete}
 Matches expected events: ${burst.matchesExpected}
+Recovered active state: ${burst.recovered}
 Contact events retained / dropped: ${burst.contacts.events.length} / ${burst.contacts.dropped}
 Trigger events retained / dropped: ${burst.triggers.events.length} / ${burst.triggers.dropped}
 Full step: ${burst.stepMilliseconds.toFixed(2)} ms`;

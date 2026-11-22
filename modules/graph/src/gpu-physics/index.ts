@@ -107,6 +107,13 @@ export type {
   GPURigidBodyTriggerEvent,
   GPURigidBodyTriggerBatch
 } from './rigid-body-triggers';
+export type {
+  GPURigidBodyActiveContact,
+  GPURigidBodyActiveTrigger,
+  GPURigidBodyContactSnapshot,
+  GPURigidBodyEventSnapshot,
+  GPURigidBodyTriggerSnapshot
+} from './rigid-body-event-snapshot';
 export {decodeRigidBodyTriggerEvents} from './rigid-body-triggers';
 
 export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joints';

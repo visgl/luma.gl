@@ -115,11 +115,26 @@ export async function runEventBurst(
         );
       });
 
+      /** Recover the persistent state independently of how much event payload survived. */
+      const [contactSnapshot, triggerSnapshot] = await Promise.all([
+        world.resyncContactEvents(),
+        world.resyncTriggerEvents()
+      ]);
+      /** Every contact remains active and every swept crossing has already ended. */
+      const recovered =
+        contactSnapshot.sequence === contacts.sequence &&
+        contactSnapshot.contacts.length === groups &&
+        triggerSnapshot.sequence === triggers.sequence &&
+        triggerSnapshot.overlaps.length === 0;
+
       return {
         groups,
         eventCapacity,
         stepMilliseconds,
         complete: state.complete,
+        recovered,
+        contactSnapshot,
+        triggerSnapshot,
         matchesExpected:
           state.complete &&
           isRetainedSuffix(contacts, groups) &&

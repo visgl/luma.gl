@@ -75,6 +75,14 @@ it.for([true, false])(
       expect(
         events.every(event => event.bodies.every(body => Math.floor(body / 4) !== subject))
       ).toBe(true);
+      /** A recovery snapshot includes committed contact history only. */
+      const recoveredContacts = await world.resyncContactEvents();
+      expect(recoveredContacts.contacts).not.toHaveLength(0);
+      expect(
+        recoveredContacts.contacts.every(contact =>
+          contact.bodies.every(body => Math.floor(body / 4) !== subject)
+        )
+      ).toBe(true);
       expect((await world.readSimulationDiagnostics()).complete).toBe(true);
 
       ensemble.wake(subject);
