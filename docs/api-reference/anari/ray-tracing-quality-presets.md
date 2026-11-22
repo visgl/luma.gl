@@ -294,7 +294,7 @@ IOR exactly 1. The renderer follows the straight connection and processes up to
 eight surface crossings. An index-matched sphere applies the transmission factor
 and base-color tint at each crossing, then Beer–Lambert attenuation over the
 distance traveled inside. Point and spot light connections end at the light,
-including when it is inside the sphere. Opaque blockers, nested media, and
+including when the receiver or light is inside the sphere. Opaque blockers, nested media, and
 dielectrics that bend the ray still block the connection. Emitter and environment
 visibility are unchanged. Both settings are off by default.
 

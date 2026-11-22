@@ -206,6 +206,26 @@ it('attenuates index-matched analytic spheres over the traversed light segment',
     expect(await readPixel()).toEqual([0, 0, 0]);
     sphere.transforms = [new Matrix4().translate([1.8, 0, 1.8])];
     expect(await readPixel()).toEqual(pointUnoccluded);
+
+    // Place the receiver and camera inside the sphere, then move the light through the boundary.
+    options.camera = {
+      ...options.camera,
+      position: [0, 0, 0.2],
+      viewMatrix: new Matrix4().lookAt({eye: [0, 0, 0.2], center: [0, 0, 0], up: [0, 1, 0]})
+    };
+    sphere.material.uniforms.ior = 1;
+    sphere.transforms = [new Matrix4()];
+    for (const lightHeight of [0.2, 1]) {
+      options.lights = [{type: 'point', position: [0, 0, lightHeight], intensity: 0.5}];
+      options.surfaces = [receiver];
+      const noSphere = await readPixel();
+      expect(noSphere[0]).toBeGreaterThan(20);
+      options.surfaces = [receiver, sphere];
+      const interior = await readPixel();
+      const distance = Math.min(0.4, lightHeight) - 0.002;
+      expect(interior[0] / noSphere[0]).toBeCloseTo(0.25 ** (distance / 0.8), 1);
+      expect(interior[2]).toBe(noSphere[2]);
+    }
   } finally {
     destroy();
   }

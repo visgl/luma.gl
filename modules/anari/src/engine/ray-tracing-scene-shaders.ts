@@ -1122,12 +1122,52 @@ fn getDiffuseTransmissionTint(primitive: RayPrimitive, hit: RayHit,
 const TRANSMISSIVE_SHADOWS = /* TRANSMISSIVE_SHADOWS */ false;
 
 const MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION = /* MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION */ false;
+const OVERLAPPING_SHADOW_MEDIA = 0xfffffffeu;
 
 // Both camera and shadow paths use the same Beer–Lambert material convention.
 fn getVolumeTransmission(attenuation: vec4<f32>, distance: f32) -> vec3<f32> {
   if (attenuation.w <= 0.0 || distance <= 0.0) { return vec3<f32>(1.0); }
   return pow(clamp(attenuation.rgb, vec3<f32>(0.0), vec3<f32>(1.0)),
     vec3<f32>(distance / attenuation.w));
+}
+
+// A point query against the same TLAS finds a sphere enclosing the shadow origin,
+// even when the light is inside it and visibility never intersects the boundary.
+fn findInitialShadowMedium(origin: vec3<f32>) -> u32 {
+  let pointRay = makeRay(origin, vec3<f32>(0.0));
+  if (uniforms.dimensions.z == 0u ||
+      intersectNodeBounds(pointRay, vec3<f32>(0.0), 0u, 1.0) >= 1.0) {
+    return 0xffffffffu;
+  }
+  var pendingNodes: array<u32, BVH_STACK_CAPACITY>;
+  var pendingCount = 1u;
+  pendingNodes[0] = 0u;
+  var medium = 0xffffffffu;
+  while (pendingCount > 0u) {
+    pendingCount--;
+    let node = pendingNodes[pendingCount];
+    if (node < uniforms.acceleration.x) {
+      let left = node * 2u + 1u;
+      for (var child = left; child <= left + 1u; child++) {
+        if (intersectNodeBounds(pointRay, vec3<f32>(0.0), child, 1.0) < 1.0) {
+          pendingNodes[pendingCount] = child;
+          pendingCount++;
+        }
+      }
+      continue;
+    }
+    let primitiveIndex = leafPrimitiveIds[node - uniforms.acceleration.x];
+    if (primitiveIndex >= uniforms.dimensions.z) { continue; }
+    let primitive = primitives[primitiveIndex];
+    if (primitive.properties.y <= 0.0 || primitive.material.x >= 0.0 ||
+        primitive.material.z != 1.0 || primitive.material.y <= 0.0) { continue; }
+    let localOrigin = (primitive.inverseTransform * vec4<f32>(origin, 1.0)).xyz;
+    if (dot(localOrigin, localOrigin) < primitive.properties.y * primitive.properties.y) {
+      if (medium != 0xffffffffu) { return OVERLAPPING_SHADOW_MEDIA; }
+      medium = primitiveIndex;
+    }
+  }
+  return medium;
 }
 
 // Analytic connections remain straight. Index matching allows closed analytic
@@ -1142,6 +1182,10 @@ fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
   var traveled = 0.0;
   var transmission = vec3<f32>(1.0);
   var medium = 0xffffffffu;
+  if (MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION) {
+    medium = findInitialShadowMedium(ray.origin);
+    if (medium == OVERLAPPING_SHADOW_MEDIA) { return vec3<f32>(0.0); }
+  }
   var mediumStart = 0.0;
   for (var interfaceIndex = 0u; interfaceIndex <= 8u; interfaceIndex++) {
     let remaining = maximumDistance - traveled;
