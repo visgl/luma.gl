@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {makeSourceBatches, makeTableTransform} from './projection-table-fixtures';
 
 it('rejects invalid measurements and malformed inputs before allocating GPU resources', async () => {

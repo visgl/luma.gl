@@ -38,11 +38,14 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   });
   const context = new GPUSQLContext({trips: frame});
   const filtered = context
-    .query('SELECT fare, category FROM trips WHERE fare IS NOT NULL')
+    .query(
+      `SELECT fare, category, CASE WHEN NULL THEN 100 WHEN :threshold THEN 99 WHEN category >= 0 AND trips.fare > 9 THEN fare WHEN fare < 4 THEN 0 END AS bucket FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)`,
+      {parameters: {threshold: null}}
+    )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
   const ordered = context
     .query(
-      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY Fare ASC LIMIT 2',
+      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY 3 ASC LIMIT 2 OFFSET 1',
       {parameters: {minimum: 8}}
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-global-sort'}));
@@ -75,6 +78,8 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
       'economy'
     ]);
 
+    expect(Array.from(filteredArrow.getChild('bucket') ?? [])).toEqual([null, 0, 10, 11]);
+
     const orderedArrow = await makeArrowTableFromGPUAnalyticsTable({
       table: ordered.table,
       validity: ordered.validity,
@@ -86,9 +91,47 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
       orderedArrow.batches.map(batch => batch.numRows),
       ''
     ).toEqual([2]);
-    expect(Array.from(orderedArrow.getChild('fare') ?? []), '').toEqual([11, 10]);
-    expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-22, -20]);
-    expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
+    expect(Array.from(orderedArrow.getChild('fare') ?? []), '').toEqual([10, 8]);
+    expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-20, -16]);
+    expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['premium', 'premium']);
+
+    expect(() =>
+      context
+        .query('SELECT fare FROM trips WHERE category = FLOOR(1.5)')
+        .compile(new GPUCommandGraph(device, {id: 'ludf-sql-numeric-mixed-format'}))
+    ).toThrow(/incompatible scalar column formats/);
+
+    const numericCases = [
+      {expression: 'FLOOR(1.5)', expected: [1, 1, 1, 1]},
+      {expression: 'ABS(-fare)', expected: [8, 3, 10, 11]},
+      {expression: 'FLOOR(-fare - 0.5)', expected: [-9, -4, -11, -12]},
+      {expression: 'CEILING(-fare - 0.5)', expected: [-8, -3, -10, -11]},
+      {
+        expression: 'ROUND(CASE WHEN fare > 3 THEN -fare - 0.5 END)',
+        expected: [-9, null, -11, -12]
+      },
+      {expression: 'TRUNC(-fare - 0.5)', expected: [-8, -3, -10, -11]},
+      {expression: 'FLOOR(category)', expected: [1, 0, 1, 0]}
+    ];
+    for (const {expression, expected} of numericCases) {
+      const result = context
+        .query(`SELECT ${expression} AS computed FROM trips WHERE fare IS NOT NULL`)
+        .compile(new GPUCommandGraph(device, {id: 'ludf-sql-numeric-function'}));
+      try {
+        const commandEncoder = device.createCommandEncoder();
+        result.encode(commandEncoder);
+        device.submit(commandEncoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(Array.from(output.getChild('computed') ?? []), expression).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
   } finally {
     filtered.destroy();
     ordered.destroy();
@@ -96,6 +139,84 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   }
 
   void 0;
+});
+
+it('GPU SQL fills missing values and nulls matching sentinels across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  try {
+    const context = new GPUSQLContext({trips: frame});
+    const plan = context.query(
+      'SELECT COALESCE(NULLIF(trips.fare, :sentinel), NULL, 99) AS filled, NULLIF(fare, NULL) AS unchanged FROM trips',
+      {parameters: {sentinel: 8}}
+    );
+    const result = plan.compile(new GPUCommandGraph(device, {id: 'sql-null-functions'}));
+    try {
+      for (const {sentinel, expected} of [
+        {sentinel: 8, expected: [99, 99, 3, 10, 11]},
+        {sentinel: null, expected: [99, 8, 3, 10, 11]}
+      ]) {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder, {sentinel});
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(Array.from(output.getChild('filled') ?? [])).toEqual(expected);
+        expect(Array.from(output.getChild('unchanged') ?? [])).toEqual([null, 8, 3, 10, 11]);
+      }
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+it('casts projected numeric columns and sorts on the converted format', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  try {
+    const context = new GPUSQLContext({trips: frame});
+    const result = context
+      .query(
+        'SELECT CAST(-trips.fare - 0.75 AS INTEGER) AS signedFare, CAST(identifier AS REAL) AS floatIdentifier FROM trips ORDER BY signedFare NULLS LAST'
+      )
+      .compile(new GPUCommandGraph(device, {id: 'sql-scalar-casts'}));
+    try {
+      if (!(result instanceof CompiledGPUDataFrameGlobalSort))
+        throw new Error('Expected global SQL sort');
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder);
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        globalRowIndices: result.globalRowIndices,
+        globalSelectedCount: result.globalSelectedCount
+      });
+      expect(output.getChild('signedFare')?.type).toBeInstanceOf(arrow.Int32);
+      expect(Array.from(output.getChild('signedFare') ?? [])).toEqual([-11, -10, -8, -3, null]);
+      expect(output.getChild('floatIdentifier')?.type).toBeInstanceOf(arrow.Float32);
+      expect(Array.from(output.getChild('floatIdentifier') ?? [])).toEqual([50, 40, 20, 30, 10]);
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
 });
 
 it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe results', async () => {
@@ -141,7 +262,7 @@ it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe resul
   void 0;
 });
 
-it('loaders.gl projection-only plans do not bind arbitrary source columns', async () => {
+it('SQL projection-only plans do not bind arbitrary source columns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -182,25 +303,61 @@ it('loaders.gl projection-only plans do not bind arbitrary source columns', asyn
     table: new GPUTable({batches: [batch]}),
     ownership: 'owned'
   });
-  const compiled = planGPUDataFrameQuery(frame, {columns: ['category']}).compile(
-    new GPUCommandGraph(device, {id: 'loaders-sql-projection-only'})
-  );
-
   try {
-    const encoder = device.createCommandEncoder({id: 'loaders-sql-projection-only'});
-    compiled.encode(encoder);
-    device.submit(encoder.finish());
+    const context = new GPUSQLContext({samples: frame});
+    for (const plan of [
+      planGPUDataFrameQuery(frame, {columns: ['category']}),
+      context.query('SELECT category FROM samples')
+    ]) {
+      const compiled = plan.compile(new GPUCommandGraph(device, {id: 'sql-projection-only'}));
+      try {
+        const encoder = device.createCommandEncoder({id: 'loaders-sql-projection-only'});
+        compiled.encode(encoder);
+        device.submit(encoder.finish());
 
-    const result = await makeArrowTableFromGPUAnalyticsTable({
-      table: compiled.table,
-      validity: compiled.validity,
-      dictionaries: compiled.dictionaries,
-      rowIndices: compiled.rowIndices,
-      selectedCounts: compiled.selectedCounts
-    });
-    expect(Array.from(result.getChild('category') ?? []), '').toEqual([7, 9]);
+        const result = await makeArrowTableFromGPUAnalyticsTable({
+          table: compiled.table,
+          validity: compiled.validity,
+          dictionaries: compiled.dictionaries,
+          rowIndices: compiled.rowIndices,
+          selectedCounts: compiled.selectedCounts
+        });
+        expect(Array.from(result.getChild('category') ?? []), '').toEqual([7, 9]);
+      } finally {
+        compiled.destroy();
+      }
+    }
+
+    const packedCount = context
+      .query('SELECT COUNT(position) AS known FROM samples')
+      .compile(new GPUCommandGraph(device, {id: 'sql-packed-count'}));
+    try {
+      const encoder = device.createCommandEncoder();
+      packedCount.encode(encoder);
+      device.submit(encoder.finish());
+      const result = await makeArrowTableFromGPUAnalyticsTable({table: packedCount.table});
+      expect(result.getChild('known')?.get(0)).toBe(2);
+    } finally {
+      packedCount.destroy();
+    }
+
+    const packedProjection = context
+      .query('SELECT position FROM samples')
+      .compile(new GPUCommandGraph(device, {id: 'sql-packed-projection'}));
+    try {
+      expect(packedProjection.table.schema.fields.map(field => field.format)).toEqual([
+        'float32x3'
+      ]);
+      expect(packedProjection.table.gpuVectors['position']?.data[0].buffer).toBe(
+        frame.table.gpuVectors.position?.data[0].buffer
+      );
+      const encoder = device.createCommandEncoder();
+      packedProjection.encode(encoder);
+      device.submit(encoder.finish());
+    } finally {
+      packedProjection.destroy();
+    }
   } finally {
-    compiled.destroy();
     frame.destroy();
   }
 
@@ -222,12 +379,12 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
   const context = new GPUSQLContext({trips: frame});
   const aggregate = context
     .query(
-      'SELECT COUNT(*) AS rows, SUM(fare) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8'
+      'SELECT COUNT(*) AS rows, COUNT(NULLIF(fare, 8)) AS known, SUM(fare * 2) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8 OR fare IS NULL'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-aggregate'}));
   const grouped = context
     .query(
-      'SELECT category, COUNT(*) AS count, SUM(fare) AS total FROM trips WHERE fare IS NOT NULL GROUP BY category'
+      'SELECT COUNT(*) AS category, category AS label, COUNT(NULLIF(fare, 8)) AS known, SUM(fare + 1) AS total FROM trips GROUP BY label'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
@@ -244,8 +401,9 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       validity: aggregate.validity,
       dictionaries: aggregate.dictionaries
     });
-    expect(Array.from(aggregateArrow.getChild('rows') ?? []), '').toEqual([3]);
-    expect(Array.from(aggregateArrow.getChild('total') ?? []), '').toEqual([29]);
+    expect(Array.from(aggregateArrow.getChild('rows') ?? [])).toEqual([4]);
+    expect(Array.from(aggregateArrow.getChild('known') ?? [])).toEqual([2]);
+    expect(Array.from(aggregateArrow.getChild('total') ?? []), '').toEqual([58]);
     expect(
       Boolean(Math.abs(Number(aggregateArrow.getChild('average')?.get(0)) - 29 / 3) < 0.001),
       ''
@@ -256,9 +414,16 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       validity: grouped.validity,
       dictionaries: grouped.dictionaries
     });
-    expect(Array.from(groupedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
-    expect(Array.from(groupedArrow.getChild('count') ?? []), '').toEqual([2, 2]);
-    expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([14, 18]);
+    expect(groupedArrow.schema.fields.map(field => field.name)).toEqual([
+      'category',
+      'label',
+      'known',
+      'total'
+    ]);
+    expect(Array.from(groupedArrow.getChild('label') ?? []), '').toEqual(['economy', 'premium']);
+    expect(Array.from(groupedArrow.getChild('category') ?? [])).toEqual([3, 2]);
+    expect(Array.from(groupedArrow.getChild('known') ?? [])).toEqual([2, 1]);
+    expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([16, 20]);
   } finally {
     aggregate.destroy();
     grouped.destroy();
@@ -288,12 +453,12 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   const context = new GPUSQLContext({trips: left, accounts: right});
   const joined = context
     .query(
-      'SELECT trips.identifier, trips.fare FROM trips LEFT JOIN accounts ON trips.identifier = accounts.identifier'
+      'SELECT trips.identifier, trips.fare FROM trips LEFT JOIN accounts ON accounts.identifier = trips.identifier'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-left-join'}));
   const unmatched = context
     .query(
-      'SELECT trips.identifier FROM trips ANTI JOIN accounts ON trips.identifier = accounts.identifier'
+      'SELECT trips.category, trips.fare + 1 AS adjusted FROM trips ANTI JOIN accounts ON trips.identifier = accounts.identifier'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-anti-join'}));
 
@@ -329,7 +494,13 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
       unmatchedArrow.batches.map(batch => batch.numRows),
       ''
     ).toEqual([1, 0, 2]);
-    expect(Array.from(unmatchedArrow.getChild('identifier') ?? []), '').toEqual([10, 30, 50]);
+    expect(unmatchedArrow.schema.fields.map(field => field.name)).toEqual(['category', 'adjusted']);
+    expect(Array.from(unmatchedArrow.getChild('category') ?? [])).toEqual([
+      'economy',
+      'economy',
+      'economy'
+    ]);
+    expect(Array.from(unmatchedArrow.getChild('adjusted') ?? [])).toEqual([null, 4, 12]);
   } finally {
     joined.destroy();
     unmatched.destroy();

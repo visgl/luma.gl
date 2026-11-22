@@ -87,6 +87,9 @@ describe('WebGPU device creation lifecycle', () => {
     const device = await adapter.create({} as DeviceProps);
 
     expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({});
+    expect(device.features.has('clip-control-webgl')).toBe(true);
+    expect(device.features.has('polygon-offset-clamp-webgl')).toBe(true);
+    expect(device.features.has('depth-clip-control')).toBe(false);
     device.destroy();
   });
 
@@ -257,6 +260,15 @@ describe('WebGPU device creation lifecycle', () => {
     await expect(device.lost).resolves.toEqual({reason: 'unknown', message: 'Driver reset'});
 
     await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
+  });
+
+  test('attach can take ownership of a native device', async () => {
+    const native = makeNativeDevice(makeDeferred<GPUDeviceLostInfo>().promise);
+    const device = await new MockWebGPUAdapter([]).attach(native.device, {ownsHandle: true});
+    expect(device.ownsHandle).toBe(true);
+    device.destroy();
+    device.destroy();
+    expect(native.device.destroy).toHaveBeenCalledTimes(1);
   });
 
   test('attach does not destroy an application-owned device', async () => {

@@ -8,7 +8,7 @@ import {
   type StructuredVolumeRendererPrepareOptions,
   type StructuredVolumeSources
 } from '@luma.gl/anari/raymarch';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import type {VectorFieldBuffers} from './vector-field-engine';
 
 export type VectorFieldRenderOptions = {

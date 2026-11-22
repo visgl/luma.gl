@@ -5,7 +5,7 @@
 /** Bounded rigid-body reference path. Pair discovery is parallel; impulses are ordered on GPU. */
 import {getEnsembleShader} from './rigid-body-ensemble-shaders';
 import {
-  RIGID_BODY_BOUNDS_SHADER,
+  getRigidBodyBoundsShader,
   RIGID_BODY_BOUND_PUBLICATION_SHADER
 } from './rigid-body-bounds-shaders';
 import {getRigidBodyParallelShader} from './rigid-body-parallel-shaders';
@@ -30,7 +30,9 @@ export function getRigidBodyShader(
   compactContacts = true,
   collisionPartitionSize?: number,
   ensembleBodiesPerInstance?: number,
-  blockContacts = false
+  blockContacts = false,
+  heightFields = false,
+  ensemblePairsPerInstance?: number
 ): string {
   return /* wgsl */ `
 const COMPACT_CONTACTS:bool=${compactContacts};
@@ -46,9 +48,9 @@ struct Target { position: vec4f, orientation: vec4f }
 struct CacheKey { key:atomic<u32>, epoch:u32 }
 struct GeneralConstraint {axes:vec4f,limits:vec4f,control:vec4f,drive:vec4f}
 struct JointState {impulses:array<f32,8>, control:vec4f, limits:vec4f, motor:vec4f, drive:vec4f, spring:vec4f, general:GeneralConstraint}
-struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? `, frame:u32, cacheDropped:atomic<u32>, reserved0:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved1:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved2:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, keys:array<CacheKey,PAIR_CAPACITY>` : ''}${ensembleBodiesPerInstance ? `, instanceHeads:array<atomic<u32>,${count / ensembleBodiesPerInstance}>, instanceFrames:array<u32,${count / ensembleBodiesPerInstance}>, links:array<u32,PAIR_CAPACITY>, journalMarks:array<u32,PAIR_CAPACITY>, journalSlots:array<u32,PAIR_CAPACITY>, journalKeys:array<vec2u,PAIR_CAPACITY>, journalLinks:array<u32,PAIR_CAPACITY>, savedHeads:array<u32,${count / ensembleBodiesPerInstance}>, savedFrames:array<u32,${count / ensembleBodiesPerInstance}>, savedHeader:array<u32,8>, journalManifolds:array<Manifold,PAIR_CAPACITY>` : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
+struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? `, frame:u32, cacheDropped:atomic<u32>, reserved0:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved1:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved2:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, keys:array<CacheKey,PAIR_CAPACITY>` : ''}${ensembleBodiesPerInstance ? `, instanceHeads:array<atomic<u32>,${count / ensembleBodiesPerInstance}>, instanceFrames:array<u32,${count / ensembleBodiesPerInstance}>, links:array<u32,PAIR_CAPACITY>, journalMarks:array<u32,PAIR_CAPACITY>, journalSlots:array<u32,PAIR_CAPACITY>, journalKeys:array<vec2u,PAIR_CAPACITY>, journalLinks:array<u32,PAIR_CAPACITY>, savedHeads:array<u32,${count / ensembleBodiesPerInstance}>, savedFrames:array<u32,${count / ensembleBodiesPerInstance}>, savedHeader:array<u32,8>, journalManifolds:array<Manifold,PAIR_CAPACITY>${ensemblePairsPerInstance ? `, instanceFailures:array<atomic<u32>,${count / ensembleBodiesPerInstance + 1}>` : ''}` : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f, firstAnchor:vec4f, secondAnchor:vec4f }
-struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
+struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u, terrainRevision:u32 }
 struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
@@ -62,7 +64,7 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f 
 ${getEnsembleShader(count, ensembleBodiesPerInstance, collisionPartitionSize, extended)}
 ${
   sparse
-    ? getRigidBodyCacheShader(sparse, Boolean(ensembleBodiesPerInstance))
+    ? getRigidBodyCacheShader(sparse, Boolean(ensembleBodiesPerInstance), ensemblePairsPerInstance)
     : `
 fn getFirstCollider(pair:u32)->u32{return pair/COLLIDER_COUNT;}
 fn getSecondCollider(pair:u32)->u32{return pair%COLLIDER_COUNT;}
@@ -210,11 +212,11 @@ fn contactFeature(collider:u32,point:vec3f,normal:vec3f)->u32 {
   let score=separation+(1.0-alignment)*settings.solver.w;
   if(score<nearest){nearest=score;feature=triangle;}
  }
- return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+feature).w)/8u;
+ return meshTriangleData(collider,feature)/8u;
 }
 fn cookedContactFeature(collider:u32,triangle:i32,fallback:u32)->u32 {
  if(triangle<0){return fallback;}
- return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+u32(triangle)).w)/8u;
+ return meshTriangleData(collider,u32(triangle))/8u;
 }
 fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32, firstTriangle:i32, secondTriangle:i32) {
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
@@ -285,7 +287,7 @@ fn clipBoxContact(reference:u32,incident:u32,faceAxis:u32,referenceNormal:vec3f,
 fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Manifold,first:u32,second:u32){
  storeFeatureContact(pair,slot,point,normal,depth,previous,first,second,-1,-1);
 }
-${RIGID_BODY_BOUNDS_SHADER}
+${getRigidBodyBoundsShader(heightFields)}
 ${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
 ${
   extended
@@ -315,6 +317,16 @@ ${
  }
  var previous=manifolds[pair]; ${sparse ? 'previous.count=previous.previousCount;' : ''} manifolds[pair].count=0u;
  ${extended ? 'manifolds[pair].padding=vec3u(0);' : ''}
+ ${
+   heightFields
+     ? `
+ // Only one side can be a static height field. Ignore ordinary mesh triangle offsets.
+ let firstTerrain=bodies.colliders[first].padding;let secondTerrain=bodies.colliders[second].padding;
+ let revision=max(select(0u,u32(firstTerrain.z),firstTerrain.y<0.0),select(0u,u32(secondTerrain.z),secondTerrain.y<0.0));
+ if(previous.terrainRevision!=revision){previous.count=0u;}
+ manifolds[pair].terrainRevision=revision;`
+     : ''
+ }
  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
  if(bodies.colliders[first].material.w!=0.0 || bodies.colliders[second].material.w!=0.0 || first>=second || firstBody==secondBody || (excludes(first,second)||excludes(second,first)) || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
  ${extended ? 'manifolds[pair].padding=vec3u(0); if(bodies.colliders[first].shape.w>=2.0 || bodies.colliders[second].shape.w>=2.0){collideExtended(pair,first,second,previous);return;}' : ''}

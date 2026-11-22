@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Matrix4, NumberArray3, NumberArray16} from '@math.gl/core';
+import type {Matrix4} from '@math.gl/core/matrix';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 
 /** Minimal texture metadata used to select backend-specific sampler bindings. */
 export type ShadowTexture = {readonly device: {readonly type: string}};

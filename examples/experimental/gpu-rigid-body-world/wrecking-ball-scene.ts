@@ -18,7 +18,7 @@ import {
   type SceneEnvironment
 } from '@luma.gl/anari';
 import type {GPURigidBodyWorld, GPURigidBody} from '@luma.gl/graph/gpu-physics';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {createLabEnvironment} from './lab-material';
 import {WRECKING_BALL_BODY_INDEX} from './wrecking-ball';
 import {LAB_SPOTLIGHT} from './rigid-body-shadows';

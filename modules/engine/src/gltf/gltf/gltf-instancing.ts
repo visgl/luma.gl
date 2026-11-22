@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFNodePostprocessed, GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** Accessor values authored on an `EXT_mesh_gpu_instancing` node. */
 export type GLTFInstanceAttribute = {

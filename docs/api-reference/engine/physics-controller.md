@@ -174,6 +174,42 @@ await physics.prepare();
 physics.setVehicleControls(0.6, 0.2, 0); // throttle fraction, steering radians, brake fraction
 ```
 
-The first implementation supports one chassis and one static terrain collider per world. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
+A controller attachment uses one dynamic chassis and up to four static terrain colliders. Enable Ackermann steering with `steeringWheelbase`, set `antiRollRate` for paired axles, and set `slipGain` to tune longitudinal and lateral tire response. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
 
-At the world level, `vehicleWheelPoses` exposes a borrowed GPU buffer range containing four column-major transforms relative to the chassis node. Compose these with the published chassis matrix to draw the wheels. `readVehicleWheels()` provides asynchronous telemetry in mount order for diagnostics.
+For a fleet, call `addVehicle` for each chassis. Each terrain reference resolves to a
+registered static body with one collider. The wheel sweeps choose the nearest
+supporting hit, with terrain order breaking equal-distance ties.
+
+```ts
+physics.addVehicle('fleet/buggy', ['terrain/west', 'terrain/east'], buggyTuning);
+physics.addVehicle('fleet/trailer', ['terrain/west', 'terrain/east'], trailerTuning);
+await physics.prepare();
+physics.setVehicleControls(0.6, 0.2, 0, 'fleet/buggy');
+const trailerPoses = physics.getVehicleWheelPoses('fleet/trailer');
+const trailerWheels = await physics.readVehicleWheels('fleet/trailer');
+```
+
+The controller keeps wheel state by chassis node identity when a state-preserving
+prepare changes fleet indices. Remove a vehicle with `removeVehicle` to retain
+the chassis body without its suspension. Removing a terrain body removes dependent
+attachments. Plain three-argument controls and `vehicleWheelPoses` address the first
+vehicle, and `setVehicle` replaces the fleet with one attachment.
+
+At the world level, pass `vehicles: [towVehicle, trailer]` to address multiple chassis
+in one suspension pass. Each entry must name a different dynamic chassis. They can
+sweep the same static terrain colliders or use different ones. Use `terrainCollider` for the primary surface and `additionalTerrainColliders` for up to three more. The compatibility
+property `vehicle` configures one chassis at index zero.
+
+```ts
+world.setVehicleControls(0.6, 0.2, 0, 0);
+world.setVehicleControls(0, 0, 0, 1);
+const trailerPoses = world.getVehicleWheelPoses(1);
+const trailerWheels = await world.readVehicleWheels(1);
+```
+
+The borrowed pose range contains four column-major transforms relative to the chassis
+node. Compose these with the published chassis matrix to draw the wheels. The asynchronous
+wheel readback includes normal load, travel, spin, and the actual steering angle in mount
+order. Pair indices 0–1 and 2–3 across their respective axles when configuring an anti-roll
+spring. It redistributes load when both tires are loaded and applies no tension to
+airborne tires. Hitch constraints use the existing ordered joint solver.

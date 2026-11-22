@@ -9,7 +9,7 @@ import {
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shaders';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

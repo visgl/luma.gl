@@ -10,6 +10,7 @@ import {getWebGLContextData} from './webgl-context-data';
  * @param onContextRestored *
  */
 type ContextProps = {
+  signal?: AbortSignal;
   /** Called when a context is lost */
   onContextLost: (event: Event) => void;
   /** Called when a context is restored */
@@ -81,14 +82,10 @@ export function createBrowserContext(
     const luma = getWebGLContextData(gl);
     luma.softwareRenderer = softwareRenderer;
 
-    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
-    const {onContextLost, onContextRestored} = props;
-    canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
-    canvas.addEventListener(
-      'webglcontextrestored',
-      (event: Event) => onContextRestored(event),
-      false
-    );
+    canvas.addEventListener('webglcontextlost', props.onContextLost, {signal: props.signal});
+    canvas.addEventListener('webglcontextrestored', props.onContextRestored, {
+      signal: props.signal
+    });
 
     return gl;
   } finally {

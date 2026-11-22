@@ -72,6 +72,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 | `clearColors?` | `(TypedArray \| false)[]` | `undefined` | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
 | `clearDepth?` | `number \| false` | `1` | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth. |
 | `clearStencil?` | `number \| false` | `0` | Stencil value used when clearing the stencil attachment. Set to `false` to preserve the previous stencil. |
+| `clipDepthMode?` | `'negative-one-to-one' \| 'zero-to-one'` | backend range | Clip-space depth range of the projection. WebGPU always uses `'zero-to-one'` and throws on `'negative-one-to-one'`. WebGL uses `'negative-one-to-one'`; `'zero-to-one'` requires the `clip-control-webgl` feature (`EXT_clip_control`). Use `'zero-to-one'` for [reverse-Z depth](/docs/api-guide/gpu/depth-buffers#reverse-z). |
 | `depthReadOnly?` | `boolean` | `false` | Marks the depth attachment as read-only for the duration of the pass. |
 | `stencilReadOnly?` | `boolean` | `false` | Marks the stencil attachment as read-only for the duration of the pass. |
 | `discard?` | `boolean` | `false` | Disables rasterization output when set to `true`. |

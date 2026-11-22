@@ -16,7 +16,7 @@ import {
   type SplatRendererProps,
   type SplatSortMode
 } from '@luma.gl/engine/splats';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {h, render} from 'preact';
 import {
   ExamplePanelManager,

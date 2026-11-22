@@ -11,7 +11,7 @@ import {
   GPUGraphEdgeLayer,
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
-import * as experimentalModule from '@luma.gl/graph/experimental/simulation';
+import * as experimentalModule from '@luma.gl/graph/experimental-simulation';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 

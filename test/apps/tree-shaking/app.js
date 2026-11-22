@@ -4,7 +4,7 @@ import {GL} from '@luma.gl/core/webgl-constants';
 // eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/engine';
 import {createTestContext} from '@luma.gl/core/test-utils';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 
 const SIDE = 256;
 

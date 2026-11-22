@@ -48,12 +48,25 @@ export type {
   GPUDataFrameJoinType,
   GPUDataFrameLookupOptions
 } from './gpu-join-query';
-export {and, column, literal, GPUExpression, not, or, parameter} from './gpu-expression';
+export {
+  and,
+  caseWhen,
+  coalesce,
+  column,
+  literal,
+  GPUExpression,
+  not,
+  nullIf,
+  or,
+  parameter,
+  scalarFunction
+} from './gpu-expression';
 export type {
   GPUExpressionBinaryOperator,
   GPUExpressionNode,
   GPUExpressionUnaryOperator,
-  GPUExpressionValue
+  GPUExpressionValue,
+  GPUScalarFunction
 } from './gpu-expression';
 export {CompiledGPUDataFrameQuery} from './gpu-query-compiler';
 export type {GPUDataFrameQueryParameters} from './gpu-query-compiler';

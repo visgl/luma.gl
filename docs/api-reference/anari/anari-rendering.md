@@ -309,6 +309,15 @@ geometry semantics. Scalar and textured alpha masks exclude below-cutoff interse
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
 Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
+### `readRadiance()`
+
+After submitting a ray-traced frame, call `await frame.readRadiance()` to read the
+internal-resolution color history before tone mapping, denoising and upscaling.
+The returned `ANARIFrameRadiance` has `width`, `height` and tightly packed
+little-endian RGBA16F `data` in top-left row order. RGB includes the renderer's
+exposure. Alpha contains sample-history metadata. Unsupported renderers and
+frames without history return `null`.
+
 ### `captureChannels()`
 
 ```ts
@@ -488,8 +497,7 @@ Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` o
 `TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
 color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
 uses explicit LOD inside divergent traversal and honors the texture's sampler. Primary triangle
-shading estimates its footprint from the camera and transformed UVs. Secondary hits, analytic
-spheres, and cutout tests use mip zero.
+shading estimates its footprint from the camera and transformed UVs. Secondary triangle hits use the propagated camera footprint. Analytic spheres and cutout tests use mip zero.
 The ray renderer binds up to fourteen distinct material textures per frame. Excess maps use the underlying material values.
 Textures are borrowed and must remain alive until their submitted GPU work finishes.
 

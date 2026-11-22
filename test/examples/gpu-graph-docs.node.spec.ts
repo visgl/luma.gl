@@ -56,12 +56,12 @@ const experimentalTabs = readFileSync(
 );
 
 describe('GPU Graph GPU-resident graph analytics documentation', () => {
-  test('publishes one canonical guide in the experimental sidebar, overview, and tabs', () => {
+  test('publishes one canonical guide in the package sidebar, overview, and tabs', () => {
     expect(graphDocumentation).toContain('# GPU Graph');
     expect(graphDocumentation).toContain('<ExperimentalDocsTabs active="gpu-graph" />');
-    expect(sidebar.match(/"api-reference\/experimental\/gpu-graph"[,\]]/gu)).toHaveLength(1);
+    expect(sidebar.match(/"api-reference\/experimental\/gpu-graph"[,\]\s]/gu)).toHaveLength(1);
     expect(sidebar).toMatch(
-      /"label": "GPU Graph"[\s\S]*?"api-reference\/experimental\/gpu-graph"/u
+      /"label": "@luma.gl\/graph\/gpu-graph-algorithms"[\s\S]*?"api-reference\/experimental\/gpu-graph"/u
     );
     expect(experimentalTabs).toContain("| 'gpu-graph'");
     expect(experimentalTabs).toContain("href: '/docs/api-reference/experimental/gpu-graph'");
@@ -193,7 +193,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('label-propagation communities');
     expect(graphDocumentation).toContain('six Graphalytics workload families');
     expect(graphDocumentation).toContain('not\nmillion-vertex benchmarks');
-    expect(graphDocumentation).toContain("from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';");
+    expect(graphDocumentation).toContain("from '@luma.gl/graph/gpu-graph-algorithms-benchmarks';");
     expect(graphDocumentation).toContain('makeGPUGraphAlgorithmsBenchmarkDataset');
     expect(graphDocumentation).toContain('await runGPUGraphAlgorithmsBenchmark(device, {');
   });

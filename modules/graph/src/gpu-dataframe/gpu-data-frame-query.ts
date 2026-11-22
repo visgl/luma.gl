@@ -8,8 +8,10 @@ import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrame} from './gpu-data-frame';
 import {
   getGPUExpressionColumnNames,
+  getGPUExpressionResultFormats,
   GPUExpression,
   isBooleanExpressionNode,
+  isGPUScalarFunction,
   type GPUExpressionNode
 } from './gpu-expression';
 import {
@@ -336,10 +338,9 @@ function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
     }
     assertDataFrameDerivedExpression(derivedColumn.expression, logicalColumns);
 
-    const referencedFormats = new Set(
-      getGPUExpressionColumnNames(derivedColumn.expression).map(columnName =>
-        logicalFormats.get(columnName)
-      )
+    const referencedFormats = getGPUExpressionResultFormats(
+      derivedColumn.expression.node,
+      logicalFormats
     );
     if (referencedFormats.size > 1) {
       throw new Error(`GPUDataFrame derived column "${derivedColumn.name}" mixes scalar formats`);
@@ -421,15 +422,27 @@ function assertSelectedQueryColumns(
 
 function isNumericExpressionNode(node: GPUExpressionNode): boolean {
   switch (node.kind) {
+    case 'conditional':
+      return (
+        (isBooleanExpressionNode(node.condition) ||
+          ((node.condition.kind === 'literal' || node.condition.kind === 'parameter') &&
+            node.condition.value === null)) &&
+        isNumericExpressionNode(node.whenTrue) &&
+        isNumericExpressionNode(node.otherwise)
+      );
+    case 'cast':
+      return !node.format.includes('x') && isNumericExpressionNode(node.operand);
     case 'column':
       return true;
     case 'literal':
     case 'parameter':
       return node.value === null || typeof node.value === 'number';
     case 'unary':
-      return node.operator === 'negate';
+      return node.operator === 'negate' || isGPUScalarFunction(node.operator);
     case 'binary':
       return (
+        node.operator === 'coalesce' ||
+        node.operator === 'nullif' ||
         node.operator === 'add' ||
         node.operator === 'subtract' ||
         node.operator === 'multiply' ||

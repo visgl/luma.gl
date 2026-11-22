@@ -29,7 +29,7 @@ import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
 import {pbrMaterial, type LightingProps, type ShaderModule} from '@luma.gl/shaders';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import * as arrow from 'apache-arrow';
 import {
   ColumnPanel,

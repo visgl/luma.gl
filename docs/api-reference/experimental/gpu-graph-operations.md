@@ -237,7 +237,7 @@ import benchmark-only datasets, CPU references, or measurement code:
 import {
   makeGPUGraphAlgorithmsBenchmarkDataset,
   runGPUGraphAlgorithmsBenchmark
-} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
+} from '@luma.gl/graph/gpu-graph-algorithms-benchmarks';
 
 const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
 const report = await runGPUGraphAlgorithmsBenchmark(device, {

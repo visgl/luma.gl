@@ -24,7 +24,8 @@ it('reports implemented software tracing separately from planned material transp
     'normal',
     'cameraDistance',
     'identity',
-    'history'
+    'history',
+    'variance'
   ]);
   expect(getRayTracingSceneCapabilities({type: 'webgl'}).supported).toBe(false);
   expect(getRayTracingSceneCapabilities({type: 'null'}).supported).toBe(false);

@@ -123,7 +123,7 @@ test('projects a point chunk in one batched call', async () => {
 
 test('direct GeoArrow adapters borrow coordinate buffers and preserve topology', async () => {
   const {makeGeoArrowColumnFromCPUVector, makeCPUVectorFromGeoArrowColumn} = await import(
-    '@luma.gl/graph/gpu-project/geoarrow'
+    '@luma.gl/graph/gpu-project-geoarrow'
   );
   const source = makeCPUVectorFromArrow(
     arrow.vectorFromArray(

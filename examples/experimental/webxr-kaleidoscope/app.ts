@@ -22,8 +22,8 @@ import {
   type WebXRFrameState,
   type WebXRInputState,
   type WebXRManagerProps
-} from '@luma.gl/engine/experimental/webxr';
-import {Matrix4} from '@math.gl/core';
+} from '@luma.gl/engine/experimental-webxr';
+import {Matrix4} from '@math.gl/core/matrix';
 import {WebxrKaleidoscopeInfoHtml} from './app-ui';
 
 export const title = 'WebXR: Immersive Prism Portal';

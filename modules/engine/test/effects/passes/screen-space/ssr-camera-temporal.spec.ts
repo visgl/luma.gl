@@ -7,7 +7,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {ssrCameraTemporal, ssrCameraDepthHistoryCopy} from '@luma.gl/engine/effects';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 it('camera SSR accepts reprojected history and rejects depth, normal, roughness, and offscreen mismatches', async context => {
   const device = await getWebGPUTestDevice();

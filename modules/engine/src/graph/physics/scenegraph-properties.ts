@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import type {InteractivityPropertyAdapter} from '../../index';
 import type {GPURigidBodyWorld, GPURigidBodyParameters} from '@luma.gl/graph/gpu-physics';
 import type {GPURigidBodyGeneralConstraint} from '@luma.gl/graph/gpu-physics';

@@ -15,10 +15,46 @@ export type GPUExpressionNumericValue = number | readonly number[] | null;
 export type GPUExpressionValue = number | boolean | null;
 
 /** Closed unary operations that can be lowered safely into generated WGSL. */
-export type GPUExpressionUnaryOperator = 'not' | 'is-valid' | 'is-null' | 'negate';
+export type GPUExpressionUnaryOperator =
+  | 'not'
+  | 'is-valid'
+  | 'is-null'
+  | 'negate'
+  | GPUScalarFunction;
+
+const scalarFunctions = [
+  'abs',
+  'floor',
+  'ceiling',
+  'round',
+  'trunc',
+  'sqrt',
+  'ln',
+  'log10',
+  'asin',
+  'acos'
+] as const;
+
+/** Numeric functions supported by GPU DataFrame expressions. */
+export type GPUScalarFunction = (typeof scalarFunctions)[number];
+
+/** Tests a canonical, lowercase scalar function name. @internal */
+export function isGPUScalarFunction(name: unknown): name is GPUScalarFunction {
+  return scalarFunctions.some(functionName => functionName === name);
+}
+
+/** Applies a supported numeric function while preserving the operand's format and nulls. */
+export function scalarFunction<Columns extends string>(
+  name: GPUScalarFunction,
+  expression: GPUExpression<number | null, Columns>
+): GPUExpression<number | null, Columns> {
+  return makeUnaryExpression(name, expression);
+}
 
 /** Closed binary operations that can be lowered safely into generated WGSL. */
 export type GPUExpressionBinaryOperator =
+  | 'coalesce'
+  | 'nullif'
   | 'add'
   | 'subtract'
   | 'multiply'
@@ -40,6 +76,12 @@ export type GPUExpressionNode =
       components: readonly GPUExpressionNode[];
     }>
   | Readonly<{kind: 'cast'; format: GPUExpressionNumericFormat; operand: GPUExpressionNode}>
+  | Readonly<{
+      kind: 'conditional';
+      condition: GPUExpressionNode;
+      whenTrue: GPUExpressionNode;
+      otherwise: GPUExpressionNode;
+    }>
   | Readonly<{kind: 'column'; name: string}>
   | Readonly<{kind: 'literal'; value: GPUExpressionValue}>
   | Readonly<{kind: 'parameter'; name: string; value: GPUExpressionValue}>
@@ -247,6 +289,39 @@ export function getGPUExpressionColumnNames(expression: GPUExpression<any, strin
   return Array.from(columnNames);
 }
 
+/** Resolves format constraints from result-producing nodes. @internal */
+export function getGPUExpressionResultFormats(
+  node: GPUExpressionNode,
+  columns: ReadonlyMap<string, string | undefined>,
+  formats = new Set<string | undefined>()
+): Set<string | undefined> {
+  switch (node.kind) {
+    case 'column':
+      formats.add(columns.get(node.name));
+      break;
+    case 'cast':
+      formats.add(node.format);
+      break;
+    case 'unary':
+      if (isGPUScalarFunction(node.operator)) {
+        const input = getGPUExpressionResultFormats(node.operand, columns);
+        for (const format of input.size ? input : ['float32']) formats.add(format);
+      } else {
+        getGPUExpressionResultFormats(node.operand, columns, formats);
+      }
+      break;
+    case 'binary':
+      getGPUExpressionResultFormats(node.left, columns, formats);
+      getGPUExpressionResultFormats(node.right, columns, formats);
+      break;
+    case 'conditional':
+      getGPUExpressionResultFormats(node.whenTrue, columns, formats);
+      getGPUExpressionResultFormats(node.otherwise, columns, formats);
+      break;
+  }
+  return formats;
+}
+
 /** Clones every closed node so caller-owned child objects cannot alter an immutable query plan. */
 function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNode {
   switch (node.kind) {
@@ -261,6 +336,13 @@ function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNod
         kind: 'cast',
         format: node.format,
         operand: cloneFrozenGPUExpressionNode(node.operand)
+      });
+    case 'conditional':
+      return Object.freeze({
+        kind: 'conditional',
+        condition: cloneFrozenGPUExpressionNode(node.condition),
+        whenTrue: cloneFrozenGPUExpressionNode(node.whenTrue),
+        otherwise: cloneFrozenGPUExpressionNode(node.otherwise)
       });
     case 'column':
       return Object.freeze({kind: 'column', name: node.name});
@@ -294,6 +376,11 @@ function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: S
       break;
     case 'cast':
       collectGPUExpressionColumnNames(node.operand, columnNames);
+      break;
+    case 'conditional':
+      collectGPUExpressionColumnNames(node.condition, columnNames);
+      collectGPUExpressionColumnNames(node.whenTrue, columnNames);
+      collectGPUExpressionColumnNames(node.otherwise, columnNames);
       break;
     case 'column':
       columnNames.add(node.name);
@@ -396,6 +483,8 @@ function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
     case 'vector':
     case 'cast':
       return getGPUVectorWGSLLayout(node.format).components;
+    case 'conditional':
+      return 1;
     case 'literal':
     case 'parameter':
       return node.value === null ? undefined : 1;
@@ -415,6 +504,40 @@ function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
     case 'column':
       return undefined;
   }
+}
+
+/** Selects a scalar value when the condition is true. A null condition selects the fallback. */
+export function caseWhen<
+  ConditionColumns extends string,
+  TrueColumns extends string,
+  OtherwiseColumns extends string
+>(
+  condition: GPUExpression<boolean | null, ConditionColumns>,
+  whenTrue: GPUExpression<number | null, TrueColumns>,
+  otherwise: GPUExpression<number | null, OtherwiseColumns>
+): GPUExpression<number | null, ConditionColumns | TrueColumns | OtherwiseColumns> {
+  return new GPUExpression({
+    kind: 'conditional',
+    condition: condition.node,
+    whenTrue: whenTrue.node,
+    otherwise: otherwise.node
+  });
+}
+
+/** Returns the first valid scalar value, falling back when the first input is null. */
+export function coalesce<LeftColumns extends string, RightColumns extends string>(
+  value: GPUExpression<number | null, LeftColumns>,
+  fallback: GPUExpression<number | null, RightColumns>
+): GPUExpression<number | null, LeftColumns | RightColumns> {
+  return makeBinaryExpression('coalesce', value, fallback);
+}
+
+/** Returns null when two valid scalar values compare equal. */
+export function nullIf<LeftColumns extends string, RightColumns extends string>(
+  value: GPUExpression<number | null, LeftColumns>,
+  sentinel: GPUExpression<number | null, RightColumns>
+): GPUExpression<number | null, LeftColumns | RightColumns> {
+  return makeBinaryExpression('nullif', value, sentinel);
 }
 
 /** Checks whether the expression produces a boolean result. */

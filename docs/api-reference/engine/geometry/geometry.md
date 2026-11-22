@@ -5,8 +5,8 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 <EngineDocsTabs group="geometry" active="geometry" />
 
-`Geometry` is a compatibility adapter over the CPU-side container from `@math.gl/geometry`.
-New code can import `Geometry` directly from `@math.gl/geometry` and pass it to `Model`.
+`Geometry` is a compatibility adapter over the CPU-side container from `@math.gl/geometry/primitives`.
+New code can import `Geometry` directly from `@math.gl/geometry/primitives` and pass it to `Model`.
 The math.gl container stores source attributes without shader layout metadata; luma.gl creates
 shader layouts when uploading it.
 It stores typed-array attributes, optional indices, and a `bufferLayout`.

@@ -11,7 +11,7 @@ import {
   type GLTFExportSkin
 } from '../../gltf/gltf-exporter';
 import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   type ANARIJSONScene,
   createGeneratedGeometry,

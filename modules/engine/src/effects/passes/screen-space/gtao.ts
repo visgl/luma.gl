@@ -4,7 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for the horizon-based GTAO pipeline. */

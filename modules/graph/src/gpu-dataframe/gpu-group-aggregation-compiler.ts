@@ -14,6 +14,7 @@ import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,
   getGPUAnalyticsInvocationIndexSource,
+  getGPUAnalyticsSelectionMask,
   validateGPUAnalyticsOutputLength
 } from './gpu-analytics-compiler-utils';
 import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
@@ -52,6 +53,14 @@ export class CompiledGPUDataFrameGroupedAggregation<
   }
 }
 
+/** Output names and order for grouped SQL projections. @internal */
+export type GPUGroupedOutputProjection = Readonly<{
+  /** Name of the grouped key in the output schema. */
+  key: string;
+  /** Output names in SELECT order. */
+  columns: readonly string[];
+}>;
+
 /** Adds dense categorical aggregation to source-row work before the shared graph is frozen. */
 export function compileGPUDataFrameGroupedAggregation<
   Source extends GPUTypeMap,
@@ -65,7 +74,8 @@ export function compileGPUDataFrameGroupedAggregation<
   key: keyof Selection & string,
   groupCount: number,
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  projection?: GPUGroupedOutputProjection
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, key, definitions);
@@ -75,9 +85,14 @@ export function compileGPUDataFrameGroupedAggregation<
     Result,
     CompiledGPUDataFrameGroupedAggregation<Result>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context =>
-      addGPUGroupedAggregationToGraph<Selection, Result>(context, key, groupCount, definitions)
+      addGPUGroupedAggregationToGraph<Selection, Result>(
+        context,
+        key,
+        groupCount,
+        definitions,
+        projection
+      )
   });
 }
 
@@ -89,7 +104,9 @@ function validateGPUGroupingSourceColumns<Source extends GPUTypeMap>(
 ): void {
   const columnNames = new Set([
     key,
-    ...definitions.flatMap(definition => (definition.column ? [definition.column] : []))
+    ...definitions.flatMap(definition =>
+      definition.operation !== 'count' && definition.column ? [definition.column] : []
+    )
   ]);
   for (const name of columnNames) {
     if (source.table.gpuConstants[name]) {
@@ -129,7 +146,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   context: GPUDataFrameQueryExtensionContext<Selection>,
   key: keyof Selection & string,
   groupCount: number,
-  definitions: readonly GPUDataFrameAggregationDefinition[]
+  definitions: readonly GPUDataFrameAggregationDefinition[],
+  projection?: GPUGroupedOutputProjection
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -152,7 +170,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       'uint32'
     );
     ownedVectors.push(groupKeys);
-    outputVectors.set(key, groupKeys);
+    const outputKey = projection?.key ?? key;
+    outputVectors.set(outputKey, groupKeys);
     const groupKeyView = graph.importGPUVector(`${prefix}-output-key-vector`, groupKeys).data[0];
     addGPUGroupIdentityPass(graph, `${prefix}-output-key-identity`, groupKeyView);
 
@@ -169,7 +188,9 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           new GPUGroupAggregation({
             id: metricId,
             keys,
-            mask: baseMask,
+            mask: definition.column
+              ? getGPUAnalyticsSelectionMask(context, definition.column, metricId, baseMask)
+              : baseMask,
             output: graph.importGPUVector(`${metricId}-output`, output).data[0],
             operation: 'count'
           })
@@ -215,10 +236,11 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       context.table,
       key,
       definitions,
-      outputVectors
+      outputVectors,
+      projection
     );
     const dictionary = context.dictionaries[key];
-    const dictionaries = Object.freeze(dictionary ? {[key]: dictionary} : {}) as Readonly<
+    const dictionaries = Object.freeze(dictionary ? {[outputKey]: dictionary} : {}) as Readonly<
       GPUDataFrameDictionaries<Result>
     >;
 
@@ -366,15 +388,16 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
   source: GPUTable<Source>,
   key: string,
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  vectors: ReadonlyMap<string, GPUVector<'uint32'> | GPUVector<'float32'>>
+  vectors: ReadonlyMap<string, GPUVector<'uint32'> | GPUVector<'float32'>>,
+  projection?: GPUGroupedOutputProjection
 ): GPUTable<Result> {
   const sourceKey = source.schema.fields.find(field => field.name === key);
   if (!sourceKey) {
     throw new Error('GPUDataFrame grouped result requires an existing key field');
   }
-  const fields: GPUField[] = [
+  const outputFields: GPUField[] = [
     {
-      name: key,
+      name: projection?.key ?? key,
       format: 'uint32',
       nullable: false,
       ...(sourceKey.metadata ? {metadata: new Map(sourceKey.metadata)} : {metadata: new Map()})
@@ -386,6 +409,9 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
       metadata: new Map<string, string>()
     }))
   ];
+  const fields = projection
+    ? projection.columns.map(name => outputFields.find(field => field.name === name)!)
+    : outputFields;
   const gpuData: Record<string, GPUData> = {};
   for (const field of fields) {
     const sourceData = vectors.get(field.name)?.data[0];

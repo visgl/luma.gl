@@ -5,6 +5,10 @@
 import {describe, expect, test} from 'vitest';
 import {parseSQLExpression} from '@math.gl/sql/parser';
 import {
+  caseWhen,
+  coalesce,
+  nullIf,
+  scalarFunction,
   column,
   literal,
   not,
@@ -57,7 +61,7 @@ describe('GPU dataframe vector syntax', () => {
       'ARRAY[x]::REAL[1]',
       'ARRAY[x,y]::DOUBLE[2]',
       'CAST(x AS VARCHAR)',
-      'sqrt(x)'
+      'unsupported(x)'
     ]) {
       expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression(sql))).toThrow();
     }
@@ -68,4 +72,36 @@ test('rejects scalar formats in vector constructors', () => {
   for (const format of ['float32', 'sint32', 'uint32'] as const) {
     expect(() => vector(format, [literal(1), literal(2)])).toThrow(/width/);
   }
+});
+
+test('lowers scalar SQL CASE into the typed DataFrame expression', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('CASE WHEN x > 0 THEN x ELSE NULL END')
+  );
+  expect(expression.node).toEqual(
+    caseWhen(column('x').greaterThan(literal(0)), column('x'), literal(null)).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x']);
+});
+
+test('shares numeric SQL functions with typed DataFrame expressions', () => {
+  expect(makeGPUExpressionFromPortableAST(parseSQLExpression('CeIlInG(x)')).node).toEqual(
+    scalarFunction('ceiling', column('x')).node
+  );
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('ROUND(x, 2)'))).toThrow(
+    /one argument/
+  );
+});
+
+test('shares SQL null-handling syntax with typed DataFrame expressions', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('COALESCE(NULLIF(x, 0), y, 99)')
+  );
+  expect(expression.node).toEqual(
+    coalesce(nullIf(column('x'), literal(0)), coalesce(column('y'), literal(99))).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x', 'y']);
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('NULLIF(x)'))).toThrow(
+    /two arguments/
+  );
 });

@@ -10,6 +10,7 @@ import {describe, expect, test} from 'vitest';
 import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
   getRayTracingScenePresentationShader,
+  getRayTracingMomentShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER,
@@ -25,7 +26,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(320);
+    expect(reflection.uniforms[0].size).toBe(368);
     expect(reflection.uniforms[0].members?.map(({name, offset}) => ({name, offset}))).toEqual([
       {name: 'inverseViewProjection', offset: 0},
       {name: 'cameraPosition', offset: 64},
@@ -40,7 +41,10 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'previousCameraPosition', offset: 256},
       {name: 'sampling', offset: 272},
       {name: 'imageRegion', offset: 288},
-      {name: 'emitters', offset: 304}
+      {name: 'emitters', offset: 304},
+      {name: 'environmentRadiance', offset: 320},
+      {name: 'environmentMap', offset: 336},
+      {name: 'visibility', offset: 352}
     ]);
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
@@ -72,7 +76,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(320);
+    expect(reflection.uniforms[0].size).toBe(368);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'historyImage', binding: 1},
       {name: 'historyMetadata', binding: 2}
@@ -130,7 +134,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(320);
+    expect(reflection.uniforms[0].size).toBe(368);
     expect(storageBuffers.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'triangles', binding: 2},
@@ -180,7 +184,12 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain(
       'fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool'
     );
-    expect(RAY_TRACING_SCENE_SHADER).toContain('if (intersectsScene(shadowRay, shadowDistance))');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'getAnalyticShadowTransmission(shadowRay, shadowDistance)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'select(1.0, 0.0, intersectsScene(ray, maximumDistance))'
+    );
     expect(RAY_TRACING_SCENE_SHADER).not.toContain(
       'for (var primitiveIndex = 0u; primitiveIndex < uniforms.dimensions.z; primitiveIndex++)'
     );
@@ -783,6 +792,28 @@ test('full-frame channels fit CORE buffer and storage texture limits', () => {
       'channelViewProjection'
     ])
   );
+});
+
+test('optional variance history stays within the trace, carry, and presentation binding limits', () => {
+  for (const [source, carry, location] of [
+    [RAY_TRACING_SCENE_SHADER, false, 13],
+    [RAY_TRACING_HISTORY_CARRY_SHADER, true, 5]
+  ] as const) {
+    const reflection = new WgslReflect(getRayTracingMomentShader(source, carry));
+    expect(reflection.textures.find(texture => texture.name === 'historyMoments')?.binding).toBe(
+      location
+    );
+    expect(reflection.storage.find(texture => texture.name === 'outputMoments')?.binding).toBe(
+      location + 1
+    );
+  }
+  const presentation = new WgslReflect(
+    getRayTracingScenePresentationShader({toneMapMode: 0, outputEncoding: 0, debugView: 'variance'})
+  );
+  expect(presentation.textures.map(({name, binding}) => ({name, binding}))).toContainEqual({
+    name: 'momentsImage',
+    binding: 2
+  });
 });
 
 test('guided presentation adds only a sampled metadata binding', () => {

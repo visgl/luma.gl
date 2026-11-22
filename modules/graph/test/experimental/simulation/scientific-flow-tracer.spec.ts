@@ -7,7 +7,7 @@ import {
   ScientificParticleStatus,
   type ScientificVectorFieldInput,
   type ScientificFlowTraceResult
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 function uniform(speed = 0): ScientificVectorFieldInput {

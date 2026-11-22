@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {decomposePhysicsTransform} from '@luma.gl/engine';
 import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
 import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';

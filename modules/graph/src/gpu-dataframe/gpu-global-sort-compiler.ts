@@ -30,6 +30,7 @@ import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
   compileGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
   type GPUDataFrameQueryExtensionResult,
@@ -56,7 +57,7 @@ export class CompiledGPUDataFrameGlobalSort<
 > extends CompiledGPUDataFrameSort<T> {
   /** One dense globally ordered source-row permutation; only the selected prefix is meaningful. */
   readonly globalRowIndices: GPUVector<'uint32'>;
-  /** One GPU-resident count of selected rows after applying the optional global top-K limit. */
+  /** One GPU-resident count of selected rows after applying the optional global page. */
   readonly globalSelectedCount: GPUVector<'uint32'>;
 
   /** @internal */
@@ -84,7 +85,8 @@ export function compileGPUDataFrameGlobalSort<
   derivedColumns: readonly GPUDataFrameDerivedColumn[],
   column: keyof Selection & string,
   options: GPUDataFrameNormalizedSortOptions,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): CompiledGPUDataFrameGlobalSort<Selection> {
   validateGPUAnalyticsSource(source, [column]);
   validateGPUGlobalSortCapacity(source, graph);
@@ -94,8 +96,7 @@ export function compileGPUDataFrameGlobalSort<
     Selection,
     CompiledGPUDataFrameGlobalSort<Selection>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
-    prepare: context => addGPUGlobalSortToGraph(context, column, options)
+    prepare: context => addGPUGlobalSortToGraph(context, column, options, resultColumns)
   });
 }
 
@@ -129,7 +130,8 @@ function validateGPUGlobalSortCapacity<Source extends GPUTypeMap>(
 function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   column: keyof Selection & string,
-  options: GPUDataFrameNormalizedSortOptions
+  options: GPUDataFrameNormalizedSortOptions,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): GPUDataFrameQueryExtensionResult<Selection, CompiledGPUDataFrameGlobalSort<Selection>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-global-sort`;
@@ -222,10 +224,11 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
         scratch,
         output: globalRows,
         count: selectedCount,
+        offset: options.offset ?? 0,
         limit: options.limit ?? MAXIMUM_UINT32
       });
 
-      if (options.limit !== undefined) {
+      if (options.offset || options.limit !== undefined) {
         let globalOffset = 0;
         let fallbackOffset = 0;
         for (const [batchIndex, batch] of context.table.batches.entries()) {
@@ -235,7 +238,8 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
               ranks: scratch.sourceClasses,
               selection,
               globalOffset,
-              limit: options.limit
+              offset: options.offset ?? 0,
+              limit: options.limit ?? MAXIMUM_UINT32
             });
             graph.add(
               new GPUVisibilityWorkflow({
@@ -254,10 +258,12 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
       }
     }
 
+    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
-      table: context.table,
-      validity: context.validity,
-      dictionaries: context.dictionaries,
+      table: projection?.table ?? context.table,
+      validity: projection?.validity ?? context.validity,
+      dictionaries: projection?.dictionaries ?? context.dictionaries,
+      ownedTables: projection ? [projection] : [],
       ownedVectors,
       createCompiled: props =>
         new CompiledGPUDataFrameGlobalSort(
@@ -460,6 +466,7 @@ function addGPUGlobalSortPublishPass(
     scratch: GPUGlobalSortScratch;
     output: GraphDataView<'uint32'>;
     count: GraphDataView<'uint32'>;
+    offset: number;
     limit: number;
   }
 ): void {
@@ -471,6 +478,7 @@ const SOURCE_ROW_OFFSET: u32 = ${getViewElementOffset(props.scratch.sourceRows)}
 const RANK_OFFSET: u32 = ${getViewElementOffset(props.scratch.sourceClasses)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
+const ROW_OFFSET: u32 = ${props.offset}u;
 const ROW_LIMIT: u32 = ${props.limit}u;
 @group(0) @binding(0) var<storage, read> sortedClasses: array<u32>;
 @group(0) @binding(1) var<storage, read> sortedOrdinals: array<u32>;
@@ -489,13 +497,21 @@ fn main(
   let ordinal = sortedOrdinals[ORDINAL_OFFSET + index];
   let accepted = sortedClasses[CLASS_OFFSET + index] != 3u;
   sourceRanks[RANK_OFFSET + ordinal] = select(0xffffffffu, index, accepted);
-  outputRows[OUTPUT_OFFSET + index] = select(
-    0u,
-    sourceRows[SOURCE_ROW_OFFSET + ordinal],
-    accepted && index < ROW_LIMIT
-  );
+  let skipped = min(ROW_OFFSET, ELEMENT_COUNT);
+  if (index >= ELEMENT_COUNT - skipped) {
+    outputRows[OUTPUT_OFFSET + index] = 0u;
+  }
+  if (index >= skipped) {
+    let pageIndex = index - skipped;
+    outputRows[OUTPUT_OFFSET + pageIndex] = select(
+      0u,
+      sourceRows[SOURCE_ROW_OFFSET + ordinal],
+      accepted && pageIndex < ROW_LIMIT
+    );
+  }
   if (index == 0u) {
-    selectedCounts[COUNT_OFFSET] = min(selectedCounts[COUNT_OFFSET], ROW_LIMIT);
+    let total = selectedCounts[COUNT_OFFSET];
+    selectedCounts[COUNT_OFFSET] = min(total - min(total, ROW_OFFSET), ROW_LIMIT);
   }
 }`;
   addGPUAnalyticsComputePass(graph, {
@@ -521,7 +537,7 @@ fn main(
   });
 }
 
-/** Applies a global rank limit back to one original source-aligned selection-mask chunk. */
+/** Applies a global rank window back to one original source-aligned selection-mask chunk. */
 function addGPUGlobalTopKSelectionPass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
@@ -529,6 +545,7 @@ function addGPUGlobalTopKSelectionPass(
     ranks: GraphDataView<'uint32'>;
     selection: GraphDataView<'uint32'>;
     globalOffset: number;
+    offset: number;
     limit: number;
   }
 ): void {
@@ -536,6 +553,7 @@ function addGPUGlobalTopKSelectionPass(
 const ELEMENT_COUNT: u32 = ${props.selection.length}u;
 const RANK_OFFSET: u32 = ${getViewElementOffset(props.ranks) + props.globalOffset}u;
 const SELECTION_OFFSET: u32 = ${getViewElementOffset(props.selection)}u;
+const ROW_OFFSET: u32 = ${props.offset}u;
 const ROW_LIMIT: u32 = ${props.limit}u;
 @group(0) @binding(0) var<storage, read> sourceRanks: array<u32>;
 @group(0) @binding(1) var<storage, read_write> selectionMask: array<u32>;
@@ -547,8 +565,9 @@ fn main(
 ) {
   ${getGPUAnalyticsInvocationIndexSource(graph, props.selection.length)}
   if (index < ELEMENT_COUNT) {
+    let rank = sourceRanks[RANK_OFFSET + index];
     selectionMask[SELECTION_OFFSET + index] =
-      select(0u, 1u, sourceRanks[RANK_OFFSET + index] < ROW_LIMIT);
+      select(0u, 1u, rank != 0xffffffffu && rank >= ROW_OFFSET && rank - ROW_OFFSET < ROW_LIMIT);
   }
 }`;
   addGPUAnalyticsComputePass(graph, {
