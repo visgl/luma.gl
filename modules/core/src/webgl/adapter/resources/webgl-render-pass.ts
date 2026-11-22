@@ -135,6 +135,7 @@ export class WEBGLRenderPass extends RenderPass {
         gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL]);
       }
     }
+    (this.props.framebuffer as WEBGLFramebuffer | null)?.resolveMultisampleColors();
     this.device.popState();
     // should add commands to CommandEncoder.
     this.destroy();
@@ -159,7 +160,8 @@ export class WEBGLRenderPass extends RenderPass {
     const glParameters: GLParameters = {...this.glParameters};
 
     // Framebuffers are specified using parameters in WebGL
-    glParameters.framebuffer = this.props.framebuffer || null;
+    const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+    glParameters.framebuffer = framebuffer?.multisampleHandle ?? framebuffer;
 
     if (this.props.depthReadOnly) {
       glParameters.depthMask = !this.props.depthReadOnly;
@@ -387,7 +389,9 @@ export class WEBGLRenderPass extends RenderPass {
           stencilMask: 0xffffffff,
           scissorTest: false
         },
-        () => this.device.gl.clear(GL.STENCIL_BUFFER_BIT)
+        () => {
+          this.device.gl.clear(GL.STENCIL_BUFFER_BIT);
+        }
       );
     }
   }
@@ -396,7 +400,7 @@ export class WEBGLRenderPass extends RenderPass {
    * WebGL2 - clear a specific color buffer
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
-    withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
+    withGLParameters(this.device.gl, {framebuffer: this.glParameters.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int8Array:

@@ -16,6 +16,8 @@ import {log} from '../../utils/log';
 export type FramebufferProps = DeviceResourceProps & {
   width?: number;
   height?: number;
+  /** Sample count for automatically allocated offscreen render storage. */
+  samples?: 1 | 4;
   colorAttachments?: (TextureView | Texture | TextureFormatColor)[];
   depthStencilAttachment?: (TextureView | Texture | TextureFormatDepthStencil) | null;
 };
@@ -42,6 +44,25 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     super(device, props, Framebuffer.defaultProps);
     this.width = this.props.width;
     this.height = this.props.height;
+    if (this.props.samples === 4) {
+      const depth = this.props.depthStencilAttachment;
+      if (depth && typeof depth !== 'string') {
+        throw new Error('Multisampled framebuffer depth/stencil storage requires a format string');
+      }
+      for (const attachment of this.props.colorAttachments) {
+        if (typeof attachment === 'string') continue;
+        const texture = attachment instanceof Texture ? attachment : attachment.texture;
+        if (
+          texture.samples !== 1 ||
+          texture.width !== this.width ||
+          texture.height !== this.height
+        ) {
+          throw new Error(
+            'Multisampled framebuffer color targets must be matching single-sample textures'
+          );
+        }
+      }
+    }
   }
 
   /**
@@ -56,10 +77,12 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     // Backend-owned storage may have no texture view. Preserve the requested format so
     // the new framebuffer can allocate its own storage.
     const depthStencilAttachment =
-      this.depthStencilAttachment?.texture.clone(size) ??
-      (typeof this.props.depthStencilAttachment === 'string'
+      this.props.samples === 4
         ? this.props.depthStencilAttachment
-        : null);
+        : (this.depthStencilAttachment?.texture.clone(size) ??
+          (typeof this.props.depthStencilAttachment === 'string'
+            ? this.props.depthStencilAttachment
+            : null));
 
     const framebuffer = this.device.createFramebuffer({
       ...this.props,
@@ -153,7 +176,11 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
   protected createDepthStencilTexture(format: TextureFormat): Texture {
     return this.device.createTexture({
       id: `${this.id}-depth-stencil-attachment`,
-      usage: Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
+      usage:
+        this.props.samples === 4
+          ? Texture.RENDER_ATTACHMENT
+          : Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
+      samples: this.device.type === 'webgpu' ? this.props.samples : 1,
       format,
       width: this.width,
       height: this.height
@@ -196,6 +223,7 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     ...DeviceResource.defaultProps,
     width: 1,
     height: 1,
+    samples: 1,
     colorAttachments: [], // ['rgba8unorm'],
     depthStencilAttachment: null // 'depth24plus-stencil8'
   };
