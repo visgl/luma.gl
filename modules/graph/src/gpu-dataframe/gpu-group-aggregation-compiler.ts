@@ -54,6 +54,8 @@ import {
 
 import {addGPUGlobalOrdering, type GPUGlobalSortKey} from './gpu-global-sort-compiler';
 
+import {prepareGPUJoinAggregation, type GPUAggregateJoin} from './gpu-join-compiler';
+
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
 
@@ -110,7 +112,8 @@ export function compileGPUDataFrameObservedAggregation(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   columns: readonly string[],
   ordering?: readonly GPUGlobalSortKey[],
-  having?: GPUExpression<boolean, string>
+  having?: GPUExpression<boolean, string>,
+  join?: GPUAggregateJoin
 ): CompiledGPUDataFrameGroupedAggregation {
   if (source.numRows > 0) validateGPUGroupingCapacity(source, source.numRows, graph);
   validateGPUGroupingSourceColumns(
@@ -124,17 +127,20 @@ export function compileGPUDataFrameObservedAggregation(
     GPUTypeMap,
     CompiledGPUDataFrameGroupedAggregation
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    prepare: context =>
-      addGPUGroupedAggregationToGraph(
-        context,
-        keys,
-        source.numRows,
-        definitions,
-        columns,
-        true,
-        ordering,
-        having
-      )
+    prepare: context => {
+      const prepare = (input: typeof context) =>
+        addGPUGroupedAggregationToGraph(
+          input,
+          keys,
+          source.numRows,
+          definitions,
+          columns,
+          true,
+          ordering,
+          having
+        );
+      return join ? prepareGPUJoinAggregation(source, context, join, prepare) : prepare(context);
+    }
   });
 }
 
@@ -154,7 +160,8 @@ export function compileGPUDataFrameGroupedAggregation<
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   projection?: GPUGroupedOutputProjection,
   ordering?: readonly GPUGlobalSortKey<keyof Result & string>[],
-  having?: GPUExpression<boolean, string>
+  having?: GPUExpression<boolean, string>,
+  join?: GPUAggregateJoin
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, [key], definitions);
@@ -164,17 +171,20 @@ export function compileGPUDataFrameGroupedAggregation<
     Result,
     CompiledGPUDataFrameGroupedAggregation<Result>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    prepare: context =>
-      addGPUGroupedAggregationToGraph<Selection, Result>(
-        context,
-        [{source: key, output: projection?.key ?? key}],
-        groupCount,
-        definitions,
-        projection?.columns,
-        false,
-        ordering,
-        having
-      )
+    prepare: context => {
+      const prepare = (input: typeof context) =>
+        addGPUGroupedAggregationToGraph<Selection, Result>(
+          input,
+          [{source: key, output: projection?.key ?? key}],
+          groupCount,
+          definitions,
+          projection?.columns,
+          false,
+          ordering,
+          having
+        );
+      return join ? prepareGPUJoinAggregation(source, context, join, prepare) : prepare(context);
+    }
   });
 }
 
