@@ -127,3 +127,17 @@ The renderer samples each texel with probability proportional to its luminance a
 Enable `filteredCutouts` to use a camera-ray footprint when sampling mipmapped triangle alpha masks. Primary color, picking, and primary-hit channels use the internal ray-tracing pixel spacing. Coverage comes from the authored mip chain and the existing alpha cutoff. Secondary paths and shadow rays carry the same footprint from each receiver, including explicit emitter and environment samples. Emitter endpoints use that footprint for alpha testing and mip zero for paired emission evaluation. Analytic sphere masks use mip zero.
 
 With PBR transport, `transmissiveShadows` lets analytic lights pass attenuated RGB through thin diffuse-transmission materials. The renderer follows the original light direction and multiplies the transmission of up to eight layers. Opaque blockers, smooth refractive interfaces, and deeper stacks still block the connection. This approximation leaves emitter and environment visibility unchanged. Both settings are off by default.
+
+## Reconstruction benchmarks[​](#reconstruction-benchmarks "Direct link to Reconstruction benchmarks")
+
+Generate a high-sample display RGB reference with an independent seed, then run all three presentation modes at identical frame checkpoints and sample seeds. Use the same viewport and scene settings for the reference and the sweep.
+
+```
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 64 --seed 73 --output /tmp/reconstruction-reference
+
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --compare-reconstruction --denoise 1 --seed 17 --frame-sweep 1,4,8,16 --reference /tmp/reconstruction-reference/chart.png --output /tmp/reconstruction-comparison
+```
+
+The report includes display RGB error, samples, logical allocation estimates, and, when timestamp queries are available, total GPU pass time and per-frame median and p95. It interpolates comparison points only across the GPU costs observed for all three modes. Linear HDR capture reads unfiltered history, so it cannot measure a presentation filter’s image error.
+
+For motion checks, run `--motion --temporal off` and `--motion --temporal on` with the same `--frames`, seed and viewport. The captures record the animation time at the final frame. Add `--linear-hdr` to summarize the minimum, maximum, and mean per-pixel retained sample confidence and the number of pixels with zero confidence. Reference images must show the same pose. A reference from the other temporal mode measures the modes’ difference and does not establish the correct radiance at that pose.
