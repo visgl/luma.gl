@@ -28,6 +28,7 @@ import {
 } from '@luma.gl/graph/gpu-core';
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
+  type GPUAnalyticsScalarFormat,
   addGPUAnalyticsComputePass,
   getGPUAnalyticsInvocationIndexSource,
   getGPUAnalyticsSelectionMask,
@@ -48,7 +49,6 @@ import {
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
-type GPUGroupingFormat = 'uint32' | 'sint32' | 'float32';
 
 type GPUGroupedMetricState = {
   values: GraphVectorView<'float32'>;
@@ -214,7 +214,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         )
       )
     );
-    const outputVectors = new Map<string, GPUVector<GPUGroupingFormat>>();
+    const outputVectors = new Map<string, GPUVector<GPUAnalyticsScalarFormat>>();
     const outputs = groupingKeys.map(({output}, index) => {
       const vector = createGPUGroupedOutputVector(
         graph.device,
@@ -395,8 +395,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
 function addGPUObservedGroups(
   context: Pick<GPUDataFrameQueryExtensionContext<GPUTypeMap>, 'graph' | 'selectionMask'>,
   prefix: string,
-  inputs: readonly GraphVectorView<GPUGroupingFormat>[],
-  outputs: readonly GraphDataView<GPUGroupingFormat>[],
+  inputs: readonly GraphVectorView<GPUAnalyticsScalarFormat>[],
+  outputs: readonly GraphDataView<GPUAnalyticsScalarFormat>[],
   nullableKeys: readonly (
     | {input?: GraphVectorView<'uint32'>; output: GraphDataView<'uint32'>}
     | undefined
@@ -424,7 +424,7 @@ function addGPUObservedGroups(
     return {keys: selectionMask, rows, count, mask};
   }
 
-  const words = (view: GraphDataView<GPUGroupingFormat>) => {
+  const words = (view: GraphDataView<GPUAnalyticsScalarFormat>) => {
     const packed = graph.createDataView(view.buffer, {
       format: 'uint32',
       length: view.length,
@@ -634,7 +634,7 @@ function addGPUPairPass(
 function getGPUGroupingFormat<T extends GPUTypeMap>(
   table: GPUTable<T>,
   name: string
-): GPUGroupingFormat {
+): GPUAnalyticsScalarFormat {
   const format = table.schema.fields.find(field => field.name === name)?.format;
   if (format !== 'uint32' && format !== 'sint32' && format !== 'float32') {
     throw new Error('GPUDataFrame grouping requires 32-bit numeric keys');
@@ -643,7 +643,10 @@ function getGPUGroupingFormat<T extends GPUTypeMap>(
 }
 
 /** Resolves one batch-aligned grouped input, including empty sources. */
-function getGPUGroupingVector<Selection extends GPUTypeMap, Format extends GPUGroupingFormat>(
+function getGPUGroupingVector<
+  Selection extends GPUTypeMap,
+  Format extends GPUAnalyticsScalarFormat
+>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   name: string,
   format: Format
@@ -744,7 +747,7 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
 }
 
 /** Creates one owned dense, renderer-compatible result vector with one physical GPU chunk. */
-function createGPUGroupedOutputVector<Format extends GPUGroupingFormat>(
+function createGPUGroupedOutputVector<Format extends GPUAnalyticsScalarFormat>(
   device: Device,
   name: string,
   length: number,
@@ -769,7 +772,7 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
   source: GPUTable<Source>,
   keys: GPUGroupingKeys,
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  vectors: ReadonlyMap<string, GPUVector<GPUGroupingFormat>>,
+  vectors: ReadonlyMap<string, GPUVector<GPUAnalyticsScalarFormat>>,
   columns?: readonly string[],
   observed = false
 ): GPUTable<Result> {
