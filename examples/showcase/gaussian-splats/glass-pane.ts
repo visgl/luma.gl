@@ -7,6 +7,7 @@ import {Model} from '@luma.gl/engine';
 import {SplatRenderer, type GPUSplatData, type SplatRendererProps} from '@luma.gl/engine/splats';
 import {Matrix4} from '@math.gl/core';
 
+/** Shared geometry for the pane depth and color draws. */
 const PANE_VERTEX_SHADER = /* wgsl */ `
 @group(0) @binding(auto) var<uniform> paneTransform: mat4x4<f32>;
 
@@ -22,6 +23,7 @@ struct PaneVertex {
 
 `;
 
+/** Translucent tint with a brighter rim to show the pane edge. */
 const PANE_COLOR_SHADER = /* wgsl */ `
 @fragment fn fragmentMain(input: PaneVertex) -> @location(0) vec4<f32> {
   let edge = max(abs(input.local.x), abs(input.local.y));
@@ -30,14 +32,22 @@ const PANE_COLOR_SHADER = /* wgsl */ `
 }
 `;
 
+/** Composites a moving transparent pane with WebGPU splats. */
 export class GaussianSplatGlassPane {
+  /** World-to-clip matrix shared by both pane models. */
   private readonly transform: Buffer;
+  /** Writes the moving pane depth to the sampled attachment. */
   private readonly depthPane: Model;
+  /** Blends the pane tint into the presentation framebuffer. */
   private readonly colorPane: Model;
+  /** Shares one sort and source batches across both depth intervals. */
   private readonly splats: SplatRenderer;
+  /** Depth-only framebuffer sized to the current canvas. */
   private depthFramebuffer?: Framebuffer;
+  /** Owned depth bound sampled by both filtered splat draws. */
   private depthTexture?: Texture;
 
+  /** Creates the pane models and the single-sample filtered splat renderer. */
   constructor(private readonly device: Device) {
     this.transform = device.createBuffer({byteLength: 64, usage: Buffer.UNIFORM | Buffer.COPY_DST});
     const paneProps = {
@@ -68,6 +78,9 @@ export class GaussianSplatGlassPane {
     this.splats = new SplatRenderer(device, {depthIntervalSamples: 1});
   }
 
+  /**
+   * Borrows the scene batches, renders the pane depth, then draws behind splats, glass, and front splats.
+   */
   draw(
     batches: readonly GPUSplatData[],
     props: SplatRendererProps & {modelViewProjectionMatrix: readonly number[]},
@@ -124,6 +137,7 @@ export class GaussianSplatGlassPane {
     colorPass.end();
   }
 
+  /** Releases demo resources. The example owns the source batches and canvas. */
   destroy(): void {
     this.splats.destroy();
     this.colorPane.destroy();

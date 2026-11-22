@@ -119,7 +119,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   readonly batches: GPUSplatData[];
 
   private readonly executionMode: GaussianSplatExecutionMode;
+  /** Records graph and trace data for the shared InfoBox panels. */
   private readonly diagnostics?: GPUGraphDiagnostics;
+  /** Owns the Settings, GPU Graph, and GPU Trace tabs. */
   private panels?: ExamplePanelManager;
   private readonly renderProfile: GaussianSplatRenderProfile;
   private graphFallbackReason: string | undefined;
@@ -146,7 +148,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private expectedBatchCount = GAUSSIAN_SPLAT_BATCH_COUNT;
   private loadedSplatCount = 0;
   private autoOrbit = true;
+  /** Owns the optional depth-interval rendering path. */
   private glassPane?: GaussianSplatGlassPane;
+  /** Whether the selected scene can use the WebGPU glass renderer. */
   private readonly supportsGlassPane: boolean;
   private orbitControls: OrbitControls | null = null;
   private loadAbortController: AbortController | null = null;
@@ -1189,6 +1193,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  /** Detaches listeners when the Settings panel unmounts. */
   private removePanelControls(): void {
     for (const dispose of this.controlDisposers) dispose();
     this.controlDisposers = [];
