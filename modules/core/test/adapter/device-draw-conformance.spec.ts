@@ -184,6 +184,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       colorAttachmentFormats: ['rgba8unorm'],
       depthStencilAttachmentFormat: 'depth24plus-stencil8',
       parameters: {
+        colorMask: 0,
         stencilReadMask: 0xff,
         stencilWriteMask: 0xff,
         stencilCompare: 'always',
@@ -223,7 +224,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
     });
 
     // WebGL scissors clears and WebGPU doesn't, so clear in a separate pass
-    device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1], clearStencil: 0}).end();
+    device.beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1], clearStencil: 0}).end();
     // Write stencil value 1 into the right pixel only
     const writePass = device.beginRenderPass({
       framebuffer,
@@ -236,15 +237,11 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
     writePass.setParameters({stencilReference: 1});
     writePass.draw({vertexCount: 3});
     writePass.end();
-    // Clear only the color, so the stencil test decides which pixels the next draw colors
-    device
-      .beginRenderPass({
-        framebuffer,
-        clearColor: [0, 0, 0, 1],
-        clearDepth: false,
-        clearStencil: false
-      })
-      .end();
+    device.submit();
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} stencil population preserves both color pixels`
+    ).toEqual([0, 0, 255, 255, 0, 0, 255, 255]);
 
     // The full-screen triangle covers both pixels; the stencil test keeps only the right one
     const testPass = device.beginRenderPass({
@@ -262,7 +259,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
     expect(
       await readTexturePixels(device, colorTexture, 2),
       `${device.type} stencil test masks the left pixel`
-    ).toEqual([0, 0, 0, 255, 255, 0, 0, 255]);
+    ).toEqual([0, 0, 255, 255, 255, 0, 0, 255]);
 
     framebuffer.destroy();
     depthStencilTexture.destroy();

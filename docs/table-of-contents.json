@@ -122,7 +122,8 @@
                   "api-guide/gpu/gpu-rendering",
                   "api-guide/gpu/gpu-antialiasing",
                   "api-guide/gpu/gpu-parameters",
-                  "api-guide/gpu/depth-buffers"
+                  "api-guide/gpu/depth-buffers",
+                  "api-guide/gpu/stencil-buffers"
                 ]
               },
               {
