@@ -11,16 +11,40 @@ import * as cpuBackend from '../operations/cpu/index';
  */
 export type BackendModule = Record<string, unknown>;
 
+/** Lazily imports the built-in backend module for one device type. */
+export type BackendModuleLoader = () => Promise<BackendModule>;
+
+/** Options for a backend registry. */
+export type BackendRegistryProps = {
+  /**
+   * Built-in backend loaders keyed by device type. Asynchronous lookup uses them for handlers that
+   * have not been registered. Defaults to the WebGL and WebGPU backends.
+   */
+  defaultModuleLoaders?: Readonly<Record<string, BackendModuleLoader>>;
+};
+
+const DEFAULT_MODULE_LOADERS: Readonly<Record<string, BackendModuleLoader>> = {
+  webgl: () => import('../operations/webgl/index'),
+  webgpu: () => import('../operations/webgpu/index')
+};
+
 /**
  * Registry for operation backends keyed by luma.gl device type.
  *
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
  * with dynamic imports when a requested handler has not been registered for those device types.
+ * Registered handlers take precedence over the built-in handlers.
  */
-class BackendRegistry {
+export class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
     cpu: cpuBackend
   };
+  private readonly _defaultModuleLoaders: Readonly<Record<string, BackendModuleLoader>>;
+
+  /** Creates a registry with the CPU backend registered. */
+  constructor(props: BackendRegistryProps = {}) {
+    this._defaultModuleLoaders = props.defaultModuleLoaders ?? DEFAULT_MODULE_LOADERS;
+  }
 
   /**
    * Registers operation handlers for a device type.
@@ -33,82 +57,51 @@ class BackendRegistry {
     moduleOrPromise: BackendModule | Promise<BackendModule>
   ): Promise<BackendModule> {
     const existingModuleOrPromise = this._modules[deviceType];
-
-    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
-      const loader = Promise.all([
-        Promise.resolve(existingModuleOrPromise || {}),
-        moduleOrPromise as Promise<BackendModule>
-      ]).then(([existingModule, incomingModule]) => ({
-        ...existingModule,
-        ...incomingModule
-      }));
-      this._modules[deviceType] = loader;
-      loader
-        .then(module => {
-          this._modules[deviceType] = module;
-        })
-        .catch(ex => {
-          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-        });
-      return loader;
+    if (!isPromise(moduleOrPromise) && !isPromise(existingModuleOrPromise)) {
+      const mergedModule = {...existingModuleOrPromise, ...moduleOrPromise};
+      this._modules[deviceType] = mergedModule;
+      return Promise.resolve(mergedModule);
     }
 
-    if (
-      existingModuleOrPromise &&
-      typeof (existingModuleOrPromise as Promise<BackendModule>).then === 'function'
-    ) {
-      const loader = Promise.resolve(existingModuleOrPromise)
-        .then(existingModule => ({
-          ...existingModule,
-          ...moduleOrPromise
-        }))
-        .then(module => {
+    const loader = Promise.all([existingModuleOrPromise || {}, moduleOrPromise]).then(
+      ([existingModule, incomingModule]) => ({...existingModule, ...incomingModule})
+    );
+    this._modules[deviceType] = loader;
+    loader
+      .then(module => {
+        // A later registration or clear() owns the registry entry now.
+        if (this._modules[deviceType] === loader) {
           this._modules[deviceType] = module;
-          return module;
-        })
-        .catch(ex => {
-          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-          throw ex;
-        });
-      this._modules[deviceType] = loader;
-      return loader;
-    }
-
-    const mergedModule = {
-      ...(existingModuleOrPromise || {}),
-      ...moduleOrPromise
-    };
-    this._modules[deviceType] = mergedModule;
-    return Promise.resolve(mergedModule);
+        }
+      })
+      .catch(ex => {
+        log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+      });
+    return loader;
   }
 
   /**
    * Resolves an operation handler for a device type.
    *
-   * Pending async backend registrations are awaited before lookup.
+   * Pending async backend registrations are awaited before lookup. When the requested handler is
+   * not registered, the built-in backend for the device type is imported and its handlers are
+   * added beneath the registered ones.
    */
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
-    let module = this._modules[deviceType];
-    if (!module) {
-      if (deviceType === 'webgl') {
-        module = this.add('webgl', import('../operations/webgl/index'));
-      } else if (deviceType === 'webgpu') {
-        module = this.add('webgpu', import('../operations/webgpu/index'));
-      } else {
-        throw new Error(`${deviceType} backend not registered`);
-      }
-    }
-    const resolvedModule = await module;
-    let operationHandler = resolvedModule[operationName];
-    // A partial registration must not hide the other built-in operations.
-    if (typeof operationHandler !== 'function') {
-      if (deviceType === 'webgl') {
-        const defaultModule: BackendModule = await import('../operations/webgl/index');
-        operationHandler = defaultModule[operationName];
-      } else if (deviceType === 'webgpu') {
-        const defaultModule: BackendModule = await import('../operations/webgpu/index');
-        operationHandler = defaultModule[operationName];
-      }
+    const registeredModule = await this._modules[deviceType];
+    let operationHandler = registeredModule?.[operationName];
+    const loadDefaultModule = this._defaultModuleLoaders[deviceType];
+    if (typeof operationHandler !== 'function' && loadDefaultModule) {
+      // The registry entry is not replaced while the import is pending, so getSync() keeps
+      // serving registered handlers, and a failed import rejects only this lookup.
+      const defaultModule = await loadDefaultModule();
+      // Registrations made while the import was pending take precedence.
+      const currentModule = await this._modules[deviceType];
+      operationHandler = this._addDefaultModule(deviceType, defaultModule, currentModule)[
+        operationName
+      ];
+    } else if (!registeredModule) {
+      throw new Error(`${deviceType} backend not registered`);
     }
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
@@ -126,11 +119,10 @@ class BackendRegistry {
     if (!moduleOrPromise) {
       throw new Error(`${deviceType} backend not registered`);
     }
-    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
+    if (isPromise(moduleOrPromise)) {
       throw new Error(`${deviceType} backend is not loaded yet`);
     }
-    const module = moduleOrPromise as BackendModule;
-    const operationHandler = module[operationName];
+    const operationHandler = moduleOrPromise[operationName];
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
@@ -141,6 +133,34 @@ class BackendRegistry {
   clear() {
     this._modules = {};
   }
+
+  /**
+   * Merges built-in handlers beneath registered ones. Registered values win unless they are
+   * `undefined`, so an unset optional handler does not hide the built-in. The merged module is
+   * stored only when no newer registration is pending.
+   */
+  private _addDefaultModule(
+    deviceType: string,
+    defaultModule: BackendModule,
+    registeredModule: BackendModule | undefined
+  ): BackendModule {
+    const mergedModule: BackendModule = {...defaultModule};
+    for (const [name, value] of Object.entries(registeredModule || {})) {
+      if (value !== undefined) {
+        mergedModule[name] = value;
+      }
+    }
+    if (!isPromise(this._modules[deviceType])) {
+      this._modules[deviceType] = mergedModule;
+    }
+    return mergedModule;
+  }
+}
+
+function isPromise(
+  value: BackendModule | Promise<BackendModule> | undefined
+): value is Promise<BackendModule> {
+  return typeof (value as Promise<BackendModule> | undefined)?.then === 'function';
 }
 
 /**
