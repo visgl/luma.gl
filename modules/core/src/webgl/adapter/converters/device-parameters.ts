@@ -254,18 +254,23 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   if (hasStencilFaceState(parameters) || parameters.stencilReadMask !== undefined) {
     const mask = parameters.stencilReadMask ?? 0xffffffff;
     gl.enable(GL.STENCIL_TEST);
-    for (const face of [GL.FRONT, GL.BACK] as const) {
-      const state = resolveStencilFace(
-        parameters,
-        face === GL.FRONT ? parameters.stencilFront : parameters.stencilBack
-      );
+    const faces = [
+      [GL.FRONT, resolveStencilFace(parameters, parameters.stencilFront)],
+      [GL.BACK, resolveStencilFace(parameters, parameters.stencilBack)]
+    ] as const;
+    // Comparison-only updates keep prior operations. Once a caller supplies operations,
+    // apply both faces so an unspecified face takes the default KEEP operations.
+    const hasOperations = faces.some(
+      ([, state]) => state.failOp || state.depthFailOp || state.passOp
+    );
+    for (const [face, state] of faces) {
       gl.stencilFuncSeparate(
         face,
         convertCompareFunction('stencilCompare', state.compare ?? 'always'),
         0,
         mask
       );
-      if (state.failOp || state.depthFailOp || state.passOp) {
+      if (hasOperations) {
         gl.stencilOpSeparate(
           face,
           convertStencilOperation('stencilFailOperation', state.failOp),
