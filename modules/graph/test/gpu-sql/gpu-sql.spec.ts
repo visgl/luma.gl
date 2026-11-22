@@ -364,6 +364,61 @@ it('SQL projection-only plans do not bind arbitrary source columns', async () =>
   void 0;
 });
 
+it('GPUSQL applies multiple ORDER BY keys before pagination across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+
+  try {
+    const cases = [
+      {
+        clause:
+          'ORDER BY category, CASE WHEN fare >= 8 THEN 1 END DESC NULLS FIRST, 2 DESC LIMIT 3 OFFSET 1',
+        identifiers: [10, 50, 40],
+        fares: [null, 11, 10]
+      },
+      {
+        clause: 'ORDER BY category, CASE WHEN fare >= 8 THEN 1 END NULLS FIRST',
+        identifiers: [10, 30, 50, 20, 40],
+        fares: [null, 3, 11, 8, 10]
+      }
+    ];
+    for (const [index, {clause, identifiers, fares}] of cases.entries()) {
+      const result = context
+        .query('SELECT fare, identifier AS trip FROM trips ' + clause)
+        .compile(new GPUCommandGraph(device, {id: 'sql-lexicographic-sort-' + index}));
+      try {
+        if (!(result instanceof CompiledGPUDataFrameGlobalSort)) {
+          throw new Error('Expected global SQL sort');
+        }
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          globalRowIndices: result.globalRowIndices,
+          globalSelectedCount: result.globalSelectedCount
+        });
+        expect(output.schema.fields.map(field => field.name)).toEqual(['fare', 'trip']);
+        expect(Array.from(output.getChild('trip') ?? [])).toEqual(identifiers);
+        expect(Array.from(output.getChild('fare') ?? [])).toEqual(fares);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and Arrow results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
