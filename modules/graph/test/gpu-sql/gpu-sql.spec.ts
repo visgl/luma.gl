@@ -751,6 +751,53 @@ it('GPUSQL groups nullable dictionary pairs across batches without confusing nul
   }
 });
 
+it('GPUSQL groups by a computed key expression, alias, or SELECT position', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  const bucket = 'CASE WHEN fare >= :cutoff THEN 1 WHEN fare IS NULL THEN NULL ELSE 0 END';
+  const qualified = bucket.replaceAll('fare', 'trips.fare');
+  try {
+    for (const reference of ['bucket', '2', qualified]) {
+      const result = context
+        .query(
+          `SELECT COUNT(*) AS trips, ${bucket} AS bucket, SUM(fare + 1) AS total FROM trips GROUP BY ${reference}`,
+          {parameters: {cutoff: 8}}
+        )
+        .compile(new GPUCommandGraph(device));
+      try {
+        for (const [cutoff, counts, sums] of [
+          [8, [1, 3, 1], [4, 32, null]],
+          [10, [2, 2, 1], [13, 23, null]]
+        ] as const) {
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder, {cutoff});
+          device.submit(encoder.finish());
+          const rows = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            dictionaries: result.dictionaries,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          expect(rows.schema.fields.map(field => field.name)).toEqual(['trips', 'bucket', 'total']);
+          expect(Array.from(rows.getChild('bucket') ?? [])).toEqual([0, 1, null]);
+          expect(Array.from(rows.getChild('trips') ?? [])).toEqual(counts);
+          expect(Array.from(rows.getChild('total') ?? [])).toEqual(sums);
+        }
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL groups numeric keys across Arrow batches and preserves their storage types', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
