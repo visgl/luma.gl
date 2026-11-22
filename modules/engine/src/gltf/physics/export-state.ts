@@ -270,7 +270,7 @@ function writeLiveTransforms(
 function getLiveNodeComponents(
   current: ScenegraphNode,
   source: NonNullable<GLTFPhysicsDocument['nodes']>[number]
-): {position: number[]; rotation: number[]; scale: number[]} {
+): {position: readonly number[]; rotation: readonly number[]; scale: readonly number[]} {
   const position = Array.from(current.position);
   const scale = Array.from(current.scale);
   const rotationMatrix = new Matrix4();
