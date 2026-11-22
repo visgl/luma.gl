@@ -409,3 +409,5 @@ and reads no row values. Conversion still checks nulls and transformed widths.
 Use `consumeArrowGPURecordBatches(device, source, schema, consume, {maxBatchPayloadBytes, signal})` to await each consumer callback and release its GPU batch before reading the next. The callback borrows the batch until its promise settles and should await any GPU work that uses it.
 
 The budget checks estimated prepared payload bytes before conversion. Transient conversion allocations, metadata, and unrelated GPU memory are outside that estimate. The iterator API also accepts the budget option and transfers batch ownership to the caller.
+
+Set `maxBatchGPUBytes` to check estimated peak conversion memory as well. The estimate includes already prepared columns, the active column output, temporary GPU source uploads, and temporal configuration buffers. It excludes driver overhead and allocations made by the consumer. Set both limits to enforce both checks.
