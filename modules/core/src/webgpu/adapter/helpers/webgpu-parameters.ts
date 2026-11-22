@@ -17,15 +17,23 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
   return descriptor.depthStencil;
 }
 
+/**
+ * Returns the front-face stencil state, creating it when the depth-stencil state has none.
+ * Members that stay unset take the WebGPU defaults (compare `always`, operations `keep`).
+ */
 function addDepthStencilFront(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
   const depthStencil = addDepthStencil(descriptor);
-  // @ts-ignore
+  depthStencil.stencilFront ||= {};
   return depthStencil.stencilFront;
 }
 
+/**
+ * Returns the back-face stencil state, creating it when the depth-stencil state has none.
+ * Members that stay unset take the WebGPU defaults (compare `always`, operations `keep`).
+ */
 function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
   const depthStencil = addDepthStencil(descriptor);
-  // @ts-ignore
+  depthStencil.stencilBack ||= {};
   return depthStencil.stencilBack;
 }
 
