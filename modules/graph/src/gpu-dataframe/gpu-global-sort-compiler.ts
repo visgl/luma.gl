@@ -25,11 +25,12 @@ import {
   validateGPUAnalyticsSource,
   type GPUAnalyticsScalarFormat
 } from './gpu-analytics-compiler-utils';
-import {GPUDataFrame} from './gpu-data-frame';
+import type {GPUDataFrame} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
   compileGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
   type GPUDataFrameQueryExtensionResult,
@@ -257,7 +258,7 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
       }
     }
 
-    const projection = resultColumns && projectGPUGlobalSortResult(context, resultColumns);
+    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
       table: projection?.table ?? context.table,
       validity: projection?.validity ?? context.validity,
@@ -278,24 +279,6 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
       vector.destroy();
     }
     throw error;
-  }
-}
-
-/** Borrows the requested SQL output columns while the sort plan owns its working table. */
-function projectGPUGlobalSortResult<Selection extends GPUTypeMap>(
-  context: GPUDataFrameQueryExtensionContext<Selection>,
-  columns: readonly (keyof Selection & string)[]
-): GPUDataFrame<Selection> {
-  const working = new GPUDataFrame<Selection>({
-    table: context.table,
-    validity: context.validity,
-    dictionaries: context.dictionaries,
-    ownership: 'borrowed'
-  });
-  try {
-    return working.select(columns) as GPUDataFrame<Selection>;
-  } finally {
-    working.destroy();
   }
 }
 

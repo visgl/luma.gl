@@ -25,7 +25,11 @@ import {
   type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
 import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
-import type {GPUDataFrameJoinType} from '../gpu-dataframe/gpu-join-query';
+import {compileGPUDataFrameJoin} from '../gpu-dataframe/gpu-join-compiler';
+import type {
+  GPUDataFrameJoinType,
+  GPUDataFrameNormalizedJoinOptions
+} from '../gpu-dataframe/gpu-join-query';
 import type {
   CompiledGPUDataFrameQuery,
   GPUDataFrameQueryParameters
@@ -84,6 +88,8 @@ type GPUSQLAggregationDefinitions = Record<
 /** Existing global-sort plan and its already-validated controls. */
 type GPUSQLSortPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedSortOptions};
 
+type GPUSQLJoinPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedJoinOptions};
+
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
 type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
   readonly selectedColumns: readonly string[];
@@ -103,13 +109,10 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
   ) => GPUSQLSortPlan & {page: (offset: number, limit?: number) => GPUSQLSortPlan};
-  innerJoin: (
-    right: GPUDataFrame,
-    options: {leftOn: string; rightOn: string}
-  ) => GPUSQLCompiledPlan;
-  leftJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
-  semiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
-  antiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
+  innerJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  leftJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  semiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  antiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
 };
 
 /**
@@ -317,28 +320,44 @@ function buildGPUSQLPlan(
     const matchesRight = (reference: GPUSQLColumnReference) =>
       matchesGPUSQLColumn(reference, rightQualifier, right.columnNames);
     const forward = matchesLeft(firstOperand) && matchesRight(secondOperand);
-    const reversed = !forward && matchesLeft(secondOperand) && matchesRight(firstOperand);
+    const reversed = matchesLeft(secondOperand) && matchesRight(firstOperand);
+    if (forward && reversed) {
+      throw new Error('GPUSQL JOIN key references are ambiguous; qualify the columns');
+    }
     const leftKey = resolve(reversed ? secondOperand : firstOperand);
     const rightKey = resolveGPUSQLColumn(
       reversed ? firstOperand : secondOperand,
       rightQualifier,
       right.columnNames
     );
-    if (!selected.includes(leftKey)) {
-      throw new Error('GPUSQL joins require the left join key to remain selected');
-    }
-    query = query.select(selected);
-    const options = {leftOn: leftKey, rightOn: rightKey};
-    switch (statement.join.type) {
-      case 'left':
-        return query.leftJoin(right, options);
-      case 'semi':
-        return query.semiJoin(right, options);
-      case 'anti':
-        return query.antiJoin(right, options);
-      default:
-        return query.innerJoin(right, options);
-    }
+    const keyIsSelected = selected.includes(leftKey);
+    const workingColumns = keyIsSelected ? selected : [...selected, leftKey];
+    const workingQuery = query.select(workingColumns);
+    const joinType = statement.join.type;
+    const method = {
+      left: 'leftJoin',
+      semi: 'semiJoin',
+      anti: 'antiJoin',
+      inner: 'innerJoin'
+    } as const;
+    const join = workingQuery[method[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
+    if (keyIsSelected) return join;
+
+    const {predicates, derivedColumns} = workingQuery;
+    return {
+      compile: graph =>
+        compileGPUDataFrameJoin(
+          frame,
+          predicates,
+          workingColumns,
+          derivedColumns,
+          right,
+          join.options,
+          joinType,
+          graph,
+          selected
+        )
+    };
   }
 
   if (statement.orderBy) {
