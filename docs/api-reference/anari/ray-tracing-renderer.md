@@ -56,8 +56,11 @@ The Morton-sorted TLAS accelerates object and instance selection, while intersec
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Retained triangle morph targets update positions and normals
 through the shared morph evaluator and rebuild ray acceleration geometry when
-weights change. Skeletal skinning and alpha blending require a compatible raster
-renderer.
+weights change. Skeletal skinning applies the retained CPU joint palette to
+`JOINTS_0` and `WEIGHTS_0` after morphing, including position, normal and
+tangent deformation. Joint changes rebuild ray acceleration geometry. All
+placements of a surface share its pose. GPU-only and per-instance joint palettes
+and alpha blending require a compatible raster renderer.
 
 ## Material support
 
