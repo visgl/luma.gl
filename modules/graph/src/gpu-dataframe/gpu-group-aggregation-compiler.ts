@@ -48,8 +48,7 @@ import {
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
-// Dictionary codes below this value remain distinct from null and excluded rows.
-const NULL_GROUP_KEY = MAXIMUM_UINT32 - 1;
+type GPUGroupingFormat = 'uint32' | 'sint32' | 'float32';
 
 type GPUGroupedMetricState = {
   values: GraphVectorView<'float32'>;
@@ -82,8 +81,8 @@ export type GPUGroupedOutputProjection = Readonly<{
 /** Ordered source keys and their corresponding output fields. */
 type GPUGroupingKeys = readonly Readonly<{source: string; output: string}>[];
 
-/** Adds observed two-key grouping bounded by the source row count. @internal */
-export function compileGPUDataFramePairAggregation(
+/** Adds observed numeric and composite grouping bounded by the source row count. @internal */
+export function compileGPUDataFrameObservedAggregation(
   source: GPUDataFrame,
   predicates: readonly GPUExpression<boolean, string>[],
   selectedColumns: readonly string[],
@@ -208,16 +207,20 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
     const inputs = groupingKeys.map(({source}, index) =>
       graph.importGPUVector(
         `${prefix}-key-${index}`,
-        getGPUGroupingVector(context, source, 'uint32')
+        getGPUGroupingVector(
+          context,
+          source,
+          observed ? getGPUGroupingFormat(context.table, source) : 'uint32'
+        )
       )
     );
-    const outputVectors = new Map<string, GPUVector<'uint32'> | GPUVector<'float32'>>();
+    const outputVectors = new Map<string, GPUVector<GPUGroupingFormat>>();
     const outputs = groupingKeys.map(({output}, index) => {
       const vector = createGPUGroupedOutputVector(
         graph.device,
         `${prefix}-output-key-${index}`,
         groupCount,
-        'uint32'
+        inputs[index].format
       );
       ownedVectors.push(vector);
       outputVectors.set(output, vector);
@@ -234,16 +237,6 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ? groupingKeys.map(({source, output}, index) => {
           const field = context.table.schema.fields.find(field => field.name === source);
           if (!field?.nullable) return undefined;
-          const dictionary = context.dictionaries[source as keyof Selection & string];
-          const labels =
-            dictionary && !Array.isArray(dictionary)
-              ? (dictionary as {values: readonly unknown[]}).values
-              : (dictionary as readonly unknown[] | undefined);
-          if (labels && labels.length > NULL_GROUP_KEY) {
-            throw new Error(
-              'GPUDataFrame nullable grouping dictionary exceeds the available key range'
-            );
-          }
           const mask = createGPUGroupedOutputVector(
             graph.device,
             prefix + '-key-mask-' + index,
@@ -259,10 +252,15 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         })
       : [];
     const rowSelection = observed
-      ? addGPUObservedPairGroups(context, prefix, inputs, outputs, nullableKeys, ownedVectors)
+      ? addGPUObservedGroups(context, prefix, inputs, outputs, nullableKeys, ownedVectors)
       : undefined;
-    const keys = rowSelection?.keys ?? inputs[0];
-    if (!observed) addGPUGroupIdentityPass(graph, `${prefix}-output-key-identity`, outputs[0]);
+    const keys = rowSelection?.keys ?? (inputs[0] as GraphVectorView<'uint32'>);
+    if (!observed)
+      addGPUGroupIdentityPass(
+        graph,
+        `${prefix}-output-key-identity`,
+        outputs[0] as GraphDataView<'uint32'>
+      );
 
     const metricStates = new Map<string, GPUGroupedMetricState>();
 
@@ -393,12 +391,12 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   }
 }
 
-/** Finds observed pairs with two stable key sorts and assigns dense group IDs on the GPU. */
-function addGPUObservedPairGroups(
+/** Groups observed rows by stable sorts of each value and its separate validity class. */
+function addGPUObservedGroups(
   context: Pick<GPUDataFrameQueryExtensionContext<GPUTypeMap>, 'graph' | 'selectionMask'>,
   prefix: string,
-  inputs: readonly GraphVectorView<'uint32'>[],
-  outputs: readonly GraphDataView<'uint32'>[],
+  inputs: readonly GraphVectorView<GPUGroupingFormat>[],
+  outputs: readonly GraphDataView<GPUGroupingFormat>[],
   nullableKeys: readonly (
     | {input?: GraphVectorView<'uint32'>; output: GraphDataView<'uint32'>}
     | undefined
@@ -411,9 +409,6 @@ function addGPUObservedPairGroups(
   mask: GPUVector<'uint32'>;
 } {
   const {graph, selectionMask} = context;
-  for (const input of inputs) {
-    for (const chunk of input.data) validatePackedUint32View(chunk, prefix + '-key');
-  }
   const length = selectionMask.length;
   const allocate = (name: string, size: number) => {
     const vector = createGPUGroupedOutputVector(graph.device, prefix + name, size, 'uint32');
@@ -426,90 +421,112 @@ function addGPUObservedPairGroups(
   const countView = graph.importGPUVector(prefix + '-count-view', count).data[0];
   if (length === 0) {
     addGPUPairPass(graph, prefix + '-empty', 1, {}, {count: countView}, 'count[0] = 0u;');
-    return {keys: inputs[0], rows, count, mask};
+    return {keys: selectionMask, rows, count, mask};
   }
 
+  const words = (view: GraphDataView<GPUGroupingFormat>) => {
+    const packed = graph.createDataView(view.buffer, {
+      format: 'uint32',
+      length: view.length,
+      byteOffset: view.byteOffset,
+      byteStride: view.byteStride
+    });
+    validatePackedUint32View(packed, prefix + '-key');
+    return packed;
+  };
   const scratch = (name: string) => createTransientView(graph, prefix + name, 'uint32', length);
-  const first = scratch('-first');
-  const second = scratch('-second');
-  const ordinals = scratch('-ordinals');
+  const staged = inputs.map((input, index) => ({
+    input,
+    values: scratch('-values-' + index),
+    classes: scratch('-classes-' + index)
+  }));
+  const orders = [scratch('-order-a'), scratch('-order-b')];
+  const gathered = scratch('-gathered');
   const sortedValues = scratch('-sorted-values');
-  const secondaryOrder = scratch('-secondary-order');
-  const reorderedFirst = scratch('-reordered-first');
-  const pairOrder = scratch('-pair-order');
   const heads = scratch('-heads');
   const ranks = scratch('-ranks');
   const groupIds = scratch('-group-ids');
-  const excluded = '0xffffffffu';
-  const nullKey = NULL_GROUP_KEY + 'u';
-  const encodedOutputs = outputs.map((output, index) =>
-    nullableKeys[index] ? scratch('-nullable-key-' + index) : output
-  );
+
   let offset = 0;
   for (const [batchIndex, selection] of selectionMask.data.entries()) {
     if (selection.length > 0) {
-      const leftValidity = nullableKeys[0]?.input?.data[batchIndex];
-      const rightValidity = nullableKeys[1]?.input?.data[batchIndex];
-      addGPUPairPass(
-        graph,
-        prefix + '-stage-' + batchIndex,
-        selection.length,
-        {
-          left: inputs[0].data[batchIndex],
-          right: inputs[1].data[batchIndex],
-          selection,
-          ...(leftValidity ? {leftValidity} : {}),
-          ...(rightValidity ? {rightValidity} : {})
-        },
-        {first, second, ordinals},
-        `
-          let row = ${offset}u + index;
-          let firstKey = ${leftValidity ? `select(${nullKey}, left[index], leftValidity[index] != 0u)` : 'left[index]'};
-          first[row] = select(${excluded}, firstKey, selection[index] != 0u);
-          second[row] = ${rightValidity ? `select(${nullKey}, right[index], rightValidity[index] != 0u)` : 'right[index]'};
-          ordinals[row] = row;
-        `
-      );
+      for (const [index, {input, values, classes}] of staged.entries()) {
+        const validity = nullableKeys[index]?.input?.data[batchIndex];
+        addGPUPairPass(
+          graph,
+          prefix + '-stage-' + batchIndex + '-' + index,
+          selection.length,
+          {
+            input: words(input.data[batchIndex]),
+            ...(index === 0 ? {selection} : {}),
+            ...(validity ? {validity} : {})
+          },
+          {values, classes, ...(index === 0 ? {ordinals: orders[0]} : {})},
+          `
+            let row = ${offset}u + index;
+            let raw = input[index];
+            let valid = ${validity ? 'validity[index] != 0u' : 'true'};
+            let category = ${index === 0 ? 'select(2u, u32(!valid), selection[index] != 0u)' : 'u32(!valid)'};
+            ${
+              input.format === 'float32'
+                ? `
+              let magnitude = raw & 0x7fffffffu;
+              let canonical = select(select(raw, 0u, magnitude == 0u), 0x7fc00000u, magnitude > 0x7f800000u);
+            `
+                : 'let canonical = raw;'
+            }
+            values[row] = select(0u, canonical, valid);
+            classes[row] = category;
+            ${index === 0 ? 'ordinals[row] = row;' : ''}
+          `
+        );
+      }
     }
     offset += selection.length;
   }
-  graph.add(
-    new GPUSort({
-      id: prefix + '-sort-second',
-      keys: second,
-      values: ordinals,
-      outputKeys: sortedValues,
-      outputValues: secondaryOrder
-    })
-  );
-  graph.add(
-    new GPUGather({
-      id: prefix + '-gather-first',
-      source: first,
-      indices: secondaryOrder,
-      output: reorderedFirst
-    })
-  );
-  graph.add(
-    new GPUSort({
-      id: prefix + '-sort-first',
-      keys: reorderedFirst,
-      values: secondaryOrder,
-      outputKeys: sortedValues,
-      outputValues: pairOrder
-    })
-  );
+
+  let orderIndex = 0;
+  for (let index = staged.length - 1; index >= 0; index--) {
+    const {values, classes} = staged[index];
+    const sortKeys = index === 0 || nullableKeys[index] ? [values, classes] : [values];
+    for (const [passIndex, source] of sortKeys.entries()) {
+      const id = prefix + '-order-' + index + '-' + passIndex;
+      graph.add(
+        new GPUGather({id: id + '-gather', source, indices: orders[orderIndex], output: gathered})
+      );
+      graph.add(
+        new GPUSort({
+          id,
+          keys: gathered,
+          values: orders[orderIndex],
+          outputKeys: sortedValues,
+          outputValues: orders[1 - orderIndex]
+        })
+      );
+      orderIndex = 1 - orderIndex;
+    }
+  }
+  const order = orders[orderIndex];
+  const first = staged[0];
+  const second = staged[1];
   addGPUPairPass(
     graph,
     prefix + '-heads-pass',
     length,
-    {first, second, pairOrder},
+    {
+      order,
+      firstValues: first.values,
+      firstClasses: first.classes,
+      ...(second ? {secondValues: second.values, secondClasses: second.classes} : {})
+    },
     {heads},
     `
-    let row = pairOrder[index];
-    let previous = pairOrder[max(index, 1u) - 1u];
-    heads[index] = u32(first[row] != ${excluded} &&
-      (index == 0u || first[row] != first[previous] || second[row] != second[previous]));
+    let row = order[index];
+    let previous = order[max(index, 1u) - 1u];
+    heads[index] = u32(firstClasses[row] != 2u &&
+      (index == 0u || firstClasses[row] != firstClasses[previous] ||
+        firstValues[row] != firstValues[previous]
+        ${second ? '|| secondClasses[row] != secondClasses[previous] || secondValues[row] != secondValues[previous]' : ''}));
   `
   );
   graph.add(
@@ -525,23 +542,33 @@ function addGPUObservedPairGroups(
   );
   addGPUPairPass(
     graph,
-    prefix + '-scatter',
+    prefix + '-scatter-ids',
     length,
-    {first, second, pairOrder, heads, ranks},
-    {groupIds, firstOutput: encodedOutputs[0], secondOutput: encodedOutputs[1]},
+    {order, classes: first.classes, ranks},
+    {groupIds},
     `
-      let row = pairOrder[index];
-      groupIds[row] = 0u;
-      if (first[row] != ${excluded}) {
-        let group = ranks[index] - 1u;
-        groupIds[row] = group;
-        if (heads[index] != 0u) {
-          firstOutput[group] = first[row];
-          secondOutput[group] = second[row];
-        }
-      }
+      let row = order[index];
+      groupIds[row] = select(0u, ranks[index] - 1u, classes[row] != 2u);
     `
   );
+  for (const [index, {values, classes}] of staged.entries()) {
+    const validity = nullableKeys[index]?.output;
+    addGPUPairPass(
+      graph,
+      prefix + '-publish-key-' + index,
+      length,
+      {order, heads, ranks, values, ...(validity ? {classes} : {})},
+      {output: words(outputs[index]), ...(validity ? {validity} : {})},
+      `
+        if (heads[index] != 0u) {
+          let row = order[index];
+          let group = ranks[index] - 1u;
+          output[group] = values[row];
+          ${validity ? 'validity[group] = u32(classes[row] == 0u);' : ''}
+        }
+      `
+    );
+  }
   addGPUPairPass(
     graph,
     prefix + '-result-selection',
@@ -553,27 +580,6 @@ function addGPUObservedPairGroups(
     },
     'rows[index] = index; mask[index] = u32(index < count[0]);'
   );
-
-  for (const [index, key] of nullableKeys.entries()) {
-    if (!key) continue;
-    addGPUPairPass(
-      graph,
-      prefix + '-decode-key-' + index,
-      length,
-      {encoded: encodedOutputs[index], count: countView},
-      {decoded: outputs[index], validity: key.output},
-      `
-        if (index < count[0]) {
-          let valid = encoded[index] != ${nullKey};
-          validity[index] = u32(valid);
-          decoded[index] = select(0u, encoded[index], valid);
-        } else {
-          validity[index] = 0u;
-          decoded[index] = 0u;
-        }
-      `
-    );
-  }
 
   let byteOffset = 0;
   const data = selectionMask.data.map(chunk => {
@@ -624,8 +630,20 @@ function addGPUPairPass(
   });
 }
 
-/** Resolves one batch-aligned grouped input, including schema-only sources without GPU chunks. */
-function getGPUGroupingVector<Selection extends GPUTypeMap, Format extends 'uint32' | 'float32'>(
+/** Resolves the scalar storage format of an observed key. */
+function getGPUGroupingFormat<T extends GPUTypeMap>(
+  table: GPUTable<T>,
+  name: string
+): GPUGroupingFormat {
+  const format = table.schema.fields.find(field => field.name === name)?.format;
+  if (format !== 'uint32' && format !== 'sint32' && format !== 'float32') {
+    throw new Error('GPUDataFrame grouping requires 32-bit numeric keys');
+  }
+  return format;
+}
+
+/** Resolves one batch-aligned grouped input, including empty sources. */
+function getGPUGroupingVector<Selection extends GPUTypeMap, Format extends GPUGroupingFormat>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   name: string,
   format: Format
@@ -726,7 +744,7 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
 }
 
 /** Creates one owned dense, renderer-compatible result vector with one physical GPU chunk. */
-function createGPUGroupedOutputVector<Format extends 'uint32' | 'float32'>(
+function createGPUGroupedOutputVector<Format extends GPUGroupingFormat>(
   device: Device,
   name: string,
   length: number,
@@ -751,7 +769,7 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
   source: GPUTable<Source>,
   keys: GPUGroupingKeys,
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  vectors: ReadonlyMap<string, GPUVector<'uint32'> | GPUVector<'float32'>>,
+  vectors: ReadonlyMap<string, GPUVector<GPUGroupingFormat>>,
   columns?: readonly string[],
   observed = false
 ): GPUTable<Result> {
@@ -761,7 +779,7 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
       if (!field) throw new Error('GPUDataFrame grouped result requires an existing key field');
       return {
         name: output,
-        format: 'uint32' as const,
+        format: observed ? getGPUGroupingFormat(source, name) : 'uint32',
         nullable: observed && field.nullable === true,
         metadata: new Map(field.metadata)
       };

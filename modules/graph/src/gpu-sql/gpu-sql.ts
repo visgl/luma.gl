@@ -15,7 +15,7 @@ import {
 } from '../gpu-dataframe/gpu-data-frame-query';
 import {
   compileGPUDataFrameGroupedAggregation,
-  compileGPUDataFramePairAggregation
+  compileGPUDataFrameObservedAggregation
 } from '../gpu-dataframe/gpu-group-aggregation-compiler';
 import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
 import {
@@ -283,16 +283,16 @@ function buildGPUSQLPlan(
         definitions
       );
 
-      if (keys.length === 2) {
+      if (keys.length === 2 || !frame.dictionaries[keys[0].source]) {
         for (const {source} of keys) {
-          const field = frame.schema.fields.find(field => field.name === source);
-          if (!frame.dictionaries[source] || field?.format !== 'uint32') {
-            throw new Error('GPUSQL two-key GROUP BY requires uint32 dictionary columns');
+          const format = frame.schema.fields.find(field => field.name === source)?.format;
+          if (format !== 'uint32' && format !== 'sint32' && format !== 'float32') {
+            throw new Error('GPUSQL GROUP BY requires 32-bit numeric or dictionary keys');
           }
         }
         return {
           compile: graph =>
-            compileGPUDataFramePairAggregation(
+            compileGPUDataFrameObservedAggregation(
               frame,
               predicates,
               selectedColumns,
