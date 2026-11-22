@@ -16,6 +16,8 @@ import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core/matrix';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {RobotArmScene} from './robot-arm-scene';
+import {measureRobotArm} from './robot-arm';
 import {makeMechanism} from './mechanisms';
 import {WRECKING_BALL_PHYSICS, WRECKING_BALL_TIME_STEP} from './wrecking-ball';
 import {CradleScene} from './cradle-scene';
@@ -29,6 +31,9 @@ import {
   RIGID_BODY_SCENES,
   DOMINO_PHYSICS
 } from './scenes';
+
+const ARM_CAMERA_POSITION = [5, -8, 5] as const;
+const ARM_CAMERA_TARGET = [1.8, 0, 1.5] as const;
 
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
@@ -79,6 +84,7 @@ try {
   const camera = new PerspectiveCamera(45, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
   if (scene.value === 'wreckingBall') camera.position.set(19, -21, 16);
+  else if (scene.value === 'robotArm') camera.position.set(...ARM_CAMERA_POSITION);
   else camera.position.set(13, -19, 19);
   const controls = new OrbitControls(camera, canvas);
   controls.autoRotate = true;
@@ -87,11 +93,13 @@ try {
     controls.autoRotate = false;
   });
   let lastOrbitTime = performance.now();
-  controls.target.set(
-    scene.value === 'wreckingBall' ? -2 : 0,
-    0,
-    scene.value === 'wreckingBall' ? 4 : 2
-  );
+  if (scene.value === 'robotArm') controls.target.set(...ARM_CAMERA_TARGET);
+  else
+    controls.target.set(
+      scene.value === 'wreckingBall' ? -2 : 0,
+      0,
+      scene.value === 'wreckingBall' ? 4 : 2
+    );
   controls.update();
   const cameraBuffer = device.createBuffer({
     id: 'rigid-body-camera',
@@ -103,7 +111,14 @@ try {
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     if (sceneName !== previousSceneName) {
-      iterations.value = sceneName === 'cradle' ? '8' : sceneName === 'wreckingBall' ? '16' : '32';
+      iterations.value =
+        sceneName === 'robotArm'
+          ? '64'
+          : sceneName === 'cradle'
+            ? '8'
+            : sceneName === 'wreckingBall'
+              ? '16'
+              : '32';
       if (isDominoScene(sceneName) || sceneName === 'wreckingBall') solver.value = 'parallel';
       previousSceneName = sceneName;
     }
@@ -112,7 +127,8 @@ try {
     if (mechanism && sceneName !== 'wreckingBall') solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
-      publishPoses: sceneName === 'cradle' || sceneName === 'wreckingBall',
+      publishPoses:
+        sceneName === 'robotArm' || sceneName === 'cradle' || sceneName === 'wreckingBall',
       publicationBounds:
         sceneName === 'cradle'
           ? bodies.map(body => {
@@ -192,7 +208,8 @@ try {
       data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
-    const retainedScene = sceneName === 'cradle' || sceneName === 'wreckingBall';
+    const retainedScene =
+      sceneName === 'robotArm' || sceneName === 'cradle' || sceneName === 'wreckingBall';
     const surface = retainedScene ? null : createLabMaterial(device, bodies, sceneName);
     const model = retainedScene
       ? null
@@ -357,9 +374,11 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       cradle:
         sceneName === 'cradle'
           ? new CradleScene(device, world, mechanism!.frame!)
-          : sceneName === 'wreckingBall'
-            ? new WreckingBallScene(device, world, bodies)
-            : null,
+          : sceneName === 'robotArm'
+            ? new RobotArmScene(device, world)
+            : sceneName === 'wreckingBall'
+              ? new WreckingBallScene(device, world, bodies)
+              : null,
       world,
       graph,
       model,
@@ -372,6 +391,27 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     };
   }
   let resources = await createScene();
+  const armPanel = document.querySelector<HTMLFieldSetElement>('#arm-controls');
+  const armInput = (name: string) => document.querySelector<HTMLInputElement>(`#arm-${name}`)!;
+  const elbowTarget = () => (Number(armInput('angle').value) * Math.PI) / 180;
+  function configureArm(input?: EventTarget | null) {
+    if (!armPanel) return;
+    armPanel.hidden = resources.sceneName !== 'robotArm';
+    if (armPanel.hidden) return;
+    if (!input || input === armInput('payload'))
+      resources.world.setBodyParameters(6, {mass: Number(armInput('payload').value)});
+    if (!input || input !== armInput('payload'))
+      resources.world.setAngularActuator('elbow', 1, {
+        angle: elbowTarget(),
+        ...(input === armInput('angle') ? {} : {maximumTorque: Number(armInput('torque').value)})
+      });
+  }
+  configureArm();
+  if (armPanel)
+    armPanel.oninput = event => {
+      if (!loading) configureArm(event.target);
+    };
+
   let paused = isWreckingBallExample;
   let loading = false;
   let alive = true;
@@ -435,10 +475,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       diagnostics.clear();
       destroy(resources);
       resources = replacement;
+      configureArm();
       if (changedScene) {
         if (resources.sceneName === 'wreckingBall') {
           camera.position.set(19, -21, 16);
           controls.target.set(-2, 0, 4);
+        } else if (resources.sceneName === 'robotArm') {
+          camera.position.set(...ARM_CAMERA_POSITION);
+          controls.target.set(...ARM_CAMERA_TARGET);
         } else {
           camera.position.set(
             resources.sceneName === 'mixed' ? 24 : 11,
@@ -662,10 +706,22 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       const sampledSimulationTime = elapsedSimulation;
       snapshot = Promise.all([
         target.world.readSimulationDiagnostics(),
-        autoPlay.checked ? target.world.readState() : Promise.resolve(null)
+        autoPlay.checked || target.sceneName === 'robotArm'
+          ? target.world.readState()
+          : Promise.resolve(null),
+        target.sceneName === 'robotArm'
+          ? target.world.readAngularActuatorTorque('elbow', 1)
+          : Promise.resolve(null)
       ])
-        .then(([counters, states]) => {
+        .then(([counters, states, torque]) => {
           if (!alive || target !== resources) return;
+          if (states && torque !== null) {
+            const measurement = measureRobotArm(states, 4, elbowTarget());
+            const cap = Number(armInput('torque').value);
+            document.querySelector<HTMLOutputElement>('#arm-reading')!.value =
+              `${armInput('payload').value} kg · target ${armInput('angle').value}° · actual ${((measurement.angle * 180) / Math.PI).toFixed(1)}°
+Tip error ${(measurement.tipError * 100).toFixed(1)} cm · ${Math.abs(torque).toFixed(1)} / ${cap} N·m${Math.abs(torque) >= cap * 0.99 ? ' · saturated' : ''}`;
+          }
           simulationRate =
             (sampledSimulationTime - previousSampleSimulation) /
             Math.max(0.001, (now - previousSampleWall) / 1000);

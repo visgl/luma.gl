@@ -3265,6 +3265,61 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return structuredClone(joint);
   }
 
+  /** Command a named angular force drive. Angles are radians and maximum torque is N·m. */
+  setAngularActuator(
+    id: string,
+    axis: 0 | 1 | 2,
+    command: {angle: number; stiffness?: number; damping?: number; maximumTorque?: number}
+  ): void {
+    const index = this.findAngularActuator(id, axis);
+    const joint = this.props.joints![index];
+    if (joint.type !== 'general' || !joint.drive) throw new Error('Expected angular drive');
+    if (
+      command.stiffness === undefined &&
+      command.damping === undefined &&
+      command.maximumTorque === undefined
+    ) {
+      this.setAngularDriveTargets(new Map([[index, command.angle]]));
+      return;
+    }
+    this.setJointParameters(index, {
+      ...joint,
+      drive: {
+        ...joint.drive,
+        positionTarget: command.angle,
+        stiffness: command.stiffness ?? joint.drive.stiffness,
+        damping: command.damping ?? joint.drive.damping,
+        maximumForce: command.maximumTorque ?? joint.drive.maximumForce
+      }
+    });
+  }
+
+  /** Read the signed mean motor torque from the most recently submitted step. */
+  async readAngularActuatorTorque(id: string, axis: 0 | 1 | 2): Promise<number> {
+    const index = this.findAngularActuator(id, axis);
+    if (!this.targets || this.destroyed) throw new Error('Inactive world');
+    const bytes = await this.targets.readAsync(
+      this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES,
+      4
+    );
+    return new DataView(bytes.buffer, bytes.byteOffset, 4).getFloat32(0, true) / this.timeStep;
+  }
+
+  private findAngularActuator(id: string, axis: number): number {
+    const indices = (this.props.joints ?? []).flatMap((joint, index) =>
+      joint.id === id &&
+      joint.type === 'general' &&
+      joint.angular &&
+      joint.drive &&
+      joint.drive.mode !== 'acceleration' &&
+      joint.axes[0] === axis
+        ? [index]
+        : []
+    );
+    if (indices.length !== 1) throw new Error('Missing or ambiguous angular force drive');
+    return indices[0];
+  }
+
   /** Retarget authored angular drive rows between steps while preserving the other joints' settings. */
   setAngularDriveTargets(targets: ReadonlyMap<number, number>): void {
     /** Validate the entire batch before publishing writes to the GPU. */

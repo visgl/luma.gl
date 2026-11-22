@@ -9,6 +9,11 @@ import {
 } from '@luma.gl/graph/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  robotArm: {
+    title: 'Mechanisms · robot arm',
+    description:
+      'Four driven joints carry a calibrated payload. Lower the elbow to press the tool against the work stop, or reduce the elbow torque to see the load pull it down.'
+  },
   wreckingBall: {
     title: 'Wrecking ball',
     description:

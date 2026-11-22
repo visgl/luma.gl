@@ -18,6 +18,8 @@ export type {
 } from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphJoint = {
+  /** Instance-local actuator identifier shared by this attachment’s drive axes. */
+  id?: string;
   first: ScenegraphNode;
   second: ScenegraphNode;
   limits?: readonly ScenegraphJointLimit[];
