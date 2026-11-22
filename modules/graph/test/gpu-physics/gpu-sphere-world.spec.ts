@@ -205,14 +205,18 @@ it('GPUSphereWorld reports bounded-contact overflow and invalid radii', async ()
 });
 
 it('GPUSphereWorld aggregates contact diagnostics across a partial workgroup', async () => {
+  /** Native WebGPU backend for checking shader reductions and readback. */
   const device = await getWebGPUTestDevice();
   if (!device) return;
+  /** Coincident centers ensure all tested neighbors overlap. */
   const positions: number[] = [];
+  /** Stationary spheres with unit inverse mass produce eligible candidate pairs. */
   const velocities: number[] = [];
   for (let index = 0; index < 65; index++) {
     positions.push(0, 0, 2, 0.5);
     velocities.push(0, 0, 0, 1);
   }
+  /** Explicit candidate and contact limits give each diagnostic an exact expected value. */
   const fixture = await makeWorld(device, positions, velocities, {
     broadPhase: 'all-pairs',
     iterations: 1,
@@ -221,6 +225,7 @@ it('GPUSphereWorld aggregates contact diagnostics across a partial workgroup', a
   });
   try {
     fixture.step();
+    /** Combined counters from the full and partial workgroups. */
     const {diagnostics} = await fixture.read();
     // The first 10 bodies inspect themselves and nine neighbors. The other 55
     // bodies inspect ten neighbors. Every body emits four contacts.

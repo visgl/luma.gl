@@ -40,7 +40,9 @@ export function advanceSphereClock(
   maximumSteps = 8
 ): {steps: number; accumulator: number} {
   if (benchmarking) return {steps: 1, accumulator: 0};
+  /** Discard elapsed time above this rendered frame's physics budget. */
   const retained = Math.min(accumulator + elapsed * speed, maximumSteps * timeStep);
+  /** Preserve the remaining fractional step for the next frame. */
   const steps = Math.min(maximumSteps, Math.floor(retained / timeStep));
   return {steps, accumulator: retained - steps * timeStep};
 }

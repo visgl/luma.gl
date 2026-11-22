@@ -22,7 +22,9 @@ it('sphere benchmark clock never leaves a playback backlog', () => {
 });
 
 it('sphere scale honors playback speed and drops catch-up work above its frame budget', () => {
+  /** Sphere Scale's fixed 60 Hz integration interval. */
   const timeStep = 1 / 60;
+  /** Residual time carried from the first half-speed frame. */
   const first = advanceSphereClock(0, timeStep, 0.5, false, timeStep, 2);
   expect(first).toEqual({steps: 0, accumulator: timeStep / 2});
   expect(advanceSphereClock(first.accumulator, timeStep, 0.5, false, timeStep, 2)).toEqual({
