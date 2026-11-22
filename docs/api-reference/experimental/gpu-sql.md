@@ -132,6 +132,11 @@ finite numeric, Boolean, and null predicate values, including reusable named par
 source-order `limit`, streaming, in-flight cancellation, string/binary/date values, and relational
 extensions are reported or rejected as unsupported instead of silently falling back to CPU work.
 
+## Inspecting a plan
+
+Call `context.query(sql).explain()` to inspect the bound execution route, projected and working columns, key count, join type, and pagination before compiling. The frozen description is generated during CPU planning and allocates no GPU buffers.
+
+
 ## Related modules
 
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe)

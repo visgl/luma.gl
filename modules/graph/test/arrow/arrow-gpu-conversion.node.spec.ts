@@ -3,7 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import {expect, test as it, vi} from 'vitest';
 import {
+  consumeArrowGPURecordBatches,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,
   planArrowTableGPUConversion
@@ -317,6 +319,71 @@ test('Arrow GPU streaming conversion preserves batch identity and one temporal o
   t.deepEqual(sourceOffsets, [0, 2], 'retains global source row offsets without combining batches');
   device.destroy();
   t.end();
+});
+
+it('bounds planned Arrow payloads before allocating and serializes borrowed batch lifetimes', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n]);
+  const schema = {columns: [{name: 'time'}]};
+  const budget = planArrowTableGPUConversion(device, new arrow.Table([batch]), schema).cost
+    .targetByteLength;
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const consume = vi.fn();
+  try {
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, consume, {
+        maxBatchPayloadBytes: budget - 1
+      })
+    ).rejects.toThrow(/batch 0 needs.*exceeding/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(consume).not.toHaveBeenCalled();
+
+    const events: string[] = [];
+    async function* source() {
+      for (const index of [0, 1]) {
+        events.push('read ' + index);
+        yield batch;
+      }
+    }
+    await consumeArrowGPURecordBatches(
+      device,
+      source(),
+      schema,
+      async prepared => {
+        const index = prepared.batch.sourceInfo?.sourceBatchIndex;
+        const buffer = prepared.vectors.time.data[0].buffer;
+        const destroy = buffer && vi.spyOn(buffer, 'destroy');
+        destroy?.mockImplementationOnce(function () {
+          events.push('release ' + index);
+          destroy.mockRestore();
+          buffer.destroy();
+        });
+        await Promise.resolve();
+        events.push('consume ' + index);
+      },
+      {maxBatchPayloadBytes: budget}
+    );
+    expect(events).toEqual([
+      'read 0',
+      'consume 0',
+      'release 0',
+      'read 1',
+      'consume 1',
+      'release 1'
+    ]);
+
+    const controller = new AbortController();
+    const abort = vi.fn(() => controller.abort());
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch, batch], schema, abort, {
+        signal: controller.signal
+      })
+    ).rejects.toMatchObject({name: 'AbortError'});
+    expect(abort).toHaveBeenCalledTimes(1);
+  } finally {
+    createBuffer.mockRestore();
+    device.destroy();
+  }
 });
 
 test('Arrow GPU conversion rejects unsupported plans before allocating', t => {
