@@ -1836,7 +1836,10 @@ export class GPUVectorModel {
         renderPass as RenderPass & {
           framebuffer?: {
             colorAttachments?: Array<{texture?: {format?: TextureFormatColor}} | null>;
-            depthStencilAttachment?: {texture?: {format?: TextureFormatDepthStencil}} | null;
+            depthStencilAttachment?: {
+              props?: {format?: TextureFormatDepthStencil};
+              texture?: {format?: TextureFormatDepthStencil};
+            } | null;
           };
         }
       ).framebuffer || renderPass.props.framebuffer;
@@ -1854,7 +1857,10 @@ export class GPUVectorModel {
       renderBundleProps.depthStencilAttachmentFormat === false
         ? undefined
         : (renderBundleProps.depthStencilAttachmentFormat ??
-          asDepthStencilAttachmentFormat(framebuffer?.depthStencilAttachment?.texture?.format));
+          asDepthStencilAttachmentFormat(
+            framebuffer?.depthStencilAttachment?.props?.format ??
+              framebuffer?.depthStencilAttachment?.texture?.format
+          ));
 
     if (
       !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats, 1) ||

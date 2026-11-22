@@ -11,6 +11,7 @@ import {
   normalizeBindingsByGroup
 } from '../../../index';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
+import {getPipelineDepthStencilFormat} from '../../../api/adapter/resources/render-pipeline';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 
@@ -219,10 +220,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
       layout: layout.handle
     };
 
-    // Set depth format if required, defaulting to the preferred depth format
-    const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
-
-    if (this.props.depthStencilAttachmentFormat || this.props.parameters.depthWriteEnabled) {
+    const depthFormat = getPipelineDepthStencilFormat(this.device, this.props);
+    if (depthFormat) {
       descriptor.depthStencil = {
         format: getWebGPUTextureFormat(depthFormat),
         depthWriteEnabled: false,
@@ -236,6 +235,9 @@ export class WebGPURenderPipeline extends RenderPipeline {
       this.props.parameters,
       this.device.features
     );
+    if (depthFormat && descriptor.depthStencil) {
+      descriptor.depthStencil.format = getWebGPUTextureFormat(depthFormat);
+    }
     if (!fragment) {
       delete descriptor.fragment;
     }

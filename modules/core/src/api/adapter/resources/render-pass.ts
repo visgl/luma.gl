@@ -87,6 +87,8 @@ export type RenderPassProps = DeviceResourceProps & {
   depthReadOnly?: boolean;
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
+  /** Whether writable stencil contents are preserved after this pass. */
+  stencilStoreOp?: 'store' | 'discard';
 
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
@@ -199,6 +201,7 @@ export abstract class RenderPass extends DeviceResource<RenderPassProps> {
     clipDepthMode: undefined!,
     depthReadOnly: false,
     stencilReadOnly: false,
+    stencilStoreOp: 'store',
     discard: false,
 
     occlusionQuerySet: undefined!,
