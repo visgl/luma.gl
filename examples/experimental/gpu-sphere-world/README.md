@@ -9,7 +9,7 @@ varied radii. State remains GPU-resident and feeds an instanced analytic sphere
 renderer. A single dark cue-ball band is attached to each quaternion orientation,
 so rolling and spinning are visible. Fragment depth follows the sphere surface.
 
-Drag the table to tilt it with the camera fixed. Drag the background or hold Shift
+Drag the table to tilt it with the camera fixed. Drag the background or hold Alt
 while dragging to orbit. The initial table is level, and releasing within 3 degrees
 optionally snaps it flat. Double-click or press **Level table** to level without changing
 the camera. **Reset** restores sphere positions, velocities, orientations and sleep

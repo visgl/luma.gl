@@ -109,7 +109,7 @@ export function createTableControls(
     <label>Tilt mode <select id="table-tilt-mode">
       <option value="grab" selected>Grab table</option><option value="orbit">Tilt with view</option>
     </select></label>
-    <p id="table-tilt-hint">Drag the table to tilt. Drag the background or hold Shift to orbit.</p>
+    <p id="table-tilt-hint">Drag the table to tilt. Drag the background or hold Alt to orbit.</p>
     <label>Drag sensitivity <span id="sensitivity-value">0.25</span>
       <input id="sensitivity" type="range" min="0.1" max="1" step="0.05" value="0.25">
     </label>
@@ -201,7 +201,7 @@ export function createTableControls(
       drag ||
       !event.isPrimary ||
       event.button !== 0 ||
-      event.shiftKey ||
+      event.altKey ||
       !hitsTable(event)
     )
       return;
@@ -360,7 +360,7 @@ export function createTableControls(
     controlMode.textContent = mode.value === 'grab' ? 'Drag table to tilt' : 'Tilt follows view';
     hint.textContent =
       mode.value === 'grab'
-        ? 'Drag the table to tilt. Drag the background or hold Shift to orbit.'
+        ? 'Drag the table to tilt. Drag the background or hold Alt to orbit.'
         : 'Orbit the view to tilt the table.';
   };
 
