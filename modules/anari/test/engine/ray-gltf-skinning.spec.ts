@@ -45,11 +45,12 @@ it('updates skinned ray geometry after an in-place joint edit and composes morph
     const before = await readPixel();
     expect(before).toEqual([255, 0, 0]);
     expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeDefined();
+    const buildNodeCount = getStatistics()?.rayTracing?.graph?.topology?.nodeCount ?? 0;
     expect((await renderer.pick(options.id, 4, 4))?.surfaceId).toBe(skinned.id);
 
     jointMatrices.set(new Matrix4().translate([16, 0, 0]), 16);
     expect(await readPixel()).toEqual([0, 0, 0]);
-    expect(getStatistics()?.rayTracing?.graph?.topology).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.topology?.nodeCount).toBeLessThan(buildNodeCount);
     expect(getStatistics()?.rayTracing?.graph?.refit).toBeDefined();
     expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeUndefined();
     expect(await renderer.pick(options.id, 4, 4)).toBeNull();
