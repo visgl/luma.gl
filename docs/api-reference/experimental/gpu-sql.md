@@ -106,7 +106,7 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 
   Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column.
   Grouped results preserve SELECT column order and retain key dictionaries under their output names.
-  Single-key dictionary grouping returns the full category domain. Single numeric keys and two-key queries return only groups observed after WHERE.
+  Single-key dictionary grouping returns the full category domain. Single numeric keys and multi-key queries return only groups observed after WHERE.
   Observed grouping supports uint32, sint32, float32, and dictionary-encoded keys, including nulls. Float keys group both signed zeros together and treat all NaNs as a single value.
   For observed results, pass the compiled query’s `rowIndices` and `selectedCounts` to Arrow readback to read the observed rows from the capacity-backed result.
 
@@ -122,7 +122,7 @@ and `"order"`. A quoted identifier such as `"fare.total"` names a single field. 
 `trips."fare.total"`, `trips` qualifies the field. The period inside the quotes remains part of its name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
-expressions, more than two group keys, and pagination without ordering fail during CPU-only planning.
+expressions and pagination without ordering fail during CPU-only planning.
 Applications still own command submission, synchronization, result readback, and cleanup.
 
 The loaders.gl adapter currently supports predicate pushdown and output projection. It accepts
