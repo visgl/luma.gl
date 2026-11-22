@@ -59,6 +59,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
 
     const framebuffer = this.device.createFramebuffer({
       ...this.props,
+      width: this.width,
+      height: this.height,
       ...size,
       colorAttachments,
       depthStencilAttachment

@@ -401,7 +401,8 @@ it('creates and clones a color framebuffer with stencil-only storage', async () 
       depthStencilAttachment: 'stencil8'
     });
     try {
-      const resized = framebuffer.clone({width: 4, height: 4});
+      framebuffer.resize({width: 4, height: 4});
+      const resized = framebuffer.clone();
       try {
         expect(resized.width).toBe(4);
         expect(
