@@ -153,5 +153,7 @@ The first glTF vertex fidelity increment applies retained morph position and
 normal deltas in ray geometry and interpolates `COLOR_0`. The vertex alpha
 factor participates in triangle mask visibility and sampled emitter endpoints.
 The next increment preserves glTF unlit base color and interpolates authored
-tangents, including handedness and morph deltas. Skeletal skinning, alpha
-blending and dispersion remain open on the ray path.
+tangents, including handedness and morph deltas. Skeletal skinning now supports retained CPU joint palettes with four influences
+per vertex, after morphing positions, normals, and tangents. GPU-only and
+per-instance palettes, deformation refits, alpha blending, and dispersion remain
+open on the ray path.

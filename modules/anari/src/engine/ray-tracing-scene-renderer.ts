@@ -9,6 +9,7 @@ import {
   getRayMaterialTextureBindings,
   getRayMaterialTextureRevision
 } from './ray-tracing-material-textures';
+import {applyRaySkin, getRaySkin} from './ray-tracing-skin';
 import {ScenegraphSurfaces} from './scenegraph-surfaces';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import {getEnvironmentMapDistribution, RAY_LIGHT_FLOAT_COUNT} from './ray-tracing-environment-map';
@@ -3910,11 +3911,17 @@ function scheduleTransformAccelerationUpdate(resources: RayTracingFrameResources
     resources.refitsSinceMortonRebuild >= MORTON_REBUILD_REFIT_INTERVAL ? 'rebuild' : 'refit';
 }
 
+/** Snapshots mutable joint values so in-place pose updates invalidate packed geometry. */
+function getRaySkinRevision(surface: SceneSurface): number[] | undefined {
+  const palette = getRaySkin(surface)?.palette;
+  return palette && Array.from(palette);
+}
+
 function getTopologyRevision(options: RayTracingSceneRenderOptions): string {
   if (options.sceneRevisions) {
     const poses = options.surfaces
-      .filter(surface => surface.morphTargets?.length)
-      .map(surface => [surface.id, surface.morphWeights]);
+      .filter(surface => surface.morphTargets?.length || surface.skin?.jointMatrices?.length)
+      .map(surface => [surface.id, surface.morphWeights, getRaySkinRevision(surface)]);
     return `${options.sceneRevisions.identity}:${options.sceneRevisions.topology}:${JSON.stringify(poses)}`;
   }
   return JSON.stringify(
@@ -3924,6 +3931,7 @@ function getTopologyRevision(options: RayTracingSceneRenderOptions): string {
       surface.geometryVersion,
       surface.transforms.length,
       surface.morphWeights,
+      getRaySkinRevision(surface),
       options.primitives?.[surface.id]
     ])
   );
@@ -4224,21 +4232,32 @@ function compileRayGeometry(
     throw new Error('Ray tracing scene geometry requires positions and normals.');
   }
 
-  const morphed =
-    surface.morphTargets?.length && surface.morphWeights?.some(Boolean)
-      ? applyMorphTargets(
-          {
-            POSITION: decodeMorphTargetAttribute(positionAttribute),
-            NORMAL: decodeMorphTargetAttribute(normalAttribute),
-            TANGENT: baseTangents
-          },
-          surface.morphTargets,
-          surface.morphWeights
-        )
+  const skin = getRaySkin(surface);
+  const {morphTargets, morphWeights} = surface;
+  const needsMorph = morphTargets?.length && morphWeights?.some(Boolean);
+  const base =
+    skin || needsMorph
+      ? {
+          POSITION: decodeMorphTargetAttribute(positionAttribute),
+          NORMAL: decodeMorphTargetAttribute(normalAttribute),
+          TANGENT: baseTangents
+        }
       : undefined;
-  const positions = morphed?.POSITION ?? positionAttribute.value;
-  const normals = morphed?.NORMAL ?? normalAttribute.value;
-  const tangents = morphed?.TANGENT ?? baseTangents;
+  const morphed =
+    base && morphTargets?.length && morphWeights?.some(Boolean)
+      ? applyMorphTargets(base, morphTargets, morphWeights)
+      : undefined;
+  const posed =
+    skin && base
+      ? applyRaySkin(skin, {
+          POSITION: morphed?.POSITION ?? base.POSITION,
+          NORMAL: morphed?.NORMAL ?? base.NORMAL,
+          TANGENT: morphed?.TANGENT ?? base.TANGENT
+        })
+      : morphed;
+  const positions = posed?.POSITION ?? positionAttribute.value;
+  const normals = posed?.NORMAL ?? normalAttribute.value;
+  const tangents = posed?.TANGENT ?? baseTangents;
   const colorAttribute = engineGeometry.attributes['COLOR_0'];
   const colors = colorAttribute && decodeMorphTargetAttribute(colorAttribute);
   const triangleValues: number[] = [];
@@ -4303,15 +4322,16 @@ function compileRayGeometry(
     triangleCount: triangleValues.length / TRIANGLE_FLOAT_COUNT,
     bounds
   };
-  if (!morphed) geometryCache.set(geometryIdentifier, compiledGeometry);
+  if (!posed) geometryCache.set(geometryIdentifier, compiledGeometry);
   return compiledGeometry;
 }
 
 function getGeometryIdentifier(surface: SceneSurface): string {
   const base = `${surface.geometry.id}:${surface.geometryVersion ?? 0}`;
   // A posed surface shares geometry across its instances, but not with other poses.
-  return surface.morphTargets?.length && surface.morphWeights?.some(Boolean)
-    ? JSON.stringify([base, surface.id, surface.morphWeights])
+  return getRaySkin(surface) ||
+    (surface.morphTargets?.length && surface.morphWeights?.some(Boolean))
+    ? JSON.stringify([base, surface.id])
     : base;
 }
 
