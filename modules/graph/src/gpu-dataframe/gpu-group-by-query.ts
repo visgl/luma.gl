@@ -190,15 +190,18 @@ export class GPUDataFrameGroupedAggregationQuery<
   }
 }
 
-/** Normalizes a closed set of operation shapes without accepting arbitrary shader expressions. */
-function normalizeGPUDataFrameAggregations<
+/** Normalizes a closed set of operation shapes without accepting arbitrary shader expressions. @internal */
+export function normalizeGPUDataFrameAggregations<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string,
   Source extends GPUTypeMap
 >(
-  query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
-  key: string,
-  definitions: GPUDataFrameAggregationDefinitions<Logical, SelectedColumns>
+  query: Pick<
+    GPUDataFrameQuery<Logical, SelectedColumns, Source>,
+    'source' | 'selectedColumns' | 'derivedColumns'
+  >,
+  outputKey: string,
+  definitions: Readonly<Record<string, unknown>>
 ): GPUDataFrameAggregationDefinition[] {
   const entries = Object.entries(definitions);
   if (entries.length === 0) {
@@ -208,7 +211,7 @@ function normalizeGPUDataFrameAggregations<
   const formats = getGPUDataFrameQueryColumnFormats(query);
   const normalized: GPUDataFrameAggregationDefinition[] = [];
   for (const [name, value] of entries) {
-    if (name.length === 0 || name === key) {
+    if (name.length === 0 || name === outputKey) {
       throw new Error('GPUDataFrame aggregation names must be distinct from the group key');
     }
     if (value === 'count') {
@@ -249,7 +252,9 @@ function normalizeGPUDataFrameAggregations<
 function getGPUDataFrameQueryColumnFormats<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string
->(query: GPUDataFrameQuery<Logical, SelectedColumns, any>): Map<string, string | undefined> {
+>(
+  query: Pick<GPUDataFrameQuery<Logical, SelectedColumns, any>, 'source' | 'derivedColumns'>
+): Map<string, string | undefined> {
   const formats = new Map<string, string | undefined>(
     query.source.schema.fields.map(
       field =>

@@ -103,7 +103,8 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   Numeric aggregate expressions such as `SUM(fare * 2) AS total` require an explicit output alias.
 
 
-  A one-based GROUP BY position must refer to the selected source key.
+  Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column.
+  Grouped results preserve SELECT column order and retain the key dictionary under the output name.
 
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 

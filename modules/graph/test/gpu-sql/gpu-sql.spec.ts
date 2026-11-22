@@ -384,7 +384,7 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-aggregate'}));
   const grouped = context
     .query(
-      'SELECT category, COUNT(*) AS count, COUNT(NULLIF(fare, 8)) AS known, SUM(fare + 1) AS total FROM trips GROUP BY 1'
+      'SELECT COUNT(*) AS category, category AS label, COUNT(NULLIF(fare, 8)) AS known, SUM(fare + 1) AS total FROM trips GROUP BY label'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
@@ -414,8 +414,14 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       validity: grouped.validity,
       dictionaries: grouped.dictionaries
     });
-    expect(Array.from(groupedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
-    expect(Array.from(groupedArrow.getChild('count') ?? [])).toEqual([3, 2]);
+    expect(groupedArrow.schema.fields.map(field => field.name)).toEqual([
+      'category',
+      'label',
+      'known',
+      'total'
+    ]);
+    expect(Array.from(groupedArrow.getChild('label') ?? []), '').toEqual(['economy', 'premium']);
+    expect(Array.from(groupedArrow.getChild('category') ?? [])).toEqual([3, 2]);
     expect(Array.from(groupedArrow.getChild('known') ?? [])).toEqual([2, 1]);
     expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([16, 20]);
   } finally {
