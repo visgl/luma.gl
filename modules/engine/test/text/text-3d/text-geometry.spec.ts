@@ -11,7 +11,7 @@ import {
   TextGeometry
 } from '../../../src/text/text-3d/index';
 import {simpleFont} from './data/simple-font';
-import {Vector3} from '@math.gl/core';
+import {Vector3} from '@math.gl/core/matrix';
 
 it('extrudeShapes outputs complete attribute arrays', () => {
   const font = parseFont(simpleFont);

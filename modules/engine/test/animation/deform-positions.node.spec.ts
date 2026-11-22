@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {deformPositions} from '../../src/animation/deform-positions';
 it('snapshots morph and normalized skin positions without mutating source geometry', () => {
   const positions = new Float32Array([1, 0, 0]);

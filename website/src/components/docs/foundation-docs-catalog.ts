@@ -40,6 +40,8 @@ export const FOUNDATION_DOCS_CATALOG = {
         {id: 'rendering', label: 'Rendering', href: '/docs/api-guide/gpu/gpu-rendering'},
         {id: 'antialiasing', label: 'Antialiasing', href: '/docs/api-guide/gpu/gpu-antialiasing'},
         {id: 'parameters', label: 'Parameters', href: '/docs/api-guide/gpu/gpu-parameters'},
+        {id: 'depth-buffers', label: 'Depth buffers', href: '/docs/api-guide/gpu/depth-buffers'},
+        {id: 'stencil-buffers', label: 'Stencil buffers', href: '/docs/api-guide/gpu/stencil-buffers'},
         {id: 'bindings', label: 'Bindings', href: '/docs/api-guide/gpu/gpu-bindings'}
       ]
     },
@@ -97,6 +99,7 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Resources and synchronization',
       tabs: [
         {id: 'resource', label: 'Resource', href: '/docs/api-reference/core/resources/resource'},
+        {id: 'device-resource', label: 'DeviceResource', href: '/docs/api-reference/core/resources/device-resource'},
         {id: 'buffer', label: 'Buffer', href: '/docs/api-reference/core/resources/buffer'},
         {id: 'command-buffer', label: 'CommandBuffer', href: '/docs/api-reference/core/resources/command-buffer'},
         {id: 'query-set', label: 'QuerySet', href: '/docs/api-reference/core/resources/query-set'},

@@ -18,7 +18,7 @@ const RIGHT_COMPARISON_SAMPLER = 'activeRightComparisonSampler';
 describe('interactive texture sampler comparisons', () => {
   test('uses the accessible shared comparison splitter instead of a settings slider', () => {
     expect(EXAMPLE_SOURCE).toMatch(
-      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental\/controls['"]/
+      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental-controls['"]/
     );
     expect(EXAMPLE_SOURCE).toMatch(/new\s+ComparisonSplitter\s*\(/);
     expect(EXAMPLE_SOURCE).toContain("id: 'texture-sampling-comparison-splitter'");

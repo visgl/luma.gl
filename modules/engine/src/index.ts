@@ -373,3 +373,5 @@ export {deformPositions} from './animation/deform-positions';
 export {createAreaLightLTCTextures} from './lighting/ltc-textures';
 
 export {makeGPUVectorGeometry} from './geometry/gpu-vector-geometry-adapter';
+
+export {makeDepthIntervalPlugin} from './shader-plugins/depth-interval';

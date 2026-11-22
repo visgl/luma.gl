@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {runProjectionRoutingBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {runProjectionRoutingBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {compileProjectionPlan, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import {
   makePerformanceOptions,

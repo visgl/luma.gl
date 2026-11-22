@@ -24,6 +24,12 @@ scalar subgroup     workgroup      long-row
                output vector
 ```
 
+```ts
+import {GPUAdaptiveSpMV} from '@luma.gl/graph/gpu-core';
+
+graph.add(new GPUAdaptiveSpMV({rowOffsets, columnIndices, values, vector, output, columns}));
+```
+
 ## Scalar rows
 
 For matrices with very short rows, synchronization and cooperative reduction can cost more than the arithmetic. One invocation therefore owns one complete row. A workgroup processes many independent rows.

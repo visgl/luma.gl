@@ -10,7 +10,7 @@ import type {
   GeoArrowDimension,
   GeoArrowArray,
   GeoArrowFixedSizeList
-} from '@math.gl/arrow/geoarrow-utils';
+} from '@math.gl/core/arrow';
 
 /** Borrow CPU coordinate chunks as native GeoArrow points or single-level coordinate lists. */
 export function makeGeoArrowColumnFromCPUVector(

@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '../../../index';
-import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '../../../index';
+import {Device, Parameters, PolygonMode, ProvokingVertex} from '../../../index';
+import {hasStencilFaceState, resolveStencilFace} from '../../../api/adapter/types/stencil-state';
 import {GL} from '../../../webgl-constants/index';
 import type {
   GLBlendEquation,
@@ -140,21 +141,31 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     );
   }
 
-  if (parameters.unclippedDepth) {
+  if (parameters.unclippedDepth !== undefined) {
     if (device.features.has('depth-clip-control')) {
       // EXT_depth_clamp
-      gl.enable(GL.DEPTH_CLAMP_EXT);
+      if (parameters.unclippedDepth) gl.enable(GL.DEPTH_CLAMP_EXT);
+      else gl.disable(GL.DEPTH_CLAMP_EXT);
     }
   }
 
-  if (parameters.depthBias !== undefined) {
+  const {depthBias, depthBiasSlopeScale, depthBiasClamp} = parameters;
+  if (
+    depthBias !== undefined ||
+    depthBiasSlopeScale !== undefined ||
+    depthBiasClamp !== undefined
+  ) {
+    if (depthBiasClamp && !device.features.has('polygon-offset-clamp-webgl')) {
+      // A nonzero clamp requires EXT_polygon_offset_clamp.
+      throw new Error('polygon-offset-clamp-webgl');
+    }
     gl.enable(GL.POLYGON_OFFSET_FILL);
-    gl.polygonOffset(parameters.depthBias, parameters.depthBiasSlopeScale || 0);
+    setGLParameters(gl, {
+      [GL.POLYGON_OFFSET_FACTOR]: depthBiasSlopeScale ?? 0,
+      [GL.POLYGON_OFFSET_UNITS]: depthBias ?? 0,
+      [GL.POLYGON_OFFSET_CLAMP_EXT]: depthBiasClamp ?? 0
+    });
   }
-
-  // depthBiasSlopeScale: {
-  //   // Handled by depthBias
-  // },
 
   // WEBGL EXTENSIONS
 
@@ -236,50 +247,45 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.clearDepth(parameters.clearDepth);
   }
 
-  if (parameters.stencilWriteMask) {
-    const mask = parameters.stencilWriteMask;
-    gl.stencilMaskSeparate(GL.FRONT, mask);
-    gl.stencilMaskSeparate(GL.BACK, mask);
+  if (parameters.stencilWriteMask !== undefined) {
+    gl.stencilMask(parameters.stencilWriteMask);
   }
 
-  if (parameters.stencilReadMask) {
-    // stencilReadMask is handle inside stencil***Compare.
-    log.warn('stencilReadMask not supported under WebGL');
-  }
-
-  if (parameters.stencilCompare) {
-    const mask = parameters.stencilReadMask || 0xffffffff;
-    const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
-    // Even an always-passing stencil test must run to apply stencil operations.
+  if (hasStencilFaceState(parameters) || parameters.stencilReadMask !== undefined) {
+    const mask = parameters.stencilReadMask ?? 0xffffffff;
     gl.enable(GL.STENCIL_TEST);
-    gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
-    gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
-  }
-
-  if (
-    parameters.stencilPassOperation ||
-    parameters.stencilFailOperation ||
-    parameters.stencilDepthFailOperation
-  ) {
-    const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
-    const sfail = convertStencilOperation('stencilFailOperation', parameters.stencilFailOperation);
-    const dpfail = convertStencilOperation(
-      'stencilDepthFailOperation',
-      parameters.stencilDepthFailOperation
+    const faces = [
+      [GL.FRONT, resolveStencilFace(parameters, parameters.stencilFront)],
+      [GL.BACK, resolveStencilFace(parameters, parameters.stencilBack)]
+    ] as const;
+    // Comparison-only updates keep prior operations. Once a caller supplies operations,
+    // apply both faces so an unspecified face takes the default KEEP operations.
+    const hasOperations = faces.some(
+      ([, state]) => state.failOp || state.depthFailOp || state.passOp
     );
-    gl.stencilOpSeparate(GL.FRONT, sfail, dpfail, dppass);
-    gl.stencilOpSeparate(GL.BACK, sfail, dpfail, dppass);
+    for (const [face, state] of faces) {
+      gl.stencilFuncSeparate(
+        face,
+        convertCompareFunction('stencilCompare', state.compare ?? 'always'),
+        0,
+        mask
+      );
+      if (hasOperations) {
+        gl.stencilOpSeparate(
+          face,
+          convertStencilOperation('stencilFailOperation', state.failOp),
+          convertStencilOperation('stencilDepthFailOperation', state.depthFailOp),
+          convertStencilOperation('stencilPassOperation', state.passOp)
+        );
+      }
+    }
   }
-
-  // stencilDepthFailOperation() {
-  //   // handled by stencilPassOperation
-  // },
-
-  // stencilFailOperation() {
-  //   // handled by stencilPassOperation
-  // },
 
   // COLOR STATE
+  if (parameters.colorMask !== undefined) {
+    const mask = parameters.colorMask;
+    gl.colorMask(Boolean(mask & 1), Boolean(mask & 2), Boolean(mask & 4), Boolean(mask & 8));
+  }
   switch (parameters.blend) {
     case true:
       gl.enable(GL.BLEND);

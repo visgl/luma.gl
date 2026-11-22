@@ -1,0 +1,44 @@
+{
+  "browser": "151.0.7922.34",
+  "adapter": {
+    "type": "webgpu",
+    "vendor": "apple",
+    "renderer": "",
+    "version": "",
+    "gpu": "apple",
+    "gpuType": "unknown",
+    "gpuBackend": "unknown",
+    "gpuArchitecture": "metal-3",
+    "fallback": false,
+    "featureLevel": "core",
+    "subgroupMinSize": 32,
+    "subgroupMaxSize": 32,
+    "shadingLanguage": "wgsl",
+    "shadingLanguageVersion": 100
+  },
+  "rows": [
+    {
+      "solver": "ordered",
+      "samples": 464,
+      "p50": 10.900000095367432,
+      "p95": 15.200000047683716,
+      "within120Hz": false,
+      "maxPenetration": 0.025378980636596715,
+      "supportedHeight": 1.2879996299743652,
+      "releasedHeight": 2.033479690551758,
+      "qualified": true
+    },
+    {
+      "solver": "reduced",
+      "samples": 464,
+      "p50": 0.40000009536743164,
+      "p95": 1.5,
+      "within120Hz": true,
+      "maxPenetration": 0.00000409126281741834,
+      "supportedHeight": 1.2899959087371826,
+      "supportedForce": 52.71156311035156,
+      "releasedHeight": 2.097733974456787,
+      "qualified": true
+    }
+  ]
+}

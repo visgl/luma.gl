@@ -10,6 +10,8 @@ import {
   SettingsManager,
   SettingsPanel,
   TabbedPanel,
+  TabbedPanelContainer,
+  type TabbedPanelContainerProps,
   type SettingsChangeDescriptor,
   type SettingsManagerLocalStorageConfig,
   type SettingsManagerOnChange,
@@ -190,7 +192,10 @@ export function makeExampleContentPanel({
 
 /** Creates a community tabbed panel with the website source viewer appended when available. */
 export function makeExampleTabbedPanel(
-  props: TabbedPanelProps & {sourcePaths?: readonly string[]}
+  props: TabbedPanelProps &
+    Pick<TabbedPanelContainerProps, 'activePanelId' | 'onActivePanelIdChange'> & {
+      sourcePaths?: readonly string[];
+    }
 ): Panel {
   const {sourcePaths, ...tabbedProps} = props;
   const hasSourcePanel = props.panels.some(panel => panel.id === EXAMPLE_SOURCE_PANEL_ID);
@@ -198,6 +203,13 @@ export function makeExampleTabbedPanel(
     isWebsiteExample() && !hasSourcePanel
       ? [...props.panels, makeExampleSourcePanel(sourcePaths)]
       : props.panels;
+  if (props.onActivePanelIdChange) {
+    return makeExampleContentPanel({
+      id: props.id ?? 'tabbed-panels',
+      title: props.title ?? 'Panels',
+      content: h(TabbedPanelContainer, {...tabbedProps, panels})
+    });
+  }
   return new TabbedPanel({...tabbedProps, panels});
 }
 

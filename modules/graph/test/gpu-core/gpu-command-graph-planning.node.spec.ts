@@ -208,3 +208,16 @@ it('GPUCommandGraph execution latency priorities select queue-time targets', () 
     16
   );
 });
+
+it('calibrates application-sized dispatches from measured GPU time', () => {
+  const controller = new GPUCommandGraphExecutionBudgetController({
+    initialBudget: {maximumInvocationCount: 4096},
+    targetStepMilliseconds: 8,
+    responsiveness: 1
+  });
+  const submittedBudget = controller.budget;
+  expect(
+    controller.observeInvocations(4096, 16, submittedBudget).budget.maximumInvocationCount
+  ).toBe(2048);
+  expect(controller.observeInvocations(2048, 8).budget.maximumInvocationCount).toBe(2048);
+});

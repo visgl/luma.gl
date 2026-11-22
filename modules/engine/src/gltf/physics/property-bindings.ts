@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {decomposePhysicsTransform} from '@luma.gl/engine';
 import {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from '@luma.gl/engine/physics';
 import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
@@ -61,13 +61,21 @@ export function makeGLTFPhysicsProperties(
       });
   }
   // Source indices and unit conversion belong to the importer; runtime mutation is shared.
+  /** Preserve the source namespace in animation pointers and native export. */
+  const shapePointer = description.source.shapes
+    ? '/shapes'
+    : '/extensions/KHR_implicit_shapes/shapes';
+  /** Both profiles use the same analytic physics property bindings. */
   const shapes =
+    (description.source.shapes as Record<string, unknown>[] | undefined) ??
     (
       description.source.extensions?.['KHR_implicit_shapes'] as
         | {shapes?: Record<string, unknown>[]}
         | undefined
-    )?.shapes ?? [];
+    )?.shapes ??
+    [];
   for (const [shapeIndex, source] of shapes.entries()) {
+    if (!source || typeof source !== 'object') continue;
     const type = source['type'];
     const fields =
       type === 'sphere'
@@ -109,7 +117,7 @@ export function makeGLTFPhysicsProperties(
                 ]
         };
       });
-      targets.set(`/extensions/KHR_implicit_shapes/shapes/${shapeIndex}/${type}/${field}`, {
+      targets.set(`${shapePointer}/${shapeIndex}/${type}/${field}`, {
         type: 'shape',
         colliders,
         property: property as Extract<PhysicsPropertyTarget, {type: 'shape'}>['property']

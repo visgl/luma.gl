@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import type {TypedArray} from '@math.gl/core';
-import type {Geometry as MathGeometry} from '@math.gl/geometry';
+import type {TypedArray} from '@math.gl/core/types';
+import type {Geometry as MathGeometry} from '@math.gl/geometry/primitives';
 import {Geometry, type GeometryAttribute} from './geometry';
 
 export type MakeEdgeGeometryOptions = {

@@ -5,7 +5,8 @@
 import {assert} from '@luma.gl/core';
 import {GroupNode} from '../group-node';
 import {ScenegraphNode} from '../scenegraph-node';
-import {Matrix4, Vector3, type NumericArray} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 
 /** Camera-facing surface orientation and overlay behavior. */
 export type BillboardOrientation = {

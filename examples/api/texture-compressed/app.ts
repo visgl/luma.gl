@@ -12,7 +12,7 @@ import type {
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {TEXTURE_COMPRESSED_INFO_HTML} from './app-ui';
 import {
   read as readKTX2,

@@ -89,7 +89,7 @@ type ANARIMatrix4 = readonly number[];
 ```
 
 ```ts
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const left = anariDevice.newInstance({
   group,
@@ -102,7 +102,7 @@ const right = anariDevice.newInstance({
 });
 ```
 
-`transform` is a 16-element, column-major affine matrix compatible with `@math.gl/core`'s `Matrix4`. If omitted, the identity matrix is used. A single instance can reference one group, an array of groups, or an `ANARIArray` containing groups.
+`transform` is a 16-element, column-major affine matrix compatible with `@math.gl/core/matrix`'s `Matrix4`. If omitted, the identity matrix is used. A single instance can reference one group, an array of groups, or an `ANARIArray` containing groups.
 
 All surfaces in the referenced groups receive the same instance transform. Group lights are collected, but their positions and directions are currently interpreted in world space rather than transformed by the instance.
 
@@ -185,3 +185,41 @@ graphicsDevice.destroy();
 ```
 
 Destroying a graphics device is appropriate only when no other application subsystem still uses it.
+
+## Scenegraph snapshots
+
+`makeANARIWorldFromScenegraph(device, scene, lights = [])` converts an engine
+`GroupNode` containing `SceneMeshNode` leaves into a committed `ANARIWorld`.
+`makeScenegraphFromANARIWorld(world)` returns `{scene, lights}` for use with the
+engine renderers. Both functions are exported by `@luma.gl/anari`.
+
+```typescript
+import {makeANARIWorldFromScenegraph, makeScenegraphFromANARIWorld} from '@luma.gl/anari';
+
+const world = makeANARIWorldFromScenegraph(anariDevice, engineScene, lights);
+const snapshot = makeScenegraphFromANARIWorld(world);
+const anotherWorld = makeANARIWorldFromScenegraph(anariDevice, snapshot.scene, snapshot.lights);
+```
+
+These are snapshots, not live bindings. Hierarchy is flattened to world-space
+placements; shared geometry and material identity is retained within each
+snapshot. CPU geometry, material values, and light vectors are copied. GPU
+textures are borrowed: the caller must keep them alive until every consumer is
+finished, and destroying the ANARI device does not transfer texture ownership.
+Changing a source array after conversion does not update the snapshot.
+
+Forward conversion supports packed float32 triangle attributes `POSITION`,
+`NORMAL`, `TANGENT`, `COLOR_0`, `TEXCOORD_0`, and `TEXCOORD_1`, with optional uint16
+or uint32 indices. ANARI attribute slots zero, one, and two carry colors, the
+first UV set, and the second UV set, respectively. The selected vertex count is
+preserved. Reverse conversion tessellates analytic geometry; it does not recover
+the original analytic primitive or authored node hierarchy.
+
+PBR material factors and supported image samplers are preserved, including UV
+transforms and UV-set selection. Ambient, directional, point, and spot lights
+are supported; point and spot attenuation is retained by the ANARI extension
+`attenuation`. Area lights must be represented as emissive geometry. Unsupported
+shader defines, geometry attributes, GPU transforms/connections, skin/morph deformation, local probes,
+and non-mesh leaves fail explicitly. Bake or snapshot these inputs before
+conversion. Cameras and renderer-specific environment settings remain separate
+from the world and must be supplied to the renderer.

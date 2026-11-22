@@ -408,6 +408,100 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     });
   });
 
+  test('reads back sliced multi-batch tables the same with and without packing', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-sliced'});
+    const schema = new arrow.Schema([new arrow.Field('value', new arrow.Float32(), true)]);
+    const vector = arrow.vectorFromArray(
+      [0, null, 2, 3, null, 5, 6, null, 8, 9],
+      new arrow.Float32()
+    );
+    const batches = [
+      [0, 3],
+      [3, 3],
+      [3, 7],
+      [7, 10]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: end - start,
+            children: [vector.slice(start, end).data[0]]
+          })
+        )
+    );
+    const source = new arrow.Table(schema, batches).slice(1, 9);
+
+    for (const packBatches of [false, true, {minBatchSize: 3}] as const) {
+      const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches});
+      try {
+        const readback = await makeArrowTableFromGPUAnalyticsTable(result);
+        expect(Array.from(readback.getChild('value') ?? []), JSON.stringify(packBatches)).toEqual(
+          Array.from(source.getChild('value') ?? [])
+        );
+      } finally {
+        destroyAnalyticsResult(result);
+      }
+    }
+  });
+
+  test('packs fixed-size-list columns with their row byte stride', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-fixed-size-list'});
+    const type = new arrow.FixedSizeList(3, new arrow.Field('item', new arrow.Float32(), true));
+    const vector = arrow
+      .vectorFromArray([[9, 9, 9], [1, 2, 3], [4, 5, 6], null, [7, null, 9], [10, 11, 12]], type)
+      .slice(1);
+    const schema = new arrow.Schema([new arrow.Field('position', type, true)]);
+    const batches = [
+      [0, 2],
+      [2, 2],
+      [2, 5]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: end - start,
+            children: [vector.slice(start, end).data[0]]
+          })
+        )
+    );
+    const source = new arrow.Table(schema, batches);
+    const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches: true});
+
+    try {
+      expect(result.table.batches.map(batch => batch.numRows)).toEqual([5]);
+      const positions = result.table.gpuVectors['position'];
+      expect(positions.format).toBe('float32x3');
+      expect(positions.data[0].byteStride).toBe(12);
+      expect(positions.data[0].buffer.byteLength).toBeGreaterThanOrEqual(5 * 12);
+      const bytes = await positions.data[0].buffer.readAsync(0, 5 * 12);
+      expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 15))).toEqual([
+        1, 2, 3, 4, 5, 6, 0, 0, 0, 7, 0, 9, 10, 11, 12
+      ]);
+      expect(await readWords(result.validity['position']!)).toEqual([[1, 1, 0, 0, 1]]);
+      expect(result.nullCounts['position']).toEqual([0, 0, 2]);
+
+      const readback = await makeArrowTableFromGPUAnalyticsTable(result);
+      const position = readback.getChild('position')!;
+      expect(Array.from(position.get(0))).toEqual([1, 2, 3]);
+      expect(Array.from(position.get(1))).toEqual([4, 5, 6]);
+      expect(position.get(2)).toBeNull();
+      expect(position.get(3)).toBeNull();
+      expect(Array.from(position.get(4))).toEqual([10, 11, 12]);
+
+      const packedData = await readArrowGPUDataAsync(positions.data[0]);
+      expect(
+        Array.from(new arrow.Vector([packedData]), row => (row ? Array.from(row) : row)),
+        'generic readback restores parent and child nulls from the merged packed bitmaps'
+      ).toEqual([[1, 2, 3], [4, 5, 6], null, [7, null, 9], [10, 11, 12]]);
+    } finally {
+      destroyAnalyticsResult(result);
+    }
+  });
+
   test('packs zero-row source batches into bindable storage', async () => {
     const device = new NullDevice({id: 'arrow-analytics-packed-empty'});
     const source = createAnalyticsTable();
@@ -879,3 +973,48 @@ function destroyAnalyticsResult(result: {
   result.table.destroy();
   for (const validity of Object.values(result.validity)) validity?.destroy();
 }
+
+test('round-trips packed Arrow vectors and collapses component nulls into row validity', async () => {
+  const device = new NullDevice({id: 'analytics-packed-vectors'});
+  for (const child of [new arrow.Float32(), new arrow.Int32(), new arrow.Uint32()]) {
+    for (const width of [2, 3, 4]) {
+      const type = new arrow.FixedSizeList(width, new arrow.Field('item', child, true));
+      const expected = Array.from({length: width}, (_, component) => component + 10);
+      const vector = arrow
+        .vectorFromArray([expected, expected, null, [null, ...expected.slice(1)]], type)
+        .slice(1);
+      const table = new arrow.Table([new arrow.RecordBatch({position: vector.data[0]})]);
+      const uploaded = makeGPUAnalyticsTableFromArrowTable(device, table);
+      try {
+        expect(uploaded.table.gpuVectors.position.byteStride).toBe(width * 4);
+        expect(uploaded.nullCounts.position).toEqual([2]);
+        const result = await makeArrowTableFromGPUAnalyticsTable(uploaded);
+        const position = result.getChild('position')!;
+        expect(Array.from(position.get(0))).toEqual(expected);
+        expect(position.get(1)).toBeNull();
+        expect(position.get(2)).toBeNull();
+      } finally {
+        destroyAnalyticsResult(uploaded);
+      }
+    }
+  }
+});
+
+test('preserves packed vector stride for schema-only Arrow tables', () => {
+  const device = new NullDevice({id: 'analytics-empty-vector-layout'});
+  const schema = new arrow.Schema([
+    new arrow.Field(
+      'position',
+      new arrow.FixedSizeList(3, new arrow.Field('item', new arrow.Float32()))
+    )
+  ]);
+  const uploaded = makeGPUAnalyticsTableFromArrowTable(device, new arrow.Table(schema, []));
+  try {
+    expect(uploaded.table.numRows).toBe(0);
+    expect(uploaded.table.bufferLayout).toEqual([
+      {name: 'position', format: 'float32x3', byteStride: 12}
+    ]);
+  } finally {
+    destroyAnalyticsResult(uploaded);
+  }
+});

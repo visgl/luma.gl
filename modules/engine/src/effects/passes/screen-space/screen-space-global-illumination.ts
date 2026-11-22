@@ -4,7 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 
 /** Construction options for temporally stabilized diffuse screen-space global illumination. */
 export type SSGICompositeShaderPassOptions = {

@@ -5,23 +5,21 @@
 import type {DataType, Vector} from 'apache-arrow';
 import {
   makeGeoArrowColumnFromArrowVector as makeGeoArrowColumn,
-  type MakeGeoArrowColumnFromArrowVectorOptions
-} from '@math.gl/arrow/geoarrow';
-import {
+  type MakeGeoArrowColumnFromArrowVectorOptions,
   getGeoArrowRowView,
   iterateGeoArrowBatches,
   type GeoArrowBatchView,
   type GeoArrowColumn,
   type GeoArrowRowView
-} from '@math.gl/arrow/geoarrow-utils';
+} from '@math.gl/core/arrow';
 
-export type {MakeGeoArrowColumnFromArrowVectorOptions} from '@math.gl/arrow/geoarrow';
+export type {MakeGeoArrowColumnFromArrowVectorOptions} from '@math.gl/core/arrow';
 export {
   makeArrowVectorFromGeoArrowColumn,
   inferGeoArrowEncodingFromArrowType,
   inferGeoArrowDimensionFromArrowType,
   inferGeoArrowCoordinateLayoutFromArrowType
-} from '@math.gl/arrow/geoarrow';
+} from '@math.gl/core/arrow';
 
 /** Adapts borrowed Arrow buffers using math.gl's shared GeoArrow adapter. */
 export function makeGeoArrowColumnFromArrowVector<T extends DataType>(

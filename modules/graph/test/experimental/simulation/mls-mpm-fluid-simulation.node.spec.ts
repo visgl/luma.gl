@@ -11,7 +11,7 @@ import {
   MAX_MLS_MPM_FLUID_PARTICLE_COUNT,
   MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
   MLS_MPM_FLUID_STAGE_ORDER
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import {
   MLS_MPM_FLUID_GRID_TO_PARTICLE_SHADER,
   MLS_MPM_FLUID_MAXIMUM_DEFORMATION,

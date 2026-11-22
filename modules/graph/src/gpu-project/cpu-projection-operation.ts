@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {assert} from '@luma.gl/core';
-import type {Projection} from '@math.gl/geospatial/projection/types';
+import type {Projection} from '@math.gl/geospatial/projection-types';
 import {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
 import {gpuGraph} from '../gpu-core/gpu-graph-value';
 

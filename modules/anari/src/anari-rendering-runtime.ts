@@ -9,7 +9,8 @@ import {
 } from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from './renderers';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter, getFrameSize} from './anari-scene-adapter';

@@ -127,7 +127,7 @@ producer; the controller detaches its source when destroyed.
 ```ts
 import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const geometry = new Geometry({
   topology: 'triangle-list',
@@ -390,10 +390,11 @@ resources and adapt their underlying textures without introducing an experimenta
 
 ```ts
 import {loadPBREnvironment} from '@luma.gl/engine/gltf';
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {load} from '@loaders.gl/core';
+import {ImageLoader} from '@loaders.gl/images';
 
 const loadedEnvironment = loadPBREnvironment(device, {
-  loadImage: loadImageTexture,
+  loadImage: url => load(url, ImageLoader),
   brdfLutUrl: '/environments/studio/brdf-lut.png',
   getTexUrl: (name, face, level) => `/environments/studio/${name}-${face}-${level}.png`,
   specularMipLevels: 5
@@ -616,3 +617,30 @@ resolution and disables adaptive resolution and temporal reprojection.
 independent of retained scheduling. Region changes reset accumulation; changing
 only the explicit sample frame advances sampling without clearing history.
 Default rendering omits both options and retains its existing behavior.
+
+### Moving reflection probes
+
+On WebGPU, use `ReflectionProbe` from `@luma.gl/engine/lighting` to capture moving
+geometry for a reflective surface. Call `probe.update()` before the main render.
+Pass the GPU pose buffer and the reflective object's matrix index. The draw
+callback receives a face framebuffer, a rotation-only view matrix and a GPU
+snapshot of the capture origin and scene matrices. Render the capture surfaces
+with those matrices and set `camera.gpuOrigin` to the supplied origin buffer.
+Use a stable render ID per face to keep the recorded uniforms independent.
+Set `rasterParameters: {frontFace: 'cw'}` because the cube projection flips Y.
+GPU-origin capture uses the forward color pass without scene transmission,
+spot shadows, picking, or depth-only rendering. Omit the reflective object
+from the capture to avoid self-reflection.
+
+Use the completed `probe.texture` as the surface environment's specular
+cubemap, alongside its diffuse environment and BRDF lookup. Submit the device
+after recording the frame. Release renderer bindings before destroying the probe.
+
+Incremental refresh uses measured frame headroom to schedule work and accepts
+directions toward multiple views to prioritize their faces. All faces use one
+GPU pose snapshot, and the probe publishes the cube after all faces are ready.
+For fast motion, set `refreshMode: 'same-frame'` to capture and publish on the
+same frame. With a frame timing estimate, this mode reduces roughness-filter
+samples under load and restores them as headroom returns. Capture resolution and
+refresh cadence stay fixed. A smaller face size or mip count reduces the peak
+per-frame workload.

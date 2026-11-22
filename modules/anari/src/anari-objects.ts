@@ -11,6 +11,7 @@ import type {
   ANARIFrameParameters,
   ANARIFrameStatistics,
   ANARIFrameChannels,
+  ANARIFrameRadiance,
   ANARIPickResult,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
@@ -225,6 +226,11 @@ export class ANARIFrame extends ANARIObject<ANARIFrameParameters> {
   /** Captures caller-owned GPU channels after rendering and submitting this frame. */
   captureChannels(): ANARIFrameChannels | null {
     return this.device.captureFrameChannels(this);
+  }
+
+  /** Reads the latest submitted ray-tracing history at internal resolution. */
+  readRadiance(): Promise<ANARIFrameRadiance | null> {
+    return this.device.readFrameRadiance(this);
   }
 
   /** Picks a top-left-origin display pixel after rendering and submitting the frame. */

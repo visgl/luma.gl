@@ -21,6 +21,24 @@ it('sphere benchmark clock never leaves a playback backlog', () => {
   expect(advanceSphereClock(10, 1, 3, false)).toEqual({steps: 8, accumulator: 0});
 });
 
+it('sphere scale honors playback speed and drops catch-up work above its frame budget', () => {
+  /** Sphere Scale's fixed 60 Hz integration interval. */
+  const timeStep = 1 / 60;
+  /** Residual time carried from the first half-speed frame. */
+  const first = advanceSphereClock(0, timeStep, 0.5, false, timeStep, 2);
+  expect(first).toEqual({steps: 0, accumulator: timeStep / 2});
+  expect(advanceSphereClock(first.accumulator, timeStep, 0.5, false, timeStep, 2)).toEqual({
+    steps: 1,
+    accumulator: 0
+  });
+  expect(advanceSphereClock(0, timeStep, 2, false, timeStep, 2)).toEqual({
+    steps: 2,
+    accumulator: 0
+  });
+  expect(advanceSphereClock(0, 0.1, 3, false, timeStep, 2)).toEqual({steps: 2, accumulator: 0});
+  expect(advanceSphereClock(0, 0.1, 3, true, timeStep, 2)).toEqual({steps: 1, accumulator: 0});
+});
+
 it('sphere benchmark rejects old-run and warmup timings but retains invalid-workload evidence', () => {
   const previous = createSphereBenchmark();
   const current = createSphereBenchmark();

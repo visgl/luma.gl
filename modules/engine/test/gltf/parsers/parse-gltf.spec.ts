@@ -11,6 +11,8 @@ import {
   createScenegraphsFromGLTF,
   type PBREnvironment
 } from '@luma.gl/engine/gltf';
+import {type PBRLightingEnvironment} from '@luma.gl/engine/lighting';
+import {pbrScene} from '@luma.gl/shaders';
 
 import {GroupNode, ModelNode} from '@luma.gl/engine';
 import {NullDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
@@ -359,7 +361,26 @@ it('gltf#parseGLTF resolves extension textures for shared materials', () => {
   void 0;
 });
 
-it('gltf#parseGLTF routes IBL bindings onto model shader inputs', () => {
+function getFirstModelNode(scene: GroupNode): ModelNode {
+  let firstModelNode: ModelNode | null = null;
+  scene.traverse(scenegraphNode => {
+    if (scenegraphNode instanceof ModelNode && !firstModelNode) {
+      firstModelNode = scenegraphNode;
+    }
+  });
+  if (!firstModelNode) {
+    throw new Error('scene contains no model node');
+  }
+  return firstModelNode;
+}
+
+/** Shader defines that the glTF parser passed to a generated model. */
+function getModelDefines(model: ModelNode['model']): Record<string, unknown> {
+  return (model as unknown as {props: {defines?: Record<string, unknown>}}).props.defines || {};
+}
+
+/** One metallic triangle with normals, for image-based lighting routing tests. */
+function makeMetallicTriangleGLTF(): GLTFPostprocessed {
   const material = {
     id: 'material-0',
     pbrMetallicRoughness: {
@@ -421,6 +442,11 @@ it('gltf#parseGLTF routes IBL bindings onto model shader inputs', () => {
     skins: [],
     textures: []
   } as unknown as GLTFPostprocessed;
+  return gltf;
+}
+
+it('gltf#parseGLTF routes IBL bindings onto model shader inputs', () => {
+  const gltf = makeMetallicTriangleGLTF();
 
   const diffuseTexture = device.createTexture({
     id: 'ibl-diffuse',
@@ -474,4 +500,99 @@ it('gltf#parseGLTF routes IBL bindings onto model shader inputs', () => {
   specularTexture.destroy();
   brdfTexture.destroy();
   void 0;
+});
+
+it('gltf#parseGLTF routes a PBRLightingEnvironment to model bindings and scene uniforms', () => {
+  const gltf = makeMetallicTriangleGLTF();
+  const diffuseTexture = device.createTexture({dimension: 'cube', width: 1, height: 1});
+  const specularTexture = device.createTexture({
+    dimension: 'cube',
+    width: 16,
+    height: 16,
+    mipLevels: 5
+  });
+  const brdfLUTTexture = device.createTexture({width: 1, height: 1});
+  const imageBasedLightingEnvironment: PBRLightingEnvironment = {
+    diffuseTexture,
+    specularTexture,
+    brdfLUTTexture,
+    intensity: 2.5,
+    rotation: 0.75
+  };
+
+  const {scenes, materials} = parseGLTF(device, gltf, {imageBasedLightingEnvironment});
+  const model = getFirstModelNode(scenes[0]).model;
+  const bindingValues = model.shaderInputs.getBindingValues();
+  const uniformValues = model.shaderInputs.getUniformValues() as Record<string, any>;
+
+  expect(bindingValues['pbr_diffuseEnvSampler'], 'diffuse texture is bound directly').toBe(
+    diffuseTexture
+  );
+  expect(bindingValues['pbr_specularEnvSampler'], 'specular texture is bound directly').toBe(
+    specularTexture
+  );
+  expect(bindingValues['pbr_brdfLUT'], 'BRDF lookup texture is bound directly').toBe(
+    brdfLUTTexture
+  );
+  expect(getModelDefines(model)['USE_IBL'], 'IBL is enabled').toBe(true);
+  expect(getModelDefines(model)['USE_SCENE_ENVIRONMENT'], 'linear scene environment').toBe(true);
+  expect(uniformValues['pbrScene'].environmentIntensity, 'intensity reaches pbrScene').toBe(2.5);
+  expect(uniformValues['pbrScene'].environmentRotation, 'rotation reaches pbrScene').toBe(0.75);
+  expect(uniformValues['pbrScene'].environmentMipCount, 'mip count reaches pbrScene').toBe(5);
+  const materialUniformValues = materials[0].shaderInputs.getUniformValues() as Record<string, any>;
+  expect(materialUniformValues['pbrMaterial'].IBLenabled, 'material enables IBL').toBe(true);
+  expect(
+    'environmentIntensity' in materialUniformValues['pbrMaterial'] ||
+      'environmentRotation' in materialUniformValues['pbrMaterial'] ||
+      'environmentMipCount' in materialUniformValues['pbrMaterial'],
+    'scene environment controls stay off the shared material'
+  ).toBe(false);
+
+  model.destroy();
+  materials.forEach(parsedMaterial => parsedMaterial.destroy());
+  diffuseTexture.destroy();
+  specularTexture.destroy();
+  brdfLUTTexture.destroy();
+});
+
+it('gltf#parseGLTF keeps the legacy PBREnvironment off the scene environment path', () => {
+  const gltf = makeMetallicTriangleGLTF();
+  const diffuseTexture = device.createTexture({dimension: 'cube', width: 1, height: 1});
+  const specularTexture = device.createTexture({
+    dimension: 'cube',
+    width: 16,
+    height: 16,
+    mipLevels: 5
+  });
+  const brdfTexture = device.createTexture({width: 1, height: 1});
+  const imageBasedLightingEnvironment = {
+    diffuseEnvSampler: {texture: diffuseTexture},
+    specularEnvSampler: {texture: specularTexture},
+    brdfLutTexture: {texture: brdfTexture}
+  } as unknown as PBREnvironment;
+
+  const {scenes, materials} = parseGLTF(device, gltf, {imageBasedLightingEnvironment});
+  const model = getFirstModelNode(scenes[0]).model;
+  const uniformValues = model.shaderInputs.getUniformValues() as Record<string, any>;
+
+  expect(getModelDefines(model)['USE_IBL'], 'IBL is enabled').toBe(true);
+  expect(
+    'USE_SCENE_ENVIRONMENT' in getModelDefines(model),
+    'legacy environments keep the sRGB decode and fixed mip range'
+  ).toBe(false);
+  expect(uniformValues['pbrScene'].environmentIntensity, 'intensity stays at the default').toBe(
+    pbrScene.defaultUniforms.environmentIntensity
+  );
+  expect(uniformValues['pbrScene'].environmentRotation, 'rotation stays at the default').toBe(
+    pbrScene.defaultUniforms.environmentRotation
+  );
+  expect(uniformValues['pbrScene'].environmentMipCount, 'mip count stays at the default').toBe(
+    pbrScene.defaultUniforms.environmentMipCount
+  );
+
+  model.destroy();
+  materials.forEach(parsedMaterial => parsedMaterial.destroy());
+  diffuseTexture.destroy();
+  specularTexture.destroy();
+  brdfTexture.destroy();
 });

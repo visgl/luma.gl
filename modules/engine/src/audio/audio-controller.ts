@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
 import type {GroupNode} from '../scenegraph/group-node';
 import {AudioGraph, type AudioGraphDefinition} from './audio-graph';
 import {

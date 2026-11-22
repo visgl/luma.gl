@@ -4,9 +4,9 @@
 
 import type {Device} from '../device';
 import type {Shader} from './shader';
-import {Resource, type ResourceProps} from './resource';
+import {DeviceResource, type DeviceResourceProps} from './device-resource';
 
-export type SharedRenderPipelineProps = ResourceProps & {
+export type SharedRenderPipelineProps = DeviceResourceProps & {
   handle?: unknown;
   vs: Shader;
   fs: Shader;
@@ -19,7 +19,7 @@ export type SharedRenderPipelineProps = ResourceProps & {
  * Backends may use this to share expensive linked/program state across multiple
  * `RenderPipeline` wrappers.
  */
-export abstract class SharedRenderPipeline extends Resource<SharedRenderPipelineProps> {
+export abstract class SharedRenderPipeline extends DeviceResource<SharedRenderPipelineProps> {
   override get [Symbol.toStringTag](): string {
     return 'SharedRenderPipeline';
   }
@@ -29,7 +29,7 @@ export abstract class SharedRenderPipeline extends Resource<SharedRenderPipeline
 
   constructor(device: Device, props: SharedRenderPipelineProps) {
     super(device, props, {
-      ...Resource.defaultProps,
+      ...DeviceResource.defaultProps,
       handle: undefined!,
       vs: undefined!,
       fs: undefined!,

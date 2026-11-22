@@ -5,7 +5,7 @@
 import {Buffer, type Device, type VertexFormat} from '@luma.gl/core';
 import {convertColorData, type ColorInputFormat} from '@luma.gl/graph/gpu-simple-graph';
 import {GPUData, GPUDataView} from '@luma.gl/graph/gpu-data';
-import type {TypedArray} from '@math.gl/core';
+import type {TypedArray} from '@math.gl/core/types';
 import {beforeEach, describe, expect, test} from 'vitest';
 import {getTestDevice} from './fixtures';
 

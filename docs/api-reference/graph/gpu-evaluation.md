@@ -139,8 +139,8 @@ handlers:
 
 ```ts
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as webglBackend from '@luma.gl/graph/gpu-simple-graph/webgl';
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webglBackend from '@luma.gl/graph/gpu-simple-graph-webgl';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
@@ -151,7 +151,7 @@ registration is recommended so backend lookup is already resolved:
 
 ```ts
 import {backendRegistry, cleanEvaluateSync, interleave} from '@luma.gl/graph/gpu-simple-graph';
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 backendRegistry.add('webgpu', webgpuBackend);
 
@@ -167,7 +167,7 @@ missing built-in handlers:
 
 ```ts
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph/webgl';
+import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph-webgl';
 import {customOpWebGL} from './custom-operation';
 
 backendRegistry.add('webgl', {
@@ -183,7 +183,7 @@ backendRegistry.add('webgl', {
 See [`Custom Operations`](/docs/api-reference/graph/custom-operation) for a full
 operation and backend handler example.
 
-The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph/cpu` when explicitly
+The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph-cpu` when explicitly
 registering CPU handlers for another device type.
 
 ## Concepts

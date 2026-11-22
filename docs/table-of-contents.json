@@ -6,7 +6,8 @@
       "README",
       "whats-new",
       "upgrade-guide",
-      "credits"
+      "credits",
+      "references-and-credits"
     ]
   },
   {
@@ -19,7 +20,6 @@
         "label": "How luma.gl fits together",
         "items": [
           "api-guide/luma-layers",
-          "packages",
           "api-guide/README"
         ]
       },
@@ -77,321 +77,7 @@
   },
   {
     "type": "category",
-    "label": "Modules",
-    "items": [
-      {
-        "type": "category",
-        "label": "Core",
-        "items": [
-          "api-guide/gpu/README",
-          "api-guide/gpu/gpu-initialization",
-          "api-guide/gpu/gpu-resources",
-          {
-            "type": "category",
-            "label": "Memory and buffers",
-            "items": [
-              "api-guide/gpu/gpu-memory",
-              "api-guide/gpu/gpu-memory-layouts",
-              "api-guide/gpu/gpu-buffers",
-              "api-guide/gpu/gpu-storage-buffers"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Textures",
-            "items": [
-              "api-guide/gpu/gpu-textures",
-              "api-guide/gpu/video-textures"
-            ]
-          },
-          "api-guide/gpu/cookbook",
-          {
-            "type": "category",
-            "label": "Commands and rendering",
-            "items": [
-              "api-guide/gpu/gpu-commands",
-              "api-guide/gpu/gpu-rendering",
-              "api-guide/gpu/gpu-antialiasing",
-              "api-guide/gpu/gpu-parameters"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Debugging and Performance",
-            "items": [
-              "developer-guide/debugging",
-              "developer-guide/profiling",
-              "developer-guide/bundling"
-            ]
-          },
-          "developer-guide/multiple-canvases"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Shaders",
-        "items": [
-          "api-guide/shaders/README",
-          {
-            "type": "category",
-            "label": "Bindings and shader data",
-            "items": [
-              "api-guide/gpu/gpu-bindings",
-              "api-guide/gpu/gpu-attributes",
-              "api-guide/gpu/gpu-uniforms"
-            ]
-          },
-          "api-guide/engine/shader-inputs",
-          {
-            "type": "category",
-            "label": "Shader composition",
-            "items": [
-              "tutorials/shader-modules",
-              "tutorials/shader-injection",
-              "tutorials/shader-plugins",
-              "api-guide/shaders/shader-assembly",
-              "api-guide/shaders/shader-injection"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Conventions and portability",
-            "items": [
-              "api-reference/shaders/shader-conventions",
-              "api-reference/shaders/wgsl-support"
-            ]
-          },
-          "api-guide/shaders/writing-portable-shaders",
-          "api-guide/shaders/cookbook",
-          "api-guide/shaders/shader-passes",
-          "api-guide/shaders/gpu-floating-point-precision"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Graph",
-        "items": [
-          "api-guide/gpu/gpgpu",
-          {
-            "type": "category",
-            "label": "Simple Computations",
-            "items": [
-              "tutorials/transform",
-              "tutorials/transform-feedback"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Evaluations",
-            "items": [
-              "api-guide/gpu/gpu-evaluations"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Graph",
-            "items": [
-              "api-reference/experimental/gpu-core/concepts",
-              "api-reference/experimental/gpu-core/webgpu-foundations",
-              "api-reference/experimental/gpu-core/execution-techniques",
-              "api-guide/gpu/batch-semantics",
-              "api-reference/experimental/gpu-core/debugging",
-              {
-                "type": "category",
-                "label": "Examples",
-                "items": [
-                  "api-reference/experimental/gpu-core/tutorial",
-                  "api-reference/experimental/gpu-core/recipes"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Data processing",
-            "items": [
-              "api-guide/gpu/gpu-data-processing",
-              "api-guide/gpu/gpu-tables",
-              "api-guide/gpu/tabular-data-in-wgsl"
-            ]
-          }
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Engine",
-        "items": [
-          "api-guide/engine/engine",
-          {
-            "type": "category",
-            "label": "First renders",
-            "items": [
-              "tutorials/hello-triangle",
-              "tutorials/hello-cube",
-              "tutorials/hello-instancing"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Models and frame lifecycle",
-            "items": [
-              "api-guide/engine/transforms",
-              "api-guide/engine/redraw",
-              "api-guide/engine/cookbook"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Materials and lighting",
-            "items": [
-              "api-guide/engine/materials",
-              "api-guide/engine/lighting-effects",
-              "tutorials/lighting",
-              "api-guide/engine/features/lighting",
-              {
-                "type": "category",
-                "label": "PBR Materials",
-                "items": [
-                  "api-guide/engine/features/README",
-                  "api-guide/engine/features/metallic-roughness",
-                  "api-guide/engine/features/metallic",
-                  "api-guide/engine/features/roughness",
-                  "api-guide/engine/features/base-color",
-                  "api-guide/engine/features/opacity",
-                  "api-guide/engine/features/double-sided",
-                  "api-guide/engine/features/occlusion",
-                  "api-guide/engine/features/unlit",
-                  "api-guide/engine/features/emission",
-                  "api-guide/engine/features/emissive-strength",
-                  "api-guide/engine/features/specular",
-                  "api-guide/engine/features/index-of-refraction",
-                  "api-guide/engine/features/transmission",
-                  "api-guide/engine/features/volume",
-                  "api-guide/engine/features/dispersion",
-                  "api-guide/engine/features/clearcoat",
-                  "api-guide/engine/features/sheen",
-                  "api-guide/engine/features/iridescence",
-                  "api-guide/engine/features/anisotropy",
-                  "api-guide/engine/features/surface-detail",
-                  "api-guide/engine/features/normal-mapping",
-                  "api-guide/engine/features/bump-mapping",
-                  "api-guide/engine/features/diffuse-transmission",
-                  "api-guide/engine/features/volume-scattering",
-                  "api-guide/engine/features/thin-wall-scattering",
-                  "api-guide/engine/features/texture-coordinates",
-                  "api-guide/engine/features/lightmaps"
-                ]
-              },
-              "api-guide/shaders/glass-effects",
-              "api-reference/engine/experimental/glass-material",
-              "api-reference/engine/experimental/reflective-material",
-              "api-reference/anari/pbr-environment"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Scenegraphs",
-            "items": [
-              "api-guide/engine/scenegraph",
-              "api-guide/engine/scene-controllers",
-              {
-                "type": "category",
-                "label": "Animation and deformation",
-                "items": [
-                  "api-guide/engine/animation",
-                  "api-guide/engine/features/animation",
-                  "api-guide/engine/scenegraph-skins",
-                  "api-guide/engine/scenegraph-morphs",
-                  "api-guide/engine/features/animated-crowds"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Interactivity and physics",
-                "items": [
-                  "api-guide/engine/scenegraph-interactivity",
-                  "api-guide/engine/interactivity",
-                  "api-guide/engine/scenegraph-physics",
-                  "api-guide/engine/scenegraph-joints"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Scene capabilities",
-                "items": [
-                  "api-guide/engine/features/visibility",
-                  "api-guide/engine/features/instancing",
-                  "api-guide/engine/features/material-variants",
-                  "api-guide/engine/scenegraph-billboards",
-                  "api-guide/engine/scenegraph-lights",
-                  "api-guide/engine/scenegraph-audio"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Effects and transparency",
-            "items": [
-              "api-guide/shaders/rendering-techniques",
-              "api-guide/shaders/transparency"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "ANARI rendering",
-            "items": [
-              "api-guide/engine/anari-rendering",
-              "api-guide/engine/anari-first-scene",
-              "api-guide/engine/anari-architecture",
-              "api-guide/engine/anari-json-scenes"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Integration",
-            "items": [
-              "tutorials/external-webgl-context",
-              "api-guide/gpu/html-in-canvas",
-              "api-guide/engine/features/asset-compression"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Physics",
-            "items": [
-              "api-guide/physics/overview",
-              "api-guide/physics/getting-started",
-              "api-guide/physics/bodies-and-collisions",
-              "api-guide/physics/joints-and-mechanisms",
-              "api-guide/physics/scenes-and-gltf",
-              "api-guide/physics/large-worlds",
-              "api-guide/physics/performance",
-              "api-guide/gpu/gpu-physics"
-            ]
-          }
-        ]
-      },
-      {
-        "type": "link",
-        "label": "ANARI 🧪",
-        "href": "/docs/api-reference/anari"
-      },
-      {
-        "type": "link",
-        "label": "Slang 🧪",
-        "href": "/docs/api-reference/slang"
-      },
-      {
-        "type": "link",
-        "label": "Three.js 🧪",
-        "href": "/docs/api-reference/three"
-      }
-    ]
-  },
-  {
-    "type": "category",
-    "label": "API Reference",
+    "label": "Packages",
     "items": [
       "api-reference/README",
       {
@@ -399,9 +85,58 @@
         "label": "@luma.gl/core",
         "items": [
           {
-            "type": "doc",
-            "id": "api-reference/core/README",
-            "label": "Overview"
+            "type": "category",
+            "label": "Guide",
+            "link": {
+              "type": "doc",
+              "id": "api-guide/gpu/README"
+            },
+            "items": [
+              "api-guide/gpu/gpu-initialization",
+              "api-guide/gpu/gpu-resources",
+              "api-guide/gpu/resource-ownership",
+              {
+                "type": "category",
+                "label": "Memory and buffers",
+                "items": [
+                  "api-guide/gpu/gpu-memory",
+                  "api-guide/gpu/gpu-memory-layouts",
+                  "api-guide/gpu/gpu-buffers",
+                  "api-guide/gpu/gpu-storage-buffers"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Textures",
+                "items": [
+                  "api-guide/gpu/gpu-textures",
+                  "api-guide/gpu/video-textures"
+                ]
+              },
+              "api-guide/gpu/cookbook",
+              {
+                "type": "category",
+                "label": "Commands and rendering",
+                "items": [
+                  "api-guide/gpu/gpu-commands",
+                  "api-guide/gpu/gpu-rendering",
+                  "api-guide/gpu/gpu-antialiasing",
+                  "api-guide/gpu/gpu-parameters",
+                  "api-guide/gpu/depth-buffers",
+                  "api-guide/gpu/stencil-buffers"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Debugging and Performance",
+                "items": [
+                  "developer-guide/debugging",
+                  "developer-guide/profiling",
+                  "developer-guide/bundling"
+                ]
+              },
+              "developer-guide/multiple-canvases"
+            ]
           },
           "api-reference/core/dynamic/dynamic-buffer",
           "api-reference/core/dynamic/dynamic-texture",
@@ -434,7 +169,6 @@
             "type": "category",
             "label": "Formats and factories",
             "items": [
-              "api-reference/core/shader-types",
               "api-reference/core/vertex-formats",
               "api-reference/core/texture-formats",
               "api-reference/core/pipeline-factory",
@@ -447,6 +181,7 @@
             "label": "Buffers and textures",
             "items": [
               "api-reference/core/resources/resource",
+              "api-reference/core/resources/device-resource",
               "api-reference/core/resources/buffer",
               "api-reference/core/resources/texture",
               "api-reference/core/resources/texture-view",
@@ -485,50 +220,70 @@
             "type": "category",
             "label": "@luma.gl/core/webgpu",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/webgpu/README",
-                "label": "Overview"
-              },
               "api-reference/webgpu/optional-features"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/webgpu/README"
+            }
           },
           {
             "type": "category",
             "label": "@luma.gl/core/webgl",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/webgl/README",
-                "label": "Overview"
-              },
               "api-reference/webgl/constants"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/webgl/README"
+            }
           },
           {
             "type": "category",
             "label": "@luma.gl/core/test-utils",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/test-utils/README",
-                "label": "Overview"
-              },
               "api-reference/test-utils/snapshot-test-runner"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/test-utils/README"
+            }
           },
           {
-            "type": "category",
-            "label": "@luma.gl/core/webgl-constants",
-            "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/constants/README",
-                "label": "Overview"
-              }
-            ]
+            "type": "doc",
+            "id": "api-reference/constants/README",
+            "label": "@luma.gl/core/webgl-constants"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/core/wgsl",
+            "id": "api-reference/core/entry-points/wgsl"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/core/wgsl-binding-scan",
+            "id": "api-reference/core/entry-points/wgsl-binding-scan"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/core/webgl-debug",
+            "id": "api-reference/core/entry-points/webgl-debug"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/core/dynamic",
+            "id": "api-reference/core/entry-points/dynamic"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/core/shadertypes",
+            "id": "api-reference/core/shader-types"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/core/README"
+        }
       },
       {
         "type": "category",
@@ -536,13 +291,51 @@
         "items": [
           {
             "type": "category",
-            "label": "Core APIs",
+            "label": "Guide",
+            "link": {
+              "type": "doc",
+              "id": "api-guide/shaders/README"
+            },
             "items": [
               {
-                "type": "doc",
-                "id": "api-reference/shaders/README",
-                "label": "Overview"
+                "type": "category",
+                "label": "Bindings and shader data",
+                "items": [
+                  "api-guide/gpu/gpu-bindings",
+                  "api-guide/gpu/gpu-attributes",
+                  "api-guide/gpu/gpu-uniforms"
+                ]
               },
+              "api-guide/engine/shader-inputs",
+              {
+                "type": "category",
+                "label": "Shader composition",
+                "items": [
+                  "tutorials/shader-modules",
+                  "tutorials/shader-injection",
+                  "tutorials/shader-plugins",
+                  "api-guide/shaders/shader-assembly",
+                  "api-guide/shaders/shader-injection"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Conventions and portability",
+                "items": [
+                  "api-reference/shaders/shader-conventions",
+                  "api-reference/shaders/wgsl-support"
+                ]
+              },
+              "api-guide/shaders/writing-portable-shaders",
+              "api-guide/shaders/cookbook",
+              "api-guide/shaders/shader-passes",
+              "api-guide/shaders/gpu-floating-point-precision"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Core APIs",
+            "items": [
               "api-reference/shaders/shader-module",
               "api-reference/shaders/shader-pass",
               "api-reference/shaders/shader-plugin",
@@ -679,17 +472,84 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/shaders/wgsl",
+            "id": "api-reference/shaders/entry-points/wgsl"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/shaders/glsl",
+            "id": "api-reference/shaders/entry-points/glsl"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/shaders/types",
+            "id": "api-reference/shaders/entry-points/types"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/shaders/README"
+        }
       },
       {
         "type": "category",
         "label": "@luma.gl/graph",
         "items": [
           {
-            "type": "doc",
-            "id": "api-reference/graph/README",
-            "label": "Overview"
+            "type": "category",
+            "label": "Guide",
+            "link": {
+              "type": "doc",
+              "id": "api-guide/gpu/gpgpu"
+            },
+            "items": [
+              {
+                "type": "category",
+                "label": "Simple Computations",
+                "items": [
+                  "tutorials/transform",
+                  "tutorials/transform-feedback"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "GPU Evaluations",
+                "items": [
+                  "api-guide/gpu/gpu-evaluations"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "GPU Graph",
+                "items": [
+                  "api-reference/experimental/gpu-core/concepts",
+                  "api-reference/experimental/gpu-core/webgpu-foundations",
+                  "api-reference/experimental/gpu-core/execution-techniques",
+                  "api-guide/gpu/batch-semantics",
+                  "api-reference/experimental/gpu-core/debugging",
+                  {
+                    "type": "category",
+                    "label": "Examples",
+                    "items": [
+                      "api-reference/experimental/gpu-core/tutorial",
+                      "api-reference/experimental/gpu-core/recipes"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Data processing",
+                "items": [
+                  "api-guide/gpu/gpu-data-processing",
+                  "api-guide/gpu/gpu-tables",
+                  "api-guide/gpu/tabular-data-in-wgsl"
+                ]
+              }
+            ]
           },
           "api-reference/graph/getting-started",
           "api-reference/graph/gpu-graph-values",
@@ -700,7 +560,6 @@
           "api-reference/graph/gpu-transfer-operations",
           "api-reference/graph/gpu-compaction-operation",
           "api-reference/graph/gpu-operation",
-          "api-reference/graph/gpu-simple-graph",
           {
             "type": "category",
             "label": "GPU Data",
@@ -740,9 +599,8 @@
           },
           {
             "type": "category",
-            "label": "GPU Core",
+            "label": "@luma.gl/graph/gpu-core",
             "items": [
-              "api-reference/experimental/gpu-core/README",
               {
                 "type": "category",
                 "label": "Compute Foundations",
@@ -902,92 +760,85 @@
                 ]
               },
               "api-reference/experimental/gpu-data/gpu-sparse-matrix"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-core/README"
+            }
           },
           {
             "type": "category",
-            "label": "GPU Graph Algorithms",
+            "label": "@luma.gl/graph/gpu-graph-algorithms",
             "items": [
-              "api-reference/experimental/gpu-graph",
               "api-reference/experimental/gpu-graph-operations",
               "api-reference/experimental/gpu-graph-topology",
               "api-reference/experimental/gpu-graph-traversal",
               "api-reference/experimental/gpu-graph-connectivity",
               "api-reference/experimental/gpu-graph-metrics",
               "api-reference/experimental/gpu-graph-layouts"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-graph"
+            }
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/graph/gpu-parse",
+            "label": "@luma.gl/graph/gpu-parse"
           },
           {
             "type": "category",
-            "label": "GPU Parse",
+            "label": "@luma.gl/graph/gpu-physics",
             "items": [
-              "api-reference/graph/gpu-parse"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Physics",
-            "items": [
-              "api-reference/graph/gpu-physics",
               "api-reference/graph/gpu-physics-collision-coverage",
               "api-reference/graph/gpu-sphere-world",
               "api-reference/graph/gpu-rigid-body-world"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/graph/gpu-physics"
+            }
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/graph/gpu-vector-search",
+            "label": "@luma.gl/graph/gpu-vector-search"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/experimental/gpu-timeseries",
+            "label": "@luma.gl/graph/gpu-timeseries"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/graph/gpu-geometry",
+            "label": "@luma.gl/graph/gpu-geometry"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/graph/gpu-pointcloud",
+            "label": "@luma.gl/graph/gpu-pointcloud"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/experimental/gpu-dggs",
+            "label": "@luma.gl/graph/gpu-dggs"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/experimental/gpu-h3",
+            "label": "@luma.gl/graph/gpu-h3"
+          },
+          {
+            "type": "doc",
+            "id": "api-reference/experimental/gpu-a5",
+            "label": "@luma.gl/graph/gpu-a5"
           },
           {
             "type": "category",
-            "label": "GPU Vector Search",
+            "label": "@luma.gl/graph/gpu-tables",
             "items": [
-              "api-reference/graph/gpu-vector-search"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Time Series",
-            "items": [
-              "api-reference/experimental/gpu-timeseries"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Geometry",
-            "items": [
-              "api-reference/graph/gpu-geometry"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Point Cloud",
-            "items": [
-              "api-reference/graph/gpu-pointcloud"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU DGGS",
-            "items": [
-              "api-reference/experimental/gpu-dggs"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU H3",
-            "items": [
-              "api-reference/experimental/gpu-h3"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU A5",
-            "items": [
-              "api-reference/experimental/gpu-a5"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Tables",
-            "items": [
-              "api-reference/experimental/gpu-tables/README",
               "api-reference/experimental/gpu-tables/gpu-table-structure",
               "api-reference/experimental/gpu-tables/gpu-table-lifecycle",
               "api-reference/experimental/gpu-tables/gpu-table",
@@ -996,13 +847,16 @@
               "api-reference/experimental/gpu-tables/gpu-input-schema",
               "api-reference/experimental/gpu-tables/gpu-table-shader-bindings",
               "api-reference/experimental/gpu-tables/gpu-table-buffer-planner"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-tables/README"
+            }
           },
           {
             "type": "category",
-            "label": "GPU Raster",
+            "label": "@luma.gl/graph/gpu-raster",
             "items": [
-              "api-reference/experimental/gpu-raster/README",
               "api-reference/experimental/gpu-raster/concepts",
               "api-reference/experimental/gpu-raster/operations",
               {
@@ -1017,22 +871,21 @@
                   "api-reference/experimental/gpu-raster/operations-regions-contours"
                 ]
               }
-            ]
-          },
-          "api-reference/experimental/lucim",
-          {
-            "type": "category",
-            "label": "GPU Project",
-            "items": [
-              "api-reference/experimental/gpu-project",
-              "api-reference/experimental/geospatial"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-raster/README"
+            }
           },
           {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-project",
+            "id": "api-reference/experimental/gpu-project"
+          },
+          {
             "type": "category",
-            "label": "GPU Trace",
+            "label": "@luma.gl/graph/gpu-trace",
             "items": [
-              "api-reference/experimental/gpu-trace",
               "api-reference/experimental/gpu-trace-algorithms",
               {
                 "type": "category",
@@ -1054,27 +907,32 @@
                   "api-reference/experimental/gpu-trace/picking"
                 ]
               }
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-trace"
+            }
           },
           {
             "type": "category",
-            "label": "GPU Dataframe",
+            "label": "@luma.gl/graph/gpu-dataframe",
             "items": [
-              "api-reference/experimental/gpu-dataframe",
               "api-reference/experimental/gpu-dataframe-operations",
               "api-reference/experimental/gpu-dataframe-expressions",
               "api-reference/experimental/gpu-dataframe-aggregation",
               "api-reference/experimental/gpu-dataframe-sorting",
               "api-reference/experimental/gpu-dataframe-indexes-joins",
               "api-reference/experimental/gpu-sql"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/experimental/gpu-dataframe"
+            }
           },
           {
-            "type": "category",
-            "label": "GPU Crossfilter",
-            "items": [
-              "api-reference/experimental/gpu-crossfilter"
-            ]
+            "type": "doc",
+            "id": "api-reference/experimental/gpu-crossfilter",
+            "label": "@luma.gl/graph/gpu-crossfilter"
           },
           {
             "type": "category",
@@ -1090,28 +948,284 @@
             "type": "category",
             "label": "@luma.gl/graph/arrow",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/arrow/README",
-                "label": "Overview"
-              },
               "api-reference/arrow/arrow-representations",
               "api-reference/arrow/arrow-conversion",
               "api-reference/arrow/supported-arrow-types",
               "api-reference/arrow/deck-target-api",
               "api-reference/arrow/arrow-utils"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/arrow/README"
+            }
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-graph",
+            "id": "api-reference/graph/entry-points/gpu-graph"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-graph-algorithms-benchmarks",
+            "id": "api-reference/graph/entry-points/gpu-graph-algorithms-benchmarks"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-dggs-benchmarks",
+            "id": "api-reference/graph/entry-points/gpu-dggs-benchmarks"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/geospatial",
+            "id": "api-reference/experimental/geospatial"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/lucim",
+            "id": "api-reference/experimental/lucim"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-project-benchmarks",
+            "id": "api-reference/graph/entry-points/gpu-project-benchmarks"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-project-geoarrow",
+            "id": "api-reference/graph/entry-points/gpu-project-geoarrow"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-project-graph",
+            "id": "api-reference/graph/entry-points/gpu-project-graph"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-project-crs",
+            "id": "api-reference/graph/entry-points/gpu-project-crs"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-sql",
+            "id": "api-reference/graph/entry-points/gpu-sql"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-simulation",
+            "id": "api-reference/graph/entry-points/gpu-simulation"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-effects",
+            "id": "api-reference/graph/entry-points/gpu-effects"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-simple-graph",
+            "id": "api-reference/graph/gpu-simple-graph"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/experimental-simulation",
+            "id": "api-reference/graph/entry-points/experimental-simulation"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/experimental-models",
+            "id": "api-reference/graph/entry-points/experimental-models"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/experimental",
+            "id": "api-reference/graph/entry-points/experimental"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-data",
+            "id": "api-reference/graph/entry-points/gpu-data"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-simple-graph-cpu",
+            "id": "api-reference/graph/entry-points/gpu-simple-graph-cpu"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-simple-graph-webgl",
+            "id": "api-reference/graph/entry-points/gpu-simple-graph-webgl"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/graph/gpu-simple-graph-webgpu",
+            "id": "api-reference/graph/entry-points/gpu-simple-graph-webgpu"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/graph/README"
+        }
       },
       {
         "type": "category",
         "label": "@luma.gl/engine",
         "items": [
           {
-            "type": "doc",
-            "id": "api-reference/engine/README",
-            "label": "Overview"
+            "type": "category",
+            "label": "Guide",
+            "link": {
+              "type": "doc",
+              "id": "api-guide/engine/engine"
+            },
+            "items": [
+              {
+                "type": "category",
+                "label": "First renders",
+                "items": [
+                  "tutorials/hello-triangle",
+                  "tutorials/hello-cube",
+                  "tutorials/hello-instancing"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Models and frame lifecycle",
+                "items": [
+                  "api-guide/engine/transforms",
+                  "api-guide/engine/redraw",
+                  "api-guide/engine/cookbook"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Materials and lighting",
+                "items": [
+                  "api-guide/engine/materials",
+                  "api-guide/engine/lighting-effects",
+                  "tutorials/lighting",
+                  "api-guide/engine/features/lighting",
+                  {
+                    "type": "category",
+                    "label": "PBR Materials",
+                    "items": [
+                      "api-guide/engine/features/README",
+                      "api-guide/engine/features/metallic-roughness",
+                      "api-guide/engine/features/metallic",
+                      "api-guide/engine/features/roughness",
+                      "api-guide/engine/features/base-color",
+                      "api-guide/engine/features/opacity",
+                      "api-guide/engine/features/double-sided",
+                      "api-guide/engine/features/occlusion",
+                      "api-guide/engine/features/unlit",
+                      "api-guide/engine/features/emission",
+                      "api-guide/engine/features/emissive-strength",
+                      "api-guide/engine/features/specular",
+                      "api-guide/engine/features/index-of-refraction",
+                      "api-guide/engine/features/transmission",
+                      "api-guide/engine/features/volume",
+                      "api-guide/engine/features/dispersion",
+                      "api-guide/engine/features/clearcoat",
+                      "api-guide/engine/features/sheen",
+                      "api-guide/engine/features/iridescence",
+                      "api-guide/engine/features/anisotropy",
+                      "api-guide/engine/features/surface-detail",
+                      "api-guide/engine/features/normal-mapping",
+                      "api-guide/engine/features/bump-mapping",
+                      "api-guide/engine/features/diffuse-transmission",
+                      "api-guide/engine/features/volume-scattering",
+                      "api-guide/engine/features/thin-wall-scattering",
+                      "api-guide/engine/features/texture-coordinates",
+                      "api-guide/engine/features/lightmaps"
+                    ]
+                  },
+                  "api-guide/shaders/glass-effects",
+                  "api-reference/engine/experimental/glass-material",
+                  "api-reference/engine/experimental/reflective-material",
+                  "api-reference/anari/pbr-environment"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Scenegraphs",
+                "items": [
+                  "api-guide/engine/scenegraph",
+                  "api-guide/engine/scene-controllers",
+                  {
+                    "type": "category",
+                    "label": "Animation and deformation",
+                    "items": [
+                      "api-guide/engine/animation",
+                      "api-guide/engine/features/animation",
+                      "api-guide/engine/scenegraph-skins",
+                      "api-guide/engine/scenegraph-morphs",
+                      "api-guide/engine/features/animated-crowds"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Interactivity and physics",
+                    "items": [
+                      "api-guide/engine/scenegraph-interactivity",
+                      "api-guide/engine/interactivity",
+                      "api-guide/engine/scenegraph-physics",
+                      "api-guide/engine/scenegraph-joints"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Scene capabilities",
+                    "items": [
+                      "api-guide/engine/features/visibility",
+                      "api-guide/engine/features/instancing",
+                      "api-guide/engine/features/material-variants",
+                      "api-guide/engine/scenegraph-billboards",
+                      "api-guide/engine/scenegraph-lights",
+                      "api-guide/engine/scenegraph-audio"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Effects and transparency",
+                "items": [
+                  "api-guide/shaders/rendering-techniques",
+                  "api-guide/shaders/transparency"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "ANARI rendering",
+                "items": [
+                  "api-guide/engine/anari-rendering",
+                  "api-guide/engine/anari-first-scene",
+                  "api-guide/engine/anari-architecture",
+                  "api-guide/engine/anari-json-scenes"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Integration",
+                "items": [
+                  "tutorials/external-webgl-context",
+                  "api-guide/gpu/html-in-canvas",
+                  "api-guide/engine/features/asset-compression"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Physics",
+                "items": [
+                  "api-guide/physics/overview",
+                  "api-guide/physics/getting-started",
+                  "api-guide/physics/bodies-and-collisions",
+                  "api-guide/physics/joints-and-mechanisms",
+                  "api-guide/physics/scenes-and-gltf",
+                  "api-guide/physics/large-worlds",
+                  "api-guide/physics/performance",
+                  "api-guide/gpu/gpu-physics"
+                ]
+              }
+            ]
           },
           {
             "type": "category",
@@ -1134,7 +1248,6 @@
               "api-reference/engine/lighting/lightmap-baker",
               "api-reference/engine/lighting/pbr-environment",
               "api-reference/engine/lighting/prefiltered-environment",
-              "api-reference/engine/text/README",
               "api-reference/engine/text-3d"
             ]
           },
@@ -1192,47 +1305,34 @@
             "items": [
               "api-reference/engine/experimental/README",
               "api-reference/engine/experimental/comparison-splitter",
-              "api-reference/engine/experimental/webxr/README",
               "api-reference/engine/experimental/webxr/webxr-camera-texture",
               "api-reference/engine/experimental/webxr/webxr-manager"
             ]
           },
           {
-            "type": "category",
-            "label": "@luma.gl/engine/effects",
-            "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/effects/README",
-                "label": "Overview"
-              }
-            ]
+            "type": "doc",
+            "id": "api-reference/effects/README",
+            "label": "@luma.gl/engine/effects"
           },
           {
             "type": "category",
-            "label": "@luma.gl/engine/splats 🧪",
+            "label": "@luma.gl/engine/splats",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/splats/README",
-                "label": "Overview"
-              },
               "api-reference/splats/renderers",
               "api-reference/splats/data-and-shading",
               "api-reference/splats/streaming-and-residency",
               "api-reference/splats/picking-and-scenes",
               "api-reference/splats/formats-and-loaders"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/splats/README"
+            }
           },
           {
             "type": "category",
             "label": "@luma.gl/engine/gltf",
             "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/gltf/README",
-                "label": "Overview"
-              },
               "api-reference/gltf/post-process-gltf",
               "api-reference/gltf/gltf-materials",
               "api-reference/gltf/gltf-native-extensions",
@@ -1255,19 +1355,92 @@
               },
               "api-reference/gltf/gltf-interchange",
               "api-reference/gltf/gltf-extensions"
-            ]
+            ],
+            "link": {
+              "type": "doc",
+              "id": "api-reference/gltf/README"
+            }
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/experimental-controls",
+            "id": "api-reference/engine/entry-points/experimental-controls"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/experimental-materials",
+            "id": "api-reference/engine/entry-points/experimental-materials"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/experimental-textures",
+            "id": "api-reference/engine/entry-points/experimental-textures"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/experimental-webxr",
+            "id": "api-reference/engine/experimental/webxr/README"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/physics",
+            "id": "api-reference/engine/entry-points/physics"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/tables",
+            "id": "api-reference/engine/entry-points/tables"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/models",
+            "id": "api-reference/engine/entry-points/models"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/gltf-physics",
+            "id": "api-reference/engine/entry-points/gltf-physics"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/text",
+            "id": "api-reference/engine/text/README"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/text-fonts",
+            "id": "api-reference/engine/entry-points/text-fonts"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/text-3d",
+            "id": "api-reference/engine/entry-points/text-3d"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/text-experimental",
+            "id": "api-reference/engine/entry-points/text-experimental"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/arrow",
+            "id": "api-reference/engine/entry-points/arrow"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/engine/lighting",
+            "id": "api-reference/engine/entry-points/lighting"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/engine/README"
+        }
       },
       {
         "type": "category",
         "label": "@luma.gl/anari 🧪",
         "items": [
-          {
-            "type": "doc",
-            "id": "api-reference/anari/README",
-            "label": "Overview 🧪"
-          },
           {
             "type": "category",
             "label": "Scene objects",
@@ -1329,22 +1502,68 @@
               "api-reference/anari/a-buffer-renderer",
               "api-reference/anari/wboit-renderer"
             ]
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/forward",
+            "id": "api-reference/anari/entry-points/forward"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/deferred",
+            "id": "api-reference/anari/entry-points/deferred"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/raytrace",
+            "id": "api-reference/anari/entry-points/raytrace"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/raymarch",
+            "id": "api-reference/anari/entry-points/raymarch"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/schemas",
+            "id": "api-reference/anari/entry-points/schemas"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/anari/gltf",
+            "id": "api-reference/anari/entry-points/gltf"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/anari/README"
+        }
       },
       {
         "type": "category",
         "label": "@luma.gl/slang 🧪",
         "items": [
+          "api-reference/slang/reflection",
           {
             "type": "doc",
-            "id": "api-reference/slang/README",
-            "label": "Overview 🧪"
+            "label": "@luma.gl/slang/luma",
+            "id": "api-reference/slang/entry-points/luma"
           },
-          "api-reference/slang/reflection",
-          "api-reference/slang/wgsl",
-          "api-reference/slang/inspect"
-        ]
+          {
+            "type": "doc",
+            "label": "@luma.gl/slang/wgsl",
+            "id": "api-reference/slang/wgsl"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/slang/inspect",
+            "id": "api-reference/slang/inspect"
+          }
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/slang/README"
+        }
       },
       {
         "type": "category",
@@ -1352,12 +1571,45 @@
         "items": [
           {
             "type": "doc",
-            "id": "api-reference/three/README",
-            "label": "Overview 🧪"
+            "label": "@luma.gl/three/objects",
+            "id": "api-reference/three/entry-points/objects"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/three/backend",
+            "id": "api-reference/three/entry-points/backend"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/three/interop",
+            "id": "api-reference/three/entry-points/interop"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/three/deck",
+            "id": "api-reference/three/entry-points/deck"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/three/overlay",
+            "id": "api-reference/three/entry-points/overlay"
+          },
+          {
+            "type": "doc",
+            "label": "@luma.gl/three/interleaved",
+            "id": "api-reference/three/entry-points/interleaved"
           }
-        ]
+        ],
+        "link": {
+          "type": "doc",
+          "id": "api-reference/three/README"
+        }
       }
-    ]
+    ],
+    "link": {
+      "type": "doc",
+      "id": "packages"
+    }
   },
   {
     "type": "category",
@@ -1382,9 +1634,7 @@
     "type": "category",
     "label": "Legacy Guides",
     "items": [
-      "legacy/porting-guide",
-      "legacy/legacy-upgrade-guide",
-      "legacy/legacy-whats-new"
+      "legacy/porting-guide"
     ]
   }
 ]

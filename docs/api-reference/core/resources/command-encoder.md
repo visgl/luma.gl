@@ -54,7 +54,7 @@ device.submit();
 
 ### `CommandEncoderProps`
 
-`CommandEncoderProps` extends [`ResourceProps`](./resource.md#resourceprops).
+`CommandEncoderProps` extends [`DeviceResourceProps`](./device-resource.md#deviceresourceprops).
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |

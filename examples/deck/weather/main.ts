@@ -82,6 +82,10 @@ for (const body of ['sun', 'moon'] as const) {
     document.querySelector<HTMLInputElement>('#hour')!.value = String(scene.diagnostics.hour);
   });
 }
+document.querySelector('#look-window-glare')!.addEventListener('click', () => {
+  scene.lookAtWindowGlare();
+  document.querySelector<HTMLInputElement>('#hour')!.value = String(scene.diagnostics.hour);
+});
 document.querySelector('#reset')!.addEventListener('click', () => scene.reset());
 scene.ready
   .then(() => {

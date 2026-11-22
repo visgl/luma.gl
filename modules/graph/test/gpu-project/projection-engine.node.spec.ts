@@ -8,14 +8,14 @@ import {projectionEngine} from '@math.gl/geospatial/projection';
 import {
   createProjectionDescriptor,
   createProjectionEngine
-} from '@math.gl/geospatial/projection/core';
-import {mercator} from '@math.gl/geospatial/projection/projections/merc';
+} from '@math.gl/geospatial/projection-core';
+import {mercator} from '@math.gl/geospatial/projection-projections-merc';
 import {
   prepareCRSProjection,
   prepareCRSProjectionAsync,
   planCRSProjection,
   ProjectionPlanningError
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {evaluateProjectionProgram, invertProjectionProgram} from '@luma.gl/graph/gpu-project';
 import {geographicCRS, makeWebMercatorCRS} from './projection-crs-fixtures';
 

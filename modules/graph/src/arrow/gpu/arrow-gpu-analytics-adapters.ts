@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/graph/gpu-data';
+import {
+  GPUData,
+  GPUVector,
+  getGPUVectorFormatInfo,
+  type GPUVectorBufferProps
+} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -15,6 +20,7 @@ import {
 import {
   DataType,
   Dictionary,
+  type FixedSizeList,
   Precision,
   type Data,
   type Field,
@@ -25,26 +31,48 @@ import {
   type Uint32,
   type Utf8
 } from 'apache-arrow';
+import {
+  getArrowDataBufferSource,
+  getArrowFixedSizeListRowValidity,
+  getArrowGPUDataReadbackMetadata,
+  type GPUDataReadbackMetadata
+} from './arrow-gpu-data';
 import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
-/** Supported WebGPU-native scalar and categorical index storage formats. */
-type GPUAnalyticsVectorFormat = 'float32' | 'sint32' | 'uint32';
+/** Supported scalar and categorical index formats. */
+type GPUAnalyticsScalarFormat = 'float32' | 'sint32' | 'uint32';
+/** Logical 32-bit values, dictionary indices, or flattened fixed-size-list components. */
+type GPUAnalyticsValues = Float32Array | Int32Array | Uint32Array;
+/** Packed scalar and fixed-width numeric row formats accepted by the Arrow adapter. */
+type GPUAnalyticsVectorFormat =
+  | GPUAnalyticsScalarFormat
+  | `${GPUAnalyticsScalarFormat}x${2 | 3 | 4}`;
+/** Maps supported Arrow child types to the format of one packed component. */
+type GPUAnalyticsListFormat<T> = T extends Float32
+  ? 'float32'
+  : T extends Int32
+    ? 'sint32'
+    : T extends Uint32
+      ? 'uint32'
+      : never;
 
 /** Maps a typed Arrow schema to its exact portable GPU analytics column formats. */
 export type GPUAnalyticsTypeMapForArrow<T extends TypeMap> = {
-  [Name in keyof T & string]: T[Name] extends Float32
-    ? 'float32'
-    : T[Name] extends Int32
-      ? 'sint32'
-      : T[Name] extends Uint32
-        ? 'uint32'
-        : T[Name] extends Dictionary<Utf8, infer IndexType>
-          ? IndexType extends Int32
-            ? 'sint32'
-            : IndexType extends Uint32
-              ? 'uint32'
-              : never
-          : never;
+  [Name in keyof T & string]: T[Name] extends FixedSizeList<infer Child>
+    ? `${GPUAnalyticsListFormat<Child>}x${2 | 3 | 4}`
+    : T[Name] extends Float32
+      ? 'float32'
+      : T[Name] extends Int32
+        ? 'sint32'
+        : T[Name] extends Uint32
+          ? 'uint32'
+          : T[Name] extends Dictionary<Utf8, infer IndexType>
+            ? IndexType extends Int32
+              ? 'sint32'
+              : IndexType extends Uint32
+                ? 'uint32'
+                : never
+            : never;
 };
 
 /** CPU-owned category labels associated with one GPU-resident dictionary-index column. */
@@ -90,8 +118,11 @@ export type GPUAnalyticsTableFromArrowTableResult<T extends GPUTypeMap = GPUType
 /** Fully validated source metadata collected before allocating any GPU resources. */
 type PreparedGPUAnalyticsColumn = {
   field: Field;
+  nullable: boolean;
   format: GPUAnalyticsVectorFormat;
   chunks: Data[];
+  /** Validated logical values for each chunk, read before any GPU allocation. */
+  values: GPUAnalyticsValues[];
   validity: Uint32Array[];
   nullCounts: number[];
   dictionary?: GPUAnalyticsDictionary;
@@ -106,6 +137,12 @@ const GPU_ANALYTICS_BUFFER_USAGE =
  * Numeric values and dictionary indices stay in existing `GPUData`, `GPURecordBatch`, `GPUVector`,
  * and `GPUTable` objects. Nullable rows receive separate batch-aligned uint32 validity vectors,
  * while dictionary labels and source null counts remain explicit adapter-owned metadata.
+ *
+ * @example
+ * ```ts
+ * const uploaded = makeGPUAnalyticsTableFromArrowTable(device, arrowTable);
+ * const frame = new GPUDataFrame({...uploaded, ownership: 'owned'});
+ * ```
  */
 export function makeGPUAnalyticsTableFromArrowTable<T extends TypeMap>(
   device: Device,
@@ -147,17 +184,15 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
       const gpuData: Record<string, GPUData> = {};
 
       for (const column of columns) {
-        const sourceData = sourceBatchIndices.map(batchIndex => column.chunks[batchIndex]);
         const data =
-          sourceData.length === 1
-            ? makeGPUAnalyticsData(device, sourceData[0], column.format, requiredBufferProps)
-            : makePackedGPUAnalyticsData(
+          sourceBatchIndices.length === 1
+            ? makeGPUAnalyticsData(
                 device,
-                sourceData,
-                sourceBatchIndices.map(batchIndex => column.validity[batchIndex]),
+                column.chunks[sourceBatchIndices[0]],
                 column.format,
                 requiredBufferProps
-              );
+              )
+            : makePackedGPUAnalyticsData(device, column, sourceBatchIndices, requiredBufferProps);
         allocatedData.push(data);
         gpuData[column.field.name] = data;
       }
@@ -195,7 +230,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
             bufferLayout: columns.map(column => ({
               name: column.field.name,
               format: column.format,
-              byteStride: 4
+              byteStride: getGPUVectorFormatInfo(column.format).byteLength
             }))
           });
 
@@ -209,7 +244,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
     }
 
     for (const column of columns) {
-      if (!column.field.nullable || batches.length === 0) {
+      if (!column.nullable || batches.length === 0) {
         continue;
       }
 
@@ -326,8 +361,11 @@ function prepareGPUAnalyticsColumns(
 
     const column: PreparedGPUAnalyticsColumn = {
       field,
+      nullable:
+        field.nullable || (DataType.isFixedSizeList(field.type) && field.type.children[0].nullable),
       format: getGPUAnalyticsVectorFormat(field.type, columnName),
       chunks: [],
+      values: [],
       validity: [],
       nullCounts: []
     };
@@ -345,7 +383,18 @@ function prepareGPUAnalyticsColumns(
         throw new Error(`GPU analytics column "${columnName}" changes type between batches`);
       }
 
-      const validity = getGPUAnalyticsValidity(data, field.nullable, columnName);
+      const parentValidity = getGPUAnalyticsValidity(data, field.nullable, columnName);
+      const validity = DataType.isFixedSizeList(field.type)
+        ? (getArrowFixedSizeListRowValidity(
+            data as Data<FixedSizeList<Float32 | Int32 | Uint32>>
+          ) ?? parentValidity)
+        : parentValidity;
+      const nullCount = validity.reduce((count, valid) => count + Number(!valid), 0);
+      if (nullCount && !column.nullable) {
+        throw new Error(
+          `GPU analytics non-nullable vector "${columnName}" contains null components`
+        );
+      }
       if (DataType.isDictionary(field.type)) {
         const dictionary = getGPUAnalyticsDictionary(data, columnName);
         if (column.dictionary && !areGPUAnalyticsDictionariesEqual(column.dictionary, dictionary)) {
@@ -353,13 +402,12 @@ function prepareGPUAnalyticsColumns(
         }
         column.dictionary ??= dictionary;
         validateGPUAnalyticsDictionaryIndices(data, dictionary, validity, columnName);
-      } else {
-        validateGPUAnalyticsValues(data, columnName);
       }
 
       column.chunks.push(data);
+      column.values.push(getGPUAnalyticsValues(data, columnName));
       column.validity.push(validity);
-      column.nullCounts.push(data.nullCount);
+      column.nullCounts.push(nullCount);
     }
 
     return column;
@@ -368,6 +416,18 @@ function prepareGPUAnalyticsColumns(
 
 /** Maps the intentionally limited portable Arrow analytics surface to canonical GPU formats. */
 function getGPUAnalyticsVectorFormat(type: DataType, columnName: string): GPUAnalyticsVectorFormat {
+  if (DataType.isFixedSizeList(type)) {
+    const child = type.children[0].type;
+    const width = type.listSize;
+    if (
+      (width === 2 || width === 3 || width === 4) &&
+      ((DataType.isFloat(child) && child.precision === Precision.SINGLE) ||
+        (DataType.isInt(child) && child.bitWidth === 32))
+    ) {
+      const scalar = DataType.isFloat(child) ? 'float32' : child.isSigned ? 'sint32' : 'uint32';
+      return `${scalar}x${width}`;
+    }
+  }
   if (DataType.isFloat(type) && type.precision === Precision.SINGLE) {
     return 'float32';
   }
@@ -472,17 +532,17 @@ function validateGPUAnalyticsDictionaryIndices(
 }
 
 /**
- * Ensures numeric values cover every logical row. Packed uploads advance each write offset by the
- * chunk's value bytes, so a short chunk would shift later chunks to the wrong rows.
- *
- * Alternative: reuse `getArrowDataBufferSource()` in `getGPUAnalyticsValues()`, which throws the
- * same error at upload time, after earlier columns have already allocated (and then destroyed)
- * their GPU buffers.
+ * Returns the logical values of one possibly sliced Arrow chunk, reading fixed-size-list
+ * components from the child data. Packed uploads advance each write offset by these bytes, so a
+ * short chunk would shift later chunks to the wrong rows; it is rejected here, before allocation.
  */
-function validateGPUAnalyticsValues(data: Data, columnName: string): void {
-  const values = data.values as Float32Array | Int32Array | Uint32Array | undefined;
-  const startIndex = values?.length === data.length ? 0 : (data.offset ?? 0);
-  if (data.length > 0 && (!values || startIndex + data.length > values.length)) {
+function getGPUAnalyticsValues(data: Data, columnName: string): GPUAnalyticsValues {
+  if (data.length === 0) {
+    return new Uint32Array(0);
+  }
+  try {
+    return getArrowDataBufferSource(data as Data<Float32 | Int32 | Uint32>) as GPUAnalyticsValues;
+  } catch {
     throw new Error(`GPU analytics column "${columnName}" has truncated values`);
   }
 }
@@ -510,15 +570,14 @@ function makeGPUAnalyticsData(
     return makeGPUDataFromArrowData(device, source, {...bufferProps, format});
   }
 
-  const buffer = device.createBuffer({...bufferProps, byteLength: 4});
+  const layout = getGPUVectorFormatInfo(format);
+  const buffer = device.createBuffer({...bufferProps, byteLength: layout.byteLength});
   try {
     return new GPUData({
       buffer,
       format,
       length: 0,
-      stride: 1,
-      byteStride: 4,
-      rowByteLength: 4,
+
       dataType: source.type,
       ownsBuffer: true
     });
@@ -531,33 +590,37 @@ function makeGPUAnalyticsData(
 /**
  * Writes adjacent Arrow chunks into one owned buffer at their row offsets.
  *
- * Every analytics format is 4 bytes wide, so each write offset satisfies WebGPU's 4-byte
- * `writeBuffer` alignment without padding between source chunks.
+ * Every analytics component is 4 bytes wide, so each row (and each write offset) is a multiple of
+ * 4 bytes and satisfies WebGPU's 4-byte `writeBuffer` alignment without padding between chunks.
  */
 function makePackedGPUAnalyticsData(
   device: Device,
-  sources: Data[],
-  validity: Uint32Array[],
-  format: GPUAnalyticsVectorFormat,
+  column: PreparedGPUAnalyticsColumn,
+  sourceBatchIndices: number[],
   bufferProps: GPUVectorBufferProps
 ): GPUData {
-  const readbackMetadata = makePackedGPUAnalyticsReadbackMetadata(sources, validity);
+  const sources = sourceBatchIndices.map(batchIndex => column.chunks[batchIndex]);
+  const validity = sourceBatchIndices.map(batchIndex => column.validity[batchIndex]);
+  const nullBitmap = makePackedGPUAnalyticsNullBitmap(validity);
+  const readbackMetadata = makePackedGPUAnalyticsReadbackMetadata(sources, nullBitmap);
+  const formatInfo = getGPUVectorFormatInfo(column.format);
   const buffer = writePackedGPUAnalyticsBuffer(
     device,
-    sources.map(source => getGPUAnalyticsValues(source)),
+    sourceBatchIndices.map(batchIndex => column.values[batchIndex]),
     bufferProps
   );
   try {
     return new GPUData({
       buffer,
-      format,
+      format: column.format,
       length: sources.reduce((length, source) => length + source.length, 0),
-      stride: 1,
-      byteStride: 4,
-      rowByteLength: 4,
+      stride: formatInfo.listSize ?? formatInfo.components,
+      byteStride: formatInfo.byteLength,
+      rowByteLength: formatInfo.byteLength,
       dataType: sources[0].type,
       ownsBuffer: true,
-      ...(readbackMetadata ? {readbackMetadata, nullBitmap: readbackMetadata.nullBitmap} : {})
+      ...(readbackMetadata ? {readbackMetadata} : {}),
+      ...(nullBitmap ? {nullBitmap} : {})
     });
   } catch (error) {
     buffer.destroy();
@@ -565,45 +628,98 @@ function makePackedGPUAnalyticsData(
   }
 }
 
+/** Merges per-chunk row validity into one Arrow bitmap, or returns `undefined` without nulls. */
+function makePackedGPUAnalyticsNullBitmap(validity: Uint32Array[]): Uint8Array | undefined {
+  if (validity.every(values => values.every(Boolean))) {
+    return undefined;
+  }
+  return concatenateGPUAnalyticsBitmaps(
+    validity.map(values => {
+      const bitmap = new Uint8Array(Math.ceil(values.length / 8));
+      for (let rowIndex = 0; rowIndex < values.length; rowIndex++) {
+        if (values[rowIndex]) {
+          bitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+        }
+      }
+      return bitmap;
+    }),
+    validity.map(values => values.length)
+  );
+}
+
 /**
- * Merges per-chunk validity into one Arrow bitmap so generic `readArrowGPUDataAsync()` restores
- * nulls for packed chunks exactly as it does for unpacked ones. Unpacked dictionary chunks carry
- * no numeric readback metadata, so dictionary columns are skipped here too.
+ * Merges per-chunk readback metadata so generic `readArrowGPUDataAsync()` restores nulls for packed
+ * chunks exactly as it does for unpacked ones. Fixed-size lists keep separate parent and child
+ * bitmaps. Unpacked dictionary chunks carry no readback metadata, so dictionaries are skipped.
  *
- * Alternative: skip this CPU bitmap (one bit per row) and document that packed chunks carry nulls
- * only in the validity sidecars read by `makeArrowTableFromGPUAnalyticsTable()`. Generic readback
- * of packed chunks would then return zero-filled payloads where unpacked chunks return nulls.
+ * Alternative: skip these CPU bitmaps and document that packed chunks carry nulls only in the
+ * validity sidecars read by `makeArrowTableFromGPUAnalyticsTable()`. Generic readback of packed
+ * chunks would then return zero-filled payloads where unpacked chunks return nulls.
  */
 function makePackedGPUAnalyticsReadbackMetadata(
   sources: Data[],
-  validity: Uint32Array[]
-): {kind: 'numeric'; nullCount: number; nullBitmap: Uint8Array} | undefined {
-  const nullCount = sources.reduce((total, source) => total + source.nullCount, 0);
-  if (nullCount === 0 || DataType.isDictionary(sources[0].type)) {
+  rowNullBitmap: Uint8Array | undefined
+): GPUDataReadbackMetadata | undefined {
+  const type = sources[0].type;
+  if (DataType.isDictionary(type)) {
     return undefined;
   }
+  if (!DataType.isFixedSizeList(type)) {
+    const nullCount = sources.reduce((total, source) => total + source.nullCount, 0);
+    return rowNullBitmap && nullCount > 0
+      ? {kind: 'numeric', nullCount, nullBitmap: rowNullBitmap}
+      : undefined;
+  }
 
-  const rowCount = validity.reduce((total, values) => total + values.length, 0);
-  const nullBitmap = new Uint8Array(Math.ceil(rowCount / 8));
-  let rowIndex = 0;
-  for (const values of validity) {
-    for (let valueIndex = 0; valueIndex < values.length; valueIndex++, rowIndex++) {
-      if (values[valueIndex]) {
-        nullBitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+  type FixedSizeListMetadata = Extract<GPUDataReadbackMetadata, {kind: 'fixed-size-list'}>;
+  const metadata = sources.map(
+    source => getArrowGPUDataReadbackMetadata(source) as FixedSizeListMetadata | undefined
+  );
+  const nullCount = metadata.reduce((total, chunk) => total + (chunk?.nullCount ?? 0), 0);
+  const childNullCount = metadata.reduce((total, chunk) => total + (chunk?.childNullCount ?? 0), 0);
+  if (nullCount === 0 && childNullCount === 0) {
+    return undefined;
+  }
+  const rowCounts = sources.map(source => source.length);
+  return {
+    kind: 'fixed-size-list',
+    nullCount,
+    ...(nullCount > 0
+      ? {
+          nullBitmap: concatenateGPUAnalyticsBitmaps(
+            metadata.map(chunk => chunk?.nullBitmap),
+            rowCounts
+          )
+        }
+      : {}),
+    childNullCount,
+    ...(childNullCount > 0
+      ? {
+          childNullBitmap: concatenateGPUAnalyticsBitmaps(
+            metadata.map(chunk => chunk?.childNullBitmap),
+            rowCounts.map(rowCount => rowCount * type.listSize)
+          )
+        }
+      : {})
+  };
+}
+
+/** Concatenates chunk-local Arrow bitmaps; a missing bitmap marks all of its bits valid. */
+function concatenateGPUAnalyticsBitmaps(
+  bitmaps: (Uint8Array | undefined)[],
+  bitCounts: number[]
+): Uint8Array {
+  const totalBitCount = bitCounts.reduce((total, bitCount) => total + bitCount, 0);
+  const result = new Uint8Array(Math.ceil(totalBitCount / 8));
+  let targetBitIndex = 0;
+  for (const [chunkIndex, bitmap] of bitmaps.entries()) {
+    for (let bitIndex = 0; bitIndex < bitCounts[chunkIndex]; bitIndex++, targetBitIndex++) {
+      if (!bitmap || (bitmap[bitIndex >> 3] & (1 << (bitIndex & 7))) !== 0) {
+        result[targetBitIndex >> 3] |= 1 << (targetBitIndex & 7);
       }
     }
   }
-  return {kind: 'numeric', nullCount, nullBitmap};
-}
-
-/** Returns the logical 32-bit values or dictionary indices of one possibly sliced Arrow chunk. */
-function getGPUAnalyticsValues(data: Data): Float32Array | Int32Array | Uint32Array {
-  if (data.length === 0) {
-    return new Uint32Array(0);
-  }
-  const values = data.values as Float32Array | Int32Array | Uint32Array;
-  const startIndex = values.length === data.length ? 0 : (data.offset ?? 0);
-  return values.subarray(startIndex, startIndex + data.length);
+  return result;
 }
 
 /** Stores row-aligned validity in a separate owned GPU buffer for each output record batch. */
@@ -661,7 +777,7 @@ function makeGPUAnalyticsField(column: PreparedGPUAnalyticsColumn): GPUField {
   return {
     name: column.field.name,
     format: column.format,
-    nullable: column.field.nullable,
+    nullable: column.nullable,
     metadata: new Map(column.field.metadata)
   };
 }
