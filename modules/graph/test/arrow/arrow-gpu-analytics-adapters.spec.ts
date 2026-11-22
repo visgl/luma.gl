@@ -142,7 +142,7 @@ it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU ba
 
   try {
     expect(packed.table.batches.map(batch => batch.numRows)).toEqual([7144]);
-    expect(packed.table.batches[0].sourceInfo).toBeUndefined();
+    expect(packed.table.batches[0].sourceInfo).toBeNull();
     expect(packed.validity['value']?.data).toHaveLength(1);
 
     const packedData = packed.table.gpuVectors['value'].data[0];
