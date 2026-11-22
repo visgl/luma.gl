@@ -182,7 +182,6 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       fs: fragmentShader,
       shaderLayout: EMPTY_SHADER_LAYOUT,
       colorAttachmentFormats: ['rgba8unorm'],
-      depthStencilAttachmentFormat: 'depth24plus-stencil8',
       parameters: {
         colorMask: 0,
         stencilReadMask: 0xff,
@@ -224,7 +223,9 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
     });
 
     // WebGL scissors clears and WebGPU doesn't, so clear in a separate pass
-    device.beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1], clearStencil: 0}).end();
+    device
+      .beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1], clearDepth: 0, clearStencil: 0})
+      .end();
     // Write the high stencil bit into the right pixel only
     const writePass = device.beginRenderPass({
       framebuffer,
@@ -248,7 +249,8 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       framebuffer,
       clearColor: false,
       clearDepth: false,
-      clearStencil: false
+      clearStencil: false,
+      stencilReadOnly: true
     });
     testPass.setPipeline(stencilTestPipeline);
     testPass.setParameters({stencilReference: 0x80});
@@ -260,6 +262,40 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       await readTexturePixels(device, colorTexture, 2),
       `${device.type} stencil test masks the left pixel`
     ).toEqual([0, 0, 255, 255, 255, 0, 0, 255]);
+
+    device
+      .beginRenderPass({
+        framebuffer,
+        clearColor: false,
+        clearDepth: false,
+        clearStencil: false,
+        stencilStoreOp: 'discard'
+      })
+      .end();
+
+    const depthTestPipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus-stencil8',
+      parameters: {depthCompare: 'less'}
+    });
+    const depthTestPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 1, 1],
+      clearDepth: false,
+      clearStencil: 0
+    });
+    depthTestPass.setPipeline(depthTestPipeline);
+    depthTestPass.draw({vertexCount: 3});
+    depthTestPass.end();
+    device.submit();
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} discarding and clearing stencil preserves depth`
+    ).toEqual([0, 0, 255, 255, 0, 0, 255, 255]);
+    depthTestPipeline.destroy();
 
     // The draw scissor covers only the right pixel, but the stencil clear covers the whole target.
     device

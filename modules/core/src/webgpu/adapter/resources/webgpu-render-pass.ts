@@ -393,7 +393,7 @@ export class WebGPURenderPass extends RenderPass {
           }
           depthStencilAttachment.stencilLoadOp =
             this.props.clearStencil !== false ? 'clear' : 'load';
-          depthStencilAttachment.stencilStoreOp = 'store';
+          depthStencilAttachment.stencilStoreOp = this.props.stencilStoreOp;
         }
       }
     }

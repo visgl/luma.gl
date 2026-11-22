@@ -15,6 +15,8 @@ import type {
   TextureFormatColor,
   TextureFormatDepthStencil
 } from '../../../shadertypes/texture-types/texture-formats';
+import {textureFormatDecoder} from '../../../shadertypes/texture-types/texture-format-decoder';
+import {hasStencilWriteOperation, resolveStencilFace} from '../types/stencil-state';
 import type {Shader} from './shader';
 import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';
@@ -75,6 +77,39 @@ export type RenderPipelineProps = DeviceResourceProps & {
   /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   bindGroups?: BindingsByGroup;
 };
+
+/** Resolves the explicit or inferred format used by the native render pipeline and its cache key. */
+export function getPipelineDepthStencilFormat(
+  device: Device,
+  props: RenderPipelineProps
+): TextureFormatDepthStencil | undefined {
+  const parameters = props.parameters ?? {};
+  const front = resolveStencilFace(parameters, parameters.stencilFront);
+  const back = resolveStencilFace(parameters, parameters.stencilBack);
+  const usesStencil =
+    (front.compare !== undefined && front.compare !== 'always') ||
+    (back.compare !== undefined && back.compare !== 'always') ||
+    hasStencilWriteOperation(front) ||
+    hasStencilWriteOperation(back);
+  const format = usesStencil
+    ? (props.depthStencilAttachmentFormat ?? parameters.depthFormat ?? 'depth24plus-stencil8')
+    : (parameters.depthFormat ?? props.depthStencilAttachmentFormat);
+  if (format && usesStencil) {
+    const aspect = textureFormatDecoder.getInfo(format).attachment;
+    if (aspect !== 'stencil' && aspect !== 'depth-stencil') {
+      throw new Error('Active stencil state requires a stencil attachment format.');
+    }
+  }
+  const preferredFormat = device.preferredDepthFormat;
+  return (
+    format ??
+    (parameters.depthWriteEnabled
+      ? preferredFormat === 'depth16'
+        ? 'depth16unorm'
+        : preferredFormat
+      : undefined)
+  );
+}
 
 /**
  * A compiled and linked shader program

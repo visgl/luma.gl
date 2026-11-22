@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {writesStencil} from '../../../api/adapter/types/stencil-state';
 import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core/types';
 import type {
   Bindings,
@@ -118,6 +119,18 @@ export class WEBGLRenderPass extends RenderPass {
     if (this.props.timestampQuerySet && this.props.endTimestampIndex !== undefined) {
       const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
       webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
+    }
+    if (this.props.stencilStoreOp === 'discard' && !this.props.stencilReadOnly) {
+      const {gl} = this.device;
+      const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+      const view = framebuffer?.depthStencilAttachment;
+      if (framebuffer?.handle) {
+        if ((view?.props.format ?? view?.texture.format)?.includes('stencil')) {
+          gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL_ATTACHMENT]);
+        }
+      } else if (gl.getContextAttributes()?.stencil) {
+        gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL]);
+      }
     }
     this.device.popState();
     // should add commands to CommandEncoder.
@@ -242,6 +255,10 @@ export class WEBGLRenderPass extends RenderPass {
       transformFeedback,
       uniforms = pipeline.uniforms
     } = options;
+
+    if (this.props.stencilReadOnly && writesStencil(parameters)) {
+      throw new Error('A stencil-writing pipeline cannot draw in a stencil read-only pass.');
+    }
 
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed = Boolean(vertexArray?.indexBuffer);
