@@ -20,7 +20,7 @@ import {
   GPUSort,
   createTransientView
 } from '@luma.gl/graph/gpu-core';
-import {GPUMask} from '@luma.gl/graph/gpu-core';
+import {GPUMask, GPUVisibilityWorkflow} from '@luma.gl/graph/gpu-core';
 import {
   createTransientVectorView,
   getViewElementOffset,
@@ -34,11 +34,16 @@ import {
   getGPUAnalyticsSelectionMask,
   validateGPUAnalyticsOutputLength
 } from './gpu-analytics-compiler-utils';
-import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
+import {
+  GPUDataFrame,
+  type GPUDataFrameDictionaries,
+  type GPUDataFrameValidity
+} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import type {GPUDataFrameAggregationDefinition} from './gpu-group-by-query';
 import {
+  addGPUDataFrameResultPredicate,
   CompiledGPUDataFrameQuery,
   compileGPUDataFrameQuery,
   type CompiledGPUDataFrameQueryProps,
@@ -104,7 +109,8 @@ export function compileGPUDataFrameObservedAggregation(
   definitions: readonly GPUDataFrameAggregationDefinition[],
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   columns: readonly string[],
-  ordering?: readonly GPUGlobalSortKey[]
+  ordering?: readonly GPUGlobalSortKey[],
+  having?: GPUExpression<boolean, string>
 ): CompiledGPUDataFrameGroupedAggregation {
   if (source.numRows > 0) validateGPUGroupingCapacity(source, source.numRows, graph);
   validateGPUGroupingSourceColumns(
@@ -126,7 +132,8 @@ export function compileGPUDataFrameObservedAggregation(
         definitions,
         columns,
         true,
-        ordering
+        ordering,
+        having
       )
   });
 }
@@ -146,7 +153,8 @@ export function compileGPUDataFrameGroupedAggregation<
   definitions: readonly GPUDataFrameAggregationDefinition[],
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   projection?: GPUGroupedOutputProjection,
-  ordering?: readonly GPUGlobalSortKey<keyof Result & string>[]
+  ordering?: readonly GPUGlobalSortKey<keyof Result & string>[],
+  having?: GPUExpression<boolean, string>
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, [key], definitions);
@@ -164,7 +172,8 @@ export function compileGPUDataFrameGroupedAggregation<
         definitions,
         projection?.columns,
         false,
-        ordering
+        ordering,
+        having
       )
   });
 }
@@ -222,7 +231,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   definitions: readonly GPUDataFrameAggregationDefinition[],
   columns?: readonly string[],
   observed = false,
-  orderBy?: readonly GPUGlobalSortKey<keyof Result & string>[]
+  orderBy?: readonly GPUGlobalSortKey<keyof Result & string>[],
+  having?: GPUExpression<boolean, string>
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -382,7 +392,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       )
     ) as Readonly<GPUDataFrameDictionaries<Result>>;
 
-    if (orderBy && !rowSelection) {
+    if ((orderBy || having) && !rowSelection) {
       const mask = createGPUGroupedOutputVector(
         graph.device,
         prefix + '-dense-mask',
@@ -416,6 +426,52 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       );
       rowSelection = {keys, mask, rows, count};
     }
+    if (having && rowSelection && groupCount > 0) {
+      const selectionMask = graph.importGPUVector(prefix + '-having-selection', rowSelection.mask);
+      const predicateMask = createTransientVectorView(
+        graph,
+        prefix + '-having-mask',
+        selectionMask
+      );
+      const groupedFrame = new GPUDataFrame({
+        table: resultTable,
+        validity: validity as GPUDataFrameValidity<Result>,
+        dictionaries,
+        ownership: 'borrowed'
+      });
+      try {
+        addGPUDataFrameResultPredicate(
+          graph,
+          prefix + '-having',
+          groupedFrame,
+          having,
+          predicateMask
+        );
+      } finally {
+        groupedFrame.destroy();
+      }
+      const mask = createGPUGroupedOutputVector(
+        graph.device,
+        prefix + '-having-result',
+        groupCount,
+        'uint32'
+      );
+      ownedVectors.push(mask);
+      graph.add(
+        new GPUVisibilityWorkflow({
+          id: prefix + '-having-filter',
+          predicates: [
+            {kind: 'selection', mask: selectionMask.data[0]},
+            {kind: 'selection', mask: predicateMask.data[0]}
+          ],
+          outputMask: graph.importGPUVector(prefix + '-having-result-view', mask).data[0],
+          output: graph.importGPUVector(prefix + '-having-rows', rowSelection.rows).data[0],
+          count: graph.importGPUVector(prefix + '-having-count', rowSelection.count).data[0]
+        })
+      );
+      rowSelection = {...rowSelection, mask};
+    }
+
     const ordering =
       orderBy && rowSelection
         ? addGPUGlobalOrdering(

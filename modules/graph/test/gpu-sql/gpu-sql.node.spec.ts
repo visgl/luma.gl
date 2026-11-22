@@ -23,6 +23,33 @@ import {describe, expect, test, vi} from 'vitest';
 type GPUSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
 
 describe('GPUSQL immutable GPU dataframe planning', () => {
+  test('binds HAVING aliases and selected aggregates while preserving clause order', () => {
+    const {frame} = createGPUSQLNodeFixture();
+    const context = new GPUSQLContext({trips: frame});
+    try {
+      expect(
+        context
+          .query(
+            'SELECT category, COUNT(*) AS "having" FROM trips -- HAVING is a comment\n GROUP BY category HAVING "having" > 0 AND COUNT(*) > 0 ORDER BY 2'
+          )
+          .explain().having
+      ).toBe(true);
+      expect(() => context.query('SELECT COUNT(*) FROM trips HAVING COUNT(*) > 0')).toThrow(
+        /HAVING requires GROUP BY/
+      );
+      expect(() =>
+        context.query('SELECT category, COUNT(*) FROM trips GROUP BY category HAVING SUM(fare) > 0')
+      ).toThrow(/aggregates must appear in SELECT/);
+      expect(() =>
+        context.query(
+          'SELECT category, COUNT(*) FROM trips GROUP BY category ORDER BY 2 HAVING COUNT(*) > 0'
+        )
+      ).toThrow(/must precede ORDER BY/);
+    } finally {
+      frame.destroy();
+    }
+  });
+
   test('explains bound execution routes without allocating GPU buffers', () => {
     const {frame, device} = createGPUSQLNodeFixture();
     const context = new GPUSQLContext({trips: frame, accounts: frame});

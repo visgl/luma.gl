@@ -690,6 +690,43 @@ function addGPUQueryControlUpload(
   });
 }
 
+/** Adds a predicate on an already prepared graph table into a caller-supplied mask. @internal */
+export function addGPUDataFrameResultPredicate<T extends GPUTypeMap>(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  queryId: string,
+  source: GPUDataFrame<T>,
+  predicate: GPUExpression<boolean, string>,
+  output: GraphVectorView<'uint32'>
+): void {
+  const plan = makeGPUQueryExpressionShaderPlan(source, [predicate], [], []);
+  validateGPUQueryBindingCapacity(plan, graph);
+  const sourceViews = importGPUQuerySourceViews(graph, source, plan, queryId);
+  const controls =
+    plan.controls.length && output.length
+      ? createTransientView(
+          graph,
+          queryId + '-controls',
+          'uint32',
+          plan.controls.length * 2,
+          Buffer.STORAGE | Buffer.COPY_DST
+        )
+      : undefined;
+  if (controls) addGPUQueryControlUpload(graph, queryId, controls, plan);
+  for (const [batchIndex, chunk] of output.data.entries()) {
+    if (!chunk.length) continue;
+    addGPUQueryPredicatePass(graph, {
+      id: queryId + '-batch-' + batchIndex,
+      batchIndex,
+      columns: plan.columns,
+      sourceViews,
+      derivedViews: new Map(),
+      controls,
+      output: chunk,
+      plan
+    });
+  }
+}
+
 /** Emits one closed-AST expression kernel for one preserved, nonempty source record batch. */
 function addGPUQueryPredicatePass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
