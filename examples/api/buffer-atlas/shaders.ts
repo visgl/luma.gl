@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+/** Emits a fullscreen triangle with normalized texture coordinates. */
 export const triangle = `#version 300 es
 out vec2 uv;
 void main() {
@@ -9,6 +10,7 @@ void main() {
   gl_Position = vec4(corner * 2.0 - 1.0, 0, 1);
 }`;
 
+/** Draws the river, city, and culverts for each stencil region. */
 export const river = `#version 300 es
 precision highp float;
 in vec2 uv;
@@ -47,6 +49,7 @@ void main() {
   color = vec4(paint,1);
 }`;
 
+/** Captures the canyon landscape into color and projected depth. */
 export const canyon = `#version 300 es
 precision highp float;
 in vec2 uv;
@@ -84,6 +87,7 @@ void main() {
   gl_FragDepth=clamp((80.-8./z)/79.9,0.,1.);
 }`;
 
+/** Reconstructs and rotates a point per visible depth sample. */
 export const relief = `#version 300 es
 precision highp float;
 uniform sampler2D capturedDepth;
@@ -104,6 +108,7 @@ void main(){
   gl_PointSize=1.8;
 }`;
 
+/** Looks up the cached color for the original sample. */
 export const capturedColor = `#version 300 es
 precision highp float;
 uniform sampler2D capturedImage;

@@ -7,8 +7,10 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {createAtlas} from '../../../../examples/api/buffer-atlas/app';
 
+/** Mounts the selected buffer example and manages its canvas device. */
 export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const requestRedraw = useRef<(() => void) | null>(null);
   const atlasRef = useRef<ReturnType<typeof createAtlas> | null>(null);
   const [value, setValue] = useState(0);
   const [error, setError] = useState('');
@@ -36,14 +38,22 @@ export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
         const atlas = createAtlas(device, kind);
         atlasRef.current = atlas;
         setSelection(0);
-        setValue(kind === 'river' ? atlas.lenses[0][0] / 0.65 : 0);
+        setValue(kind === 'river' ? atlas.lenses[0][0] : 0);
         cleanup = () => {
           atlas.destroy();
           device.destroy();
         };
         const draw = (time: number) => {
-          atlas.render(time / 1000);
-          if (kind === 'river') frame = requestAnimationFrame(draw);
+          try {
+            const drawn = atlas.render(time / 1000);
+            if (kind === 'river' || !drawn) frame = requestAnimationFrame(draw);
+          } catch (reason) {
+            setError(String(reason));
+          }
+        };
+        requestRedraw.current = () => {
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(draw);
         };
         draw(0);
       })
@@ -54,17 +64,19 @@ export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
       disposed = true;
       cancelAnimationFrame(frame);
       atlasRef.current = null;
+      requestRedraw.current = null;
       cleanup();
     };
   }, [kind, backend]);
+  /** Moves the selected river lens in scene units or rotates the canyon relief. */
   function update(value: number) {
     setValue(value);
     const atlas = atlasRef.current;
     if (!atlas) return;
-    if (kind === 'river') atlas.lenses[selection][0] = value * 0.65;
+    if (kind === 'river') atlas.lenses[selection][0] = value;
     else {
       atlas.setAngle(value * 0.65);
-      atlas.render(0);
+      requestRedraw.current?.();
     }
   }
   return (
@@ -101,18 +113,21 @@ export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
             );
             const index = distance[0] <= distance[1] ? 0 : 1;
             setSelection(index);
-            setValue(atlasRef.current.lenses[index][0] / 0.65);
+            setValue(atlasRef.current.lenses[index][0]);
           }
         }}
         onPointerMove={event => {
           if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
           const bounds = event.currentTarget.getBoundingClientRect();
-          if (kind === 'river' && atlasRef.current)
-            atlasRef.current.lenses[selection][1] =
-              0.5 - (event.clientY - bounds.top) / bounds.height;
-          update(
-            Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width - 0.5) * 2))
-          );
+          const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
+          if (kind === 'river' && atlasRef.current) {
+            const lens = atlasRef.current.lenses[selection];
+            lens[0] = horizontal * 1.6;
+            lens[1] = 0.5 - (event.clientY - bounds.top) / bounds.height;
+            setValue(lens[0]);
+          } else {
+            update(Math.max(-1, Math.min(1, horizontal * 2)));
+          }
         }}
       />
       {error ? (
@@ -127,7 +142,7 @@ export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
                 onChange={event => {
                   const index = Number(event.target.value);
                   setSelection(index);
-                  setValue((atlasRef.current?.lenses[index][0] || 0) / 0.65);
+                  setValue(atlasRef.current?.lenses[index][0] ?? 0);
                 }}
               >
                 <option value="0">Historical river</option>
@@ -139,8 +154,8 @@ export function BufferAtlas({kind}: {kind: 'river' | 'canyon'}) {
             {kind === 'river' ? ' Lens position ' : ' Relief angle '}
             <input
               type="range"
-              min="-1"
-              max="1"
+              min={kind === 'river' ? -0.8 : -1}
+              max={kind === 'river' ? 0.8 : 1}
               step=".01"
               value={value}
               onChange={event => update(Number(event.target.value))}

@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+/** Declares the shared vertex outputs. */
 export const header = `struct VertexOutput {
   @builtin(position) position: vec4f,
   @location(0) uv: vec2f,
 }
 `;
 
+/** Emits a fullscreen triangle with normalized texture coordinates. */
 export const triangle = `@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> VertexOutput {
   let corner = vec2f(f32((index << 1u) & 2u), f32(index & 2u));
   return VertexOutput(vec4f(corner * 2.0 - 1.0, 0, 1), corner);
 }
 `;
 
+/** Declares per-draw settings for the mask and relief pipelines. */
 export const settings = `@group(0) @binding(0) var<uniform> settings: vec4f;
 `;
 
+/** Draws the river, city, and culverts for each stencil region. */
 export const river = `fn line(distanceToLine: f32, width: f32) -> f32 {
   return 1.0 - smoothstep(width, width + fwidth(distanceToLine), distanceToLine);
 }
@@ -48,6 +52,7 @@ export const river = `fn line(distanceToLine: f32, width: f32) -> f32 {
   return vec4f(paint,1);
 }`;
 
+/** Captures the canyon landscape into color and projected depth. */
 export const canyon = `fn terrain(p: vec2f) -> f32 {
   var bend =  p.x - 2.0*sin(0.2*p.y);
   var rim =  smoothstep(1.5,5.0,abs(bend));
@@ -83,6 +88,7 @@ struct Capture { @location(0) color: vec4f, @builtin(frag_depth) depth: f32 }
   return Capture(color,clamp((80.0-8.0/z)/79.9,0.0,1.0));
 }`;
 
+/** Loads and reconstructs a point from captured depth. */
 export const points = `@group(0) @binding(2) var capturedDepth: texture_depth_2d;
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> VertexOutput {
   let pixel = vec2i(i32(index % 640u),i32(index / 640u));
@@ -100,6 +106,7 @@ export const points = `@group(0) @binding(2) var capturedDepth: texture_depth_2d
 }
 `;
 
+/** Looks up the captured color at the original sample coordinates. */
 export const color = `@group(0) @binding(1) var capturedImage: texture_2d<f32>;
 @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let size = vec2i(textureDimensions(capturedImage));

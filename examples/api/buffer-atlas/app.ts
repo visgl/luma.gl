@@ -11,26 +11,30 @@ import {
 import * as wgsl from './shaders.wgsl';
 import {triangle, river, canyon, relief, capturedColor} from './shaders';
 
+/** Creates an atlas and owns its GPU resources until destroy is called. */
 export function createAtlas(device: Device, kind: 'river' | 'canyon') {
   const resources: {destroy(): void}[] = [];
-  const gpu = device.type === 'webgpu';
+  const isWebGPU = device.type === 'webgpu';
+  /** Allocates a per-draw WebGPU settings buffer. */
   function settingsBuffer() {
-    if (!gpu) return null;
+    if (!isWebGPU) return null;
     const buffer = device.createBuffer({byteLength: 16, usage: Buffer.UNIFORM | Buffer.COPY_DST});
     resources.push(buffer);
     return buffer;
   }
+  /** Gets the current canvas framebuffer with the scene’s depth format. */
   const surface = () =>
     device.getDefaultCanvasContext().getCurrentFramebuffer({
       depthStencilFormat: kind === 'river' ? 'depth24plus-stencil8' : 'depth24plus'
     });
+  /** Builds an attribute-free pipeline for the active backend. */
   function pipeline(
     vertex: string,
     fragment: string,
     parameters: RenderPipelineParameters,
     points = false
   ) {
-    if (gpu) {
+    if (isWebGPU) {
       const source =
         wgsl.header +
         (points || fragment === river ? wgsl.settings : '') +
@@ -50,12 +54,12 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
       resources.push(shader, result);
       return result;
     }
-    const vs = device.createShader({stage: 'vertex', source: vertex});
-    const fs = device.createShader({stage: 'fragment', source: fragment});
-    resources.push(vs, fs);
+    const vertexShader = device.createShader({stage: 'vertex', source: vertex});
+    const fragmentShader = device.createShader({stage: 'fragment', source: fragment});
+    resources.push(vertexShader, fragmentShader);
     const result = device.createRenderPipeline({
-      vs,
-      fs,
+      vs: vertexShader,
+      fs: fragmentShader,
       parameters,
       topology: points ? 'point-list' : 'triangle-list'
     });
@@ -67,7 +71,7 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
     [0.16, -0.03]
   ];
   let angle = 0;
-  let render: (time: number) => void;
+  let render: (time: number) => boolean;
   if (kind === 'river') {
     const writers = [1, 2].map(bit =>
       pipeline(triangle, river, {
@@ -107,6 +111,7 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
       }
       pass.end();
       device.submit();
+      return true;
     };
   } else {
     const textureProps = {
@@ -136,12 +141,19 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
     );
     const rotation = settingsBuffer();
     const photograph = pipeline(triangle, capturedColor, {});
-    const capture = device.beginRenderPass({framebuffer, clearDepth: 1});
-    capture.setPipeline(landscape);
-    capture.draw({vertexCount: 3});
-    capture.end();
-    device.submit();
+    /** Whether the one-time capture has successfully drawn and been submitted. */
+    let captured = false;
     render = () => {
+      if (!captured) {
+        const capture = device.beginRenderPass({framebuffer, clearDepth: 1});
+        capture.setPipeline(landscape);
+        captured = capture.draw({vertexCount: 3});
+        capture.end();
+        device.submit();
+        if (landscape.isErrored) throw new Error('Could not link the canyon capture pipeline.');
+        if (!captured) return false;
+      }
+      let drawn: boolean;
       const pass: RenderPass = device.beginRenderPass({
         framebuffer: surface(),
         clearColor: [0.025, 0.038, 0.065, 1],
@@ -150,7 +162,7 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
       if (angle === 0) {
         pass.setPipeline(photograph);
         pass.setBindings({capturedImage});
-        pass.draw({vertexCount: 3});
+        drawn = pass.draw({vertexCount: 3});
       } else {
         pass.setPipeline(pointCloud);
         if (rotation) rotation.write(new Float32Array([angle, 0, 0, 0]));
@@ -159,18 +171,24 @@ export function createAtlas(device: Device, kind: 'river' | 'canyon') {
             ? {capturedImage, capturedDepth, settings: rotation}
             : {capturedImage, capturedDepth}
         );
-        pass.draw({vertexCount: 640 * 400, uniforms: {angle}});
+        drawn = pass.draw({vertexCount: 640 * 400, uniforms: {angle}});
       }
       pass.end();
       device.submit();
+      if ((angle === 0 ? photograph : pointCloud).isErrored) {
+        throw new Error('Could not link the canyon display pipeline.');
+      }
+      return drawn;
     };
   }
   return {
     render,
     lenses,
+    /** Sets the canyon relief rotation in radians. */
     setAngle(value: number) {
       angle = value;
     },
+    /** Releases owned resources in reverse creation order. */
     destroy() {
       for (const resource of resources.reverse()) resource.destroy();
     }
