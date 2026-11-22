@@ -149,7 +149,9 @@ export class WEBGLRenderPass extends RenderPass {
       glParameters.depthMask = !this.props.depthReadOnly;
     }
 
-    glParameters.stencilMask = this.props.stencilReadOnly ? 0 : 1;
+    if (this.props.stencilReadOnly) {
+      glParameters.stencilMask = 0;
+    }
 
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
 
@@ -352,6 +354,8 @@ export class WEBGLRenderPass extends RenderPass {
     if (this.props.clearStencil !== false) {
       clearMask |= GL.STENCIL_BUFFER_BIT;
       glParameters.clearStencil = this.props.clearStencil;
+      // Preserve the read-only mask. Writable attachment clears affect all stencil bits.
+      glParameters.stencilMask ??= 0xffffffff;
     }
 
     if (clearMask !== 0) {
