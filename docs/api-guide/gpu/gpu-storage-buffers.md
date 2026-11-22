@@ -128,7 +128,9 @@ computePass.end();
 Single-buffer vectors bind directly. Aggregate multi-batch vectors are rebound
 batch-by-batch before dispatch. Each chunk binds at its own `GPUData.byteOffset`, which must be a multiple
 of `device.limits.minStorageBufferOffsetAlignment` (256 bytes by default); unaligned chunks
-are rejected before dispatch.
+are rejected when `GPUTableComputation` is created. The low-part `residualVector` (`<name>64Low`)
+from a GPU Float64 split starts at a non-aligned byte offset, so on WebGPU it is
+vertex-attribute only.
 
 ## Practical Guidance
 
