@@ -90,7 +90,24 @@ for (const width of [2, 3, 4] as const) {
         left: column('position').node,
         right: increment.node
       });
-      const query = frame.withColumn('result', expression, {format}).select(['result']);
+      const rounded = new GPUExpression<readonly number[] | null>({
+        kind: 'unary',
+        operator: 'round',
+        operand: expression.node
+      });
+      expect(() =>
+        frame.withColumn('rounded', rounded).compile(new GPUCommandGraph(device))
+      ).toThrow(/scalar function requires/);
+      const matched = new GPUExpression<readonly number[] | null>({
+        kind: 'binary',
+        operator: 'nullif',
+        left: expression.node,
+        right: expression.node
+      });
+      const query = frame
+        .withColumn('result', expression, {format})
+        .withColumn('matched', matched)
+        .select(['result', 'matched']);
       const compiled = query.compile(new GPUCommandGraph<GPUDataFrameQueryParameters>(device));
       try {
         const encoder = device.createCommandEncoder();
@@ -120,6 +137,12 @@ for (const width of [2, 3, 4] as const) {
             )
           )
         ).toEqual([1, 0]);
+        const matchedValidity = await (
+          compiled.validity.matched!.data[0].buffer as Buffer
+        ).readAsync(0, 8);
+        expect(
+          Array.from(new Uint32Array(matchedValidity.buffer, matchedValidity.byteOffset, 2))
+        ).toEqual([0, 0]);
       } finally {
         compiled.destroy();
         frame.destroy();

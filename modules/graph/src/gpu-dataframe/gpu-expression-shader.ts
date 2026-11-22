@@ -486,7 +486,10 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'round':
       case 'trunc': {
         const format = this.inferFormat(operandNode) ?? 'float32';
-        if (format === 'boolean' || (operator === 'abs' && format === 'sint32')) {
+        if (
+          (format !== 'float32' && format !== 'sint32' && format !== 'uint32') ||
+          (operator === 'abs' && format === 'sint32')
+        ) {
           throw new Error('GPUDataFrame scalar function requires a supported numeric format');
         }
         const operand = this.emit(operandNode, format);
@@ -564,17 +567,19 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         left.nullable && right.nullable
       );
     }
+    const vector = format !== 'boolean' && getGPUVectorWGSLLayout(format).components > 1;
     if (operator === 'nullif') {
+      const equals = `(${left.value} == ${right.value})`;
       return this.addValue(
         format,
         left.value,
-        `(${left.valid} && !(${right.valid} && ${left.value} == ${right.value}))`,
+        `(${left.valid} && !(${right.valid} && ${vector ? `all(${equals})` : equals}))`,
         true
       );
     }
     const symbol = getGPUQueryBinaryOperator(operator);
     let value = `(${left.value} ${symbol} ${right.value})`;
-    if (format !== 'boolean' && getGPUVectorWGSLLayout(format).components > 1 && !arithmetic) {
+    if (vector && !arithmetic) {
       if (operator !== 'equal' && operator !== 'not-equal')
         throw new Error('Vector ordering is unsupported');
       value = `${operator === 'equal' ? 'all' : 'any'}(${value})`;
