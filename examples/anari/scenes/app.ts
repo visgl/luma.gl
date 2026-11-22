@@ -1,3 +1,5 @@
+import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
+import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
   ANARIDevice,
   type ANARIFrame,
@@ -84,6 +86,8 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private orbitControls: OrbitControls | null = null;
   private bloomEnabled = true;
   private temporalAntialiasingEnabled = true;
+  /** Limits outstanding live ray work while leaving raster submissions on their normal path. */
+  private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
   private lastStatisticsUpdate = 0;
   private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
@@ -147,7 +151,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     setElementText('device-type', `${device.type.toUpperCase()}${displayMode}`);
   }
 
-  override onRender({width, height, time}: AnimationProps): void {
+  override onRender({device, width, height, time}: AnimationProps): void {
     const elapsedSeconds = time * 0.001;
     const activeScene = this.scenes[this.activeSceneIndex];
     for (const animation of activeScene.animations) {
@@ -180,7 +184,23 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     ];
     this.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
 
+    const paceRayFrame = this.frame.getParameter('renderer')?.subtype === 'raytrace';
+    if (paceRayFrame && !this.raySubmissionPacer.isReady()) return;
+    if (paceRayFrame) {
+      this.frame
+        .getParameter('renderer')
+        ?.setParameter(
+          'previousFrameExecutionMilliseconds',
+          this.raySubmissionPacer.lastSubmissionMilliseconds
+        )
+        .commitParameters();
+    }
     const statistics = this.frame.render();
+    if (paceRayFrame) {
+      void submitPacedRayFrame(device, this.raySubmissionPacer).catch(() => {
+        setElementText('ray-tracing-frame', 'GPU work interrupted');
+      });
+    }
     if (elapsedSeconds - this.lastStatisticsUpdate > 0.3) {
       setElementText('instance-count', statistics.instanceCount.toLocaleString());
       setElementText('draw-count', statistics.drawCount.toLocaleString());
@@ -276,6 +296,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           ) {
             return;
           }
+          this.raySubmissionPacer.resetCooldown();
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
@@ -328,6 +349,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   }
 
   private selectScene(sceneIndex: number): void {
+    this.raySubmissionPacer.resetCooldown();
     const scene = this.scenes[sceneIndex];
     this.activeSceneIndex = sceneIndex;
     this.orbitControls?.setProps({

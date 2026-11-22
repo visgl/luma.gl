@@ -483,8 +483,12 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     if (supportsRawValidationErrorScopes) {
       device.handle.pushErrorScope('validation');
     }
-    const accumulatedStatistics = renderer.render(options);
+    const accumulatedStatistics = renderer.render({
+      ...options,
+      previousFrameExecutionMilliseconds: 12
+    });
     device.submit();
+    expect(accumulatedStatistics.rayTracing?.frameTimeMilliseconds).toBe(12);
     expect(
       accumulatedStatistics.instanceCount,
       'unchanged instances reuse the compiled graph and progressive history'

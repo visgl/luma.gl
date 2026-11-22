@@ -363,6 +363,7 @@ const raytraceRendererProperties = {
   minimumResolutionScale: positiveNumberSchema.max(1).optional(),
   adaptiveResolution: z.boolean().optional(),
   targetFrameTimeMilliseconds: positiveNumberSchema.optional(),
+  previousFrameExecutionMilliseconds: positiveNumberSchema.nullable().optional(),
   temporalReprojection: z.boolean().optional(),
   shadowSamplesPerFrame: z.number().int().nonnegative().optional()
 };

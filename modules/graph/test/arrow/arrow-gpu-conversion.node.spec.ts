@@ -386,6 +386,35 @@ it('bounds planned Arrow payloads before allocating and serializes borrowed batc
   }
 });
 
+it('rejects a peak budget that fits output but omits temporary GPU conversion storage', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n]);
+  const schema = {columns: [{name: 'time'}]};
+  const table = new arrow.Table([batch]);
+  const cpu = planArrowTableGPUConversion(device, table, schema);
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const gpu = planArrowTableGPUConversion(device, table, schema);
+  expect(gpu.columns[0].plan.backend).toBe('webgpu');
+  expect(gpu.cost.targetByteLength).toBe(cpu.cost.targetByteLength);
+  expect(gpu.cost.temporaryGPUByteLength).toBeGreaterThanOrEqual(28);
+  expect(gpu.estimatedPeakGPUBytes).toBeGreaterThan(cpu.estimatedPeakGPUBytes);
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const consume = vi.fn();
+  try {
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, consume, {
+        maxBatchPayloadBytes: gpu.cost.targetByteLength,
+        maxBatchGPUBytes: cpu.estimatedPeakGPUBytes
+      })
+    ).rejects.toThrow(/peak GPU bytes/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(consume).not.toHaveBeenCalled();
+  } finally {
+    createBuffer.mockRestore();
+    device.destroy();
+  }
+});
+
 test('Arrow GPU conversion rejects unsupported plans before allocating', t => {
   const device = new NullDevice({});
   const colors = makeArrowFixedSizeListVector(new arrow.Float32(), 3, new Float32Array([1, 0, 0]));

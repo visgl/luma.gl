@@ -55,6 +55,8 @@ import support1 from './showcase/gaussian-splats/mobile-support';
 import support2 from './showcase/instancing/mobile-support';
 import support3 from './showcase/globe/mobile-support';
 import support4 from './showcase/packet-spraying/mobile-support';
+import riverSupport from './showcase/the-river-remembers/mobile-support';
+import canyonSupport from './showcase/canyon-echo/mobile-support';
 import support5 from './showcase/dof/mobile-support';
 import support6 from './experimental/bloom/mobile-support';
 import support7 from './showcase/persistence/mobile-support';
@@ -159,6 +161,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/instancing': support2,
   'showcase/globe': support3,
   'showcase/packet-spraying': support4,
+  'showcase/the-river-remembers': riverSupport,
+  'showcase/canyon-echo': canyonSupport,
   'showcase/dof': support5,
   'experimental/bloom': support6,
   'showcase/persistence': support7,

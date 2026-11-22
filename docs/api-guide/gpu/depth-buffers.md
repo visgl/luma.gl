@@ -1,3 +1,4 @@
+import {BufferAtlas} from '@site/src/components/docs/buffer-atlas';
 import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # Depth buffers
@@ -7,6 +8,12 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 A depth attachment stores a depth value per framebuffer sample. For overlapping opaque draws, the depth comparison decides which surface is visible. The projection, render pass and pipeline must agree on which end of the depth range is closer.
 
 For masks and per-sample tags, see [Stencil buffers](/docs/api-guide/gpu/stencil-buffers).
+
+## Canyon Echo
+
+Pull the relief angle slider to one side. Each point comes from a visible sample in one captured color and depth image. Look through the gaps behind the bridge to see which surfaces the camera never recorded.
+
+<BufferAtlas kind="canyon" />
 
 ## Configure opaque rendering
 

@@ -533,6 +533,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   adaptiveResolution?: boolean;
   /** Target animation-frame duration used by the adaptive scheduler. */
   targetFrameTimeMilliseconds?: number;
+  /** Previous execution time excluding intentional pacing delays. Null skips this observation. */
+  previousFrameExecutionMilliseconds?: number | null;
   /** Reprojects compatible history while the camera or instances move. */
   temporalReprojection?: boolean;
   /** Maximum non-ambient shadowed light samples traced per pixel in one frame. */
@@ -893,7 +895,11 @@ export class RayTracingSceneRenderer {
       resources.lightRevision = lightRevision;
       this.frames.set(options.id, resources);
     } else {
-      updateFrameTiming(resources, currentTimeMilliseconds);
+      updateFrameTiming(
+        resources,
+        currentTimeMilliseconds,
+        options.previousFrameExecutionMilliseconds
+      );
       if (updateQualityOptions(resources, quality)) {
         resources.historyNeedsReset = true;
       }
@@ -4634,15 +4640,21 @@ function updateQualityOptions(
 
 function updateFrameTiming(
   resources: RayTracingFrameResources,
-  currentTimeMilliseconds: number
+  currentTimeMilliseconds: number,
+  previousFrameExecutionMilliseconds?: number | null
 ): void {
   const previousTimeMilliseconds = resources.lastRenderTimeMilliseconds;
   resources.lastRenderTimeMilliseconds = currentTimeMilliseconds;
-  if (previousTimeMilliseconds === undefined) {
-    return;
-  }
-  const frameTimeMilliseconds = currentTimeMilliseconds - previousTimeMilliseconds;
-  if (frameTimeMilliseconds <= 0 || frameTimeMilliseconds > 1000) {
+  const frameTimeMilliseconds =
+    previousFrameExecutionMilliseconds === undefined
+      ? currentTimeMilliseconds - (previousTimeMilliseconds ?? currentTimeMilliseconds)
+      : previousFrameExecutionMilliseconds;
+  if (frameTimeMilliseconds === null) return;
+  if (
+    !Number.isFinite(frameTimeMilliseconds) ||
+    frameTimeMilliseconds <= 0 ||
+    (previousFrameExecutionMilliseconds === undefined && frameTimeMilliseconds > 1000)
+  ) {
     return;
   }
   resources.averageFrameTimeMilliseconds =

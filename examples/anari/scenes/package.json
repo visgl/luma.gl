@@ -14,6 +14,7 @@
     "@luma.gl/anari": "workspace:*",
     "@luma.gl/core": "10.0.0-beta.2",
     "@luma.gl/engine": "10.0.0-beta.2",
+    "@luma.gl/graph": "workspace:*",
     "@luma.gl/shaders": "10.0.0-beta.2",
     "@math.gl/core": "^5.0.0",
     "jsonc-parser": "3.2.0",

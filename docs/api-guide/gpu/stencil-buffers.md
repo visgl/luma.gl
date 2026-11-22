@@ -1,3 +1,4 @@
+import {BufferAtlas} from '@site/src/components/docs/buffer-atlas';
 import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # Stencil buffers
@@ -7,6 +8,12 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 A stencil attachment stores a small unsigned integer at each framebuffer sample. Draws can
 label samples, test those labels, and update them. Use the labels to clip one draw to the
 shape of another, reserve bits for independent effects, or count coverage.
+
+## The River Remembers
+
+Drag the survey lenses across the city. One traces the old riverbed and the other exposes the culverts. Overlap them to see where water follows its old course.
+
+<BufferAtlas kind="river" />
 
 ## Clip a draw to a shape
 
