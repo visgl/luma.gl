@@ -271,13 +271,18 @@ function getLiveNodeComponents(
   current: ScenegraphNode,
   source: NonNullable<GLTFPhysicsDocument['nodes']>[number]
 ): {position: readonly number[]; rotation: readonly number[]; scale: readonly number[]} {
+  /** Live local translation from the scenegraph component API. */
   const position = Array.from(current.position);
+  /** Keep each axis sign, including axes collapsed by animation. */
   const scale = Array.from(current.scale);
+  /** Convert either quaternion or Euler components with the scenegraph convention. */
   const rotationMatrix = new Matrix4();
   if (current.rotation.length === 4) rotationMatrix.fromQuaternion(current.rotation);
   else rotationMatrix.rotateXYZ(current.rotation);
+  /** Verify that the components still describe the matrix used by the scene. */
   const liveMatrix = new Matrix4().translate(position).multiplyRight(rotationMatrix).scale(scale);
   if (liveMatrix.every((value, index) => value === current.matrix[index])) {
+    /** glTF rotation channels always use quaternions. */
     const rotation =
       current.rotation.length === 4
         ? Array.from(current.rotation)
@@ -287,9 +292,13 @@ function getLiveNodeComponents(
 
   // Some imported nodes initialize only the matrix. Retain the source TRS when it still matches.
   if (!source.matrix) {
+    /** Authored local translation with the glTF identity default. */
     const authoredPosition = source.translation ?? [0, 0, 0];
+    /** Authored quaternion with the glTF identity default. */
     const authoredRotation = source.rotation ?? [0, 0, 0, 1];
+    /** Authored scale with the glTF identity default. */
     const authoredScale = source.scale ?? [1, 1, 1];
+    /** Match the import-time matrix before using source components. */
     const authoredMatrix = new Matrix4()
       .translate(authoredPosition)
       .multiplyRight(new Matrix4().fromQuaternion(authoredRotation))

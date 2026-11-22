@@ -246,6 +246,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
     this.updateStatus();
   }
   private updateStatus() {
+    /** Share the current session summary with the panel and qualification runner. */
     const status = this.controls?.querySelector<HTMLElement>('[data-status]');
     if (status && this.session) {
       status.textContent = `${this.session.world.count} bodies · revision ${this.session.revision} · ${this.stressCycles} reset/restore cycles · GPU poses (no frame readback)`;

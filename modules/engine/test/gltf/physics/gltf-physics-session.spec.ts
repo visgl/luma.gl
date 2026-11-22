@@ -240,10 +240,12 @@ it('exports a settled animated collider frame and shared analytic scale without 
   /** This round trip exercises the same CPU-independent physics world used by rendering. */
   const device = await getWebGPUTestDevice('core');
   if (!device) return context.skip('WebGPU unavailable');
-  /** Move the first collider to an independently animated child; both bodies share one shape. */
+  /** Start with two rigid bodies that share a primitive declaration. */
   const original = document();
+  /** Copy the node array so additional children keep stable glTF indices. */
   const nodes = [...original.nodes!];
   nodes[1].children = [3, 4, 5];
+  /** Move the first collider off the body node to exercise compound ownership. */
   const extension = nodes[1].extensions!['KHR_physics_rigid_bodies'] as Record<string, unknown>;
   delete extension['collider'];
   nodes.push({
@@ -252,6 +254,7 @@ it('exports a settled animated collider frame and shared analytic scale without 
   });
   // Render-only siblings may have singular scales both before and after animation.
   nodes.push({scale: [0, 1, 1]}, {scale: [1, 0, 1]});
+  /** Exercise both standard and pointer-targeted scale channels. */
   const source: GLTFPhysicsDocument = {
     ...original,
     nodes,
@@ -270,12 +273,16 @@ it('exports a settled animated collider frame and shared analytic scale without 
       }
     ]
   };
-  /** Reuse the real importer and the engine's animation/physics session. */
+  /** Let the scenegraph drive changes to the cooked collider. */
   const options = {animationOwnership: 'scenegraph', propertyBindings: true} as const;
+  /** Cook the original hierarchy before applying the live changes. */
   const description = parseGLTFPhysics(source, options);
   expect(description.issues).toEqual([]);
+  /** Live node whose matrix supplies the compound collider placement. */
   const child = description.sceneNodes.get(3)!;
+  /** Live visual sibling with no collider binding. */
   const renderOnlyChild = description.sceneNodes.get(4)!;
+  /** Disable gravity so the test isolates the authored scale and placement changes. */
   const session = await ScenegraphPhysicsSession.create(
     device,
     makeGLTFPhysicsScene(description, undefined, {gravity: [0, 0, 0]})
@@ -303,7 +310,7 @@ it('exports a settled animated collider frame and shared analytic scale without 
     expect(saved.nodes![5].matrix).toBeUndefined();
     expect(saved.nodes![5].scale).toEqual([1, 0, 1]);
     expect(source.nodes![3].translation).toEqual([1, 0, 0]);
-    /** Reimport must recook the same live dimensions exactly once. */
+    /** Reimport the exported pose to compare the newly cooked colliders. */
     const roundTrip = parseGLTFPhysics(saved, options);
     expect(roundTrip.issues).toEqual([]);
     for (const collider of roundTrip.colliders) {
@@ -326,15 +333,21 @@ it('exports absolute body poses after a physics origin shift', async context => 
   /** Source coordinates should not become simulation-local after rebasing. */
   const device = await getWebGPUTestDevice('core');
   if (!device) return context.skip('WebGPU unavailable');
+  /** Author bodies far from the initial simulation origin. */
   const source = document();
   source.nodes![0].translation = [129, 0, 0];
+  /** Cook the bodies in the original world frame. */
   const description = parseGLTFPhysics(source);
+  /** Attach the scene to a real GPU world so the rebase updates live buffers. */
   const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
   try {
     session.world.shiftOrigin([128, 0, 0]);
+    /** Confirm the GPU pose shifted before reading the exported pose. */
     const live = await session.world.readState();
     expect(live[0].position[0]).toBeCloseTo(1.1, 4);
+    /** Export using the saved origin and live local poses. */
     const saved = await exportGLTFPhysicsState(source, description, session.world);
+    /** Verify import reconstructs both authored world translations. */
     const imported = parseGLTFPhysics(saved);
     expect(imported.issues).toEqual([]);
     expect(imported.bodies[0].worldMatrix[12]).toBeCloseTo(129, 4);
