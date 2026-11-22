@@ -910,6 +910,11 @@ it('GPUSQL applies HAVING after aggregation and before pagination', async () => 
         'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY fare HAVING trips = 0',
         [],
         false
+      ],
+      [
+        'SELECT category FROM trips GROUP BY category HAVING SUM(fare + 1) > 17 AND SUM(trips.fare + 1) IS NOT NULL ORDER BY 1',
+        [['premium']],
+        true
       ]
     ] as const) {
       const result = context
