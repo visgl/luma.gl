@@ -199,6 +199,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         })
         .commitParameters();
     }
+    /** Scene render and optional asynchronous GPU pass timing. */
     const timedFrame =
       paceRayFrame && this.rayBatchBudget.canMeasure(device)
         ? timeCaptureFrame(device, () => this.frame.render())

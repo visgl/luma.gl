@@ -734,6 +734,8 @@ type RayTracingFrameResources = {
   accumulatedFrameCount: number;
   /** Samples from completed full-coverage sweeps. */
   completedSweepSamples: number;
+  /** Whether the preceding frame used a caller-supplied batch policy. */
+  usedRayBatchOverride: boolean;
   primitiveCount: number;
   primitiveCapacity: number;
   leafCapacity: number;
@@ -857,9 +859,13 @@ export class RayTracingSceneRenderer {
     const lightRevision = getLightRevision(options, lights);
     let resources = this.frames.get(options.id);
     const currentTimeMilliseconds = getTimestampMilliseconds();
+    /** Sparse batches carry metadata only when the view and scene pose are stable. */
     const stationaryBatch =
       resources?.transformRevision === transformRevision &&
       resources.lightRevision === lightRevision &&
+      resources.previousCameraPosition.every(
+        (value, index) => value === options.camera.position[index]
+      ) &&
       resources.previousViewProjection.every((value, index) => value === viewProjection[index]);
 
     if (!resources) {
@@ -1122,8 +1128,18 @@ export class RayTracingSceneRenderer {
       resources.historyNeedsReset = true;
     }
     if (!options.rayBatchPhaseCount) {
+      if (resources.usedRayBatchOverride) {
+        resources.phaseCount = 1;
+        resources.phaseIndex = 0;
+        resources.accumulatedFrameCount = Math.floor(
+          resources.completedSweepSamples / getSamplesPerPixel(options)
+        );
+        resources.overBudgetFrameCount = 0;
+        resources.underBudgetFrameCount = 0;
+      }
       updateRayTracingAdaptiveBudget(resources, currentTimeMilliseconds);
     }
+    resources.usedRayBatchOverride = Boolean(options.rayBatchPhaseCount);
 
     const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
     const materialTextures = getRayMaterialTextures(options.surfaces);
@@ -1997,6 +2013,7 @@ export class RayTracingSceneRenderer {
       frameIndex: 0,
       accumulatedFrameCount: 0,
       completedSweepSamples: 0,
+      usedRayBatchOverride: false,
       primitiveCount: scene.primitiveCount,
       primitiveCapacity,
       leafCapacity,

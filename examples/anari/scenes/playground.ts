@@ -368,7 +368,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         .commitParameters();
     }
     if (paceRayFrame) this.refinementRenderTime = time;
+    /** Enable live feedback only for paced submissions with timestamp support. */
     const measureLiveBudget = paceRayFrame && this.rayBatchBudget.canMeasure(device);
+    /** Scene render and optional asynchronous GPU pass timing. */
     const timedFrame =
       (this.captureGpuTiming && this.rendererSubtype === 'raytrace') || measureLiveBudget
         ? timeCaptureFrame(device, () => scene.frame.render())

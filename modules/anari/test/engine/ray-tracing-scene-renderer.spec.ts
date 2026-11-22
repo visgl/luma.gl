@@ -560,6 +560,14 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
       frameResources.colorHistory.previousTexture
     );
 
+    const restoredFullCoverage = renderer.render(options);
+    device.submit();
+    expect(restoredFullCoverage.rayTracing?.sampledPixelCoverage).toBe(1);
+    expect(restoredFullCoverage.rayTracing?.accumulatedSamples).toBe(8);
+    expect([initialColorHistory, initialColorOutput]).toContain(
+      frameResources.colorHistory.previousTexture
+    );
+
     const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
     expect(
