@@ -240,13 +240,22 @@ function buildGPUSQLPlan(
       const occupied = new Set(Object.keys(definitions));
       const selectedKeys = new Map<string, {source: string; output: string}>();
       const keyByItem = new Map<GPUSQLSelectItem, {source: string; output: string}>();
+      const materializeKey = (expression: GPUExpressionNode): string => {
+        if (expression.kind === 'column') return expression.name;
+        let source: string;
+        do {
+          source = '__sqlGroupKey' + inputIndex++;
+        } while (reservedNames.has(source));
+        reservedNames.add(source);
+        query = query.withColumn(source, new GPUExpression<number | null, string>(expression));
+        return source;
+      };
       for (const item of keyItems) {
         if (!item.expression) {
           throw new Error('GPUSQL grouped SELECT requires explicit key expressions');
         }
         const expression = lowerSQLExpression(item.expression, parameters, resolve);
-        let source = expression.kind === 'column' ? expression.name : undefined;
-        const output = item.alias ?? source;
+        const output = item.alias ?? (expression.kind === 'column' ? expression.name : undefined);
         if (!output) throw new Error('GPUSQL computed group keys require an explicit AS alias');
         if (occupied.has(output)) {
           throw new Error('GPUSQL output column "' + output + '" is duplicated');
@@ -255,21 +264,15 @@ function buildGPUSQLPlan(
         if (selectedKeys.has(signature)) {
           throw new Error('GPUSQL grouped queries must select each GROUP BY key exactly once');
         }
-        if (source === undefined) {
-          do {
-            source = '__sqlGroupKey' + inputIndex++;
-          } while (reservedNames.has(source));
-          reservedNames.add(source);
-          query = query.withColumn(source, new GPUExpression<number | null, string>(expression));
-        }
-        const key = {source, output};
+        const key = {source: materializeKey(expression), output};
         selectedKeys.set(signature, key);
         keyByItem.set(item, key);
         occupied.add(output);
         outputNames.set(item, output);
       }
 
-      const keys = statement.groupBy.map(reference => {
+      const hiddenKeys = new Map<string, {source: string}>();
+      const keys = statement.groupBy.map<{source: string; output?: string}>(reference => {
         if (reference.type === 'Literal' && typeof reference.value === 'number') {
           const item = getGPUSQLProjectionItem(statement.items, reference.value, 'GROUP BY');
           const key = keyByItem.get(item);
@@ -284,15 +287,22 @@ function buildGPUSQLPlan(
           const alias = keyItems.find(item => item.alias === reference.name);
           if (alias) return keyByItem.get(alias)!;
         }
-        const signature = JSON.stringify(lowerSQLExpression(reference, parameters, resolve));
-        const key = selectedKeys.get(signature);
-        if (!key) {
-          throw new Error('GPUSQL grouped queries must select each GROUP BY key exactly once');
-        }
+        const expression = lowerSQLExpression(reference, parameters, resolve);
+        const signature = JSON.stringify(expression);
+        const existing = selectedKeys.get(signature) ?? hiddenKeys.get(signature);
+        if (existing) return existing;
+        const key = {source: materializeKey(expression)};
+        hiddenKeys.set(signature, key);
         return key;
       });
-      if (selectedKeys.size !== keys.length || new Set(keys).size !== keys.length) {
-        throw new Error('GPUSQL grouped queries must select each GROUP BY key exactly once');
+      const uniqueKeys = new Set(keys);
+      if (uniqueKeys.size !== keys.length) {
+        throw new Error('GPUSQL GROUP BY keys must be distinct');
+      }
+      if ([...selectedKeys.values()].some(key => !uniqueKeys.has(key))) {
+        throw new Error(
+          'GPUSQL grouped queries must group by every non-aggregate SELECT expression'
+        );
       }
 
       const {predicates, selectedColumns, derivedColumns} = query;
@@ -303,7 +313,7 @@ function buildGPUSQLPlan(
         definitions
       );
 
-      if (keys.length > 1 || !frame.dictionaries[keys[0].source]) {
+      if (keys.length > 1 || keys[0].output === undefined || !frame.dictionaries[keys[0].source]) {
         for (const {source} of keys) {
           const format = frame.schema.fields.find(field => field.name === source)?.format;
           if (
@@ -343,7 +353,7 @@ function buildGPUSQLPlan(
             groupCount,
             normalized,
             graph,
-            {key: key.output, columns}
+            {key: key.output!, columns}
           )
       };
     }

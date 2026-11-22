@@ -751,6 +751,71 @@ it('GPUSQL groups nullable dictionary pairs across batches without confusing nul
   }
 });
 
+it('GPUSQL returns observed aggregates without projecting hidden grouping keys', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable(true)),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  try {
+    for (const {sql, names, expected} of [
+      {
+        sql: 'SELECT COUNT(*) AS category, SUM(fare) AS total FROM trips WHERE fare < 5 GROUP BY category',
+        names: ['category', 'total'],
+        expected: [[1, 3]]
+      },
+      {
+        sql: 'SELECT category AS label, COUNT(*) AS trips FROM trips GROUP BY label, CASE WHEN fare >= 8 THEN 1 ELSE 0 END',
+        names: ['label', 'trips'],
+        expected: [
+          ['economy', 2],
+          ['economy', 1],
+          ['premium', 2]
+        ]
+      },
+      {
+        sql: 'SELECT COUNT(*) AS trips, COUNT(fare) AS known FROM trips GROUP BY NULLIF(fare, 8)',
+        names: ['trips', 'known'],
+        expected: [
+          [1, 1],
+          [1, 1],
+          [1, 1],
+          [2, 1]
+        ]
+      },
+      {
+        sql: 'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY service',
+        names: ['trips'],
+        expected: []
+      }
+    ]) {
+      const result = context.query(sql).compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(output.schema.fields.map(field => field.name)).toEqual(names);
+        expect(Object.keys(result.dictionaries)).toEqual(names.includes('label') ? ['label'] : []);
+        expect(Object.keys(result.validity)).toEqual(names.includes('total') ? ['total'] : []);
+        expect(Array.from(output, row => names.map(name => row[name]))).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL groups by a computed key expression, alias, or SELECT position', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
