@@ -816,6 +816,60 @@ it('GPUSQL returns observed aggregates without projecting hidden grouping keys',
   }
 });
 
+it('GPUSQL applies ORDER BY and pagination after grouping', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  try {
+    for (const [sql, expected] of [
+      [
+        'SELECT category, COUNT(*) AS trips FROM trips GROUP BY category ORDER BY trips ASC LIMIT 1',
+        [['premium', 2]]
+      ],
+      [
+        'SELECT COUNT(*) AS trips, SUM(NULLIF(fare, 8)) AS total FROM trips GROUP BY NULLIF(fare, 8) ORDER BY 2 DESC NULLS FIRST, 1 ASC OFFSET 1 LIMIT 2',
+        [
+          [1, 11],
+          [1, 10]
+        ]
+      ],
+      [
+        'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY fare ORDER BY trips LIMIT 1',
+        []
+      ],
+      ['SELECT COUNT(*) AS trips FROM trips GROUP BY fare ORDER BY trips OFFSET 100', []]
+    ] as const) {
+      const result = context.query(sql).compile(new GPUCommandGraph(device));
+      try {
+        expect(result).toBeInstanceOf(CompiledGPUDataFrameGroupedAggregation);
+        if (!(result instanceof CompiledGPUDataFrameGroupedAggregation))
+          throw new Error('Expected grouped result');
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          globalRowIndices: result.globalRowIndices,
+          globalSelectedCount: result.globalSelectedCount
+        });
+        expect(
+          Array.from(output, row => output.schema.fields.map(field => row[field.name]))
+        ).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL groups by a computed key expression, alias, or SELECT position', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

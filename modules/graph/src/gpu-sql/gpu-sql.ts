@@ -259,9 +259,8 @@ function buildGPUSQLPlan(
   if (aggregates.length > 0) {
     if (
       statement.join ||
-      statement.orderBy ||
-      statement.limit !== undefined ||
-      statement.offset !== undefined
+      (!statement.groupBy &&
+        (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined))
     ) {
       throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or pagination');
     }
@@ -371,6 +370,32 @@ function buildGPUSQLPlan(
 
       const {predicates, selectedColumns, derivedColumns} = query;
       const columns = statement.items.map(item => outputNames.get(item)!);
+      if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
+        throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
+      }
+      const ordering: GPUGlobalSortKey[] | undefined = statement.orderBy?.map(
+        ({expression, direction, nulls}, index) => {
+          const column =
+            expression.type === 'Literal' && typeof expression.value === 'number'
+              ? getGPUSQLProjectionItem(columns, expression.value, 'ORDER BY')
+              : expression.type === 'Identifier' && !('gpuSQLParameter' in expression)
+                ? expression.name
+                : undefined;
+          if (column === undefined || !columns.includes(column)) {
+            throw new Error('GPUSQL grouped ORDER BY requires a SELECT output name or position');
+          }
+          return {
+            column,
+            options: {
+              direction,
+              nulls: nulls ?? 'last',
+              nans: 'last',
+              algorithm: 'auto',
+              ...(index === 0 ? {limit: statement.limit, offset: statement.offset} : {})
+            }
+          };
+        }
+      );
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,
@@ -400,7 +425,8 @@ function buildGPUSQLPlan(
                 keys,
                 normalized,
                 graph,
-                columns
+                columns,
+                ordering
               )
           },
           'observed-grouping',
@@ -424,7 +450,8 @@ function buildGPUSQLPlan(
               groupCount,
               normalized,
               graph,
-              {key: key.output!, columns}
+              {key: key.output!, columns},
+              ordering
             )
         },
         'dense-grouping',

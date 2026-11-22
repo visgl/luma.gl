@@ -143,90 +143,17 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
   keys: readonly GPUGlobalSortKey<keyof Selection & string>[],
   resultColumns?: readonly (keyof Selection & string)[]
 ): GPUDataFrameQueryExtensionResult<Selection, CompiledGPUDataFrameGlobalSort<Selection>> {
-  const graph = context.graph;
   const prefix = `${context.queryId}-global-sort`;
   const ownedVectors: GPUVector[] = [];
 
   try {
     const {column, options} = keys[0];
-    const length = context.table.numRows;
-    const globalRowIndices = createGPUAnalyticsOutputVector(
-      graph.device,
-      `${prefix}-row-indices`,
-      'uint32',
-      length
+    const {globalRowIndices, globalSelectedCount} = addGPUGlobalOrdering(
+      context,
+      keys,
+      ownedVectors,
+      prefix
     );
-    ownedVectors.push(globalRowIndices);
-    const globalSelectedCount = createGPUAnalyticsOutputVector(
-      graph.device,
-      `${prefix}-selected-count`,
-      'uint32',
-      1
-    );
-    ownedVectors.push(globalSelectedCount);
-    const globalRows = graph.importGPUVector(`${prefix}-row-vector`, globalRowIndices).data[0];
-    const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
-      .data[0];
-
-    graph.add(
-      new GPUReduction({
-        id: `${prefix}-count-selected`,
-        input: context.selectedCounts,
-        output: selectedCount,
-        operation: 'sum'
-      })
-    );
-
-    if (length > 0) {
-      const scratch = createGPUGlobalSortScratch(graph, prefix, length);
-      // Stable sorts transfer the ordering of less significant keys through ties.
-      for (let index = keys.length - 1; index >= 0; index--) {
-        addGPUGlobalSortKeyPasses(
-          context,
-          `${prefix}-key-${index}`,
-          keys[index],
-          scratch,
-          index === keys.length - 1
-        );
-      }
-
-      addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
-        scratch,
-        output: globalRows,
-        count: selectedCount,
-        offset: options.offset ?? 0,
-        limit: options.limit ?? MAXIMUM_UINT32
-      });
-
-      if (options.offset || options.limit !== undefined) {
-        let globalOffset = 0;
-        let fallbackOffset = 0;
-        for (const [batchIndex, batch] of context.table.batches.entries()) {
-          if (batch.numRows > 0) {
-            const selection = context.selectionMask.data[batchIndex];
-            addGPUGlobalTopKSelectionPass(graph, `${prefix}-select-batch-${batchIndex}`, {
-              ranks: scratch.sourceClasses,
-              selection,
-              globalOffset,
-              offset: options.offset ?? 0,
-              limit: options.limit ?? MAXIMUM_UINT32
-            });
-            graph.add(
-              new GPUVisibilityWorkflow({
-                id: `${prefix}-visibility-batch-${batchIndex}`,
-                predicates: [{kind: 'selection', mask: selection}],
-                outputMask: selection,
-                output: context.rowIndices.data[batchIndex],
-                count: context.selectedCounts.data[batchIndex],
-                firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
-              })
-            );
-          }
-          globalOffset += batch.numRows;
-          fallbackOffset += batch.numRows;
-        }
-      }
-    }
 
     const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
@@ -250,6 +177,96 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
     }
     throw error;
   }
+}
+
+/** Orders a prepared table and its selection within the caller's open graph. @internal */
+export function addGPUGlobalOrdering<Selection extends GPUTypeMap>(
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  keys: readonly GPUGlobalSortKey<keyof Selection & string>[],
+  ownedVectors: GPUVector[],
+  prefix: string
+): {globalRowIndices: GPUVector<'uint32'>; globalSelectedCount: GPUVector<'uint32'>} {
+  const {graph} = context;
+  const {options} = keys[0];
+  const length = context.table.numRows;
+  const globalRowIndices = createGPUAnalyticsOutputVector(
+    graph.device,
+    `${prefix}-row-indices`,
+    'uint32',
+    length
+  );
+  ownedVectors.push(globalRowIndices);
+  const globalSelectedCount = createGPUAnalyticsOutputVector(
+    graph.device,
+    `${prefix}-selected-count`,
+    'uint32',
+    1
+  );
+  ownedVectors.push(globalSelectedCount);
+  const globalRows = graph.importGPUVector(`${prefix}-row-vector`, globalRowIndices).data[0];
+  const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
+    .data[0];
+
+  graph.add(
+    new GPUReduction({
+      id: `${prefix}-count-selected`,
+      input: context.selectedCounts,
+      output: selectedCount,
+      operation: 'sum'
+    })
+  );
+
+  if (length > 0) {
+    const scratch = createGPUGlobalSortScratch(graph, prefix, length);
+    // Stable sorts transfer the ordering of less significant keys through ties.
+    for (let index = keys.length - 1; index >= 0; index--) {
+      addGPUGlobalSortKeyPasses(
+        context,
+        `${prefix}-key-${index}`,
+        keys[index],
+        scratch,
+        index === keys.length - 1
+      );
+    }
+
+    addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
+      scratch,
+      output: globalRows,
+      count: selectedCount,
+      offset: options.offset ?? 0,
+      limit: options.limit ?? MAXIMUM_UINT32
+    });
+
+    if (options.offset || options.limit !== undefined) {
+      let globalOffset = 0;
+      let fallbackOffset = 0;
+      for (const [batchIndex, batch] of context.table.batches.entries()) {
+        if (batch.numRows > 0) {
+          const selection = context.selectionMask.data[batchIndex];
+          addGPUGlobalTopKSelectionPass(graph, `${prefix}-select-batch-${batchIndex}`, {
+            ranks: scratch.sourceClasses,
+            selection,
+            globalOffset,
+            offset: options.offset ?? 0,
+            limit: options.limit ?? MAXIMUM_UINT32
+          });
+          graph.add(
+            new GPUVisibilityWorkflow({
+              id: `${prefix}-visibility-batch-${batchIndex}`,
+              predicates: [{kind: 'selection', mask: selection}],
+              outputMask: selection,
+              output: context.rowIndices.data[batchIndex],
+              count: context.selectedCounts.data[batchIndex],
+              firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
+            })
+          );
+        }
+        globalOffset += batch.numRows;
+        fallbackOffset += batch.numRows;
+      }
+    }
+  }
+  return {globalRowIndices, globalSelectedCount};
 }
 
 /** Stages and stably sorts one key, starting from the permutation of less significant keys. */
