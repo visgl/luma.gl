@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
+import {log} from '@luma.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {
   AnimationLoopTemplate,
@@ -75,6 +76,10 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
   private status?: HTMLElement;
   /** Prevents pending initialization from reviving a closed viewport. */
   private finalized = false;
+  /** An instance may still be borrowing composition nodes while its world compiles. */
+  private pendingPuppet?: Promise<void>;
+  /** One disposal transaction is shared by teardown and initialization failure. */
+  private disposal?: Promise<void>;
   /** Previous frame timestamp in milliseconds. */
   private previousTime?: number;
   /** Unconsumed wall time for fixed simulation steps. */
@@ -105,25 +110,31 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     this.panel = panel;
     this.status = panel.querySelector<HTMLElement>('[data-status]')!;
 
-    /** The loader resolves the draft's nested files before the engine instantiates them. */
-    const source = await load(THEATER.href, GLTFLoader, {
-      gltf: {loadExternalAssets: true},
-      core: {
-        fetch: (url: string, init?: RequestInit) =>
-          fetch(url === RELATIVE_MARIONETTE.href ? MARIONETTE.href : url, init)
-      }
-    });
-    if (this.finalized) return;
     try {
+      /** The loader resolves the draft's nested files before the engine instantiates them. */
+      const source = await load(THEATER.href, GLTFLoader, {
+        gltf: {loadExternalAssets: true},
+        core: {
+          fetch: (url: string, init?: RequestInit) =>
+            fetch(url === RELATIVE_MARIONETTE.href ? MARIONETTE.href : url, init)
+        }
+      });
+      if (this.finalized) return;
       this.composition = createComposedScenegraphsFromGLTF(device, source, {
         storageSkinPalettes: true
       });
       for (const instance of this.composition.instances) {
-        if (instance.mount) await this.addPuppet(device, instance);
+        if (!instance.mount) continue;
+        this.pendingPuppet = this.addPuppet(device, instance);
+        try {
+          await this.pendingPuppet;
+        } finally {
+          this.pendingPuppet = undefined;
+        }
         if (this.finalized) return;
       }
     } catch (error) {
-      this.onFinalize();
+      await this.dispose();
       throw error;
     }
     this.updateStatus();
@@ -162,6 +173,8 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
       {node: scene.findNode('Center string')!, bone: scene.findNode('Head')!, height: 0.55},
       {node: scene.findNode('Right string')!, bone: scene.findNode('Right elbow')!, height: -0.34}
     ];
+    // Keep rest-state strings hidden until their animator has placed them.
+    for (const {node} of strings) node.display = false;
     /** Borrow this asset instance's nodes into an independent physics world. */
     const session = await ScenegraphPhysicsSession.create(device, rig);
     if (this.finalized) {
@@ -230,6 +243,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     puppet.ragdoll.reset();
     puppet.released = false;
     puppet.instance.scenegraphs.animator.setTime(puppet.animationTime);
+    this.updateStrings(puppet);
     puppet.button.textContent = `Release ${puppet.instance.mount!.id}`;
     this.updateStatus();
   }
@@ -264,7 +278,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
 
   /** Sample kinematics at fixed steps and render with the standard PBR skin path. */
   override onRender({device, aspect, time}: AnimationProps): void {
-    if (!this.composition || !this.controls) return;
+    if (this.finalized || !this.composition || !this.controls) return;
     this.accumulatedTime += Math.min(Math.max((time - (this.previousTime ?? time)) / 1000, 0), 0.1);
     this.previousTime = time;
     /** Submit each fixed step before writing kinematic targets for the next step. */
@@ -316,15 +330,32 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     pass.end();
   }
 
-  /** Stop the controls and release each borrowed palette before disposing scene assets. */
+  /** Stop frame work immediately and release the borrowed scene after pending resets settle. */
   override onFinalize(): void {
+    void this.dispose().catch(error => log.error(error)());
+  }
+
+  /** Dispose each borrowing session before destroying the composition's owned scenegraph. */
+  private dispose(): Promise<void> {
+    if (this.disposal) return this.disposal;
     this.finalized = true;
     this.controls?.destroy();
     this.panel?.remove();
-    for (const puppet of this.puppets.splice(0)) {
-      puppet.ragdoll.destroy();
-      void puppet.session.destroy();
-    }
-    this.composition?.destroy();
+    this.disposal = (async () => {
+      try {
+        await this.pendingPuppet;
+      } catch {
+        // Initialization reports its own error after this shared cleanup finishes.
+      }
+      /** Take the instances only after any pending initializer has settled. */
+      const puppets = this.puppets.splice(0);
+      for (const puppet of puppets) puppet.ragdoll.destroy();
+      /** Await every reset or outstanding session operation before freeing scene resources. */
+      const results = await Promise.allSettled(puppets.map(puppet => puppet.session.destroy()));
+      this.composition?.destroy();
+      this.composition = undefined;
+      for (const result of results) if (result.status === 'rejected') throw result.reason;
+    })();
+    return this.disposal;
   }
 }
