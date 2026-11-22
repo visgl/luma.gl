@@ -172,6 +172,7 @@ struct RayTriangle {
   secondNormal: vec4<f32>,
   thirdNormal: vec4<f32>,
   secondaryCoordinates: array<vec4<f32>, 2>,
+  colors: array<vec4<f32>, 3>,
 };
 
 struct RayLight {
@@ -200,6 +201,7 @@ struct RayHit {
   secondaryCoordinates: vec2<f32>,
   triangleIndex: u32,
   footprint: f32,
+  vertexColor: vec4<f32>,
 };
 
 struct PendingRayNode {
@@ -479,7 +481,7 @@ fn intersectBlasNodeBounds(
 }
 
 fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> RayHit {
-  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0);
+  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
   let primitive = primitives[primitiveIndex];
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
@@ -494,7 +496,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
       let localNormal = normalize(localOrigin + localDirection * distance);
       let worldNormal = normalize((transpose(primitive.inverseTransform) *
         vec4<f32>(localNormal, 0.0)).xyz);
-      let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0), 0xffffffffu, 0.0);
+      let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
       if (isMaterialVisible(candidate)) { return candidate; }
       minimumDistance = distance;
     }
@@ -557,7 +559,8 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
               vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w) * normalWeight +
               vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w) * intersection.y +
               vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * intersection.z,
-              triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z, triangleIndex, 0.0);
+              triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z, triangleIndex, 0.0,
+              triangle.colors[0] * normalWeight + triangle.colors[1] * intersection.y + triangle.colors[2] * intersection.z);
             if (primitive.material.x >= 0.0) {
               candidate.footprint = getCutoutFootprint(ray, candidate);
             }
@@ -694,7 +697,7 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
 }
 
 fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
-  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0);
+  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
   if (uniforms.dimensions.z == 0u) {
     return closestHit;
   }
@@ -842,7 +845,7 @@ fn isMaterialVisible(hit: RayHit) -> bool {
   return getMaterialOpacity(hit) >= primitive.material.x;
 }
 fn getMaterialOpacity(hit: RayHit) -> f32 {
-  var opacity = primitives[hit.primitiveIndex].baseColor.a;
+  var opacity = primitives[hit.primitiveIndex].baseColor.a * hit.vertexColor.a;
   switch u32(primitives[hit.primitiveIndex].material.w) {
     /* MATERIAL_OPACITY_CASES */
     default: {}
@@ -860,6 +863,7 @@ fn getMaterialEmission(hit: RayHit) -> vec3<f32> {
 }
 fn getShadedPrimitive(hit: RayHit) -> RayPrimitive {
   var primitive = primitives[hit.primitiveIndex];
+  primitive.baseColor *= hit.vertexColor;
   switch u32(primitive.material.w) {
     /* MATERIAL_SURFACE_CASES */
     default: {}
@@ -1825,6 +1829,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let primitiveIndex = u32(lights[uniforms.dimensions.w + emitterIndex].colorIntensity.x);
   let emitter = primitives[primitiveIndex];
   var emitterTriangleIndex = 0xffffffffu;
+  var emitterVertexColor = vec4<f32>(1.0);
   var emitterCoordinates = vec2<f32>(0.0);
   var emitterSecondaryCoordinates = vec2<f32>(0.0);
   var lightPosition: vec3<f32>;
@@ -1855,6 +1860,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     let thirdPosition = (emitter.transform * vec4<f32>(triangle.thirdPosition.xyz, 1.0)).xyz;
     let rootSample = sqrt(firstSample);
     let weights = vec3<f32>(1.0 - rootSample, rootSample * (1.0 - secondSample), rootSample * secondSample);
+    emitterVertexColor = triangle.colors[0] * weights.x + triangle.colors[1] * weights.y + triangle.colors[2] * weights.z;
     emitterCoordinates = vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w) * weights.x +
       vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w) * weights.y +
       vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * weights.z;
@@ -1901,7 +1907,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   }
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   var emitterHit = RayHit(shadowDistance, lightNormal, primitiveIndex, true,
-    emitterCoordinates, emitterSecondaryCoordinates, emitterTriangleIndex, 0.0);
+    emitterCoordinates, emitterSecondaryCoordinates, emitterTriangleIndex, 0.0, emitterVertexColor);
   if (emitter.material.x >= 0.0) {
     emitterHit.footprint = getCutoutFootprint(shadowRay, emitterHit);
     if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }

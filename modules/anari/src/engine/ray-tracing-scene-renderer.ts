@@ -24,7 +24,13 @@ import {
   type TextureFormatDepthStencil,
   textureFormatDecoder
 } from '@luma.gl/core';
-import {Computation, type Geometry, type GroupNode, Model} from '@luma.gl/engine';
+import {
+  applyMorphTargets,
+  Computation,
+  decodeMorphTargetAttribute,
+  type GroupNode,
+  Model
+} from '@luma.gl/engine';
 import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumericArray} from '@math.gl/core/types';
@@ -59,7 +65,7 @@ import type {
 } from './scene-renderer';
 
 const PRIMITIVE_FLOAT_COUNT = 100;
-const TRIANGLE_FLOAT_COUNT = 32;
+const TRIANGLE_FLOAT_COUNT = 44;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const UNIFORM_FLOAT_COUNT = 92;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
@@ -261,6 +267,7 @@ struct RayTriangle {
   secondNormal: vec4<f32>,
   thirdNormal: vec4<f32>,
   secondaryCoordinates: array<vec4<f32>, 2>,
+  colors: array<vec4<f32>, 3>,
 };
 
 @group(0) @binding(0) var<storage, read> triangles: array<RayTriangle>;
@@ -3904,7 +3911,10 @@ function scheduleTransformAccelerationUpdate(resources: RayTracingFrameResources
 
 function getTopologyRevision(options: RayTracingSceneRenderOptions): string {
   if (options.sceneRevisions) {
-    return `${options.sceneRevisions.identity}:${options.sceneRevisions.topology}`;
+    const poses = options.surfaces
+      .filter(surface => surface.morphTargets?.length)
+      .map(surface => [surface.id, surface.morphWeights]);
+    return `${options.sceneRevisions.identity}:${options.sceneRevisions.topology}:${JSON.stringify(poses)}`;
   }
   return JSON.stringify(
     options.surfaces.map(surface => [
@@ -4202,15 +4212,30 @@ function compileRayGeometry(
   }
 
   const engineGeometry = surface.geometry;
-  const positions = engineGeometry.attributes['POSITION']?.value;
-  const normals = engineGeometry.attributes['NORMAL']?.value;
+  const positionAttribute = engineGeometry.attributes['POSITION'];
+  const normalAttribute = engineGeometry.attributes['NORMAL'];
   const coordinates = engineGeometry.attributes['TEXCOORD_0']?.value;
-  if (!positions || !normals) {
+  if (!positionAttribute || !normalAttribute) {
     throw new Error('Ray tracing scene geometry requires positions and normals.');
   }
 
+  const morphed =
+    surface.morphTargets?.length && surface.morphWeights?.some(Boolean)
+      ? applyMorphTargets(
+          {
+            POSITION: decodeMorphTargetAttribute(positionAttribute),
+            NORMAL: decodeMorphTargetAttribute(normalAttribute)
+          },
+          surface.morphTargets,
+          surface.morphWeights
+        )
+      : undefined;
+  const positions = morphed?.POSITION ?? positionAttribute.value;
+  const normals = morphed?.NORMAL ?? normalAttribute.value;
+  const colorAttribute = engineGeometry.attributes['COLOR_0'];
+  const colors = colorAttribute && decodeMorphTargetAttribute(colorAttribute);
   const triangleValues: number[] = [];
-  const bounds = getGeometryBounds(engineGeometry);
+  const bounds = getGeometryBounds(positions);
   const indices = engineGeometry.indices?.value;
   const vertexCount = indices?.length ?? positions.length / 3;
   for (let vertexIndex = 0; vertexIndex + 2 < vertexCount; vertexIndex += 3) {
@@ -4244,6 +4269,17 @@ function compileRayGeometry(
       );
     }
     triangleValues.push(0, 0);
+    for (let cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
+      const vertex = Number(indices?.[vertexIndex + cornerIndex] ?? vertexIndex + cornerIndex);
+      const colorSize = colorAttribute?.size ?? 0;
+      const offset = vertex * colorSize;
+      triangleValues.push(
+        colors?.[offset] ?? 1,
+        colors?.[offset + 1] ?? 1,
+        colors?.[offset + 2] ?? 1,
+        colorSize === 4 ? (colors?.[offset + 3] ?? 1) : 1
+      );
+    }
   }
 
   const compiledGeometry: CompiledRayGeometry = {
@@ -4251,17 +4287,22 @@ function compileRayGeometry(
     triangleCount: triangleValues.length / TRIANGLE_FLOAT_COUNT,
     bounds
   };
-  geometryCache.set(geometryIdentifier, compiledGeometry);
+  if (!morphed) geometryCache.set(geometryIdentifier, compiledGeometry);
   return compiledGeometry;
 }
 
 function getGeometryIdentifier(surface: SceneSurface): string {
-  return `${surface.geometry.id}:${surface.geometryVersion ?? 0}`;
+  const base = `${surface.geometry.id}:${surface.geometryVersion ?? 0}`;
+  // A posed surface shares geometry across its instances, but not with other poses.
+  return surface.morphTargets?.length && surface.morphWeights?.some(Boolean)
+    ? JSON.stringify([base, surface.id, surface.morphWeights])
+    : base;
 }
 
-function getGeometryBounds(geometry: Geometry): readonly [number, number, number, number] {
-  const positions = geometry.attributes['POSITION']?.value;
-  if (!positions || positions.length === 0) {
+function getGeometryBounds(
+  positions: ArrayLike<number>
+): readonly [number, number, number, number] {
+  if (positions.length === 0) {
     return [0, 0, 0, 0];
   }
 

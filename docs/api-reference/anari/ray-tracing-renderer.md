@@ -54,14 +54,17 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, and alpha blending require a
-compatible raster renderer.
+not implemented. Retained triangle morph targets update positions and normals
+through the shared morph evaluator and rebuild ray acceleration geometry when
+weights change. Skeletal skinning and alpha blending require a compatible raster
+renderer.
 
 ## Material support
 
 | Material feature | Ray-traced support |
 | --- | --- |
 | Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
+| Vertex color | Interpolated glTF `COLOR_0` RGB multiplies the base color. RGBA vertex alpha participates in `MASK` visibility. |
 | Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
 | Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
@@ -79,6 +82,7 @@ a mip level from the projected pixel footprint and transformed UVs. Secondary tr
 projects the carried camera footprint at each hit. For perspective cameras, the footprint grows
 with travel distance. Analytic spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
+Interpolated vertex alpha is an additional multiplier for triangle masks.
 Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres
 check both interfaces. `OPAQUE` ignores texture alpha.
