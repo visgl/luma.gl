@@ -62,7 +62,7 @@ The CompareFunction used when testing fragments against depthStencilAttachment s
 
 Defined in: [modules/core/src/api/adapter/types/parameters.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L112)
 
-The GPUStencilOperation performed if the fragment stencil comparison test described by compare passes.
+The StencilOperation performed if the fragment stencil comparison test passes but the depth comparison described by depthCompare fails.
 
 ***
 
@@ -72,7 +72,7 @@ The GPUStencilOperation performed if the fragment stencil comparison test descri
 
 Defined in: [modules/core/src/api/adapter/types/parameters.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L110)
 
-The GPUStencilOperation performed if the fragment depth comparison described by depthCompare fails.
+The StencilOperation performed if the fragment stencil comparison test described by stencilCompare fails.
 
 ***
 
@@ -82,7 +82,7 @@ The GPUStencilOperation performed if the fragment depth comparison described by 
 
 Defined in: [modules/core/src/api/adapter/types/parameters.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L108)
 
-The StencilOperation performed if the fragment stencil comparison test described by compare fails.
+The StencilOperation performed if the fragment stencil comparison test described by stencilCompare and the depth comparison described by depthCompare both pass.
 
 ***
 
