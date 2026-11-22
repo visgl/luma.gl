@@ -334,25 +334,42 @@ it('exports absolute body poses after a physics origin shift', async context => 
   /** Source coordinates should not become simulation-local after rebasing. */
   const device = await getWebGPUTestDevice('core');
   if (!device) return context.skip('WebGPU unavailable');
-  /** Author bodies far from the initial simulation origin. */
+  /** Cook the authored collider near zero, before moving its body to a distant origin. */
   const source = document();
-  source.nodes![0].translation = [129, 0, 0];
+  /** Exactly representable in the GPU origin-shift command. */
+  const origin = 2 ** 40;
+  source.nodes![0].translation = [0, 0, 0];
+  source.nodes![1].children = [3];
+  /** Put a small offset on the rotated collider so validation must work in a local frame. */
+  const rigidBody = source.nodes![1].extensions!['KHR_physics_rigid_bodies'] as Record<
+    string,
+    unknown
+  >;
+  source.nodes!.push({
+    translation: [1, 0, 0],
+    extensions: {KHR_physics_rigid_bodies: {collider: rigidBody['collider']}}
+  });
+  delete rigidBody['collider'];
+  rigidBody['motion'] = {isKinematic: true, mass: 1, centerOfMass: [0.1, 0, 0]};
   /** Cook the bodies in the original world frame. */
   const description = parseGLTFPhysics(source);
   /** Attach the scene to a real GPU world so the rebase updates live buffers. */
   const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
   try {
-    session.world.shiftOrigin([128, 0, 0]);
+    session.world.shiftOrigin([origin, 0, 0]);
+    session.world.setKinematicTarget(0, [2, 1, 0], [0, 0, Math.sin(0.1), Math.cos(0.1)]);
+    await session.step();
     /** Confirm the GPU pose shifted before reading the exported pose. */
     const live = await session.world.readState();
-    expect(live[0].position[0]).toBeCloseTo(1.1, 4);
+    expect(live[0].position[0]).toBeCloseTo(2 + 0.1 * Math.cos(0.2), 6);
     /** Export using the saved origin and live local poses. */
     const saved = await exportGLTFPhysicsState(source, description, session.world);
-    /** Verify import reconstructs both authored world translations. */
+    /** Verify import reconstructs the moved body’s absolute world translation. */
     const imported = parseGLTFPhysics(saved);
     expect(imported.issues).toEqual([]);
-    expect(imported.bodies[0].worldMatrix[12]).toBeCloseTo(129, 4);
-    expect(imported.bodies[1].worldMatrix[12]).toBeCloseTo(134, 4);
+    expect(imported.bodies[0].worldMatrix[12] - origin).toBeCloseTo(2, 3);
+    expect(saved.nodes![1].translation![0] - origin).toBeCloseTo(2, 3);
+    expect(saved.nodes![3].translation).toEqual([1, 0, 0]);
   } finally {
     await session.destroy();
   }

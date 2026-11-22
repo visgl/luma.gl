@@ -102,24 +102,32 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       world.getBodyParameters(body.bodyIndex).centerOfMass ?? [0, 0, 0]
     );
     const matrix = new Matrix4()
-      .translate(state.position.map((value, axis) => value + origin[axis] - center[axis]))
+      .translate(state.position.map((value, axis) => value - center[axis]))
       .multiplyRight(rotation)
       .scale(decomposePhysicsTransform(authored(body.nodeIndex)).scale);
     bodyMatrices.set(body.nodeIndex, matrix);
   }
   matrices.clear();
+  /** Compose the accepted hierarchy near the simulation origin to preserve small local offsets. */
   const currentWorld = (index: number): Matrix4 => {
     const existing = bodyMatrices.get(index) ?? matrices.get(index);
     if (existing) return existing;
+    /** Articulated and static descendants inherit the same origin-relative frame. */
     const parent = parents.get(index);
+    /** The source local matrix is needed later and must stay in its authored frame. */
+    const local = locals.get(index)!;
+    /** Rebase an authored root by changing its world translation directly. */
     const matrix =
-      parent === undefined
-        ? locals.get(index)!
-        : new Matrix4(currentWorld(parent)).multiplyRight(locals.get(index)!);
+      parent === undefined ? local.clone() : new Matrix4(currentWorld(parent)).multiplyRight(local);
+    if (parent === undefined) {
+      matrix[12] -= origin[0];
+      matrix[13] -= origin[1];
+      matrix[14] -= origin[2];
+    }
     matrices.set(index, matrix);
     return matrix;
   };
-  validateColliderFrames(description, world, currentWorld);
+  validateColliderFrames(description, world, currentWorld, parents, locals);
   const bodyNodes = new Set(description.bodies.map(body => body.nodeIndex));
   for (const body of description.bodies) {
     if (body.nodeIndex < 0) continue;
@@ -164,7 +172,11 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     }
     const node = nodes[body.nodeIndex];
     delete node.matrix;
-    node.translation = transform.position;
+    // Only scene roots need world-space positions. Child TRS is already relative to its parent.
+    node.translation =
+      parent === undefined || promote
+        ? transform.position.map((value, axis) => value + origin[axis])
+        : transform.position;
     node.rotation = transform.rotation;
     node.scale = transform.scale;
     if (mode === 'static') {
@@ -313,13 +325,33 @@ function getLiveNodeComponents(
 function validateColliderFrames(
   description: GLTFPhysicsDescription,
   world: GPURigidBodyWorld,
-  getWorldMatrix: (index: number) => Matrix4
+  getWorldMatrix: (index: number) => Matrix4,
+  parents: ReadonlyMap<number, number>,
+  locals: ReadonlyMap<number, Matrix4>
 ): void {
   for (const collider of description.colliders) {
-    /** Compute the candidate native collider frame after accepted GPU body poses are substituted. */
-    const authored = decomposePhysicsTransform(
-      new Matrix4(getWorldMatrix(collider.nodeIndex)).multiplyRight(collider.localMatrix)
-    );
+    /** The importer assigns the collider to its nearest rigid body ancestor. */
+    const body = description.bodies[collider.bodyIndex];
+    /** Begin at the authored collider placement, including any baked mesh center. */
+    const matrix = new Matrix4(collider.localMatrix);
+    if (body.nodeIndex < 0) {
+      matrix.multiplyLeft(getWorldMatrix(collider.nodeIndex));
+    } else {
+      /** Walk only body-local matrices to retain offsets even in distant parts of the world. */
+      let nodeIndex = collider.nodeIndex;
+      while (nodeIndex !== body.nodeIndex) {
+        matrix.multiplyLeft(locals.get(nodeIndex)!);
+        /** Collider ownership must still match the settled scene hierarchy. */
+        const parent = parents.get(nodeIndex);
+        if (parent === undefined) throw new Error('Recook before exporting collider ownership');
+        nodeIndex = parent;
+      }
+      /** Cooked collider frames include body scale and exclude rigid world motion. */
+      const {scale} = decomposePhysicsTransform(getWorldMatrix(body.nodeIndex));
+      matrix.multiplyLeft(new Matrix4().scale(scale));
+    }
+    /** Inspect the dimensions and pose in the same frame as the cooked collider. */
+    const authored = decomposePhysicsTransform(matrix);
     /** Authored absolute scale must match the live cooked dimensions without baking scale twice. */
     const liveScale = world.getColliderShapeScale(collider.colliderIndex);
     if (
@@ -333,29 +365,16 @@ function validateColliderFrames(
     if (collider.shapeIndex === undefined && liveScale.some(component => component !== 1))
       throw new Error('Recook mesh geometry before export');
 
-    /** Express the collider in the accepted body's unscaled local frame. */
-    const body = description.bodies[collider.bodyIndex];
     if (body.nodeIndex < 0) continue;
-    /** Strip visual scale using the same body frame convention as the importer. */
-    const bodyTransform = decomposePhysicsTransform(getWorldMatrix(body.nodeIndex));
-    /** Apply the inverse node-origin frame to the candidate collider pose. */
-    const frame = decomposePhysicsTransform(
-      new Matrix4()
-        .translate(bodyTransform.position)
-        .multiplyRight(new Matrix4().fromQuaternion(bodyTransform.rotation))
-        .invert()
-        .translate(authored.position)
-        .multiplyRight(new Matrix4().fromQuaternion(authored.rotation))
-    );
     /** The two quaternion signs represent the same accepted collider orientation. */
     const live = world.getColliderTransform(collider.colliderIndex);
     /** Quaternion alignment tests orientation independently of quaternion sign. */
-    const alignment = frame.rotation.reduce(
+    const alignment = authored.rotation.reduce(
       (sum, value, axis) => sum + value * live.orientation[axis],
       0
     );
     if (
-      !frame.position.every((value, axis) => closeComponent(value, live.position[axis])) ||
+      !authored.position.every((value, axis) => closeComponent(value, live.position[axis])) ||
       !closeComponent(Math.abs(alignment), 1)
     )
       throw new Error(
