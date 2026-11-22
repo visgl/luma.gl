@@ -86,7 +86,7 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. `COUNT(column)` counts valid values after filtering, while `COUNT(*)` counts all selected rows. Numeric aggregate expressions such as `SUM(fare * 2) AS total` require an explicit output alias.
 
-  A one-based GROUP BY position must refer to the selected source key.
+  Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column. Grouped results preserve SELECT column order and retain the key dictionary under the output name.
 
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
