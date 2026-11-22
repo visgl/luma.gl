@@ -963,3 +963,10 @@ their deterministic scheduling.
 The pacer controls how often work is submitted. Use the execution budget
 controller and bounded dispatches for graphs that also need to reduce work per
 submission.
+
+
+For application-sized dispatches, call the budget controller's
+`observeInvocations()` with the measured invocation count, GPU duration, and
+budget used for that submission. Its recommendation applies to future batches.
+The live ANARI examples use this to vary trace coverage at sweep boundaries
+while reusing their progressive history.

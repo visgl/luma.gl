@@ -312,6 +312,8 @@ export type ANARIRendererParameters = {
   targetFrameTimeMilliseconds?: number;
   /** Previous execution time excluding intentional idle time. Null skips this observation. */
   previousFrameExecutionMilliseconds?: number | null;
+  /** Number of interleaved pixel batches per complete sweep. Preserves progressive history. */
+  rayBatchPhaseCount?: 1 | 2 | 4 | 8;
   /**
    * Enables camera-reprojection temporal antialiasing for raster renderers. Defaults to true.
    */

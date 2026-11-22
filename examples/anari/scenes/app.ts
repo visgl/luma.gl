@@ -1,3 +1,5 @@
+import {timeCaptureFrame} from './ray-capture-timing';
+import {RayBatchBudget} from './ray-batch-budget';
 import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
 import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
@@ -88,6 +90,8 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private temporalAntialiasingEnabled = true;
   /** Limits outstanding live ray work while leaving raster submissions on their normal path. */
   private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
+  /** Calibrates the ray trace dispatch independently of queue pacing. */
+  private readonly rayBatchBudget = new RayBatchBudget();
   private lastStatisticsUpdate = 0;
   private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
@@ -189,13 +193,18 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     if (paceRayFrame) {
       this.frame
         .getParameter('renderer')
-        ?.setParameter(
-          'previousFrameExecutionMilliseconds',
-          this.raySubmissionPacer.lastSubmissionMilliseconds
-        )
+        ?.setParameters({
+          previousFrameExecutionMilliseconds: this.raySubmissionPacer.lastSubmissionMilliseconds,
+          rayBatchPhaseCount: this.rayBatchBudget.phaseCount
+        })
         .commitParameters();
     }
-    const statistics = this.frame.render();
+    const timedFrame =
+      paceRayFrame && this.rayBatchBudget.canMeasure(device)
+        ? timeCaptureFrame(device, () => this.frame.render())
+        : undefined;
+    const statistics = timedFrame?.result ?? this.frame.render();
+    if (timedFrame) this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
     if (paceRayFrame) {
       void submitPacedRayFrame(device, this.raySubmissionPacer).catch(() => {
         setElementText('ray-tracing-frame', 'GPU work interrupted');
@@ -297,6 +306,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
             return;
           }
           this.raySubmissionPacer.resetCooldown();
+          this.rayBatchBudget.reset();
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
@@ -350,6 +360,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
 
   private selectScene(sceneIndex: number): void {
     this.raySubmissionPacer.resetCooldown();
+    this.rayBatchBudget.reset();
     const scene = this.scenes[sceneIndex];
     this.activeSceneIndex = sceneIndex;
     this.orbitControls?.setProps({
