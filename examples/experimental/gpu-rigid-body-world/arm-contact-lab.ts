@@ -71,6 +71,7 @@ try {
       camera.position.y,
       camera.position.z
     ]);
+    device.submit();
     panel.update();
     if (now - lastReading > 250) {
       const [height, status] = await Promise.all([
