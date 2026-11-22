@@ -88,6 +88,8 @@ type GPUSQLAggregationDefinitions = Record<
 /** Existing global-sort plan and its already-validated controls. */
 type GPUSQLSortPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedSortOptions};
 
+/** Validated join plan with normalized key and hash-index controls. */
+
 type GPUSQLJoinPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedJoinOptions};
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
