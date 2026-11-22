@@ -14,18 +14,19 @@ import {GaussianSplatsExample} from '@site/src/examples';
 
 <GaussianSplatsExample />
 
-The Gaussian Splats showcase renders a deterministic, colorful scene with the experimental
-[`@luma.gl/engine/splats`](/docs/api-reference/splats) renderer. Each source batch remains independently
-owned, so additional splats can appear progressively without concatenating or reuploading the
-previously prepared GPU data.
+The default scene places two copies of a captured cat figurine at different depths. On WebGPU,
+the transparent pane moves between them. The depth-interval shader plugin draws the splats behind
+the pane first, blends the glass, then draws the splats in front. Use **Moving tinted glass** in
+**Settings** to compare the result, and drag to orbit the scene.
 
-WebGPU uses a compiled GPU command graph for camera-aware Gaussian projection, visibility,
-transparency ordering, and rendering. Expand **GPU graph inspector** for per-node encoding
-diagnostics, or select **CPU depth ordering** to compare against the original renderer. WebGL2
-provides its existing attribute-backed fallback. The example keeps file
-format parsing separate: loaders.gl owns `.ply`, `.splat`, `.ksplat`, and related loaders, while
-[`@luma.gl/engine/arrow`](/docs/api-reference/arrow) converts Gaussian Apache Arrow batches into the
-framework-independent GPU representation.
+The example downloads one 2 MB [cat figurine SPZ scan](https://github.com/raymondyfei/SharedTestModels/blob/92aec9410cd3cbc661d4c4e3c5e8c78157357988/a_cute_cat_float32.spz)
+from SharedTestModels under [CC0 1.0 Universal](https://github.com/raymondyfei/SharedTestModels/blob/92aec9410cd3cbc661d4c4e3c5e8c78157357988/LICENSE).
+
+Turn off the pane to inspect standard WebGPU rendering in **GPU Graph** and **GPU Trace**. Choose
+**Synthetic chromatic showcase** to stream the generated scene, or **CPU depth ordering** to
+compare the portable renderer. WebGL2 uses attribute-backed rendering. The example keeps
+format parsing in loaders.gl and uses [`@luma.gl/engine/arrow`](/docs/api-reference/arrow) to
+convert decoded Gaussian batches into GPU data.
 
 Spherical-harmonic DC colors remain unclamped floating-point radiance from loading through GPU
 rendering. Standard displays use configurable exposure and tone mapping, while compatible WebGPU
