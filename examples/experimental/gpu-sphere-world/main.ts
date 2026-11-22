@@ -106,6 +106,7 @@ try {
       positions,
       velocities,
       orientations,
+      timeStep: scaleDemo ? 1 / 60 : 1 / 120,
       maximumRadius: 0.4,
       maximumContacts: 32,
       maximumCandidateTests: 512,
@@ -169,6 +170,8 @@ try {
   /** Share the same tilt interaction and instrumentation between both sphere examples. */
   const table = createTableControls(canvas, orbitCamera, controls, () => resources.halfExtent);
   const infoBox = createSphereInfoBox(resources.graph, scaleDemo, table.panel);
+  let gravityWorld: GPUSphereWorld | undefined;
+  let previousGravity: [number, number, number] | undefined;
 
   /** Publish the current gravity and synchronize the canvas projection used for picking. */
   function updatePlatform(): void {
@@ -177,7 +180,15 @@ try {
       orbitCamera.aspect = aspect;
       orbitCamera.updateProjectionMatrix();
     }
-    resources.world.update({gravity: table.update()});
+    const gravity = table.update();
+    if (
+      gravityWorld !== resources.world ||
+      gravity.some((value, index) => value !== previousGravity?.[index])
+    ) {
+      resources.world.update({gravity});
+      gravityWorld = resources.world;
+      previousGravity = gravity;
+    }
   }
 
   updatePlatform();
@@ -283,6 +294,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   let frameMilliseconds = 0;
   let encodeMilliseconds = 0;
   let samplingPromise: Promise<void> = Promise.resolve();
+  let scaleFrame: Promise<void> | null = null;
   let benchmark: SphereBenchmark | undefined;
   let lastReport: object | undefined;
   const percentile = (values: number[], fraction: number): number => {
@@ -329,7 +341,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     try {
       rebuilding = createResources(Number(getElement<HTMLSelectElement>('#body-count').value));
       const next = await rebuilding;
-      await samplingPromise;
+      await Promise.all([samplingPromise, scaleFrame]);
       if (!alive) {
         destroyResources(next);
         return;
@@ -383,6 +395,10 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     try {
       if (gpuError) throw gpuError;
       infoBox.update(now);
+      if (scaleFrame) {
+        animation = requestAnimationFrame(renderFrame);
+        return;
+      }
       frameMilliseconds = now - lastFrame;
       lastFrame = now;
       const wallElapsed = (now - previous) / 1000;
@@ -391,9 +407,17 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       updatePlatform();
       encodeMilliseconds = 0;
       if (!paused && !loading && !benchmark?.finishing) {
-        const clock = advanceSphereClock(accumulator, elapsed, speed, Boolean(benchmark));
-        const steps = scaleDemo && !benchmark ? Math.min(1, clock.steps) : clock.steps;
-        simulatedSeconds += steps / 120;
+        const timeStep = resources.world.timeStep;
+        const clock = advanceSphereClock(
+          accumulator,
+          elapsed,
+          speed,
+          Boolean(benchmark),
+          timeStep,
+          scaleDemo ? 2 : 8
+        );
+        const {steps} = clock;
+        simulatedSeconds += steps * timeStep;
         playbackSeconds += wallElapsed;
         accumulator = clock.accumulator;
         for (let step = 0; step < steps; step++) {
@@ -436,7 +460,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 const memory =
                   target.graph.stats.physicalTransientResourceBytes + target.count * 80 + 144;
                 getElement('#metrics').textContent =
-                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.exhaustedCandidateBodies} candidate budgets exhausted · ${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB${scaleDemo ? `\nPlayback ${(simulatedSeconds / Math.max(0.001, playbackSeconds)).toFixed(2)}× real time · capped at one fixed step/frame` : ''}`;
+                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.exhaustedCandidateBodies} candidate budgets exhausted · ${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB${scaleDemo ? `\nPlayback ${(simulatedSeconds / Math.max(0.001, playbackSeconds)).toFixed(2)}× real time · ${Math.round(1 / timeStep)} Hz fixed step` : ''}`;
                 status.value =
                   diagnostics.droppedContacts ||
                   diagnostics.invalidBodies ||
@@ -540,6 +564,18 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       spheres.draw(pass);
       pass.end();
       device.submit();
+      if (scaleDemo && !benchmark) {
+        // Keep at most one interactive frame in flight so a new tilt reaches the next batch.
+        const fence = device.createFence();
+        scaleFrame = fence.signaled
+          .catch(error => {
+            gpuError = error;
+          })
+          .finally(() => {
+            fence.destroy();
+            scaleFrame = null;
+          });
+      }
       animation = requestAnimationFrame(renderFrame);
     } catch (error) {
       status.value = String(error);
@@ -552,7 +588,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     () => {
       alive = false;
       cancelAnimationFrame(animation);
-      void Promise.allSettled([samplingPromise, rebuilding]).then(() => {
+      void Promise.allSettled([samplingPromise, rebuilding, scaleFrame]).then(() => {
         infoBox.destroy();
         destroyResources(resources);
         camera.destroy();

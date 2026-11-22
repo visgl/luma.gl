@@ -30,17 +30,19 @@ export function createSphereBenchmark(): SphereBenchmark {
   };
 }
 
-/** Benchmark frames never accrue playback time; slow playback retains at most eight steps. */
+/** Benchmark frames advance a single fixed step. Playback retains only one frame of work. */
 export function advanceSphereClock(
   accumulator: number,
   elapsed: number,
   speed: number,
-  benchmarking: boolean
+  benchmarking: boolean,
+  timeStep = 1 / 120,
+  maximumSteps = 8
 ): {steps: number; accumulator: number} {
   if (benchmarking) return {steps: 1, accumulator: 0};
-  const retained = Math.min(accumulator + elapsed * speed, 8 / 120);
-  const steps = Math.floor(retained * 120);
-  return {steps, accumulator: retained - steps / 120};
+  const retained = Math.min(accumulator + elapsed * speed, maximumSteps * timeStep);
+  const steps = Math.min(maximumSteps, Math.floor(retained / timeStep));
+  return {steps, accumulator: retained - steps * timeStep};
 }
 
 /** Bind asynchronous results to the run and phase captured when their GPU work was submitted. */

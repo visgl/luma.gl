@@ -204,6 +204,36 @@ it('GPUSphereWorld reports bounded-contact overflow and invalid radii', async ()
   }
 });
 
+it('GPUSphereWorld aggregates contact diagnostics across a partial workgroup', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const positions: number[] = [];
+  const velocities: number[] = [];
+  for (let index = 0; index < 65; index++) {
+    positions.push(0, 0, 2, 0.5);
+    velocities.push(0, 0, 0, 1);
+  }
+  const fixture = await makeWorld(device, positions, velocities, {
+    broadPhase: 'all-pairs',
+    iterations: 1,
+    maximumContacts: 4,
+    maximumCandidateTests: 10
+  });
+  try {
+    fixture.step();
+    const {diagnostics} = await fixture.read();
+    // The first 10 bodies inspect themselves and nine neighbors. The other 55
+    // bodies inspect ten neighbors. Every body emits four contacts.
+    expect(diagnostics.candidateTests).toBe(650);
+    expect(diagnostics.exhaustedCandidateBodies).toBe(65);
+    expect(diagnostics.maximumContacts).toBe(10);
+    expect(diagnostics.droppedContacts).toBe(380);
+    expect(diagnostics.contacts).toBe(260);
+  } finally {
+    fixture.destroy();
+  }
+});
+
 it('GPUSphereWorld finite floor catches bodies and lets edge bodies fall', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
