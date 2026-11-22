@@ -302,8 +302,11 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 4294967296')).toThrow(
       /OFFSET.*32-bit/i
     );
-    expect(() => context.query('SELECT fare FROM trips ORDER BY fare, identifier')).toThrow(
-      /one ORDER BY/i
+    expect(
+      context.query('SELECT fare FROM trips ORDER BY fare NULLS FIRST, identifier DESC')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare, 2')).toThrow(
+      /one-based SELECT column/
     );
     expect(() => context.query('SELECT * FROM trips; DROP TABLE trips')).toThrow(
       /unsupported SQL query syntax/i

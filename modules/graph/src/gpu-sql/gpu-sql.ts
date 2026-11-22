@@ -15,7 +15,10 @@ import {
 } from '../gpu-dataframe/gpu-data-frame-query';
 import {compileGPUDataFrameGroupedAggregation} from '../gpu-dataframe/gpu-group-aggregation-compiler';
 import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
-import {compileGPUDataFrameGlobalSort} from '../gpu-dataframe/gpu-global-sort-compiler';
+import {
+  compileGPUDataFrameGlobalSort,
+  type GPUGlobalSortKey
+} from '../gpu-dataframe/gpu-global-sort-compiler';
 import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-query';
 import {
   GPUExpression,
@@ -67,11 +70,11 @@ type GPUSQLStatement = Readonly<{
   }>;
   predicate?: Expression;
   groupBy?: GPUSQLProjectionReference;
-  orderBy?: Readonly<{
+  orderBy?: readonly Readonly<{
     expression: Expression;
     direction: 'ascending' | 'descending';
     nulls?: 'first' | 'last';
-  }>;
+  }>[];
   limit?: number;
   offset?: number;
 }>;
@@ -363,51 +366,67 @@ function buildGPUSQLPlan(
   }
 
   if (statement.orderBy) {
-    const {expression, direction, nulls} = statement.orderBy;
-    let orderColumn: string;
-    if (expression.type === 'Literal' && typeof expression.value === 'number') {
-      orderColumn = getGPUSQLProjectionItem(selected, expression.value, 'ORDER BY');
-    } else if (
-      expression.type === 'Identifier' &&
-      !('gpuSQLParameter' in expression) &&
-      selected.includes(expression.name)
-    ) {
-      orderColumn = expression.name;
-    } else {
-      const sortExpression = lowerSQLExpression(expression, parameters, resolve);
-      if (sortExpression.kind === 'column') {
-        orderColumn = sortExpression.name;
+    const workingColumns = new Set(selected);
+    const resolvedKeys = statement.orderBy.map(({expression, direction, nulls}) => {
+      let orderColumn: string;
+      if (expression.type === 'Literal' && typeof expression.value === 'number') {
+        orderColumn = getGPUSQLProjectionItem(selected, expression.value, 'ORDER BY');
+      } else if (
+        expression.type === 'Identifier' &&
+        !('gpuSQLParameter' in expression) &&
+        selected.includes(expression.name)
+      ) {
+        orderColumn = expression.name;
       } else {
-        orderColumn = '__sqlOrderKey';
-        while (frame.columnNames.includes(orderColumn) || selected.includes(orderColumn)) {
-          orderColumn += '_';
+        const sortExpression = lowerSQLExpression(expression, parameters, resolve);
+        if (sortExpression.kind === 'column') {
+          orderColumn = sortExpression.name;
+        } else {
+          orderColumn = '__sqlOrderKey';
+          while (frame.columnNames.includes(orderColumn) || workingColumns.has(orderColumn)) {
+            orderColumn += '_';
+          }
+          query = query.withColumn(
+            orderColumn,
+            new GPUExpression<number | null, string>(sortExpression)
+          );
         }
-        query = query.withColumn(
-          orderColumn,
-          new GPUExpression<number | null, string>(sortExpression)
-        );
       }
-    }
-    const hidden = !selected.includes(orderColumn);
-    const workingColumns = hidden ? [...selected, orderColumn] : selected;
-    const sort = query.select(workingColumns).sortByGlobal(orderColumn, {direction, nulls});
+      workingColumns.add(orderColumn);
+      return {column: orderColumn, direction, nulls};
+    });
+
+    const columns = [...workingColumns];
+    const workingQuery = query.select(columns);
+    const plans = resolvedKeys.map(({column, direction, nulls}) => ({
+      column,
+      plan: workingQuery.sortByGlobal(column, {direction, nulls})
+    }));
+    const [{column, plan: sort}, ...secondary] = plans;
     const page =
       statement.limit === undefined && statement.offset === undefined
         ? sort
         : sort.page(statement.offset ?? 0, statement.limit);
-    if (!hidden) return page;
-    const {predicates, derivedColumns} = query;
+    const projection = columns.length > selected.length ? selected : undefined;
+    if (!projection && secondary.length === 0) return page;
+
+    const {predicates, derivedColumns} = workingQuery;
+    const additionalKeys: GPUGlobalSortKey[] = secondary.map(key => ({
+      column: key.column,
+      options: key.plan.options
+    }));
     return {
       compile: graph =>
         compileGPUDataFrameGlobalSort(
           frame,
           predicates,
-          workingColumns,
+          columns,
           derivedColumns,
-          orderColumn,
+          column,
           page.options,
           graph,
-          selected
+          projection,
+          additionalKeys
         )
     };
   }
@@ -477,9 +496,6 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
   if ((statement.groupBy?.length ?? 0) > 1) {
     throw new Error('GPUSQL currently supports one GROUP BY column');
   }
-  if ((statement.orderBy?.length ?? 0) > 1) {
-    throw new Error('GPUSQL currently supports one ORDER BY column');
-  }
   if (statement.limit !== undefined && statement.limit > 0xffffffff) {
     throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
   }
@@ -530,7 +546,6 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
       right: readGPUSQLColumn(join.on.right)
     };
   }
-  const sort = statement.orderBy?.[0];
   return {
     items,
     table: statement.from.name,
@@ -538,11 +553,13 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     join: loweredJoin,
     predicate: statement.where as Expression | undefined,
     groupBy: statement.groupBy?.[0] && readGPUSQLProjectionReference(statement.groupBy[0]),
-    orderBy: sort && {
-      expression: sort.expression as Expression,
-      direction: sort.direction === 'desc' ? 'descending' : 'ascending',
-      nulls: sort.nulls
-    },
+    orderBy: statement.orderBy?.length
+      ? statement.orderBy.map(sort => ({
+          expression: sort.expression as Expression,
+          direction: sort.direction === 'desc' ? 'descending' : 'ascending',
+          nulls: sort.nulls
+        }))
+      : undefined,
     offset: statement.offset,
     limit: statement.limit
   };
