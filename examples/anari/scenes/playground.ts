@@ -206,8 +206,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         maxBounces <= 8
       )
         sceneDescription.renderer.maxBounces = maxBounces;
-      if (parameters.get('varianceGuidance') === '1')
-        sceneDescription.renderer.varianceGuidance = true;
+      const varianceGuidance = parameters.get('varianceGuidance');
+      if (varianceGuidance === '0' || varianceGuidance === '1')
+        sceneDescription.renderer.varianceGuidance = varianceGuidance === '1';
       const debugView = parameters.get('view');
       if (
         debugView === 'color' ||
@@ -240,6 +241,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         sceneDescription.renderer.samplingSeed = seed;
       if (parameters.get('quality') === 'still')
         Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
+      const temporal = parameters.get('temporal');
+      if (temporal === 'on' || temporal === 'off')
+        sceneDescription.renderer.temporalReprojection = temporal === 'on';
       const resolutionScale = Number(parameters.get('resolution'));
       if ([0.25, 0.5, 0.75, 1].includes(resolutionScale)) {
         Object.assign(sceneDescription.renderer, {
@@ -391,6 +395,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
     this.renderedFrameCount++;
     this.canvas.dataset['renderedFrames'] = String(this.renderedFrameCount);
+    if (this.captureFrameLimit)
+      this.canvas.dataset['animationTimeSeconds'] = String(elapsedSeconds);
     if (
       elapsedSeconds - this.lastStatisticsUpdate > 0.25 ||
       this.renderedFrameCount === this.captureFrameLimit ||
