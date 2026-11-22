@@ -888,7 +888,9 @@ fn getTriangleTangentFrame(hit: RayHit, normal: vec3<f32>, uvTransform: mat3x3<f
     let projected = direction - normal * dot(normal, direction);
     if (dot(projected, projected) > 0.0) {
       let tangent = normalize(projected);
-      let bitangent = cross(normal, tangent) * sign(authored.w);
+      let linearTransform = mat3x3<f32>(transform[0].xyz, transform[1].xyz, transform[2].xyz);
+      let orientation = select(-1.0, 1.0, determinant(linearTransform) >= 0.0);
+      let bitangent = cross(normal, tangent) * sign(authored.w) * orientation;
       return mat2x3<f32>(tangent, bitangent);
     }
   }

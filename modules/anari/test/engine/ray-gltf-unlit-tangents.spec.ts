@@ -88,7 +88,11 @@ it('uses authored tangent handedness on a triangle with degenerate UVs', async (
     }
     expect(values[0]).toBeGreaterThan(fallback + 15);
     expect(values[1]).toBeLessThan(fallback);
-    expect((await renderer.pick(options.id, 4, 4))?.normal).toEqual([0, 0, 1]);
+    mapped.transforms = [new Matrix4().scale([-1, 1, 1])];
+    expect(Math.abs((await readPixel())[0] - values[1])).toBeLessThanOrEqual(2);
+    expect((await renderer.pick(options.id, 4, 4))?.normal.map(component => component + 0)).toEqual(
+      [0, 0, 1]
+    );
   } finally {
     destroy();
   }
