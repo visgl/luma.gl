@@ -87,3 +87,7 @@ Histograms publish a dense GPU table of `uint32` `bin` identifiers and `count` v
 * [GPU Dataframe overview](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md)
 * [GPU Dataframe operations index](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-operations.md)
 * [GPU tables](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md)
+
+### Partitioned mean accumulation[​](#partitioned-mean-accumulation "Direct link to Partitioned mean accumulation")
+
+Pass `{maxMeanScratchBytes: budget}` to `groupBy` to cap the temporary count buffer used by mean aggregation. The GPU scans the source for each contiguous key range, reuses one count buffer per mean operation, and writes each partition into the final result. Choose a budget of at least four bytes. Source data, output vectors, and row masks have their own memory costs.
