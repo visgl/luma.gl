@@ -45,6 +45,7 @@ import {
   type GaussianSplatRADWorkerDecoder
 } from './rad-worker-decoder';
 import {makeGaussianSplatInfoHtml} from './app-ui';
+import {GaussianSplatGlassPane} from './glass-pane';
 export {makeGaussianSplatInfoHtml} from './app-ui';
 
 export const title = 'Gaussian Splats';
@@ -144,6 +145,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private expectedBatchCount = GAUSSIAN_SPLAT_BATCH_COUNT;
   private loadedSplatCount = 0;
   private autoOrbit = true;
+  private glassPane?: GaussianSplatGlassPane;
   private orbitControls: OrbitControls | null = null;
   private loadAbortController: AbortController | null = null;
   private radSceneController: GaussianSplatRADSceneController | null = null;
@@ -353,13 +355,20 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const hasUpdatedBatches = this.batches.some(
       (batch, batchIndex) => batch.revision !== this.renderedBatchRevisions[batchIndex]
     );
-    if (!this.needsRedraw && !this.autoOrbit && !hasUpdatedBatches) {
+    if (!this.needsRedraw && !this.autoOrbit && !this.glassPane && !hasUpdatedBatches) {
       return;
     }
 
     let graphChanged = false;
     const activeRenderer = this.renderer;
-    if (
+    if (this.glassPane) {
+      this.glassPane.draw(
+        this.batches,
+        activeRenderer.props,
+        elapsedTimeMilliseconds,
+        this.clearColor
+      );
+    } else if (
       activeRenderer instanceof GPUSplatGraphRenderer ||
       activeRenderer instanceof GPUPagedSplatRenderer
     ) {
@@ -390,7 +399,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         }
       }
     }
-    if (this.renderer instanceof SplatRenderer) {
+    if (!this.glassPane && this.renderer instanceof SplatRenderer) {
       this.renderer.predraw(device.commandEncoder);
       const renderPass = device.beginRenderPass({clearColor: this.clearColor, clearDepth: 1});
       this.renderer.draw(renderPass);
@@ -429,6 +438,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.controlDisposers = [];
 
     // Rendering resources borrow the caller-owned source batches.
+    this.glassPane?.destroy();
     this.renderer.destroy();
     this.radSceneController?.destroy();
     this.radSceneController = null;
@@ -1127,6 +1137,21 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       });
     }
 
+    const glassElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-glass]');
+    if (glassElement && this.device.type === 'webgpu' && !this.localLoadersConfiguration) {
+      const glassControl = glassElement.closest('label');
+      if (glassControl) glassControl.hidden = false;
+      const setGlassPane = (): void => {
+        this.glassPane?.destroy();
+        this.glassPane = glassElement.checked ? new GaussianSplatGlassPane(this.device) : undefined;
+        this.requestRedraw();
+        this.updatePanel();
+      };
+      glassElement.checked = new URLSearchParams(window.location.search).get('glass') === '1';
+      setGlassPane();
+      this.listen(glassElement, 'change', setGlassPane);
+    }
+
     if (orbitElement) {
       orbitElement.checked = this.autoOrbit;
       this.listen(orbitElement, 'change', () => {
@@ -1175,6 +1200,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     for (const pipelineElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-pipeline]'
     )) {
+      if (this.glassPane) {
+        pipelineElement.textContent = 'Depth-interval compositing';
+        continue;
+      }
       pipelineElement.textContent = this.graphFallbackReason
         ? 'CPU fallback · graph unavailable'
         : this.renderer instanceof GPUPagedSplatRenderer
