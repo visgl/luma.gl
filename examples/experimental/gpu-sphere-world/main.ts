@@ -290,6 +290,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] ?? 0;
   };
   function resetView(): void {
+    table.resetOrbit();
     orbitCamera.far = Math.max(100, resources.halfExtent * 12);
     orbitCamera.updateProjectionMatrix();
     orbitCamera.position.set(

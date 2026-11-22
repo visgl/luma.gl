@@ -371,6 +371,7 @@ export function createTableControls(
     inverseRotation,
     update,
     calibrate,
+    resetOrbit,
     setInputEnabled,
     /** Remove the mounted instrument and release listeners before orbit disposal. */
     destroy() {
