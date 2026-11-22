@@ -228,13 +228,17 @@ export class GPUGroupAggregation {
 
     const output = this.output as GraphDataView<'float32'>;
     const operation = this.operation;
+    /** Number of domain keys processed together under the configured mean budget. */
     const partitionSize = operation === 'mean' ? this.meanPartitionSize : output.length;
+    /** Scratch reused from initialization through finalization for each key range. */
     const countScratch =
       operation === 'mean'
         ? createTransientView(graph, this.id + '-counts', 'uint32', partitionSize)
         : undefined;
     for (let firstGroup = 0; firstGroup < output.length; firstGroup += partitionSize) {
+      /** Final partitions may be smaller than the configured range. */
       const length = Math.min(partitionSize, output.length - firstGroup);
+      /** Writable subview of the final output for the current key range. */
       const partition =
         firstGroup === 0 && length === output.length
           ? output
@@ -243,6 +247,7 @@ export class GPUGroupAggregation {
               length,
               byteOffset: output.byteOffset + firstGroup * 4
             });
+      /** The active prefix of the shared count buffer for this partition. */
       const counts =
         countScratch && length !== countScratch.length
           ? graph.createDataView(countScratch.buffer, {
@@ -251,6 +256,7 @@ export class GPUGroupAggregation {
               byteOffset: countScratch.byteOffset
             })
           : countScratch;
+      /** Distinguishes partition command IDs while preserving existing single-pass IDs. */
       const id = partitionSize === output.length ? this.id : this.id + '-partition-' + firstGroup;
       nodes.push(...addInitializeGroupStatisticsPass(graph, id, partition, operation, counts));
       for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
