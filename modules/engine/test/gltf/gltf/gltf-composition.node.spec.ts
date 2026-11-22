@@ -111,7 +111,9 @@ test('the authored glTF 2.1 marionette keeps valid release modes and body-to-bod
   expect(description.issues).toEqual([]);
   expect(description.animatedBodyIndices).toHaveLength(10);
   expect(description.bodies.filter(body => body.body.mode === 'dynamic')).toHaveLength(10);
-  expect(description.joints).toHaveLength(36);
+  const drives = description.joints.filter(({joint}) => joint.type === 'general' && joint.drive);
+  expect(drives).toHaveLength(27);
+  expect(description.joints.length - drives.length).toBe(36);
   expect(description.joints.every(({joint}) => joint.first !== joint.second)).toBe(true);
 });
 
