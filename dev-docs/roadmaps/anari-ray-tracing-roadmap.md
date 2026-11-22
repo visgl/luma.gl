@@ -152,5 +152,6 @@ references and broader ghosting acceptance scenes remain open.
 The first glTF vertex fidelity increment applies retained morph position and
 normal deltas in ray geometry and interpolates `COLOR_0`. The vertex alpha
 factor participates in triangle mask visibility and sampled emitter endpoints.
-Skeletal skinning, authored tangents, unlit materials, alpha blending and
-dispersion remain open on the ray path.
+The next increment preserves glTF unlit base color and interpolates authored
+tangents, including handedness and morph deltas. Skeletal skinning, alpha
+blending and dispersion remain open on the ray path.

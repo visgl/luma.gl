@@ -64,8 +64,8 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 100;
-const TRIANGLE_FLOAT_COUNT = 44;
+const PRIMITIVE_FLOAT_COUNT = 104;
+const TRIANGLE_FLOAT_COUNT = 56;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const UNIFORM_FLOAT_COUNT = 92;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
@@ -268,6 +268,7 @@ struct RayTriangle {
   thirdNormal: vec4<f32>,
   secondaryCoordinates: array<vec4<f32>, 2>,
   colors: array<vec4<f32>, 3>,
+  tangents: array<vec4<f32>, 3>,
 };
 
 @group(0) @binding(0) var<storage, read> triangles: array<RayTriangle>;
@@ -4149,6 +4150,7 @@ function makePrimitiveData(
       const transmissionColor = materialUniforms?.diffuseTransmissionColorFactor ?? [1, 1, 1];
       primitiveValues.set(transmissionColor, primitiveOffset + 96);
       primitiveValues[primitiveOffset + 99] = materialUniforms?.diffuseTransmissionFactor ?? 0;
+      primitiveValues[primitiveOffset + 100] = Number(materialUniforms?.unlit ?? false);
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,
@@ -4214,6 +4216,9 @@ function compileRayGeometry(
   const engineGeometry = surface.geometry;
   const positionAttribute = engineGeometry.attributes['POSITION'];
   const normalAttribute = engineGeometry.attributes['NORMAL'];
+  const tangentAttribute = engineGeometry.attributes['TANGENT'];
+  const baseTangents =
+    tangentAttribute?.size === 4 ? decodeMorphTargetAttribute(tangentAttribute) : undefined;
   const coordinates = engineGeometry.attributes['TEXCOORD_0']?.value;
   if (!positionAttribute || !normalAttribute) {
     throw new Error('Ray tracing scene geometry requires positions and normals.');
@@ -4224,7 +4229,8 @@ function compileRayGeometry(
       ? applyMorphTargets(
           {
             POSITION: decodeMorphTargetAttribute(positionAttribute),
-            NORMAL: decodeMorphTargetAttribute(normalAttribute)
+            NORMAL: decodeMorphTargetAttribute(normalAttribute),
+            TANGENT: baseTangents
           },
           surface.morphTargets,
           surface.morphWeights
@@ -4232,6 +4238,7 @@ function compileRayGeometry(
       : undefined;
   const positions = morphed?.POSITION ?? positionAttribute.value;
   const normals = morphed?.NORMAL ?? normalAttribute.value;
+  const tangents = morphed?.TANGENT ?? baseTangents;
   const colorAttribute = engineGeometry.attributes['COLOR_0'];
   const colors = colorAttribute && decodeMorphTargetAttribute(colorAttribute);
   const triangleValues: number[] = [];
@@ -4278,6 +4285,15 @@ function compileRayGeometry(
         colors?.[offset + 1] ?? 1,
         colors?.[offset + 2] ?? 1,
         colorSize === 4 ? (colors?.[offset + 3] ?? 1) : 1
+      );
+    }
+    for (let cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
+      const offset = Number(indices?.[vertexIndex + cornerIndex] ?? vertexIndex + cornerIndex) * 4;
+      triangleValues.push(
+        tangents?.[offset] ?? 0,
+        tangents?.[offset + 1] ?? 0,
+        tangents?.[offset + 2] ?? 0,
+        tangents?.[offset + 3] ?? 0
       );
     }
   }
@@ -4335,6 +4351,7 @@ function getEmissivePrimitiveIndices(primitives: Float32Array): number[] {
       primitives[offset + 68] < 0 || primitives[offset + 35] >= primitives[offset + 68];
     if (
       visible &&
+      primitives[offset + 100] === 0 &&
       (primitives[offset + 41] > 0 || primitives[offset + 43] > 0) &&
       Math.max(primitives[offset + 36], primitives[offset + 37], primitives[offset + 38]) > 0
     ) {
