@@ -47,6 +47,8 @@ import {
   type GPUDataFrameQueryParameters
 } from './gpu-query-compiler';
 
+import {addGPUGlobalOrdering, type GPUGlobalSortKey} from './gpu-global-sort-compiler';
+
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
 
@@ -63,10 +65,21 @@ export class CompiledGPUDataFrameGroupedAggregation<
   /** Result table capacity. Observed grouping publishes the actual count in selectedCounts. */
   readonly groupCount: number;
 
+  /** Group row indices in global ORDER BY order, when requested. */
+  readonly globalRowIndices?: GPUVector<'uint32'>;
+  /** Number of groups left after applying the page, when ordered. */
+  readonly globalSelectedCount?: GPUVector<'uint32'>;
+
   /** @internal */
-  constructor(props: CompiledGPUDataFrameQueryProps<T>, groupCount: number) {
+  constructor(
+    props: CompiledGPUDataFrameQueryProps<T>,
+    groupCount: number,
+    ordering?: ReturnType<typeof addGPUGlobalOrdering>
+  ) {
     super(props);
     this.groupCount = groupCount;
+    this.globalRowIndices = ordering?.globalRowIndices;
+    this.globalSelectedCount = ordering?.globalSelectedCount;
   }
 }
 
@@ -90,7 +103,8 @@ export function compileGPUDataFrameObservedAggregation(
   keys: GPUGroupingKeys,
   definitions: readonly GPUDataFrameAggregationDefinition[],
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
-  columns: readonly string[]
+  columns: readonly string[],
+  ordering?: readonly GPUGlobalSortKey[]
 ): CompiledGPUDataFrameGroupedAggregation {
   if (source.numRows > 0) validateGPUGroupingCapacity(source, source.numRows, graph);
   validateGPUGroupingSourceColumns(
@@ -105,7 +119,15 @@ export function compileGPUDataFrameObservedAggregation(
     CompiledGPUDataFrameGroupedAggregation
   >(source, predicates, selectedColumns, graph, derivedColumns, {
     prepare: context =>
-      addGPUGroupedAggregationToGraph(context, keys, source.numRows, definitions, columns, true)
+      addGPUGroupedAggregationToGraph(
+        context,
+        keys,
+        source.numRows,
+        definitions,
+        columns,
+        true,
+        ordering
+      )
   });
 }
 
@@ -123,7 +145,8 @@ export function compileGPUDataFrameGroupedAggregation<
   groupCount: number,
   definitions: readonly GPUDataFrameAggregationDefinition[],
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
-  projection?: GPUGroupedOutputProjection
+  projection?: GPUGroupedOutputProjection,
+  ordering?: readonly GPUGlobalSortKey<keyof Result & string>[]
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, [key], definitions);
@@ -139,7 +162,9 @@ export function compileGPUDataFrameGroupedAggregation<
         [{source: key, output: projection?.key ?? key}],
         groupCount,
         definitions,
-        projection?.columns
+        projection?.columns,
+        false,
+        ordering
       )
   });
 }
@@ -196,7 +221,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   groupCount: number,
   definitions: readonly GPUDataFrameAggregationDefinition[],
   columns?: readonly string[],
-  observed = false
+  observed = false,
+  orderBy?: readonly GPUGlobalSortKey<keyof Result & string>[]
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -254,7 +280,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           };
         })
       : [];
-    const rowSelection = observed
+    let rowSelection = observed
       ? addGPUObservedGroups(context, prefix, inputs, outputs, nullableKeys, ownedVectors)
       : undefined;
     const keys = rowSelection?.keys ?? (inputs[0] as GraphVectorView<'uint32'>);
@@ -356,6 +382,59 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       )
     ) as Readonly<GPUDataFrameDictionaries<Result>>;
 
+    if (orderBy && !rowSelection) {
+      const mask = createGPUGroupedOutputVector(
+        graph.device,
+        prefix + '-dense-mask',
+        groupCount,
+        'uint32'
+      );
+      const rows = createGPUGroupedOutputVector(
+        graph.device,
+        prefix + '-dense-rows',
+        groupCount,
+        'uint32'
+      );
+      const count = createGPUGroupedOutputVector(
+        graph.device,
+        prefix + '-dense-count',
+        1,
+        'uint32'
+      );
+      ownedVectors.push(mask, rows, count);
+      addGPUGroupingPass(
+        graph,
+        prefix + '-dense-selection',
+        groupCount,
+        {},
+        {
+          mask: graph.importGPUVector(prefix + '-dense-mask-init', mask).data[0],
+          rows: graph.importGPUVector(prefix + '-dense-rows-init', rows).data[0],
+          count: graph.importGPUVector(prefix + '-dense-count-init', count).data[0]
+        },
+        `mask[index] = 1u; rows[index] = index; if (index == 0u) { count[0] = ${groupCount}u; }`
+      );
+      rowSelection = {keys, mask, rows, count};
+    }
+    const ordering =
+      orderBy && rowSelection
+        ? addGPUGlobalOrdering(
+            {
+              graph,
+              queryId: prefix + '-ordered',
+              table: resultTable,
+              validity: validity as GPUDataFrameValidity<Result>,
+              dictionaries,
+              selectionMask: graph.importGPUVector(prefix + '-ordered-mask', rowSelection.mask),
+              rowIndices: graph.importGPUVector(prefix + '-ordered-rows', rowSelection.rows),
+              selectedCounts: graph.importGPUVector(prefix + '-ordered-count', rowSelection.count)
+            },
+            orderBy,
+            ownedVectors,
+            prefix + '-ordered'
+          )
+        : undefined;
+
     return {
       table: resultTable,
       validity: Object.freeze(validity) as Readonly<GPUDataFrameValidity<Result>>,
@@ -383,7 +462,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
                 ]
               }
             : props,
-          groupCount
+          groupCount,
+          ordering
         )
     };
   } catch (error) {
