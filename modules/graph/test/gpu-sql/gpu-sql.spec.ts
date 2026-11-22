@@ -816,6 +816,64 @@ it('GPUSQL returns observed aggregates without projecting hidden grouping keys',
   }
 });
 
+it('GPUSQL applies HAVING after aggregation and before pagination', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable(true)),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  try {
+    for (const [sql, expected, ordered] of [
+      [
+        'SELECT category, COUNT(*) AS trips FROM trips GROUP BY category HAVING COUNT(*) >= :minimum ORDER BY trips LIMIT 1',
+        [['economy', 3]],
+        true
+      ],
+      [
+        'SELECT service, COUNT(*) AS trips, SUM(fare) AS total FROM trips GROUP BY service HAVING total > 15 AND trips >= :minimum',
+        [['basic', 3, 18]],
+        false
+      ],
+      [
+        'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY fare HAVING trips = 0',
+        [],
+        false
+      ]
+    ] as const) {
+      const result = context
+        .query(sql, {parameters: {minimum: 3}})
+        .compile(new GPUCommandGraph(device));
+      try {
+        if (!(result instanceof CompiledGPUDataFrameGroupedAggregation))
+          throw new Error('Expected grouped result');
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          ...(ordered
+            ? {
+                globalRowIndices: result.globalRowIndices,
+                globalSelectedCount: result.globalSelectedCount
+              }
+            : {rowIndices: result.rowIndices, selectedCounts: result.selectedCounts})
+        });
+        expect(
+          Array.from(output, row => output.schema.fields.map(field => row[field.name]))
+        ).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL applies ORDER BY and pagination after grouping', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

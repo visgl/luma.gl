@@ -72,6 +72,7 @@ type GPUSQLStatement = Readonly<{
   }>;
   predicate?: Expression;
   groupBy?: readonly Expression[];
+  having?: Expression;
   orderBy?: readonly Readonly<{
     expression: Expression;
     direction: 'ascending' | 'descending';
@@ -96,6 +97,8 @@ export type GPUSQLExplanation = Readonly<{
   table: string;
   /** Whether a source-row WHERE predicate runs before the terminal operation. */
   filtered: boolean;
+  /** A post-aggregation HAVING predicate filters the grouped result. */
+  having?: true;
   /** Terminal GPU dataframe execution route. */
   execution: GPUSQLExecution;
   /** Result fields in SELECT order. */
@@ -242,6 +245,7 @@ function buildGPUSQLPlan(
     explanation: Object.freeze({
       table: statement.table,
       filtered: Boolean(statement.predicate),
+      ...(statement.having ? {having: true as const} : {}),
       execution,
       columns: Object.freeze([...columns]),
       workingColumns: Object.freeze([...workingColumns]),
@@ -256,6 +260,9 @@ function buildGPUSQLPlan(
   });
 
   const aggregates = statement.items.filter(item => item.aggregate);
+  if (statement.having && (!statement.groupBy || !aggregates.length)) {
+    throw new Error('GPUSQL HAVING requires GROUP BY and an aggregate SELECT item');
+  }
   if (aggregates.length > 0) {
     if (
       statement.join ||
@@ -267,6 +274,7 @@ function buildGPUSQLPlan(
     const definitions: GPUSQLAggregationDefinitions = {};
     const reservedNames = new Set(frame.columnNames);
     const outputNames = new Map<GPUSQLSelectItem, string>();
+    const aggregateOutputs = new Map<string, string>();
     let inputIndex = 0;
     for (const item of aggregates) {
       const input =
@@ -284,6 +292,7 @@ function buildGPUSQLPlan(
       }
       const name = item.alias ?? `${item.aggregate}_${inputColumn ?? 'all'}`;
       outputNames.set(item, name);
+      aggregateOutputs.set(JSON.stringify([item.aggregate, input ?? null]), name);
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
@@ -373,6 +382,31 @@ function buildGPUSQLPlan(
       if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
         throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
       }
+      const having = statement.having
+        ? new GPUExpression<boolean, string>(
+            lowerSQLExpression(
+              statement.having,
+              parameters,
+              reference => resolveGPUSQLColumn(reference, '', columns),
+              call => {
+                const name =
+                  call.callee.type === 'Identifier'
+                    ? String(call.callee['name']).toLowerCase()
+                    : '';
+                const operation = name === 'avg' ? 'mean' : name;
+                if (!['count', 'sum', 'min', 'max', 'mean'].includes(operation)) return undefined;
+                if (call.arguments.length !== 1)
+                  throw new Error('GPUSQL aggregates require one argument');
+                const argument = call.arguments[0] as Expression;
+                const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+                const input = wildcard ? null : lowerSQLExpression(argument, parameters, resolve);
+                const output = aggregateOutputs.get(JSON.stringify([operation, input]));
+                if (!output) throw new Error('GPUSQL HAVING aggregates must appear in SELECT');
+                return column(output).node;
+              }
+            )
+          )
+        : undefined;
       const ordering: GPUGlobalSortKey[] | undefined = statement.orderBy?.map(
         ({expression, direction, nulls}, index) => {
           const column =
@@ -426,7 +460,8 @@ function buildGPUSQLPlan(
                 normalized,
                 graph,
                 columns,
-                ordering
+                ordering,
+                having
               )
           },
           'observed-grouping',
@@ -451,7 +486,8 @@ function buildGPUSQLPlan(
               normalized,
               graph,
               {key: key.output!, columns},
-              ordering
+              ordering,
+              having
             )
         },
         'dense-grouping',
@@ -668,11 +704,49 @@ function resolveGPUSQLColumn(
   return reference.name;
 }
 
+/** Isolates the top-level HAVING clause until the shared SELECT parser exposes it. */
+function splitGPUSQLHaving(source: string): {select: string; having?: string} {
+  const tokens = /"(?:""|[^"])*"|'(?:''|[^'])*'|:[A-Za-z_]\w*|[A-Za-z_]\w*|[();]|--[^\r\n]*|\/\*/g;
+  let depth = 0;
+  let start = -1;
+  let predicateStart = -1;
+  let end = source.length;
+  let tailStarted = false;
+  for (const token of source.matchAll(tokens)) {
+    if (token[0].startsWith('--')) continue;
+    if (token[0] === '/*') {
+      throw new Error('GPUSQL does not support SQL comments');
+    }
+    if (token[0] === '(') depth++;
+    if (token[0] === ')') depth--;
+    if (depth !== 0) continue;
+    const keyword = token[0].toUpperCase();
+    if (start !== -1 && ['ORDER', 'LIMIT', 'OFFSET', ';'].includes(keyword)) {
+      end = token.index;
+      break;
+    }
+    if (start === -1 && ['ORDER', 'LIMIT', 'OFFSET', ';'].includes(keyword)) tailStarted = true;
+    if (start === -1 && keyword === 'HAVING') {
+      if (tailStarted) throw new Error('GPUSQL HAVING must precede ORDER BY and pagination');
+      start = token.index;
+      predicateStart = start + token[0].length;
+    }
+  }
+  return start === -1
+    ? {select: source}
+    : {
+        select: source.slice(0, start) + ' ' + source.slice(end),
+        having: source.slice(predicateStart, end)
+      };
+}
+
 /** Parses the SQL subset supported by the GPU relational planner. */
 function parseGPUSQLStatement(source: string): GPUSQLStatement {
-  const statement = parseSQLSelectStatement(source, {
-    parseParameter: name => ({type: 'Identifier', name, gpuSQLParameter: true})
-  });
+  const {select, having} = splitGPUSQLHaving(source);
+  const options = {
+    parseParameter: (name: string) => ({type: 'Identifier' as const, name, gpuSQLParameter: true})
+  };
+  const statement = parseSQLSelectStatement(select, options);
   if (statement.offset !== undefined && statement.offset > 0xffffffff) {
     throw new Error('GPUSQL OFFSET must fit an unsigned 32-bit row count');
   }
@@ -733,6 +807,11 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     alias: statement.from.alias,
     join: loweredJoin,
     predicate: statement.where as Expression | undefined,
+    having:
+      having === undefined
+        ? undefined
+        : parseSQLSelectStatement('SELECT (' + having + '\n) FROM __gpu_having', options).select![0]
+            .expression,
     groupBy: statement.groupBy?.length
       ? statement.groupBy.map(expression => expression as Expression)
       : undefined,
@@ -786,7 +865,10 @@ function readGPUSQLColumn(
 function lowerSQLExpression(
   node: Extract<Expression, {type: 'BinaryExpression'}>['left'],
   parameters: GPUDataFrameQueryParameters,
-  resolve: (reference: GPUSQLColumnReference) => string
+  resolve: (reference: GPUSQLColumnReference) => string,
+  resolveCall?: (
+    call: Extract<Expression, {type: 'CallExpression'}>
+  ) => GPUExpressionNode | undefined
 ): GPUExpressionNode {
   const expression = node as Expression;
   try {
@@ -802,6 +884,8 @@ function lowerSQLExpression(
         return column(resolve(readGPUSQLColumn(leaf))).node;
       }
       if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
+        const replacement = resolveCall?.(leaf);
+        if (replacement) return replacement;
         const name = leaf.callee['name'];
         const functionName =
           typeof name === 'string' && leaf['sqlFunction'] === true ? name.toLowerCase() : name;
