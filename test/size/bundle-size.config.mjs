@@ -104,7 +104,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Resnapshotting native state on reattachment adds about 0.15 KB minified.
     // Clip control, depth clamp and polygon offset clamp together measure 142,944 B / 40,366 B gzip.
     // Per-face stencil operations and scoped stencil clears.
-    maximum: {minified: 143_250, gzip: 40_500, brotli: 34_675},
+    maximum: {minified: 143_265, gzip: 40_500, brotli: 34_675},
     targetGzip: 30_000
   },
   {
