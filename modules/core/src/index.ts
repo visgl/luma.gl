@@ -150,6 +150,7 @@ export type {
   RasterizationParameters,
   CompareFunction,
   StencilOperation,
+  StencilFaceState,
   DepthStencilParameters,
   BlendFactor,
   BlendOperation,

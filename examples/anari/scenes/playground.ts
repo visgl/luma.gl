@@ -1,3 +1,4 @@
+import {RayBatchBudget} from './ray-batch-budget';
 import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
 import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
@@ -79,6 +80,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private refinementSamples = 0;
   /** Limits the rate of live ray submissions without changing history or capture settings. */
   private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
+  /** Calibrates the ray trace dispatch independently of queue pacing. */
+  private readonly rayBatchBudget = new RayBatchBudget();
   private refinementGeneration = 0;
 
   constructor({device}: AnimationProps) {
@@ -358,19 +361,24 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     if (paceRayFrame) {
       scene.frame
         .getParameter('renderer')
-        ?.setParameter(
-          'previousFrameExecutionMilliseconds',
-          this.raySubmissionPacer.lastSubmissionMilliseconds
-        )
+        ?.setParameters({
+          previousFrameExecutionMilliseconds: this.raySubmissionPacer.lastSubmissionMilliseconds,
+          rayBatchPhaseCount: this.rayBatchBudget.phaseCount
+        })
         .commitParameters();
     }
     if (paceRayFrame) this.refinementRenderTime = time;
+    /** Enable live feedback only for paced submissions with timestamp support. */
+    const measureLiveBudget = paceRayFrame && this.rayBatchBudget.canMeasure(device);
+    /** Scene render and optional asynchronous GPU pass timing. */
     const timedFrame =
-      this.captureGpuTiming && this.rendererSubtype === 'raytrace'
+      (this.captureGpuTiming && this.rendererSubtype === 'raytrace') || measureLiveBudget
         ? timeCaptureFrame(device, () => scene.frame.render())
         : undefined;
-    if (timedFrame) this.captureGpuTimes.push(timedFrame.gpuTime);
+    if (timedFrame && this.captureGpuTiming) this.captureGpuTimes.push(timedFrame.gpuTime);
     const statistics = timedFrame?.result ?? scene.frame.render();
+    if (timedFrame && measureLiveBudget)
+      this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
     this.refinementSamples = statistics.rayTracing?.accumulatedSamples ?? 0;
     const showChartLabels = scene.name === 'CHART MOTION' && Boolean(this.chartLabels);
     if (
@@ -1022,6 +1030,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       const previousScene = this.scene;
       this.refinementGeneration++;
       this.raySubmissionPacer.resetCooldown();
+      this.rayBatchBudget.reset();
       this.scene = nextScene;
       this.renderedFrameCount = 0;
       this.selectedPlacementId = null;

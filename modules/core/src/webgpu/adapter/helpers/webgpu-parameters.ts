@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type DeviceFeatures, Parameters, log} from '../../../index';
+import {hasStencilFaceState, resolveStencilFace} from '../../../api/adapter/types/stencil-state';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -18,30 +19,10 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
 }
 
 /**
- * Returns the front-face stencil state, creating it when the depth-stencil state has none.
- * Members that stay unset take the WebGPU defaults (compare `always`, operations `keep`).
- */
-function addDepthStencilFront(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
-  const depthStencil = addDepthStencil(descriptor);
-  depthStencil.stencilFront ||= {};
-  return depthStencil.stencilFront;
-}
-
-/**
- * Returns the back-face stencil state, creating it when the depth-stencil state has none.
- * Members that stay unset take the WebGPU defaults (compare `always`, operations `keep`).
- */
-function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
-  const depthStencil = addDepthStencil(descriptor);
-  depthStencil.stencilBack ||= {};
-  return depthStencil.stencilBack;
-}
-
-/**
  * Supports for luma.gl's flat parameter space
  * Populates the corresponding sub-objects in a GPURenderPipelineDescriptor
  */
-export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
+export const PARAMETER_TABLE: Partial<Record<keyof Parameters, Function>> = {
   // RASTERIZATION PARAMETERS
 
   cullMode: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
@@ -104,46 +85,6 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
   stencilWriteMask: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilWriteMask = value;
-  },
-
-  stencilCompare: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.compare = value;
-    stencilBack.compare = value;
-  },
-
-  stencilPassOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.passOp = value;
-    stencilBack.passOp = value;
-  },
-
-  stencilFailOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.failOp = value;
-    stencilBack.failOp = value;
-  },
-
-  stencilDepthFailOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.depthFailOp = value;
-    stencilBack.depthFailOp = value;
   },
 
   // MULTISAMPLE
@@ -309,6 +250,11 @@ export function applyParametersToRenderPipelineDescriptor(
   // Apply defaults
   Object.assign(pipelineDescriptor, {...DEFAULT_PIPELINE_DESCRIPTOR, ...pipelineDescriptor});
   setParameters(pipelineDescriptor, parameters, features);
+  if (hasStencilFaceState(parameters)) {
+    const depthStencil = addDepthStencil(pipelineDescriptor);
+    depthStencil.stencilFront = resolveStencilFace(parameters, parameters.stencilFront);
+    depthStencil.stencilBack = resolveStencilFace(parameters, parameters.stencilBack);
+  }
   // Factor setters create blend state; explicit disabling must win regardless of key order.
   if (parameters.blend === false) {
     for (const target of pipelineDescriptor.fragment?.targets || []) {
@@ -325,6 +271,9 @@ function setParameters(
 ): void {
   for (const [key, value] of Object.entries(parameters)) {
     if (value === undefined) {
+      continue;
+    }
+    if (key.startsWith('stencil') && key !== 'stencilReadMask' && key !== 'stencilWriteMask') {
       continue;
     }
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];

@@ -207,6 +207,7 @@ export class GPUDataFrameGroupedAggregationQuery<
       undefined,
       undefined,
       undefined,
+      undefined,
       this.maxMeanScratchBytes
     );
   }

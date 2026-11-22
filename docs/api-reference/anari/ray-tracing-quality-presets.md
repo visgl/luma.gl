@@ -321,3 +321,18 @@ record the animation time at the final frame. Add `--linear-hdr` to summarize th
 minimum, maximum, and mean per-pixel retained sample confidence and the number of
 pixels with zero confidence. Reference images must show the same pose. A reference from the other temporal mode measures the modes’ difference and
 does not establish the correct radiance at that pose.
+
+
+### Adaptive batch size without resetting history
+
+The live Playground and Observatory sample WebGPU timestamps when available.
+The GPU Graph execution budget controller targets 16 ms of GPU pass time and
+requests full, half, quarter, or eighth-frame ray batches. Each smaller batch
+updates one interleaved pixel phase and retains the other pixels. A phase-count
+change takes effect at a complete sweep boundary. Camera or scene motion uses
+full coverage so carried pixels do not retain metadata from an older pose.
+
+Batch size changes preserve the render resolution, history textures, and
+sample sequence. Reported progress in this mode counts completed sweeps.
+Devices without usable GPU timestamps keep the existing renderer policy.
+Offline captures keep their configured batch size.

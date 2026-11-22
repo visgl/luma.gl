@@ -545,6 +545,29 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     frameResources.phaseCount = 1;
     frameResources.phaseIndex = 0;
 
+    const budgetedHalf = renderer.render({...options, rayBatchPhaseCount: 2});
+    device.submit();
+    expect(budgetedHalf.rayTracing?.sampledPixelCoverage).toBe(0.5);
+    const pendingQuarter = renderer.render({...options, rayBatchPhaseCount: 4});
+    device.submit();
+    expect(pendingQuarter.rayTracing?.sampledPixelCoverage).toBe(0.5);
+    expect(pendingQuarter.rayTracing?.accumulatedSamples).toBe(6);
+    const budgetedQuarter = renderer.render({...options, rayBatchPhaseCount: 4});
+    device.submit();
+    expect(budgetedQuarter.rayTracing?.sampledPixelCoverage).toBe(0.25);
+    expect(budgetedQuarter.rayTracing?.accumulatedSamples).toBe(6);
+    expect([initialColorHistory, initialColorOutput]).toContain(
+      frameResources.colorHistory.previousTexture
+    );
+
+    const restoredFullCoverage = renderer.render(options);
+    device.submit();
+    expect(restoredFullCoverage.rayTracing?.sampledPixelCoverage).toBe(1);
+    expect(restoredFullCoverage.rayTracing?.accumulatedSamples).toBe(8);
+    expect([initialColorHistory, initialColorOutput]).toContain(
+      frameResources.colorHistory.previousTexture
+    );
+
     const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
     expect(

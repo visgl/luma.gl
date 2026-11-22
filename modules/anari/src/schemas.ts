@@ -364,6 +364,7 @@ const raytraceRendererProperties = {
   adaptiveResolution: z.boolean().optional(),
   targetFrameTimeMilliseconds: positiveNumberSchema.optional(),
   previousFrameExecutionMilliseconds: positiveNumberSchema.nullable().optional(),
+  rayBatchPhaseCount: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8)]).optional(),
   temporalReprojection: z.boolean().optional(),
   shadowSamplesPerFrame: z.number().int().nonnegative().optional()
 };

@@ -816,6 +816,76 @@ it('GPUSQL returns observed aggregates without projecting hidden grouping keys',
   }
 });
 
+it('GPUSQL feeds unique-right join matches into global and grouped aggregates on the GPU', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const rightTable = arrow.tableFromArrays({identifier: Uint32Array.of(20, 40)});
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, rightTable),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [type, expected] of [
+      ['INNER', [2, 2, 18]],
+      ['LEFT', [5, 4, 32]],
+      ['SEMI', [2, 2, 18]],
+      ['ANTI', [3, 2, 14]]
+    ] as const) {
+      const result = context
+        .query(
+          `SELECT COUNT(*) AS trips, COUNT(fare) AS known, SUM(fare) AS total FROM trips ${type} JOIN accounts ON accounts.identifier = trips.identifier`
+        )
+        .compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const rows = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity
+        });
+        expect(Array.from(rows, row => [row.trips, row.known, row.total])).toEqual([expected]);
+      } finally {
+        result.destroy();
+      }
+    }
+
+    const grouped = context
+      .query(
+        'SELECT category, COUNT(*) AS trips, AVG(fare) AS total FROM trips INNER JOIN accounts ON trips.identifier = accounts.identifier GROUP BY category HAVING trips > 0 ORDER BY total DESC LIMIT 1',
+        {maxMeanScratchBytes: 4}
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      if (!(grouped instanceof CompiledGPUDataFrameGroupedAggregation))
+        throw new Error('Expected grouped result');
+      const encoder = device.createCommandEncoder();
+      grouped.encode(encoder);
+      device.submit(encoder.finish());
+      const rows = await makeArrowTableFromGPUAnalyticsTable({
+        table: grouped.table,
+        validity: grouped.validity,
+        dictionaries: grouped.dictionaries,
+        globalRowIndices: grouped.globalRowIndices,
+        globalSelectedCount: grouped.globalSelectedCount
+      });
+      expect(Array.from(rows, row => [row.category, row.trips, row.total])).toEqual([
+        ['premium', 2, 9]
+      ]);
+    } finally {
+      grouped.destroy();
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
 it('GPUSQL applies HAVING after aggregation and before pagination', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
