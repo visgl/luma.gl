@@ -76,11 +76,11 @@
       import {makeAnimationLoop} from '@luma.gl/engine';
       import {webgl2Adapter} from '@luma.gl/core/webgl';
       import {webgpuAdapter} from '@luma.gl/core/webgpu';
-      import AnimationLoopTemplate from './app.ts';
+      import {GaussianSplatsShowcase} from './app.ts';
 
       window.__lumaGaussianSplatsLocalLoadersRoot = import.meta.env.VITE_LOADERS_GL_ROOT || '';
       document.getElementById('gaussian-splats-panel-container').innerHTML =
-        AnimationLoopTemplate.info;
+        GaussianSplatsShowcase.info;
 
       try {
         const requestedDevice = new URLSearchParams(window.location.search).get('device');
@@ -117,7 +117,7 @@
         } else {
           device = await luma.createDevice(deviceOptions);
         }
-        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+        const animationLoop = makeAnimationLoop(GaussianSplatsShowcase, {
           device,
           autoResizeViewport: true
         });

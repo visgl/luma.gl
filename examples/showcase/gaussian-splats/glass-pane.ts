@@ -5,7 +5,7 @@
 import {Buffer, Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {SplatRenderer, type GPUSplatData, type SplatRendererProps} from '@luma.gl/engine/splats';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** Shared geometry for the pane depth and color draws. */
 const PANE_VERTEX_SHADER = /* wgsl */ `

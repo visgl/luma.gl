@@ -78,6 +78,11 @@ const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/ap
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
 const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
+/** Loads the captured-scene default for the standalone website showcase. */
+const loadGaussianSplatsShowcaseApp = async () => ({
+  default: (await loadGaussianSplatsApp()).GaussianSplatsShowcase
+});
+
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
 const loadArrowText2DApp = () => import('../../examples/arrow/arrow-text-2d/app');
@@ -1073,7 +1078,7 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
       subtitle="Moving glass and Gaussian splat compositing"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
-      loadTemplate={loadGaussianSplatsApp}
+      loadTemplate={props.embedded ? loadGaussianSplatsApp : loadGaussianSplatsShowcaseApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       showStats
@@ -1084,12 +1089,16 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
 
 export const GaussianSplatViewerExample: React.FC<
   WebsiteExampleProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}
-> = ({defaultScene = 'train', ...props}) => {
+> = ({defaultScene, ...props}) => {
   const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
   const loadAnimationTemplate = useMemo(
     () => async () => {
       const {default: GaussianSplatsApp} = await loadGaussianSplatsApp();
       const makeAnimationTemplate = () => {
+        if (!defaultScene) {
+          return GaussianSplatsApp;
+        }
+
         return class GaussianSplatSceneAnimationTemplate extends GaussianSplatsApp {
           constructor(animationProps: AnimationProps) {
             super({...animationProps, defaultScene});

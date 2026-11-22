@@ -169,7 +169,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     device,
     width,
     height,
-    defaultScene = 'cat'
+    defaultScene
   }: AnimationProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}) {
     super();
     this.device = device;
@@ -1415,6 +1415,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       distance: this.cameraHomeDistance
     });
   };
+}
+
+/** Starts the full showcase with the captured figurine pair. */
+export class GaussianSplatsShowcase extends GaussianSplatsAnimationLoopTemplate {
+  /** Selects the capture when no scene was supplied in the URL. */
+  constructor(props: AnimationProps) {
+    super({...props, defaultScene: 'cat'});
+  }
 }
 
 function makeGaussianSplatCameraFrame(
