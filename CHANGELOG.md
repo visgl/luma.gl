@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-beta.3
+
+- Expand GPU SQL grouping and sorting to multiple, computed, and hidden keys. Add bound-plan explanations and packed vector expressions.
+- Budget streamed Arrow GPU batches and preserve Float64 Arrow path offsets.
+- Add batched GPU collision queries and recover contact and trigger state after event overflow.
+- Support glTF 2.1 scene composition and GPU ragdolls. Preserve skinning, morph targets, vertex colors, and unlit materials in ANARI ray tracing.
+- Improve ray-traced cutouts, reconstruction, and volume lighting. Pace live ray-tracing and sphere simulation submissions.
+- Fix WebGL color and stencil write masks and WebGPU stencil state initialization.
+
 ### v10.0.0-beta.2
 
 - Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
