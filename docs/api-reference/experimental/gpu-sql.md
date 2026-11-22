@@ -109,6 +109,8 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
+  The SELECT list controls which left-side columns appear in the result. The left join key can be omitted.
+  Qualify the ON operands when the join sides cannot be determined from their field names.
 
 SQL keywords and registered table names are case-insensitive. Column names must match the
 dataframe schema exactly, even when unquoted. Double-quote reserved names such as `"limit"`

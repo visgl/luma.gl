@@ -39,6 +39,7 @@ import type {GPUDataFrameJoinType, GPUDataFrameNormalizedJoinOptions} from './gp
 import {
   CompiledGPUDataFrameQuery,
   compileGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
   type GPUDataFrameQueryExtensionResult,
@@ -170,7 +171,8 @@ export function compileGPUDataFrameJoin<
   right: GPUDataFrame<Right>,
   options: GPUDataFrameNormalizedJoinOptions,
   joinType: GPUDataFrameJoinType,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): CompiledGPUDataFrameJoin<Selection, Right> {
   validateGPUJoinSources(source, right, options, graph);
   const retainedRight = right.select(right.columnNames);
@@ -181,7 +183,8 @@ export function compileGPUDataFrameJoin<
       Selection,
       CompiledGPUDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
-      prepare: context => addGPUJoinToGraph(context, retainedRight, options, joinType)
+      prepare: context =>
+        addGPUJoinToGraph(context, retainedRight, options, joinType, resultColumns)
     });
   } catch (error) {
     retainedRight.destroy();
@@ -261,7 +264,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Left>,
   right: GPUDataFrame<Right>,
   options: GPUDataFrameNormalizedJoinOptions,
-  joinType: GPUDataFrameJoinType
+  joinType: GPUDataFrameJoinType,
+  resultColumns?: readonly (keyof Left & string)[]
 ): GPUDataFrameQueryExtensionResult<Left, CompiledGPUDataFrameJoin<Left, Right>> {
   const ownedVectors: GPUVector[] = [];
   const id = `${context.queryId}-${joinType}-join`;
@@ -401,10 +405,12 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
       indexStatistics: indexState.indexStatistics,
       contractViolation: indexState.contractViolation
     };
+    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
-      table: context.table,
-      validity: context.validity,
-      dictionaries: context.dictionaries,
+      table: projection?.table ?? context.table,
+      validity: projection?.validity ?? context.validity,
+      dictionaries: projection?.dictionaries ?? context.dictionaries,
+      ownedTables: projection ? [projection] : [],
       ownedVectors,
       createCompiled: props => new CompiledGPUDataFrameJoin(props, resources)
     };

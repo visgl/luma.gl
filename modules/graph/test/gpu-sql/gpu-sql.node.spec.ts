@@ -204,7 +204,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     ]) {
       expect(
         context.query(
-          `SELECT source.identifier FROM trips AS source ${operator} accounts AS target ON source.identifier = target.identifier`
+          `SELECT source.fare FROM trips AS source ${operator} accounts AS target ON source.identifier = target.identifier`
         )
       ).toBeInstanceOf(GPUSQLQuery);
     }
@@ -224,6 +224,12 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
         'SELECT source.identifier FROM trips AS source JOIN accounts AS target ON source.identifier = source.identifier'
       )
     ).toThrow(/qualifier/);
+
+    expect(() =>
+      context.query(
+        'SELECT source.fare FROM trips AS source JOIN accounts AS target ON identifier = identifier'
+      )
+    ).toThrow(/ambiguous/i);
 
     left.frame.destroy();
     right.frame.destroy();

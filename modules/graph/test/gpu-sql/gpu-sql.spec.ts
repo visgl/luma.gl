@@ -458,7 +458,7 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-left-join'}));
   const unmatched = context
     .query(
-      'SELECT trips.identifier FROM trips ANTI JOIN accounts ON trips.identifier = accounts.identifier'
+      'SELECT trips.category, trips.fare + 1 AS adjusted FROM trips ANTI JOIN accounts ON trips.identifier = accounts.identifier'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-anti-join'}));
 
@@ -494,7 +494,13 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
       unmatchedArrow.batches.map(batch => batch.numRows),
       ''
     ).toEqual([1, 0, 2]);
-    expect(Array.from(unmatchedArrow.getChild('identifier') ?? []), '').toEqual([10, 30, 50]);
+    expect(unmatchedArrow.schema.fields.map(field => field.name)).toEqual(['category', 'adjusted']);
+    expect(Array.from(unmatchedArrow.getChild('category') ?? [])).toEqual([
+      'economy',
+      'economy',
+      'economy'
+    ]);
+    expect(Array.from(unmatchedArrow.getChild('adjusted') ?? [])).toEqual([null, 4, 12]);
   } finally {
     joined.destroy();
     unmatched.destroy();
