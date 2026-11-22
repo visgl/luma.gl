@@ -8,9 +8,10 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core/matrix';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUSphereWorld, decodeGPUSphereWorldDiagnostics} from '@luma.gl/graph/gpu-physics';
-import {PerspectiveCamera, Vector3, Quaternion} from 'three';
+import {PerspectiveCamera, Vector3} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createSphereInfoBox} from './info-box';
+import {createTableControls} from './table-controls';
 import {
   advanceSphereClock,
   createSphereBenchmark,
@@ -139,7 +140,6 @@ try {
   const initialCount = scaleDemo ? 10000 : 64;
   getElement<HTMLSelectElement>('#body-count').value = String(initialCount);
   let resources = await createResources(initialCount);
-  const infoBox = createSphereInfoBox(resources.graph, scaleDemo);
   function restoreSceneControls(): void {
     getElement<HTMLSelectElement>('#scene').value = resources.scene;
     getElement<HTMLSelectElement>('#body-count').value = String(resources.count);
@@ -149,7 +149,9 @@ try {
   const orbitCamera = new PerspectiveCamera(45, 1, 0.1, 100);
   orbitCamera.up.set(0, 0, 1);
   orbitCamera.position.set(0, -22, 26);
-  const controls = new OrbitControls(orbitCamera, getElement('#spheres'));
+  /** The same camera serves orbital input, table picking, and sphere presentation. */
+  const canvas = getElement<HTMLCanvasElement>('#spheres');
+  const controls = new OrbitControls(orbitCamera, canvas);
   controls.target.set(0, 0, 2);
   controls.enablePan = false;
   controls.enableZoom = scaleDemo;
@@ -157,8 +159,6 @@ try {
   controls.enableDamping = true;
   controls.dampingFactor = 0.1;
   controls.update();
-  let initialDirection = orbitCamera.position.clone().sub(controls.target).normalize();
-  let gravityRotation = new Quaternion().setFromUnitVectors(initialDirection, new Vector3(0, 0, 1));
   const initialPolar = controls.getPolarAngle();
   const initialAzimuth = controls.getAzimuthalAngle();
   controls.minPolarAngle = Math.max(0.1, initialPolar - 0.6);
@@ -166,57 +166,18 @@ try {
   controls.minAzimuthAngle = initialAzimuth - 0.7;
   controls.maxAzimuthAngle = initialAzimuth + 0.7;
   controls.saveState();
-  let dragging = false;
-  controls.addEventListener('start', () => {
-    dragging = true;
-  });
-  controls.addEventListener('end', () => {
-    dragging = false;
-  });
-  function levelView() {
-    // Flush the accumulated damping before restoring the saved level pose.
-    controls.enableDamping = false;
-    controls.update();
-    controls.reset();
-    controls.enableDamping = true;
-  }
-  function updatePlatform() {
-    controls.update();
-    let direction = orbitCamera.position.clone().sub(controls.target).normalize();
-    let angle = direction.angleTo(initialDirection);
-    if (
-      !dragging &&
-      getElement<HTMLInputElement>('#snap').checked &&
-      angle > 0.00001 &&
-      angle < (3 * Math.PI) / 180
-    ) {
-      levelView();
-      direction.copy(initialDirection);
-      angle = 0;
+  /** Share the same tilt interaction and instrumentation between both sphere examples. */
+  const table = createTableControls(canvas, orbitCamera, controls, () => resources.halfExtent);
+  const infoBox = createSphereInfoBox(resources.graph, scaleDemo, table.panel);
+
+  /** Publish the current gravity and synchronize the canvas projection used for picking. */
+  function updatePlatform(): void {
+    const aspect = device.canvasContext!.getAspect();
+    if (orbitCamera.aspect !== aspect) {
+      orbitCamera.aspect = aspect;
+      orbitCamera.updateProjectionMatrix();
     }
-    const gravity = direction.applyQuaternion(gravityRotation).multiplyScalar(-9.81);
-    resources.world.update({gravity: [gravity.x, gravity.y, gravity.z]});
-    getElement('#tilt-value').textContent = Math.round((angle * 180) / Math.PI) + '°';
-    const angleDegrees = (angle * 180) / Math.PI;
-    const isLevel = angleDegrees < 0.5;
-    const bubbleHorizontal = -gravity.x;
-    const bubbleVertical = gravity.y;
-    const bubbleDistance = Math.hypot(bubbleHorizontal, bubbleVertical);
-    const bubbleScale = Math.min(
-      32 / (9.81 * Math.sin(Math.PI / 4)),
-      32 / Math.max(bubbleDistance, 0.001)
-    );
-    getElement('#level-bubble').style.transform =
-      `translate(${bubbleHorizontal * bubbleScale}px, ${bubbleVertical * bubbleScale}px)`;
-    getElement('#level-indicator').dataset.level = String(isLevel);
-    getElement('#level-state').textContent =
-      `${isLevel ? 'Level' : 'Tilted'} · ${angleDegrees.toFixed(1)}°`;
-    getElement('#level-dial').setAttribute(
-      'aria-label',
-      isLevel
-        ? 'Bubble centered: platform level'
-        : `Platform tilted ${angleDegrees.toFixed(1)} degrees; bubble points uphill`
-    );
+    resources.world.update({gravity: table.update()});
   }
 
   updatePlatform();
@@ -339,9 +300,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     controls.target.set(0, 0, 2);
     controls.update();
     controls.saveState();
-    initialDirection = orbitCamera.position.clone().sub(controls.target).normalize();
-    gravityRotation = new Quaternion().setFromUnitVectors(initialDirection, new Vector3(0, 0, 1));
-    levelView();
+    table.calibrate();
     updatePlatform();
   }
   getElement('#pause').onclick = () => {
@@ -358,12 +317,6 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     speed = Number(getElement<HTMLInputElement>('#speed').value);
     getElement('#speed-value').textContent = speed.toFixed(1) + '×';
   };
-  getElement('#sensitivity').oninput = () => {
-    controls.rotateSpeed = Number(getElement<HTMLInputElement>('#sensitivity').value);
-    getElement('#sensitivity-value').textContent = controls.rotateSpeed.toFixed(2);
-  };
-  getElement('#level').onclick = levelView;
-  getElement('#spheres').addEventListener('dblclick', levelView);
   getElement('#scene').onchange = () =>
     getElement('#body-count').dispatchEvent(new Event('change'));
   getElement('#body-count').onchange = async () => {
@@ -405,7 +358,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     accumulator = 0;
     paused = false;
     getElement('#pause').textContent = 'Pause';
-    controls.enabled = false;
+    table.setInputEnabled(false);
     for (const identifier of ['body-count', 'scene', 'reset', 'pause', 'benchmark'])
       getElement<HTMLButtonElement>('#' + identifier).disabled = true;
     benchmark = createSphereBenchmark();
@@ -551,7 +504,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
               `${completedBenchmark.maximumExhaustedCandidateBodies || completedBenchmark.maximumDroppedContacts || completedBenchmark.maximumInvalidBodies || completedBenchmark.samplingErrors || !completedBenchmark.diagnosticSamples ? 'INVALID · ' : ''}300 frames · frame median ${percentile(completedBenchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(completedBenchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(completedBenchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${completedBenchmark.gpu.length ? percentile(completedBenchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
             getElement<HTMLButtonElement>('#download-report').disabled = false;
             benchmark = undefined;
-            controls.enabled = true;
+            table.setInputEnabled(true);
             for (const identifier of ['body-count', 'scene', 'reset', 'pause', 'benchmark'])
               getElement<HTMLButtonElement>('#' + identifier).disabled = false;
             accumulator = 0;
@@ -571,11 +524,15 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
           near: 0.1,
           far: 1000
         })
-        .multiplyRight(view);
+        .multiplyRight(view)
+        .multiplyRight(new Matrix4().fromQuaternion(table.rotation.toArray()));
       const cameraData = new Float32Array(24);
       cameraData.set(matrix);
-      cameraData.set([view[0], view[4], view[8], resources.halfExtent], 16);
-      cameraData.set([view[1], view[5], view[9], 0], 20);
+      /** Billboards still face the camera after the table rotates their simulation space. */
+      const right = new Vector3(view[0], view[4], view[8]).applyQuaternion(table.inverseRotation);
+      const up = new Vector3(view[1], view[5], view[9]).applyQuaternion(table.inverseRotation);
+      cameraData.set([right.x, right.y, right.z, resources.halfExtent], 16);
+      cameraData.set([up.x, up.y, up.z, 0], 20);
       camera.write(cameraData);
       const pass = device.beginRenderPass({clearColor: [0.04, 0.065, 0.1, 1], clearDepth: 1});
       floor.draw(pass);
@@ -600,6 +557,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
         camera.destroy();
         spheres.destroy();
         floor.destroy();
+        table.destroy();
         controls.dispose();
         device.destroy();
       });

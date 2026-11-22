@@ -9,11 +9,13 @@ varied radii. State remains GPU-resident and feeds an instanced analytic sphere
 renderer. A single dark cue-ball band is attached to each quaternion orientation,
 so rolling and spinning are visible. Fragment depth follows the sphere surface.
 
-Drag with OrbitControls to orbit the camera and tilt gravity relative to the
-platform. The initial view is calibrated to level. Drag sensitivity defaults to
-0.25; releasing within 3 degrees optionally snaps level. Double-click or Level
-restores the initial view; Reset restores sphere positions, velocities, orientations
-and sleep state. The bubble level shows direction and angle. Static/dynamic contact
+Drag the table to tilt it with the camera fixed. Drag the background or hold Shift
+while dragging to orbit. The initial table is level, and releasing within 3 degrees
+optionally snaps it flat. Double-click or press **Level table** to level without changing
+the camera. **Reset** restores sphere positions, velocities, orientations and sleep
+state. The compact attitude indicator shows the uphill bubble, total tilt, pitch and roll.
+Open the **Table** tab for the artificial horizon, drag sensitivity and the optional
+**Tilt with view** mode that couples orbital input to gravity. Static/dynamic contact
 friction, rolling resistance and sleeping bring the balls to rest. Sleeping is
 limited to direct fixed-plane support; stacked bodies stay active so removing
 their support cannot leave a floating cluster.
