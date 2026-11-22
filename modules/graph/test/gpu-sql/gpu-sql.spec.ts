@@ -974,7 +974,19 @@ it('GPUSQL applies ORDER BY and pagination after grouping', async () => {
         'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY fare ORDER BY trips LIMIT 1',
         []
       ],
-      ['SELECT COUNT(*) AS trips FROM trips GROUP BY fare ORDER BY trips OFFSET 100', []]
+      ['SELECT COUNT(*) AS trips FROM trips GROUP BY fare ORDER BY trips OFFSET 100', []],
+      [
+        'SELECT category FROM trips GROUP BY category HAVING SUM(fare + 1) > 0 ORDER BY SUM(trips.fare + 1) DESC LIMIT 1',
+        [['premium']]
+      ],
+      [
+        'SELECT category FROM trips GROUP BY category ORDER BY SUM(fare) DESC, COUNT(*) ASC OFFSET 1 LIMIT 1',
+        [['economy']]
+      ],
+      [
+        'SELECT COUNT(*) AS trips FROM trips GROUP BY NULLIF(fare, 8) ORDER BY SUM(NULLIF(fare, 8)) DESC NULLS FIRST LIMIT 1',
+        [[2]]
+      ]
     ] as const) {
       const result = context.query(sql).compile(new GPUCommandGraph(device));
       try {
