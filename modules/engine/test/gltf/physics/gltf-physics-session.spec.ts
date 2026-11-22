@@ -113,6 +113,7 @@ it('reimports automatically derived inertia under nonuniform box scale', async c
   if (!device) return context.skip('WebGPU unavailable');
   const source = document();
   source.nodes![1].scale = [2, 1, 3];
+  source.nodes![1].rotation = [0, 0, 0.7071, 0.7071];
   const description = parseGLTFPhysics(source);
   expect(description.issues).toEqual([]);
   const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
@@ -122,6 +123,10 @@ it('reimports automatically derived inertia under nonuniform box scale', async c
     );
     expect(result.issues).toEqual([]);
     expect(result.bodies[0].body.inertiaDiagonal).toBeUndefined();
+    expect(result.bodies[0].body.orientation![2]).toBeCloseTo(Math.SQRT1_2, 7);
+    expect(result.colliders[0].collider.shape).toMatchObject({
+      halfExtents: [expect.closeTo(1, 7), expect.closeTo(0.5, 7), expect.closeTo(1.5, 7)]
+    });
   } finally {
     await session.destroy();
   }

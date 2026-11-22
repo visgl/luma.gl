@@ -55,7 +55,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       ? new Matrix4(node.matrix)
       : new Matrix4()
           .translate(node.translation ?? [0, 0, 0])
-          .multiplyRight(new Matrix4().fromQuaternion(node.rotation ?? [0, 0, 0, 1]))
+          .multiplyRight(new Matrix4().fromQuaternion(readPhysicsRotation(node.rotation)))
           .scale(node.scale ?? [1, 1, 1]);
     locals.set(index, local);
     const parent = parents.get(index);
@@ -97,7 +97,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
   for (const body of description.bodies) {
     if (body.nodeIndex < 0) continue;
     const state = states[body.bodyIndex];
-    const rotation = new Matrix4().fromQuaternion(state.orientation);
+    const rotation = new Matrix4().fromQuaternion(readPhysicsRotation(state.orientation));
     const center = rotation.transformAsVector(
       world.getBodyParameters(body.bodyIndex).centerOfMass ?? [0, 0, 0]
     );
@@ -219,7 +219,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
         output,
         `${motion}angularVelocity`,
         new Matrix4()
-          .fromQuaternion(states[body.bodyIndex].orientation)
+          .fromQuaternion(readPhysicsRotation(states[body.bodyIndex].orientation))
           .invert()
           .transformAsVector(states[body.bodyIndex].angularVelocity)
       );
