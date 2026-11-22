@@ -182,3 +182,13 @@ zero. Color mask bits 0 through 3 select red, green, blue, and alpha respectivel
 See also [GPU parameters](/docs/api-guide/gpu/gpu-parameters), the
 [RenderPass API](/docs/api-reference/core/resources/render-pass), and the
 [WebGPU depth/stencil state specification](https://www.w3.org/TR/webgpu/#depth-stencil-state).
+
+## Read stencil in a shader
+
+Check `device.features.has('stencil-texturing')`. Create a stencil-only texture view with
+`texture.createView({aspect: 'stencil-only'})` from an attachment created with sampling
+usage. Bind it as `texture_2d<u32>` in WGSL or `usampler2D` in GLSL and use integer texel
+loads. WebGPU provides stencil aspect views in core. WebGL2 requires
+[WEBGL_stencil_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/).
+On WebGL2 the selected aspect belongs to the texture object. Use separate draws when
+reading depth and stencil from the same packed texture.

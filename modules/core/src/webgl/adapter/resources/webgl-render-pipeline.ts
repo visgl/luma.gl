@@ -228,6 +228,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     gl.useProgram(this.handle);
 
     let textureUnit = 0;
+    let stencilModes: Map<WebGLTexture, boolean> | undefined;
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
       const value = getBindingValueForLayoutBinding(bindings, binding.name);
@@ -285,6 +286,22 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
           gl.activeTexture(GL.TEXTURE0 + textureUnit);
           gl.bindTexture(texture.glTarget, texture.handle);
+          if (
+            texture.format.endsWith('-stencil8') &&
+            this.device.features.has('stencil-texturing')
+          ) {
+            const stencilOnly =
+              value instanceof WEBGLTextureView && value.props.aspect === 'stencil-only';
+            stencilModes ??= new Map();
+            if (stencilModes.has(texture) && stencilModes.get(texture) !== stencilOnly) {
+              throw new Error(
+                'WebGL2 cannot sample depth and stencil from the same texture in one draw'
+              );
+            }
+            stencilModes.set(texture, stencilOnly);
+            // DEPTH_STENCIL_TEXTURE_MODE_WEBGL is texture-object state, shared by all views.
+            gl.texParameteri(texture.glTarget, 0x90ea, stencilOnly ? 0x1901 : GL.DEPTH_COMPONENT);
+          }
           // gl.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;

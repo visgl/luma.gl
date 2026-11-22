@@ -22,5 +22,11 @@ export class WEBGLTextureView extends TextureView {
     this.gl = this.device.gl;
     this.handle = null;
     this.texture = props.texture;
+    if (props.aspect === 'stencil-only' && !this.device.features.has('stencil-texturing')) {
+      throw new Error('Stencil sampling requires WEBGL_stencil_texturing');
+    }
+    if (props.aspect === 'stencil-only' && !this.texture.format.endsWith('-stencil8')) {
+      throw new Error('A stencil-only view requires a packed depth/stencil texture in WebGL2');
+    }
   }
 }
