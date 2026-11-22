@@ -36,11 +36,21 @@ it('WebGPU compatibility devices keep compatibility default limits', async () =>
 });
 
 it('WebGPU compatibility-max devices request adapter-supported limits', async () => {
-  const device = await getWebGPUTestDevice('compatibility-max');
-  if (!device || device.info.featureLevel !== 'compatibility') {
+  // Skip only when this platform cannot create a compatibility device at all
+  const compatibilityDevice = await getWebGPUTestDevice('compatibility');
+  if (!compatibilityDevice || compatibilityDevice.info.featureLevel !== 'compatibility') {
     return;
   }
 
+  const device = await getWebGPUTestDevice('compatibility-max');
+  expect(device, 'compatibility-max creates a device').toBeTruthy();
+  if (!device) {
+    return;
+  }
+
+  expect(device.info.featureLevel, 'compatibility-max keeps compatibility validation').toBe(
+    'compatibility'
+  );
   expect(
     device.features.has('core-features-and-limits'),
     'compatibility-max does not upgrade to core'
