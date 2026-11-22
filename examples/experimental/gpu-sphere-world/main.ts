@@ -170,7 +170,9 @@ try {
   /** Share the same tilt interaction and instrumentation between both sphere examples. */
   const table = createTableControls(canvas, orbitCamera, controls, () => resources.halfExtent);
   const infoBox = createSphereInfoBox(resources.graph, scaleDemo, table.panel);
+  /** The world that received the cached gravity. A rebuilt world always needs an upload. */
   let gravityWorld: GPUSphereWorld | undefined;
+  /** Gravity components last uploaded to the active world. */
   let previousGravity: [number, number, number] | undefined;
 
   /** Publish the current gravity and synchronize the canvas projection used for picking. */
@@ -180,6 +182,7 @@ try {
       orbitCamera.aspect = aspect;
       orbitCamera.updateProjectionMatrix();
     }
+    /** The table-local vector shared by the tilt indicators and the solver. */
     const gravity = table.update();
     if (
       gravityWorld !== resources.world ||
@@ -294,6 +297,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   let frameMilliseconds = 0;
   let encodeMilliseconds = 0;
   let samplingPromise: Promise<void> = Promise.resolve();
+  /** Completion of the single interactive Sphere Scale frame allowed on the GPU queue. */
   let scaleFrame: Promise<void> | null = null;
   let benchmark: SphereBenchmark | undefined;
   let lastReport: object | undefined;
@@ -407,6 +411,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       updatePlatform();
       encodeMilliseconds = 0;
       if (!paused && !loading && !benchmark?.finishing) {
+        /** Use the world's actual step for playback pacing and telemetry. */
         const timeStep = resources.world.timeStep;
         const clock = advanceSphereClock(
           accumulator,
@@ -565,7 +570,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       pass.end();
       device.submit();
       if (scaleDemo && !benchmark) {
-        // Keep at most one interactive frame in flight so a new tilt reaches the next batch.
+        /** Keep the queue short so a new tilt reaches the next physics batch. */
         const fence = device.createFence();
         scaleFrame = fence.signaled
           .catch(error => {
