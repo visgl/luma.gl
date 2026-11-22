@@ -81,6 +81,38 @@ type GPUSQLStatement = Readonly<{
   offset?: number;
 }>;
 
+/** Execution route selected by the GPU SQL planner. */
+export type GPUSQLExecution =
+  | 'projection'
+  | 'global-sort'
+  | 'global-aggregation'
+  | 'dense-grouping'
+  | 'observed-grouping'
+  | 'unique-right-join';
+
+/** CPU-only description of the bound GPU SQL plan. */
+export type GPUSQLExplanation = Readonly<{
+  /** Registered input table. */
+  table: string;
+  /** Whether a source-row WHERE predicate runs before the terminal operation. */
+  filtered: boolean;
+  /** Terminal GPU dataframe execution route. */
+  execution: GPUSQLExecution;
+  /** Result fields in SELECT order. */
+  columns: readonly string[];
+  /** Columns used internally, including derived or hidden keys when applicable. */
+  workingColumns: readonly string[];
+  /** Number of resolved grouping or ordering keys. */
+  keyCount: number;
+  /** Registered right table and join type for join plans. */
+  join?: Readonly<{table: string; type: GPUDataFrameJoinType}>;
+  /** Applied global page bounds, when supplied. */
+  page?: Readonly<{offset: number; limit?: number}>;
+}>;
+
+/** Binds executable operations to the immutable description produced at planning time. */
+type GPUSQLBoundPlan = {plan: GPUSQLCompiledPlan; explanation: GPUSQLExplanation};
+
 type GPUSQLCompiledPlan = Readonly<{
   compile: (graph: GPUCommandGraph<GPUDataFrameQueryParameters>) => CompiledGPUDataFrameQuery;
 }>;
@@ -159,18 +191,23 @@ export class GPUSQLContext {
 export class GPUSQLQuery {
   /** Original application-owned SQL text, retained solely for diagnostics and inspection. */
   readonly sql: string;
-  private readonly plan: GPUSQLCompiledPlan;
+  private readonly plan: GPUSQLBoundPlan;
 
   /** @internal */
-  constructor(sql: string, plan: GPUSQLCompiledPlan) {
+  constructor(sql: string, plan: GPUSQLBoundPlan) {
     this.sql = sql;
     this.plan = plan;
     Object.freeze(this);
   }
 
+  /** Returns a frozen plan description without allocating GPU resources. */
+  explain(): GPUSQLExplanation {
+    return this.plan.explanation;
+  }
+
   /** Compiles existing dataframe operations into the caller-owned GPU command graph. */
   compile(graph: GPUCommandGraph<GPUDataFrameQueryParameters>): CompiledGPUDataFrameQuery {
-    return this.plan.compile(graph);
+    return this.plan.plan.compile(graph);
   }
 }
 
@@ -178,7 +215,7 @@ function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
   statement: GPUSQLStatement,
   parameters: GPUDataFrameQueryParameters
-): GPUSQLCompiledPlan {
+): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
   let query = new GPUDataFrameQuery(frame, [], frame.columnNames) as unknown as GPUSQLDynamicQuery;
@@ -192,6 +229,31 @@ function buildGPUSQLPlan(
       )
     );
   }
+
+  /** Captures the route chosen by the same branch that supplies the executable plan. */
+  const describe = (
+    plan: GPUSQLCompiledPlan,
+    execution: GPUSQLExecution,
+    columns: readonly string[],
+    workingColumns: readonly string[] = columns,
+    keyCount = 0
+  ): GPUSQLBoundPlan => ({
+    plan,
+    explanation: Object.freeze({
+      table: statement.table,
+      filtered: Boolean(statement.predicate),
+      execution,
+      columns: Object.freeze([...columns]),
+      workingColumns: Object.freeze([...workingColumns]),
+      keyCount,
+      ...(statement.join
+        ? {join: Object.freeze({table: statement.join.table, type: statement.join.type})}
+        : {}),
+      ...(statement.limit !== undefined || statement.offset !== undefined
+        ? {page: Object.freeze({offset: statement.offset ?? 0, limit: statement.limit})}
+        : {})
+    })
+  });
 
   const aggregates = statement.items.filter(item => item.aggregate);
   if (aggregates.length > 0) {
@@ -327,42 +389,59 @@ function buildGPUSQLPlan(
             throw new Error('GPUSQL GROUP BY requires 32-bit numeric or dictionary keys');
           }
         }
-        return {
-          compile: graph =>
-            compileGPUDataFrameObservedAggregation(
-              frame,
-              predicates,
-              selectedColumns,
-              derivedColumns,
-              keys,
-              normalized,
-              graph,
-              columns
-            )
-        };
+        return describe(
+          {
+            compile: graph =>
+              compileGPUDataFrameObservedAggregation(
+                frame,
+                predicates,
+                selectedColumns,
+                derivedColumns,
+                keys,
+                normalized,
+                graph,
+                columns
+              )
+          },
+          'observed-grouping',
+          columns,
+          selectedColumns,
+          keys.length
+        );
       }
 
       const [key] = keys;
       const {groupCount} = query.groupBy(key.source);
-      return {
-        compile: graph =>
-          compileGPUDataFrameGroupedAggregation(
-            frame,
-            predicates,
-            selectedColumns,
-            derivedColumns,
-            key.source,
-            groupCount,
-            normalized,
-            graph,
-            {key: key.output!, columns}
-          )
-      };
+      return describe(
+        {
+          compile: graph =>
+            compileGPUDataFrameGroupedAggregation(
+              frame,
+              predicates,
+              selectedColumns,
+              derivedColumns,
+              key.source,
+              groupCount,
+              normalized,
+              graph,
+              {key: key.output!, columns}
+            )
+        },
+        'dense-grouping',
+        columns,
+        selectedColumns,
+        1
+      );
     }
     if (aggregates.length !== statement.items.length) {
       throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
     }
-    return query.aggregate(definitions);
+    return describe(
+      query.aggregate(definitions),
+      'global-aggregation',
+      statement.items.map(item => outputNames.get(item)!),
+      query.selectedColumns
+    );
   }
   if (statement.groupBy !== undefined)
     throw new Error('GPUSQL GROUP BY requires at least one aggregation');
@@ -422,23 +501,29 @@ function buildGPUSQLPlan(
       inner: 'innerJoin'
     } as const;
     const join = workingQuery[method[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
-    if (keyIsSelected) return join;
+    if (keyIsSelected) return describe(join, 'unique-right-join', selected, workingColumns, 1);
 
     const {predicates, derivedColumns} = workingQuery;
-    return {
-      compile: graph =>
-        compileGPUDataFrameJoin(
-          frame,
-          predicates,
-          workingColumns,
-          derivedColumns,
-          right,
-          join.options,
-          joinType,
-          graph,
-          selected
-        )
-    };
+    return describe(
+      {
+        compile: graph =>
+          compileGPUDataFrameJoin(
+            frame,
+            predicates,
+            workingColumns,
+            derivedColumns,
+            right,
+            join.options,
+            joinType,
+            graph,
+            selected
+          )
+      },
+      'unique-right-join',
+      selected,
+      workingColumns,
+      1
+    );
   }
 
   if (statement.orderBy) {
@@ -484,31 +569,38 @@ function buildGPUSQLPlan(
         ? sort
         : sort.page(statement.offset ?? 0, statement.limit);
     const projection = columns.length > selected.length ? selected : undefined;
-    if (!projection && secondary.length === 0) return page;
+    if (!projection && secondary.length === 0)
+      return describe(page, 'global-sort', selected, columns, plans.length);
 
     const {predicates, derivedColumns} = workingQuery;
     const additionalKeys: GPUGlobalSortKey[] = secondary.map(key => ({
       column: key.column,
       options: key.plan.options
     }));
-    return {
-      compile: graph =>
-        compileGPUDataFrameGlobalSort(
-          frame,
-          predicates,
-          columns,
-          derivedColumns,
-          column,
-          page.options,
-          graph,
-          projection,
-          additionalKeys
-        )
-    };
+    return describe(
+      {
+        compile: graph =>
+          compileGPUDataFrameGlobalSort(
+            frame,
+            predicates,
+            columns,
+            derivedColumns,
+            column,
+            page.options,
+            graph,
+            projection,
+            additionalKeys
+          )
+      },
+      'global-sort',
+      selected,
+      columns,
+      plans.length
+    );
   }
   if (statement.limit !== undefined || statement.offset !== undefined)
     throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
-  return query.select(selected);
+  return describe(query.select(selected), 'projection', selected);
 }
 
 /** Formats the source spelling for diagnostics. */

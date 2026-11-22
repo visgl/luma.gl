@@ -23,6 +23,54 @@ import {describe, expect, test, vi} from 'vitest';
 type GPUSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
 
 describe('GPUSQL immutable GPU dataframe planning', () => {
+  test('explains bound execution routes without allocating GPU buffers', () => {
+    const {frame, device} = createGPUSQLNodeFixture();
+    const context = new GPUSQLContext({trips: frame, accounts: frame});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    try {
+      const sort = context
+        .query(
+          'SELECT fare FROM trips WHERE fare > 0 ORDER BY identifier, fare DESC LIMIT 2 OFFSET 1'
+        )
+        .explain();
+      expect(sort).toEqual({
+        table: 'trips',
+        filtered: true,
+        execution: 'global-sort',
+        columns: ['fare'],
+        workingColumns: ['fare', 'identifier'],
+        keyCount: 2,
+        page: {offset: 1, limit: 2}
+      });
+      expect(Object.isFrozen(sort)).toBe(true);
+      expect(Object.isFrozen(sort.columns)).toBe(true);
+      expect(Object.isFrozen(sort.page)).toBe(true);
+      for (const [sql, execution] of [
+        ['SELECT fare FROM trips', 'projection'],
+        ['SELECT COUNT(*) FROM trips', 'global-aggregation'],
+        ['SELECT category, COUNT(*) FROM trips GROUP BY category', 'dense-grouping'],
+        ['SELECT COUNT(*) FROM trips GROUP BY category, fare', 'observed-grouping']
+      ]) {
+        expect(context.query(sql).explain().execution).toBe(execution);
+      }
+      const join = context
+        .query(
+          'SELECT trips.fare FROM trips LEFT JOIN accounts ON trips.identifier = accounts.identifier'
+        )
+        .explain();
+      expect(join).toMatchObject({
+        execution: 'unique-right-join',
+        join: {table: 'accounts', type: 'left'},
+        columns: ['fare'],
+        workingColumns: ['fare', 'identifier']
+      });
+      expect(createBuffer).not.toHaveBeenCalled();
+    } finally {
+      createBuffer.mockRestore();
+      frame.destroy();
+    }
+  });
+
   test('publishes native SQL without a loaders.gl package dependency', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
