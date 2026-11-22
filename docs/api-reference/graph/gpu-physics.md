@@ -55,9 +55,9 @@ experimental as a module.
 | Scalable rigid-body discovery | Available | Hierarchical discovery and sparse contact storage; all-pairs reference for small scenes | Dense scenes and mixed-size extremes still require capacity and performance qualification |
 | Parallel rigid-body solving | Experimental | Opt-in parallel contact response, GPU contact compaction/indirect work, persistent manifolds, coupled friction and island sleep/wake | Ordered solving remains the default; deep stacks and extreme mass ratios need broader evidence |
 | Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer sphere/static-surface CCD and opt-in moving-convex CCD with swept queues, angular bounds, friction and rollback; jointed/nonconvex continuous coverage remains open |
-| Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
+| Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Ordered GPU compaction scans pair capacity in parallel. Lost records require consumer resynchronization |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
-| Trigger volumes | Partial | Step-local compound sensors, per-collider glTF events, bounded general geometry and swept sphere crossings | Curved trajectories, general swept sensor geometry and large-world event throughput remain work |
+| Trigger volumes | Partial | Step-local compound sensors, per-collider glTF events, bounded general geometry and swept sphere crossings | Curved trajectories and general swept sensor geometry remain work |
 | Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Static-anchored distance joints can alternate with parallel contacts; dynamic-to-dynamic parallel scheduling, breakage and articulations remain planned |
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Pinned G4/G5 qualification covers attachment constraints, triggers and behavior operations; analytic shape mutation/scale and live scene capture are implemented, while mesh-deformation recooking and full-profile qualification remain work |
 | GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF gallery consumes GPU matrices directly and binds rigid animation targets; deformation, live scene edits and export/reimport remain work |
@@ -160,6 +160,23 @@ their existing explicit overflow semantics; this runner does not guarantee deliv
 of every event across world replacement. Consumer event cursors must not be carried
 across replacements. Numerical/geometry failures and CCD impact-budget exhaustion
 are rejected instead of being disguised as capacity problems.
+
+### Event ordering and overflow
+
+Rigid-body contact and trigger publishers compact transitions in parallel before writing
+their bounded rings. Events retain pair-slot or trigger-slot order within each accepted
+step, with a swept trigger enter preceding its exit. A fused ensemble omits events from
+rejected instances. The publisher writes the newest records that fit, while sequence numbers
+also account for the overwritten records. A nonzero `dropped` count means the consumer
+needs to resynchronize any state derived from the missing transitions. Sequence and step
+counters saturate instead of wrapping.
+
+Publishers with up to 64 input slots publish with one workgroup. Larger workloads classify
+tiles in parallel, reserve ring positions in tile order, then scatter retained records.
+The input scan still scales with configured pair or trigger slots. Temporary storage is
+owned by the simulation graph and counted in batch residency. In Physics Batch Lab,
+**Event burst** checks counts, ordered trigger pairs and retained ring suffixes under
+deliberate overflow. The GPU Graph inspector shows the publication stages.
 
 The **Physics Stress Lab** exposes recovery counters, buffer capacities, completion
 p50/p95 and JSON reports. Independent GPU qualification tests cover rotated-box slab

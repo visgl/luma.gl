@@ -377,6 +377,12 @@ Lab collision scan compares a matched subset with scalar queries and presents a
 depth image for larger workloads. A world-level spatial index for queries,
 event compaction, and the remaining glTF behavior operations are open.
 
+Rigid-body contact and trigger publication now uses deterministic tiled GPU
+compaction. The ring keeps event order and reports overwritten sequences even
+during a burst larger than the ring, without running the whole publication
+loop in one invocation. The Batch Lab exercises both publishers in one step.
+Capacity-wide classification and consumer state recovery after loss remain open.
+
 Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
 produce correct payloads and ordering without whole-world readback per operation.
 
