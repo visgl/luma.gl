@@ -329,6 +329,7 @@ fn eventPublish(index:u32,flags:u32,offset:u32,reservation:vec3u){
   );
   return {
     events: extras[5].buffer,
+    history: extras[4].buffer,
     samples: {buffer: extras[3].buffer, resource: extras[3].resource, count: layout.count},
     sample: () =>
       addStage(

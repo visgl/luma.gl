@@ -99,6 +99,11 @@ import {
 } from './rigid-body-events';
 import {addRigidBodyEventCompaction} from './rigid-body-event-compaction';
 import {
+  readRigidBodyEventSnapshot,
+  type GPURigidBodyContactSnapshot,
+  type GPURigidBodyTriggerSnapshot
+} from './rigid-body-event-snapshot';
+import {
   RIGID_BODY_QUERY_SHADER,
   getRigidBodyBatchCastShader,
   RIGID_BODY_CAST_COMMAND_BYTES,
@@ -259,6 +264,14 @@ export type GPURigidBodyGPUCheckpoint = {
   destroy(): void;
 };
 
+/** An incremental read may need a recovery cursor before it can decode its queued bytes. */
+type PendingEventRead<Batch, Snapshot> = {
+  /** Hold the latest read until its cursor update finishes. */
+  result: Promise<Batch>;
+  /** Coalesce reads only when they use the same recovery dependency. */
+  afterSnapshot: Promise<Snapshot> | null;
+};
+
 export class GPURigidBodyWorld {
   private worldOrigin: [number, number, number] = [0, 0, 0];
   readonly id: string;
@@ -280,11 +293,25 @@ export class GPURigidBodyWorld {
   sleepStates: Buffer | null = null;
   /** World-owned GPU event ring; present only when eventCapacity is positive. */
   contactEvents: Buffer | null = null;
+  /** Trigger history and authored group IDs remain stable until world destruction. */
+  private triggerHistory: {buffer: Buffer; groups: Uint32Array} | null = null;
+  /** Contact activity is recorded in pair-slot order after accepted steps. */
+  private contactHistory: Buffer | null = null;
+  /** A recovery read shares the incremental trigger cursor. */
+  private triggerSnapshotRead: Promise<GPURigidBodyTriggerSnapshot> | null = null;
+  /** A recovery read shares the incremental contact cursor. */
+  private contactSnapshotRead: Promise<GPURigidBodyContactSnapshot> | null = null;
   private triggerEvents: Buffer | null = null;
   private triggerCursor = 0;
-  private triggerRead: Promise<GPURigidBodyTriggerBatch> | null = null;
+  private triggerRead: PendingEventRead<
+    GPURigidBodyTriggerBatch,
+    GPURigidBodyTriggerSnapshot
+  > | null = null;
   private eventCursor = 0;
-  private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
+  private eventRead: PendingEventRead<
+    GPURigidBodyContactBatch,
+    GPURigidBodyContactSnapshot
+  > | null = null;
   private queryComputation: BoundKernel | null = null;
   private queryReduction: BoundKernel | null = null;
   /** Batched nearest-hit computation using the current world pose buffers. */
@@ -1458,6 +1485,8 @@ export class GPURigidBodyWorld {
         )
       : undefined;
     this.triggerEvents = triggers?.events ?? null;
+    if (triggers && triggerLayout)
+      this.triggerHistory = {buffer: triggers.history, groups: triggerLayout.groups};
     const passDescriptions: Record<string, string> = {
       integrate: 'Apply gravity and advance body velocities and predicted poses for this timestep.',
       prepare: 'Reset broad-phase counters before generating potential collider pairs.',
@@ -2188,6 +2217,7 @@ export class GPURigidBodyWorld {
     }
     if (this.props.eventCapacity) {
       const contactHistory = allocate('contact-history', this.maximumPairs * 16);
+      this.contactHistory = contactHistory;
       this.contactEvents = allocate('contact-events', 16 + this.props.eventCapacity * 64);
       const eventBindings = [
         ...bindings.filter(binding => ['bodies', 'manifolds', 'ensemble'].includes(binding.name)),
@@ -2505,7 +2535,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 
   /** Rebase between submissions, preserving velocities, contact impulses and sleeping state. */
   shiftOrigin(shift: Vector3): void {
-    if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+    if (!this.device || this.destroyed || this.queryPending || this.eventReadsPending)
       throw new Error('Origin shifting requires an idle attached world');
     // Exact float32 shifts keep the CPU origin and GPU subtraction consistent.
     if (
@@ -2811,7 +2841,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   setHeightFieldTiles(edits: readonly GPURigidBodyHeightFieldEdit[]): void {
     if (!edits.length) return;
     const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
-    if (!metadata || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+    if (!metadata || this.destroyed || this.queryPending || this.eventReadsPending)
       throw new Error('Terrain streaming requires an idle attached world');
     const seen = new Set<number>();
     const packedFields = this.terrainAtlas
@@ -3298,10 +3328,18 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   readContactEvents(): Promise<GPURigidBodyContactBatch> {
     if (!this.contactEvents || this.destroyed)
       return Promise.reject(new Error('Contact events are not enabled'));
-    if (!this.eventRead)
-      this.eventRead = this.contactEvents
+    /** Queue the copy now, then decode only after any preceding recovery sets the cursor. */
+    const afterSnapshot = this.contactSnapshotRead;
+    if (this.eventRead && (!afterSnapshot || this.eventRead.afterSnapshot === afterSnapshot))
+      return this.eventRead.result;
+    /** Register the read before recovery can clear its own busy flag. */
+    const pending = {
+      afterSnapshot,
+      result: this.contactEvents
         .readAsync()
+        .finally(() => afterSnapshot)
         .then(bytes => {
+          /** The newest stream cursor is available once the preceding snapshot resolves. */
           const batch = decodeRigidBodyContactEvents(
             new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
             this.eventCursor
@@ -3310,9 +3348,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           return batch;
         })
         .finally(() => {
-          this.eventRead = null;
-        });
-    return this.eventRead;
+          if (this.eventRead === pending) this.eventRead = null;
+        })
+    };
+    this.eventRead = pending;
+    return pending.result;
   }
 
   /** Nearest exact sphere/OBB hit. Origins inside a shape return distance zero and a zero normal. */
@@ -3528,21 +3568,120 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   /** Read step-ordered trigger transitions without losing intermediate enter/exit changes. */
   readTriggerEvents(): Promise<GPURigidBodyTriggerBatch> {
     if (!this.triggerEvents || this.destroyed) throw new Error('Triggers are disabled');
-    if (this.triggerRead) return this.triggerRead;
-    this.triggerRead = this.triggerEvents
-      .readAsync()
-      .then(bytes => {
-        const batch = decodeRigidBodyTriggerEvents(
-          new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
-          this.triggerCursor
-        );
-        this.triggerCursor = batch.sequence;
-        return batch;
+    /** Queue the copy in caller order, including when recovery is still mapping. */
+    const afterSnapshot = this.triggerSnapshotRead;
+    if (this.triggerRead && (!afterSnapshot || this.triggerRead.afterSnapshot === afterSnapshot))
+      return this.triggerRead.result;
+    /** Track the read immediately so checkpoint operations see a busy world. */
+    const pending = {
+      afterSnapshot,
+      result: this.triggerEvents
+        .readAsync()
+        .finally(() => afterSnapshot)
+        .then(bytes => {
+          /** The snapshot has established the sequence used to decode this delta. */
+          const batch = decodeRigidBodyTriggerEvents(
+            new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
+            this.triggerCursor
+          );
+          this.triggerCursor = batch.sequence;
+          return batch;
+        })
+        .finally(() => {
+          if (this.triggerRead === pending) this.triggerRead = null;
+        })
+    };
+    this.triggerRead = pending;
+    return pending.result;
+  }
+
+  /** Recover the active contact set and advance the incremental cursor to the snapshot. */
+  resyncContactEvents(): Promise<GPURigidBodyContactSnapshot> {
+    if (!this.device || !this.contactEvents || !this.contactHistory || this.destroyed)
+      return Promise.reject(new Error('Contact events are not enabled'));
+    if (this.contactSnapshotRead) return this.contactSnapshotRead;
+    /** An earlier incremental read may still be advancing its cursor. */
+    const priorRead = this.eventRead?.result.catch(() => undefined);
+    /** Capture immediately, even when a previous delta read is still mapping. */
+    const snapshot = readRigidBodyEventSnapshot<GPURigidBodyContactSnapshot>(
+      this.device,
+      this.contactEvents,
+      this.contactHistory,
+      (header, rows) => {
+        /** The retained history contains active pairs, independent of event retention. */
+        const contacts: GPURigidBodyContactSnapshot['contacts'] = [];
+        for (let offset = 0; offset < rows.length; offset += 4) {
+          if (rows[offset + 2] === 0) continue;
+          /** A contact history row stores the two original collider IDs. */
+          const first = rows[offset];
+          /** Compound collider IDs map back to their owning bodies. */
+          const second = rows[offset + 1];
+          contacts.push({
+            colliders: [first, second],
+            bodies: [this.colliders[first].body, this.colliders[second].body]
+          });
+        }
+        return {...header, contacts};
+      }
+    );
+    this.contactSnapshotRead = snapshot
+      .finally(() => priorRead)
+      .then(result => {
+        this.eventCursor = result.sequence;
+        return result;
       })
       .finally(() => {
-        this.triggerRead = null;
+        this.contactSnapshotRead = null;
       });
-    return this.triggerRead;
+    return this.contactSnapshotRead;
+  }
+
+  /** Recover the active trigger overlap set and advance the incremental trigger cursor. */
+  resyncTriggerEvents(): Promise<GPURigidBodyTriggerSnapshot> {
+    if (!this.device || !this.triggerEvents || !this.triggerHistory || this.destroyed)
+      return Promise.reject(new Error('Triggers are disabled'));
+    if (this.triggerSnapshotRead) return this.triggerSnapshotRead;
+    /** Preserve authored trigger and target-body identities alongside the sampled pairs. */
+    const {buffer, groups} = this.triggerHistory;
+    /** Wait for prior cursor updates before replacing them with the new recovery point. */
+    const priorRead = this.triggerRead?.result.catch(() => undefined);
+    /** Read only the history bit and representative collider pair for each group. */
+    const snapshot = readRigidBodyEventSnapshot<GPURigidBodyTriggerSnapshot>(
+      this.device,
+      this.triggerEvents,
+      buffer,
+      (header, rows) => {
+        /** Swept crossings with no final overlap are absent from this state. */
+        const overlaps: GPURigidBodyTriggerSnapshot['overlaps'] = [];
+        for (let offset = 0; offset < rows.length; offset += 4) {
+          if ((rows[offset] & 1) === 0) continue;
+          overlaps.push({
+            trigger: groups[offset],
+            body: groups[offset + 1],
+            triggerCollider: rows[offset + 1],
+            collider: rows[offset + 2]
+          });
+        }
+        return {...header, overlaps};
+      }
+    );
+    this.triggerSnapshotRead = snapshot
+      .finally(() => priorRead)
+      .then(result => {
+        this.triggerCursor = result.sequence;
+        return result;
+      })
+      .finally(() => {
+        this.triggerSnapshotRead = null;
+      });
+    return this.triggerSnapshotRead;
+  }
+
+  /** Reset, capture and origin operations require stable event cursors. */
+  private get eventReadsPending(): boolean {
+    return Boolean(
+      this.eventRead || this.triggerRead || this.contactSnapshotRead || this.triggerSnapshotRead
+    );
   }
 
   private getSnapshotBuffers(includeRollbackScratch = true): Buffer[] {
@@ -3581,7 +3720,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       throw error;
     }
     const copy = (restore: boolean) => {
-      if (released || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+      if (released || this.destroyed || this.queryPending || this.eventReadsPending)
         throw new Error('Checkpoint requires an idle live world');
       const encoder = device.createCommandEncoder();
       for (const [index, buffer] of checkpointBuffers.entries())
@@ -3642,7 +3781,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   async captureState(
     options: {includeRollbackScratch?: boolean} = {}
   ): Promise<GPURigidBodyCapture> {
-    if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+    if (!this.device || this.destroyed || this.queryPending || this.eventReadsPending)
       throw new Error('Capture requires an idle attached world');
     return {
       version: 1,
@@ -3671,8 +3810,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       !this.device ||
       this.destroyed ||
       this.queryPending ||
-      this.eventRead ||
-      this.triggerRead ||
+      this.eventReadsPending ||
       capture.version !== 1 ||
       Boolean(capture.terrainAtlasLeases) !== Boolean(this.terrainAtlas) ||
       !Number.isInteger(terrainRevision) ||
