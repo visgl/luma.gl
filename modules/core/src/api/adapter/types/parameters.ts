@@ -239,6 +239,8 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   stencilPassOperation: 'keep',
   stencilFailOperation: 'keep',
   stencilDepthFailOperation: 'keep',
+  stencilFront: {},
+  stencilBack: {},
 
   // Multisample parameters
   sampleCount: 0,

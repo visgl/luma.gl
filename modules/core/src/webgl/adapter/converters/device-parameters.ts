@@ -265,12 +265,14 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
         0,
         mask
       );
-      gl.stencilOpSeparate(
-        face,
-        convertStencilOperation('stencilFailOperation', state.failOp),
-        convertStencilOperation('stencilDepthFailOperation', state.depthFailOp),
-        convertStencilOperation('stencilPassOperation', state.passOp)
-      );
+      if (state.failOp || state.depthFailOp || state.passOp) {
+        gl.stencilOpSeparate(
+          face,
+          convertStencilOperation('stencilFailOperation', state.failOp),
+          convertStencilOperation('stencilDepthFailOperation', state.depthFailOp),
+          convertStencilOperation('stencilPassOperation', state.passOp)
+        );
+      }
     }
   }
 
