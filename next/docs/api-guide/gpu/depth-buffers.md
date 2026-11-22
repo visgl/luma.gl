@@ -6,6 +6,18 @@ A depth attachment stores a depth value per framebuffer sample. For overlapping 
 
 For masks and per-sample tags, see [Stencil buffers](https://luma.gl/next/docs/api-guide/gpu/stencil-buffers.md).
 
+## Canyon Echo[​](#canyon-echo "Direct link to Canyon Echo")
+
+Pull the relief angle slider to one side. Each point comes from a visible sample in one captured color and depth image. Look through the gaps behind the bridge to see which surfaces the camera never recorded.
+
+Backend
+
+<!-- -->
+
+Automatic (best-available)
+
+Relief angle 0Return to photograph
+
 ## Configure opaque rendering[​](#configure-opaque-rendering "Direct link to Configure opaque rendering")
 
 This example creates an offscreen target. Supply the model with a conventional projection for the backend and color output compatible with the target.
