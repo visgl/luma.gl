@@ -2,7 +2,7 @@
 
 > **DepthStencilParameters** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L90)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L102)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/types/parameters.ts:90](https://github
 
 > `optional` **clearDepth?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:98](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L98)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L110)
 
 Depth value used when clearing depth buffers.
 
@@ -20,7 +20,7 @@ Depth value used when clearing depth buffers.
 
 > `optional` **depthCompare?**: [`CompareFunction`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CompareFunction.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L94)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L106)
 
 The comparison operation used to test fragment depths against existing depthStencilAttachment depth values.
 
@@ -30,7 +30,7 @@ The comparison operation used to test fragment depths against existing depthSten
 
 > `optional` **depthFormat?**: [`TextureFormatDepthStencil`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormatDepthStencil.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:96](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L96)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L108)
 
 The format of depthStencilAttachment this GPURenderPipeline will be compatible with.
 
@@ -40,9 +40,19 @@ The format of depthStencilAttachment this GPURenderPipeline will be compatible w
 
 > `optional` **depthWriteEnabled?**: `boolean`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L92)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L104)
 
 Whether this GPURenderPipeline can modify depthStencilAttachment depth values.
+
+***
+
+### stencilBack?[​](#stencilback "Direct link to stencilBack?")
+
+> `optional` **stencilBack?**: [`StencilFaceState`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilFaceState.md)
+
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L128)
+
+Overrides individual stencil settings for back-facing primitives.
 
 ***
 
@@ -50,7 +60,7 @@ Whether this GPURenderPipeline can modify depthStencilAttachment depth values.
 
 > `optional` **stencilCompare?**: [`CompareFunction`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CompareFunction.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L106)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L118)
 
 The CompareFunction used when testing fragments against depthStencilAttachment stencil values.
 
@@ -60,7 +70,7 @@ The CompareFunction used when testing fragments against depthStencilAttachment s
 
 > `optional` **stencilDepthFailOperation?**: [`StencilOperation`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilOperation.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L112)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L124)
 
 The StencilOperation performed if the fragment stencil comparison test passes but the depth comparison described by depthCompare fails.
 
@@ -70,9 +80,19 @@ The StencilOperation performed if the fragment stencil comparison test passes bu
 
 > `optional` **stencilFailOperation?**: [`StencilOperation`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilOperation.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L110)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L122)
 
 The StencilOperation performed if the fragment stencil comparison test described by stencilCompare fails.
+
+***
+
+### stencilFront?[​](#stencilfront "Direct link to stencilFront?")
+
+> `optional` **stencilFront?**: [`StencilFaceState`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilFaceState.md)
+
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L126)
+
+Overrides individual stencil settings for front-facing primitives.
 
 ***
 
@@ -80,7 +100,7 @@ The StencilOperation performed if the fragment stencil comparison test described
 
 > `optional` **stencilPassOperation?**: [`StencilOperation`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilOperation.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L108)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L120)
 
 The StencilOperation performed if the fragment stencil comparison test described by stencilCompare and the depth comparison described by depthCompare both pass.
 
@@ -90,7 +110,7 @@ The StencilOperation performed if the fragment stencil comparison test described
 
 > `optional` **stencilReadMask?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L101)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L113)
 
 Bitmask controlling which depthStencilAttachment stencil value bits are read when performing stencil comparison tests.
 
@@ -100,6 +120,6 @@ Bitmask controlling which depthStencilAttachment stencil value bits are read whe
 
 > `optional` **stencilWriteMask?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L103)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:115](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L115)
 
 Bitmask controlling which depthStencilAttachment stencil value bits are written to when performing stencil operations.

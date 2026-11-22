@@ -744,6 +744,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: SharedRenderPipelineProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SharedRenderPipelineProps.md): SharedRenderPipelineProps = DeviceResourceProps & object
 - [Type Alias: SignedDataType](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataType.md): SignedDataType = DataType
 - [Type Alias: SignedDataTypeT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md): SignedDataTypeT\ = T extends "unorm8" ? "uint8" T extends "unorm16" ? "uint16" T extends NormalizedDataType ? T : never
+- [Type Alias: StencilFaceState](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilFaceState.md): StencilFaceState = object
 - [Type Alias: StencilOperation](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilOperation.md): StencilOperation = "keep" \| "zero" \| "replace" \| "invert" \| "increment-clamp" \| "decrement-clamp" \| "increment-wrap" \| "decrement-wrap"
 - [Type Alias: StorageBufferBindingLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StorageBufferBindingLayout.md): StorageBufferBindingLayout = object
 - [Type Alias: StorageTextureBindingLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StorageTextureBindingLayout.md): StorageTextureBindingLayout = object

@@ -136,13 +136,13 @@ Partition the eight bits when several effects share one attachment. For example,
 
 To read just the selection bit, use `stencilReference: 0x80`, `stencilReadMask: 0x80`, and `stencilCompare: 'equal'`. A stored sample of `0x81` passes, even though its clip bit is also set. Use a draw with `'zero'` and a write mask of `0x80` to clear only the selection bit. A pass-start clear initializes the whole stencil aspect.
 
-Set masks independently. The read mask controls which bits enter the comparison. The write mask controls which bits an operation may update. For simple labels, keep the reference and values in the range 0–255.
+Set masks independently. The read mask controls which bits enter the comparison. The write mask controls which bits an operation may update. A read mask of zero makes both comparison operands zero. A write mask of zero preserves all stored bits. For simple labels, keep the reference and values in the range 0–255.
 
 ## Preserve a mask across passes[​](#preserve-a-mask-across-passes "Direct link to Preserve a mask across passes")
 
 Use the same framebuffer and set `clearStencil: false` on later passes to load the existing mask. Set `clearDepth` independently. For instance, you can preserve stencil while clearing depth for a new draw sequence.
 
-For a pass that only compares stencil, use `stencilReadOnly: true` with a pipeline that keeps stencil values, and leave depth writable if the pass needs it. A pass clear bypasses draw-time stencil comparisons. WebGL scissor state can limit a clear, so clear before applying a draw scissor. To clear a region or a subset of bits portably, draw the region with color and depth writes disabled and the appropriate stencil operation and write mask.
+For a pass that only compares stencil, use `stencilReadOnly: true` with a pipeline that keeps stencil values, and leave depth writable if the pass needs it. A numeric stencil clear fills the entire writable stencil attachment, regardless of the draw scissor, comparison, or write mask. Set `clearDepth: false` when clearing stencil alone on a packed depth/stencil attachment. To clear a region or a subset of bits portably, draw the region with color and depth writes disabled and the appropriate stencil operation and write mask.
 
 The reference is dynamic pass state. Set it before draws that depend on it, including when returning to zero. You can reuse one pipeline for many reference values.
 
@@ -155,7 +155,25 @@ The reference is dynamic pass state. Set it before draws that depend on it, incl
 | Faces             | Native WebGL exposes face-specific comparisons and operations, with restrictions on different effective masks and references.                                  | Native WebGPU exposes face-specific comparisons and operations with shared masks and reference. |
 | Shader reads      | Optional [WEBGL\_stencil\_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/) selects the sampled aspect on the texture object. | Native WebGPU has stencil-only views with unsigned-integer shader access.                       |
 
-The luma.gl flat stencil pipeline parameters apply to both faces. A single shared mask and reference fits both backends. A two-sided winding fill that increments front faces and decrements back faces in the same draw needs separate face operations. Follow the [stencil tracker](https://github.com/visgl/luma.gl/issues/3881) for that API and other capabilities.
+## Count winding with both faces[​](#count-winding-with-both-faces "Direct link to Count winding with both faces")
+
+A single draw can add to stencil on front faces and subtract on back faces. For example, draw triangulated contours with culling disabled and leave color writes off during counting.
+
+```
+const windingParameters = {
+
+  cullMode: 'none',
+
+  colorMask: 0,
+
+  stencilFront: {passOp: 'increment-wrap'},
+
+  stencilBack: {passOp: 'decrement-wrap'}
+
+} satisfies RenderPipelineParameters;
+```
+
+Clear stencil to zero before counting. Draw a cover with `stencilCompare: 'not-equal'` and a reference of zero to shade samples with nonzero winding. Opposite contributions cancel, so an inner contour with opposite winding cuts a hole. Face overrides apply field by field. Unspecified fields inherit the corresponding flat parameters and then the backend defaults. The masks and dynamic reference are shared by both faces. An override such as `stencilBack: {passOp: 'decrement-wrap'}` combines with a flat `stencilCompare` on both faces. For this recipe, declare `depthStencilAttachmentFormat: 'depth24plus-stencil8'` when creating the pipeline and use a framebuffer with the matching attachment.
 
 Use a single color attachment for portable color write masks. With multiple color attachments, the WebGL mask applies to all draw buffers and the WebGPU pipeline parameter applies to target zero. Color mask bits 0 through 3 select red, green, blue, and alpha respectively.
 

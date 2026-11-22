@@ -141,6 +141,7 @@
 * [SharedRenderPipelineProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SharedRenderPipelineProps.md)
 * [SignedDataType](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataType.md)
 * [SignedDataTypeT](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md)
+* [StencilFaceState](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilFaceState.md)
 * [StencilOperation](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StencilOperation.md)
 * [StorageBufferBindingLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StorageBufferBindingLayout.md)
 * [StorageTextureBindingLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/StorageTextureBindingLayout.md)

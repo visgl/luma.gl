@@ -2,7 +2,7 @@
 
 > **RenderPassParameters** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L177)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L193)
 
 These parameters are set on the render pass and are thus easy to change frequently
 
@@ -12,7 +12,7 @@ These parameters are set on the render pass and are thus easy to change frequent
 
 > `optional` **blendConstant?**: `NumberArray4`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:183](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L183)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:199](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L199)
 
 Sets constant blend color and alpha values used with "constant" and "one-minus-constant" blend factors.
 
@@ -22,7 +22,7 @@ Sets constant blend color and alpha values used with "constant" and "one-minus-c
 
 > `optional` **scissorRect?**: `NumberArray4` | `null`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L181)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:197](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L197)
 
 Scissor rectangle \[x, y, width, height], or null to disable clipping to a rectangle.
 
@@ -32,7 +32,7 @@ Scissor rectangle \[x, y, width, height], or null to disable clipping to a recta
 
 > `optional` **stencilReference?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:185](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L185)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L201)
 
 Stencil operation "replace" sets the value to stencilReference
 
@@ -42,6 +42,6 @@ Stencil operation "replace" sets the value to stencilReference
 
 > `optional` **viewport?**: `NumberArray4` | `NumberArray6`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:179](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L179)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L195)
 
 Linear map from normalized device coordinates to viewport coordinates \[x, y, width, height, minDepth, maxDepth]
