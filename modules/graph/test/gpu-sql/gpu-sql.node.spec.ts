@@ -291,7 +291,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     ).not.toThrow();
     expect(() =>
       context.query('SELECT category, COUNT(*) FROM trips GROUP BY category, category')
-    ).toThrow(/each GROUP BY key exactly once/);
+    ).toThrow(/GROUP BY keys must be distinct/);
     expect(() =>
       context.query(
         'SELECT category, identifier, fare, COUNT(*) FROM trips GROUP BY category, identifier, fare'
@@ -309,7 +309,10 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     ).toBeInstanceOf(GPUSQLQuery);
     expect(() =>
       context.query('SELECT FLOOR(fare) AS bucket, COUNT(*) FROM trips GROUP BY CEILING(fare)')
-    ).toThrow(/each GROUP BY key exactly once/);
+    ).toThrow(/group by every non-aggregate SELECT expression/);
+    expect(context.query('SELECT COUNT(*) FROM trips GROUP BY FLOOR(fare)')).toBeInstanceOf(
+      GPUSQLQuery
+    );
     expect(() => context.query('SELECT FLOOR(fare), COUNT(*) FROM trips GROUP BY 1')).toThrow(
       /computed group keys require an explicit AS alias/
     );

@@ -105,9 +105,10 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 
 
   Refer to a selected key by source name, a matching expression, a one-based SELECT position, or an unqualified alias that does not shadow a source column.
-  A computed key such as `FLOOR(fare) AS bucket` requires an explicit SELECT alias. Computed keys use observed grouping.
+  GROUP BY keys may be omitted from SELECT. Queries with hidden keys return only groups observed after WHERE.
+  A projected computed key such as `FLOOR(fare) AS bucket` requires an explicit SELECT alias. Computed keys use observed grouping.
   Grouped results preserve SELECT column order and retain key dictionaries under their output names.
-  Single-key dictionary grouping returns the full category domain. Single numeric keys and multi-key queries return only groups observed after WHERE.
+  A projected single dictionary key returns the full category domain. Single numeric keys and multi-key queries return only groups observed after WHERE.
   Observed grouping supports uint32, sint32, float32, and dictionary-encoded keys, including nulls. Float keys group both signed zeros together and treat all NaNs as a single value.
   For observed results, pass the compiled query’s `rowIndices` and `selectedCounts` to Arrow readback to read the observed rows from the capacity-backed result.
 

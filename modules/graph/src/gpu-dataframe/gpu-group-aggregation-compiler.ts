@@ -79,7 +79,7 @@ export type GPUGroupedOutputProjection = Readonly<{
 }>;
 
 /** Ordered source keys and their corresponding output fields. */
-type GPUGroupingKeys = readonly Readonly<{source: string; output: string}>[];
+type GPUGroupingKeys = readonly Readonly<{source: string; output?: string}>[];
 
 /** Adds observed numeric and composite grouping bounded by the source row count. @internal */
 export function compileGPUDataFrameObservedAggregation(
@@ -216,6 +216,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
     );
     const outputVectors = new Map<string, GPUVector<GPUAnalyticsScalarFormat>>();
     const outputs = groupingKeys.map(({output}, index) => {
+      if (output === undefined) return undefined;
       const vector = createGPUGroupedOutputVector(
         graph.device,
         `${prefix}-output-key-${index}`,
@@ -237,6 +238,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ? groupingKeys.map(({source, output}, index) => {
           const field = context.table.schema.fields.find(field => field.name === source);
           if (!field?.nullable) return undefined;
+          const input = getGPUGroupingValidity(context, source, inputs[index]);
+          if (output === undefined) return {input};
           const mask = createGPUGroupedOutputVector(
             graph.device,
             prefix + '-key-mask-' + index,
@@ -246,7 +249,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           ownedVectors.push(mask);
           validity[output] = mask;
           return {
-            input: getGPUGroupingValidity(context, source, inputs[index]),
+            input,
             output: graph.importGPUVector(prefix + '-key-mask-view-' + index, mask).data[0]
           };
         })
@@ -346,6 +349,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
     const dictionaries = Object.freeze(
       Object.fromEntries(
         groupingKeys.flatMap(({source, output}) => {
+          if (output === undefined) return [];
           const dictionary = context.dictionaries[source as keyof Selection & string];
           return dictionary ? [[output, dictionary]] : [];
         })
@@ -396,9 +400,9 @@ function addGPUObservedGroups(
   context: Pick<GPUDataFrameQueryExtensionContext<GPUTypeMap>, 'graph' | 'selectionMask'>,
   prefix: string,
   inputs: readonly GraphVectorView<GPUAnalyticsScalarFormat>[],
-  outputs: readonly GraphDataView<GPUAnalyticsScalarFormat>[],
+  outputs: readonly (GraphDataView<GPUAnalyticsScalarFormat> | undefined)[],
   nullableKeys: readonly (
-    | {input?: GraphVectorView<'uint32'>; output: GraphDataView<'uint32'>}
+    | {input?: GraphVectorView<'uint32'>; output?: GraphDataView<'uint32'>}
     | undefined
   )[],
   ownedVectors: GPUVector[]
@@ -548,13 +552,15 @@ function addGPUObservedGroups(
     `
   );
   for (const [index, {values, classes}] of staged.entries()) {
+    const output = outputs[index];
+    if (!output) continue;
     const validity = nullableKeys[index]?.output;
     addGPUGroupingPass(
       graph,
       prefix + '-publish-key-' + index,
       length,
       {order, heads, ranks, values, ...(validity ? {classes} : {})},
-      {output: words(outputs[index]), ...(validity ? {validity} : {})},
+      {output: words(output), ...(validity ? {validity} : {})},
       `
         if (heads[index] != 0u) {
           let row = order[index];
@@ -773,15 +779,18 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
   observed = false
 ): GPUTable<Result> {
   const outputFields: GPUField[] = [
-    ...keys.map(({source: name, output}) => {
+    ...keys.flatMap(({source: name, output}) => {
+      if (output === undefined) return [];
       const field = source.schema.fields.find(candidate => candidate.name === name);
       if (!field) throw new Error('GPUDataFrame grouped result requires an existing key field');
-      return {
-        name: output,
-        format: observed ? getGPUGroupingFormat(source, name) : 'uint32',
-        nullable: observed && field.nullable === true,
-        metadata: new Map(field.metadata)
-      };
+      return [
+        {
+          name: output,
+          format: observed ? getGPUGroupingFormat(source, name) : 'uint32',
+          nullable: observed && field.nullable === true,
+          metadata: new Map(field.metadata)
+        }
+      ];
     }),
     ...definitions.map(definition => ({
       name: definition.name,

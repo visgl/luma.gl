@@ -200,7 +200,7 @@ export function normalizeGPUDataFrameAggregations<
     GPUDataFrameQuery<Logical, SelectedColumns, Source>,
     'source' | 'selectedColumns' | 'derivedColumns'
   >,
-  outputKey: string,
+  outputKey: string | undefined,
   definitions: Readonly<Record<string, unknown>>
 ): GPUDataFrameAggregationDefinition[] {
   const entries = Object.entries(definitions);
