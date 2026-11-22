@@ -295,3 +295,9 @@ Streaming helpers preserve batch and buffer boundaries by creating one immutable
 ### Checking a column schema[​](#checking-a-column-schema "Direct link to Checking a column schema")
 
 `getArrowConversionFormat(type, options)` checks Arrow type metadata against the numeric vertex conversion rules and returns the GPU format. Pass `semantic: 'position'` to require numeric XY or XYZ rows, or `semantic: 'color'` to require RGB or RGBA rows. The check needs no device and reads no row values. Conversion still checks nulls and transformed widths.
+
+### Budgeted batch consumption[​](#budgeted-batch-consumption "Direct link to Budgeted batch consumption")
+
+Use `consumeArrowGPURecordBatches(device, source, schema, consume, {maxBatchPayloadBytes, signal})` to await each consumer callback and release its GPU batch before reading the next. The callback borrows the batch until its promise settles and should await any GPU work that uses it.
+
+The budget checks estimated prepared payload bytes before conversion. Transient conversion allocations, metadata, and unrelated GPU memory are outside that estimate. The iterator API also accepts the budget option and transfers batch ownership to the caller.
