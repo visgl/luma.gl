@@ -428,6 +428,37 @@ it('splits oversized Arrow batches into budgeted source-aligned slices', async (
   }
 });
 
+it('estimates a temporal list slice using its referenced values on WebGPU', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  try {
+    const child = makeTimestampBatch([1000n, 1001n, 1002n, 1003n, 1004n, 1005n, 1006n, 1007n]).data
+      .children[0];
+    const type = new arrow.List(new arrow.Field('values', child.type, false));
+    const vector = arrow.makeVector(
+      arrow.makeData({
+        type,
+        length: 4,
+        valueOffsets: Int32Array.of(0, 2, 4, 6, 8),
+        child
+      })
+    );
+    const table = new arrow.Table({times: vector});
+    const schema = {columns: [{name: 'times'}]};
+    const full = planArrowTableGPUConversion(device, table, schema);
+    const sliced = planArrowTableGPUConversion(
+      device,
+      new arrow.Table([table.batches[0].slice(2, 3)]),
+      schema
+    );
+    expect(full.estimatedPeakGPUBytes).toBeGreaterThan(64);
+    expect(sliced.estimatedPeakGPUBytes).toBeLessThanOrEqual(64);
+    expect(sliced.cost.temporaryGPUByteLength).toBe(28);
+  } finally {
+    device.destroy();
+  }
+});
+
 it('rejects a peak budget that fits output but omits temporary GPU conversion storage', async () => {
   const device = new NullDevice({});
   const batch = makeTimestampBatch([1000n, 1010n]);
