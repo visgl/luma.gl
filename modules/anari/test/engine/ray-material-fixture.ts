@@ -90,9 +90,11 @@ export async function createMaterialFixture() {
     adaptiveResolution: false,
     resolutionScale: 1
   };
+  /** Statistics from the most recent fixture render. */
+  let statistics: ReturnType<RayTracingSceneRenderer['render']> | undefined;
   /** Render once and average the RGB channels of adjacent pixels on the center row. */
   async function readMeanColor(pixelCount: 1 | 4): Promise<number[]> {
-    renderer.render(options);
+    statistics = renderer.render(options);
     device.submit();
     const layout = color.computeMemoryLayout({width: pixelCount, height: 1});
     const buffer = device.createBuffer({
@@ -134,6 +136,8 @@ export async function createMaterialFixture() {
     renderer,
     replacement,
     map,
+    /** Retrieves statistics from the same submission as the pixel readback. */
+    getStatistics: () => statistics,
     readPixel: () => readMeanColor(1),
     readMeanColor,
     readRadiance: () => renderer.readRadiance(options.id),

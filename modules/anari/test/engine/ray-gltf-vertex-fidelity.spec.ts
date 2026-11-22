@@ -3,6 +3,7 @@
 
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Geometry} from '@luma.gl/engine';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';
 
@@ -51,7 +52,8 @@ it('interpolates glTF vertex color and applies vertex alpha to ray masks', async
 
 it('updates packed triangle geometry and picking after retained morph weight changes', async () => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, surface, renderer, readPixel, destroy} = await createMaterialFixture();
+  const {options, surface, renderer, readPixel, getStatistics, destroy} =
+    await createMaterialFixture();
   try {
     options.background = [0, 0, 0, 1];
     options.progressive = false;
@@ -80,6 +82,22 @@ it('updates packed triangle geometry and picking after retained morph weight cha
     posed.morphWeights[0] = 0;
     expect(await readPixel()).toEqual(before);
     expect(await renderer.pick(options.id, 4, 4)).not.toBeNull();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeDefined();
+
+    // An inactive morph shares its base mesh with the distant copy.
+    options.surfaces = [
+      posed,
+      {...surface, id: 'shared-base', transforms: [new Matrix4().translate([-12, 0, 0])]}
+    ];
+    options.sceneRevisions.topology++;
+    expect(await readPixel()).toEqual(before);
+
+    // Activating the morph splits the packed layout into two meshes.
+    posed.morphWeights[0] = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeUndefined();
+    expect(await renderer.pick(options.id, 4, 4)).toBeNull();
   } finally {
     destroy();
   }
