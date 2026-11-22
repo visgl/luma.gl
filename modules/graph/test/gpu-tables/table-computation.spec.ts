@@ -110,16 +110,73 @@ it('GPUTableComputation binds aligned per-batch views and rejects unaligned ones
   ).toEqual([0, 3, 2, alignedRowOffset * 3, (alignedRowOffset + 1) * 3]);
 
   // A view that starts one row past the alignment cannot be bound at its own byte offset.
-  const unalignedComputation = new GPUTableComputation(device, {
-    source: COMPUTE_SHADER,
-    shaderLayout: COMPUTE_SHADER_LAYOUT,
-    inputVectors: {values: makeValues([0, alignedRowOffset + 1])}
-  });
-  const unalignedPass = device.beginComputePass({});
-  expect(() => unalignedComputation.dispatchBatches(unalignedPass, 1)).toThrow();
-  unalignedPass.end();
+  // The constructor rejects it, so no dispatch is recorded.
+  const alignment = device.limits.minStorageBufferOffsetAlignment;
+  expect(
+    () =>
+      new GPUTableComputation(device, {
+        source: COMPUTE_SHADER,
+        shaderLayout: COMPUTE_SHADER_LAYOUT,
+        inputVectors: {values: makeValues([0, alignedRowOffset + 1])}
+      })
+  ).toThrow(
+    `GPUTableComputation "values" batch 1 starts at byte ${alignment + 4}, which is not a multiple of minStorageBufferOffsetAlignment (${alignment})`
+  );
 
   computation.destroy();
-  unalignedComputation.destroy();
   buffer.destroy();
 });
+
+it('probe: unaligned per-batch views are rejected at construction with a useful message', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip('WebGPU unavailable');
+  const alignedRows = device.limits.minStorageBufferOffsetAlignment / 4;
+  const buffer = device.createBuffer({
+    usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
+    byteLength: alignedRows * 8
+  });
+  const values = makeProbeVector(buffer, [0, alignedRows + 1]);
+
+  let constructionError: unknown = null;
+  let computation: GPUTableComputation | null = null;
+  try {
+    computation = new GPUTableComputation(device, {
+      source: COMPUTE_SHADER,
+      shaderLayout: COMPUTE_SHADER_LAYOUT,
+      inputVectors: {values}
+    });
+  } catch (error) {
+    constructionError = error;
+  }
+
+  let dispatchError: unknown = null;
+  if (computation) {
+    const encoder = device.createCommandEncoder({id: 'probe-discarded'});
+    const pass = encoder.beginComputePass({});
+    try {
+      computation.dispatchBatches(pass, 1);
+    } catch (error) {
+      dispatchError = error;
+    }
+    pass.end();
+    computation.destroy();
+  }
+  buffer.destroy();
+
+  expect(constructionError, 'rejected before any dispatch is recorded').toBeInstanceOf(Error);
+  expect(String(dispatchError ?? constructionError)).toMatch(/offset|alignment/i);
+});
+
+function makeProbeVector(buffer: Buffer, rowOffsets: number[]): GPUVector {
+  return new GPUVector({
+    type: 'data',
+    name: 'values',
+    format: 'sint32',
+    data: rowOffsets.map(
+      rowOffset => new GPUData({buffer, format: 'sint32', length: 2, byteOffset: rowOffset * 4})
+    ),
+    ownsData: false
+  });
+}

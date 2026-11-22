@@ -47,6 +47,10 @@ export {
   type GPUVectorCollection
 } from './gpu-vector-utils';
 export {
+  assertStorageBufferOffsetAligned,
+  getStorageBufferOffsetAlignment
+} from './gpu-storage-offset-alignment';
+export {
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
   isFixedSizeListGPUVectorFormat,

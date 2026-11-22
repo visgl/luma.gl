@@ -22,6 +22,7 @@ import {
   type GraphBufferHandle,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
+import {getStorageBufferOffsetAlignment} from '@luma.gl/graph/gpu-data';
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
   GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
@@ -1554,7 +1555,7 @@ function getPagedSourceRowByteLength(
 }
 
 function getPagedSourceAlignmentRows(device: Device, batch: GPUSplatData): number {
-  const alignment = Math.max(device.limits.minStorageBufferOffsetAlignment || 1, 1);
+  const alignment = getStorageBufferOffsetAlignment(device);
   let rows = 1;
   for (const name of [
     ...SOURCE_COLUMNS.map(column => column.name),

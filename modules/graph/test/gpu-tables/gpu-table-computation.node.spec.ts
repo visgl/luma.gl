@@ -4,7 +4,7 @@
 
 import {GPUTableComputation} from '@luma.gl/graph/gpu-tables';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 // WebGPU's default minStorageBufferOffsetAlignment, which every adapter supports.
@@ -87,4 +87,48 @@ test('GPUTableComputation never truncates padded rows with shorter explicit valu
   limited.destroy();
   limitedData.destroy();
   empty.destroy();
+});
+
+test('GPUTableComputation rejects unaligned batch views before creating its kernel', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'limits', {
+    value: {...device.limits, minStorageBufferOffsetAlignment: STORAGE_OFFSET_ALIGNMENT}
+  });
+  const buffer = device.createBuffer({byteLength: STORAGE_OFFSET_ALIGNMENT * 2});
+  const makeValues = (byteOffsets: number[]) =>
+    new GPUVector({
+      type: 'data',
+      name: 'values',
+      format: 'sint32',
+      data: byteOffsets.map(
+        byteOffset => new GPUData({buffer, format: 'sint32', length: 2, byteOffset})
+      ),
+      ownsData: false
+    });
+
+  expect(
+    () =>
+      new GPUTableComputation(device, {
+        inputVectors: {values: makeValues([0, STORAGE_OFFSET_ALIGNMENT + 4])}
+      })
+  ).toThrow(
+    'GPUTableComputation "values" batch 1 starts at byte 260, which is not a multiple of minStorageBufferOffsetAlignment (256)'
+  );
+  // Empty batches are never bound, so their offsets are not checked.
+  const emptyBatchValues = new GPUVector({
+    type: 'data',
+    name: 'values',
+    format: 'sint32',
+    data: [
+      new GPUData({buffer, format: 'sint32', length: 2, byteOffset: 0}),
+      new GPUData({buffer, format: 'sint32', length: 0, byteOffset: 4})
+    ],
+    ownsData: false
+  });
+  // The alignment check passes, so construction reaches the WebGPU-only kernel.
+  expect(() => new GPUTableComputation(device, {inputVectors: {values: emptyBatchValues}})).toThrow(
+    'Kernel is only supported in WebGPU'
+  );
+
+  buffer.destroy();
 });

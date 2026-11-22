@@ -669,6 +669,21 @@ it('GPUTableShaderBindings rejects storage views at unaligned byte offsets', () 
   } satisfies ShaderLayout;
   const gpuInputSchema = GPU_INPUT_SCHEMA.slice(0, 1);
 
+  const getActiveBufferCount = () =>
+    device.statsManager.getStats('Resource Counts').get('Buffers Active').count;
+  const baselineBufferCount = getActiveBufferCount();
+  const unalignedMessage =
+    'GPUTableShaderBindings "positions" batch 0 starts at byte 8, which is not a multiple of minStorageBufferOffsetAlignment (256)';
+
+  // A view that starts inside a shared buffer cannot be bound at its own byte offset.
+  const unalignedTable = makeTable(8);
+  expect(
+    () => new GPUTableShaderBindings(device, {table: unalignedTable, gpuInputSchema, shaderLayout})
+  ).toThrow(unalignedMessage);
+  expect(getActiveBufferCount(), 'failed construction releases its buffers').toBe(
+    baselineBufferCount
+  );
+
   const alignedTable = makeTable(256);
   const aligned = new GPUTableShaderBindings(device, {
     table: alignedTable,
@@ -676,13 +691,15 @@ it('GPUTableShaderBindings rejects storage views at unaligned byte offsets', () 
     shaderLayout
   });
   expect(aligned.batches[0].bindings.positions).toMatchObject({offset: 256});
-  // A view that starts inside a shared buffer cannot be bound at its own byte offset.
-  const unalignedTable = makeTable(8);
-  expect(
-    () => new GPUTableShaderBindings(device, {table: unalignedTable, gpuInputSchema, shaderLayout})
-  ).toThrow();
+  const preparedBufferCount = getActiveBufferCount();
+  expect(() => aligned.updateBindings(unalignedTable)).toThrow(unalignedMessage);
+  expect(getActiveBufferCount(), 'failed update keeps reused buffers only').toBe(
+    preparedBufferCount
+  );
+  expect(aligned.table).toBe(alignedTable);
 
   aligned.destroy();
+  expect(getActiveBufferCount(), 'destroy returns to baseline').toBe(baselineBufferCount);
   alignedTable.destroy();
   unalignedTable.destroy();
   buffer.destroy();

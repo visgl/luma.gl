@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {assert, type Binding, type ComputePass, Device} from '@luma.gl/core';
+import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Kernel, type KernelProps} from '../../execution/compute/kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
+  assertStorageBufferOffsetAligned,
   isFixedSizeListGPUVectorFormat,
   type GPUData,
   type GPUVector
@@ -59,8 +60,10 @@ export class GPUTableComputation {
     assertNoDuplicateBindingNames(inputVectors, bindings);
 
     const batchState = getGPUTableComputationBatchState(inputVectors);
+    // Reject unaligned views before any work can be recorded.
+    assertInputVectorOffsetsAligned(device, inputVectors, batchState);
     const baseBindings = {
-      ...getDirectVectorBindings(device, inputVectors),
+      ...getDirectVectorBindings(inputVectors),
       ...bindings
     };
 
@@ -94,7 +97,7 @@ export class GPUTableComputation {
       } satisfies GPUTableComputationBatch;
       this.setBindings({
         ...this.baseBindings,
-        ...getBatchVectorBindings(this.kernel.device, this.inputVectors, batchIndex)
+        ...getBatchVectorBindings(this.inputVectors, batchIndex)
       });
 
       const workgroupCount =
@@ -161,21 +164,42 @@ function requiresBatchBinding(vector: GPUVector): boolean {
   return vector.data.length !== 1;
 }
 
-function getDirectVectorBindings(
+/**
+ * Checks that every chunk bound as storage starts at an aligned byte offset.
+ * Chunks of empty batches are skipped because they are never bound.
+ */
+function assertInputVectorOffsetsAligned(
   device: Device,
-  inputVectors: Record<string, GPUVector>
-): Record<string, Binding> {
+  inputVectors: Record<string, GPUVector>,
+  batchState: GPUTableComputationBatchState
+): void {
+  for (const [name, vector] of Object.entries(inputVectors)) {
+    const batched = requiresBatchBinding(vector);
+    vector.data.forEach((data, batchIndex) => {
+      if (!batched || !batchState.emptyBatches[batchIndex]) {
+        assertStorageBufferOffsetAligned(
+          device,
+          'GPUTableComputation',
+          name,
+          batchIndex,
+          data.byteOffset
+        );
+      }
+    });
+  }
+}
+
+function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Record<string, Binding> {
   const bindings: Record<string, Binding> = {};
   for (const [name, vector] of Object.entries(inputVectors)) {
     if (!requiresBatchBinding(vector)) {
-      bindings[name] = getGPUDataBinding(device, getSingleGPUVectorData(vector));
+      bindings[name] = getGPUDataBinding(getSingleGPUVectorData(vector));
     }
   }
   return bindings;
 }
 
 function getBatchVectorBindings(
-  device: Device,
   inputVectors: Record<string, GPUVector>,
   batchIndex: number
 ): Record<string, Binding> {
@@ -188,15 +212,12 @@ function getBatchVectorBindings(
     if (!data) {
       throw new Error(`GPUTableComputation vector "${name}" is missing batch ${batchIndex}`);
     }
-    bindings[name] = getGPUDataBinding(device, data);
+    bindings[name] = getGPUDataBinding(data);
   }
   return bindings;
 }
 
-function getGPUDataBinding(device: Device, data: GPUData): Binding {
-  // WebGPU storage bindings must start at a multiple of minStorageBufferOffsetAlignment.
-  // Views that start inside a shared buffer need a binding that starts at an aligned offset.
-  assert(data.byteOffset % getStorageOffsetAlignment(device) === 0);
+function getGPUDataBinding(data: GPUData): Binding {
   const fixedSizeListByteLength =
     data.format && isFixedSizeListGPUVectorFormat(data.format)
       ? data.length === 0
@@ -211,10 +232,6 @@ function getGPUDataBinding(device: Device, data: GPUData): Binding {
         ? (data.valueByteLength ?? data.length * data.byteStride)
         : Math.max(data.valueByteLength ?? 0, fixedSizeListByteLength)
   };
-}
-
-function getStorageOffsetAlignment(device: Device): number {
-  return Math.max(device.limits.minStorageBufferOffsetAlignment || 1, 1);
 }
 
 function getGPUDataBuffer(data: GPUData) {
