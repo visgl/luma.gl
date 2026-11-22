@@ -134,3 +134,18 @@ Treat asynchronous edits as boundaries between frames:
 Reset restores the starting scene; it should not reset an external camera. Rebuild preserves state by node object identity, so independently animated instances need separate mutable nodes even when they share immutable geometry or texture resources.
 
 Try [glTF Physics](https://luma.gl/next/examples/gltf/physics), [Authored Scene Stress](https://luma.gl/next/examples/gltf/authored-scene-stress), [Newton's Cradle](https://luma.gl/next/examples/experimental/newtons-cradle), and [Wrecking Ball](https://luma.gl/next/examples/experimental/wrecking-ball) to explore these paths.
+
+## Composed glTF scenes and ragdolls[​](#composed-gltf-scenes-and-ragdolls "Direct link to Composed glTF scenes and ragdolls")
+
+With a loader that supports the glTF 2.1 draft, enable `gltf: {loadExternalAssets: true}` when decoding. Pass the decoded document to `createComposedScenegraphsFromGLTF(device, source, {storageSkinPalettes: true})`. Each referencing node receives its own scenegraph objects, scene controllers, and materials. Traverse `composition.root.scene` to render the result. Each entry in `composition.instances` also exposes its source JSON and document-local node map. Use the instance's mount path or its resolved node objects to distinguish repeated authoring names. Destroy the composition after disposing any physics sessions that borrow it.
+
+To make a ragdoll, author dynamic limb bodies and physical joints around a normal skinned mesh. Each bone needs a body or a body ancestor. The physical joint attachments can be separate scenegraph nodes so their frames are independent of the skin bind pose.
+
+1. For imported rigs, use `parseGLTFPhysics` with `animationOwnership: 'scenegraph'` and `preserveAnimatedBodyModes: true`. Use `makeGLTFPhysicsScene` with the instance's nodes and root, then create a `ScenegraphPhysicsSession`. For a programmatic rig, supply the same body and joint definitions through the engine session.
+2. While the animation plays, sample the clip before each fixed step and pass its active nodes to `session.encode`. The session temporarily makes their bodies kinematic.
+3. At release, leave those nodes out of the active set. The bodies resume their authored dynamic mode from the last accepted pose and velocity. After encoding that step, call `ragdoll.encode(encoder, session.publication, meshWorldMatrix)` with a `ScenegraphRagdoll` connected to the existing skin binding. The mesh matrix uses the same origin-relative space as the simulation. Submit before drawing.
+4. To resume animation, reset the ragdoll's palette ownership and then sample the clip. Dispose the ragdoll before disposing the skin controller or its composition.
+
+The palette transfer reads the GPU-published body matrices and writes the same storage buffer the skin shader already uses. Ordinary CPU-authored animation can continue on another instance of the same asset. The current path uses ordered rigid-body joints and WebGPU storage palettes. It covers passive ragdolls with authored rigid colliders and fixed body-to-bone offsets.
+
+[Try Marionette Theater](https://luma.gl/next/examples/gltf/marionette-theater).
