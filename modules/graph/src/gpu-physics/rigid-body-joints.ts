@@ -17,6 +17,8 @@ export type GPURigidBodyJointFrame = {
   orientation?: readonly [number, number, number, number];
 };
 type JointBase = {
+  /** Instance-local name of the authored joint. All compiled rows share this name. */
+  id?: string;
   /** Can be toggled between submitted steps without rebuilding the world. */
   enabled?: boolean;
   first: number;

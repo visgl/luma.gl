@@ -563,6 +563,8 @@ the whole step. Qualification across adapters and broader fault attribution rema
 
 ### G9. Articulations and mechanism quality
 
+The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold is the next reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
+
 Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate
 reduced-coordinate articulation solving, contact coupling, motors, limits and closed-loop
 handling. Keep generic constraint and articulation APIs distinct where their semantics
