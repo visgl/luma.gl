@@ -210,9 +210,11 @@ export function getArrowPickingSourceInfo(
     table?: Pick<GPUTable, 'batches'> | null;
     sourceInfos?: readonly (GPURecordBatchSourceInfo | null | undefined)[];
   };
-  return (
-    sourceObject.sourceInfos?.[batchIndex] ?? sourceObject.table?.batches[batchIndex]?.sourceInfo
-  );
+  // An explicit `null` entry marks a packed batch, so only `undefined` falls back to the table.
+  const sourceInfo = sourceObject.sourceInfos?.[batchIndex];
+  return sourceInfo !== undefined
+    ? sourceInfo
+    : sourceObject.table?.batches[batchIndex]?.sourceInfo;
 }
 
 function getArrowBatchRowIndex(

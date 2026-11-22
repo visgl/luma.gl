@@ -407,6 +407,29 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     });
   });
 
+  test('treats a null sourceInfos entry as packed in the object picking source', () => {
+    const pickInfo = {batchIndex: 2, objectIndex: 3};
+    const sourceInfo = {sourceBatchIndex: 5, sourceRowIndexOffset: 0, sourceRowCount: 4};
+    const table = {batches: [{}, {}, {sourceInfo}]} as unknown as Pick<GPUTable, 'batches'>;
+    const packedPickInfo = {batchIndex: null, rowIndex: 3, batchRowIndex: null};
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined, null]})).toEqual(
+      packedPickInfo
+    );
+    expect(
+      resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined, null], table})
+    ).toEqual(packedPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [], table})).toEqual({
+      batchIndex: 5,
+      rowIndex: 3,
+      batchRowIndex: 3
+    });
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined]})).toEqual({
+      batchIndex: 2,
+      rowIndex: 3,
+      batchRowIndex: null
+    });
+  });
+
   test('keeps the raw picking batch index for a GPUTable that never carried sourceInfo', () => {
     const device = new NullDevice({id: 'arrow-analytics-picking-no-source-info'});
     const makeBatch = () =>
