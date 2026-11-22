@@ -58,6 +58,8 @@ type Puppet = {
   driveRows: number[];
   /** Hold the release pose with torque-limited dynamic joints. */
   recovering: boolean;
+  /** Sample the held release pose once, before the first driven step. */
+  recoveryTargetPending: boolean;
   released: boolean;
   resetting: boolean;
   animationTime: number;
@@ -226,6 +228,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
         joint.type === 'general' && joint.angular && joint.drive ? [index] : []
       ),
       recovering: false,
+      recoveryTargetPending: false,
       released: false,
       resetting: false,
       animationTime: this.puppets.length * 790
@@ -233,6 +236,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     button.onclick = () => {
       if (puppet.released && !puppet.recovering) {
         puppet.recovering = true;
+        puppet.recoveryTargetPending = true;
         for (const row of puppet.driveRows) puppet.session.world.setJointEnabled(row, true);
         button.textContent = `Reset ${instance.mount!.id}`;
         this.updateStatus();
@@ -266,6 +270,7 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
     puppet.ragdoll.reset();
     puppet.released = false;
     puppet.recovering = false;
+    puppet.recoveryTargetPending = false;
     puppet.instance.scenegraphs.animator.setTime(puppet.animationTime);
     this.updateStrings(puppet);
     puppet.button.textContent = `Release ${puppet.instance.mount!.id}`;
@@ -319,9 +324,10 @@ export default class MarionetteTheater extends AnimationLoopTemplate {
           this.updateStrings(puppet);
         }
         puppet.session.encode(encoder, {
-          angularDriveRows: puppet.recovering ? puppet.driveRows : undefined,
+          angularDriveRows: puppet.recoveryTargetPending ? puppet.driveRows : undefined,
           animatedNodes: puppet.released ? undefined : puppet.animatedNodes
         });
+        puppet.recoveryTargetPending = false;
         if (puppet.released) {
           // Both mesh and simulated bodies are expressed in the external instance's local world.
           puppet.ragdoll.encode(encoder, puppet.session.publication, puppet.skin.node.matrix);

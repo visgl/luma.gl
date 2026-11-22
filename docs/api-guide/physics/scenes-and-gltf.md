@@ -239,9 +239,9 @@ Marionette Theater gives each puppet three angular drive rows per articulation.
 Release a puppet to disable its motors. **Recover pose** enables its motors with the last sampled dance pose as their target. The puppet stays where it fell while its limbs move toward
 that held pose. **Reset** returns it to the strings.
 
-For a programmatic scene, author single-axis angular drives with a stiffness,
+For a programmatic scene, bind both bodies to scene nodes and author single-axis angular drives with a stiffness,
 damping, and maximum torque. After sampling animation, pass their compiled row
 indices to `session.encode(encoder, {angularDriveRows})`. The engine measures each
-target in its two joint attachment frames. Contacts and the torque cap determine how
+target in its two joint attachment frames. Sample once for a held pose, or sample each fixed step to follow a clip. Contacts and the torque cap determine how
 closely the dynamic bodies can follow. The GPU skin palette continues to use the
 solved body transforms.

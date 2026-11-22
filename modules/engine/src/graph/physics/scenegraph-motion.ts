@@ -127,10 +127,11 @@ export class ScenegraphPhysicsMotion {
         const joint = this.world.getJointParameters(index);
         if (joint.type !== 'general' || !joint.angular || !joint.drive)
           throw new Error('Expected angular drive');
-        const attachment = (body: number, frame?: readonly [number, number, number, number]) =>
-          (rotations.get(body)?.clone() ?? new Quaternion()).multiplyRight(
-            new Quaternion(frame ?? [0, 0, 0, 1])
-          );
+        const attachment = (body: number, frame?: readonly [number, number, number, number]) => {
+          const rotation = rotations.get(body);
+          if (!rotation) throw new Error('Missing angular drive body node');
+          return rotation.clone().multiplyRight(new Quaternion(frame ?? [0, 0, 0, 1]));
+        };
         const relative = attachment(joint.first, joint.firstFrame?.orientation)
           .invert()
           .multiplyRight(attachment(joint.second, joint.secondFrame?.orientation));
