@@ -943,3 +943,21 @@ const nodes = inspector.getSnapshot().graphs[0].preflight?.nodes;
 
 `GPUScan` and `GPUSegmentedScan` supply metadata. Custom compute nodes can supply a `kernel`
 declaration through `graph.addComputePass()` or `createGPUComputeCommandNode()`.
+
+### Pacing repeated submissions
+
+Use `GPUCommandGraphSubmissionPacer` when an animation loop owns submission and
+should leave headroom between graph executions. It allows one tracked submission
+at a time and chooses the next cooldown from the observed queue-completion time.
+The default targets a 50% duty cycle with a cooldown between 8 and 250 ms.
+Queue-completion time includes waiting behind other work on the queue.
+
+Check `isReady()` before encoding a batch. Submit with the application's usual
+queue ownership, then pass its completion promise to `trackSubmission()`. The
+pacer preserves completion errors and can accept later submissions after the
+minimum cooldown. The ANARI Observatory and Playground use this policy for live
+ray tracing. Offline captures retain their deterministic scheduling.
+
+The pacer controls how often work is submitted. Use the execution budget
+controller and bounded dispatches for graphs that also need to reduce work per
+submission.

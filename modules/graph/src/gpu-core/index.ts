@@ -731,3 +731,6 @@ export type {
   GPUGraphGroupAggregationProps,
   GPUGraphReductionProps
 } from './gpu-semantic-aggregation-operation';
+
+export {GPUCommandGraphSubmissionPacer} from './gpu-command-graph-submission-pacer';
+export type {GPUCommandGraphSubmissionPacerProps} from './gpu-command-graph-submission-pacer';
