@@ -34,7 +34,9 @@ Use a fresh frame, the same seed, resolution, scene, camera, quality settings, a
 
 ## Guided presentation and history limits[​](#guided-presentation-and-history-limits "Direct link to Guided presentation and history limits")
 
-Ray-traced scene renderers also accept `denoiseRadius: 0 | 1 | 2` (default `0`) for an opt-in spatial filter in internal pixels. It smooths accumulated linear radiance before tone mapping, guided by primitive identity, world normals and relative depth. Background and ambiguous overflow identities remain unfiltered. The spatial filter gives less weight to neighbors with fewer retained samples. It tapers from full strength at eight samples to zero at 64 samples to preserve detail as the unfiltered estimate converges. When the history limit is below 64, some filtering remains after the history reaches its limit. Changing the filter preserves unfiltered progressive history and picking channels.
+Ray-traced scene renderers also accept `denoiseRadius: 0 | 1 | 2` (default `0`) for an opt-in spatial filter in internal pixels. It smooths accumulated linear radiance before tone mapping, guided by primitive identity, world normals and relative depth. Background and ambiguous overflow identities remain unfiltered. The spatial filter gives less weight to neighbors with fewer retained samples. It tapers from full strength at eight samples to zero at 64 samples to preserve detail as the unfiltered estimate converges. When the history limit is below 64, some filtering remains after the history reaches its limit. Changing the radius preserves unfiltered progressive history and picking channels.
+
+Enable `varianceGuidance` with a nonzero radius to adapt the spatial filter to the retained variance of log luminance. The renderer accumulates the first and second moments of individual samples in two rotating RG32F textures. Low-variance pixels retain more detail. The estimate uses total luminance and shares the renderer’s existing reprojection acceptance tests. It adds 16 bytes per internal pixel across both textures and leaves 13 material texture bindings within the portable sampled-texture limit. Enabling or disabling moment tracking resets accumulation.
 
 With temporal reprojection, each bilinear tap and the history clipping neighborhood must match the reprojected surface identity, normal, and camera distance. Valid taps are normalized for color, while rejected taps reduce retained confidence so newly exposed areas respond more quickly to current samples.
 
@@ -51,9 +53,10 @@ The scene playground has Denoise and History samples controls plus owned allocat
 * `normal`: centered primary-hit world normals mapped from `[-1, 1]` into RGB `[0, 1]`.
 * `cameraDistance`: grayscale world-space camera-eye distance compressed as `distance / (1 + distance)`. It comes from temporal guidance and can vary laterally across a constant-depth plane in orthographic views. It is neither projected device depth nor ray-origin distance; use the exact distance channel for the latter.
 * `identity`: deterministic colors for primitive identifiers in retained internal guidance. Background is black; identifiers beyond the exact half-float range are magenta. Use full-resolution integer channel snapshots for exact IDs and picking.
+* `variance`: grayscale log-luminance standard deviation, compressed as `σ / (1 + σ)`. Selecting this view enables moment tracking.
 * `history`: grayscale `log2(1 + samples) / log2(257)`, exposing retained confidence up to the maximum 256-sample budget, including background pixels.
 
-Guidance views use nearest internal pixels, so reduced-resolution diagnostics do not imply full-output-resolution channels. The playground's Ray view selector and capture harness `--view` option expose these modes.
+Guidance views use nearest internal pixels, so reduced-resolution diagnostics do not imply full-output-resolution channels. The playground's Ray view selector and capture harness `--view` option expose these modes. Use `--variance-guidance --denoise 1` to capture the guided color output.
 
 ## Implementation capabilities[​](#implementation-capabilities "Direct link to Implementation capabilities")
 
