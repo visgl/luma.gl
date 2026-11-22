@@ -104,11 +104,11 @@ export type DepthStencilParameters = {
 
   /** The CompareFunction used when testing fragments against depthStencilAttachment stencil values. */
   stencilCompare?: CompareFunction;
-  /** The StencilOperation performed if the fragment stencil comparison test described by compare fails. */
+  /** The StencilOperation performed if the fragment stencil comparison test described by stencilCompare and the depth comparison described by depthCompare both pass. */
   stencilPassOperation?: StencilOperation;
-  /** The GPUStencilOperation performed if the fragment depth comparison described by depthCompare fails. */
+  /** The StencilOperation performed if the fragment stencil comparison test described by stencilCompare fails. */
   stencilFailOperation?: StencilOperation;
-  /** The GPUStencilOperation performed if the fragment stencil comparison test described by compare passes. */
+  /** The StencilOperation performed if the fragment stencil comparison test passes but the depth comparison described by depthCompare fails. */
   stencilDepthFailOperation?: StencilOperation;
 };
 
