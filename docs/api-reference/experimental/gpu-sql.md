@@ -117,6 +117,7 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
+  Aggregates can consume the selected left rows of a unique-right join directly on the GPU. The join and aggregate execute in one graph. An invalid right key index contributes no rows.
   The SELECT list controls which left-side columns appear in the result. The left join key can be omitted.
   Qualify the ON operands when the join sides cannot be determined from their field names.
 

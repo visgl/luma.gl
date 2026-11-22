@@ -31,7 +31,9 @@ import {
   type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
 import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
-import {compileGPUDataFrameJoin} from '../gpu-dataframe/gpu-join-compiler';
+import {compileGPUDataFrameAggregation} from '../gpu-dataframe/gpu-global-aggregation-compiler';
+import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
+import {compileGPUDataFrameJoin, type GPUAggregateJoin} from '../gpu-dataframe/gpu-join-compiler';
 import type {
   GPUDataFrameJoinType,
   GPUDataFrameNormalizedJoinOptions
@@ -146,7 +148,9 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
   groupBy: (key: string) => {
     readonly groupCount: number;
   };
-  aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
+  aggregate: (
+    definitions: GPUSQLAggregationDefinitions
+  ) => GPUSQLCompiledPlan & {readonly definitions: readonly GPUDataFrameAggregationDefinition[]};
   sortByGlobal: (
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
@@ -259,17 +263,55 @@ function buildGPUSQLPlan(
     })
   });
 
+  /** Binds a single equality join for row-returning and aggregate plans. */
+  const bindJoin = (join: NonNullable<GPUSQLStatement['join']>) => {
+    const right = tables[join.table.toLowerCase()];
+    if (!right) throw new Error(`GPUSQL table "${join.table}" is not registered`);
+    const rightQualifier = join.alias ?? join.table;
+    const {left: firstOperand, right: secondOperand} = join;
+    const matchesLeft = (reference: GPUSQLColumnReference) =>
+      matchesGPUSQLColumn(reference, qualifier, frame.columnNames);
+    const matchesRight = (reference: GPUSQLColumnReference) =>
+      matchesGPUSQLColumn(reference, rightQualifier, right.columnNames);
+    const forward = matchesLeft(firstOperand) && matchesRight(secondOperand);
+    const reversed = matchesLeft(secondOperand) && matchesRight(firstOperand);
+    if (forward && reversed) {
+      throw new Error('GPUSQL JOIN key references are ambiguous; qualify the columns');
+    }
+    const leftKey = resolve(reversed ? secondOperand : firstOperand);
+    const rightKey = resolveGPUSQLColumn(
+      reversed ? firstOperand : secondOperand,
+      rightQualifier,
+      right.columnNames
+    );
+    return {right, leftKey, rightKey};
+  };
+  const joinMethods = {
+    left: 'leftJoin',
+    semi: 'semiJoin',
+    anti: 'antiJoin',
+    inner: 'innerJoin'
+  } as const;
+
   const aggregates = statement.items.filter(item => item.aggregate);
   if (statement.having && (!statement.groupBy || !aggregates.length)) {
     throw new Error('GPUSQL HAVING requires GROUP BY and an aggregate SELECT item');
   }
   if (aggregates.length > 0) {
     if (
-      statement.join ||
-      (!statement.groupBy &&
-        (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined))
+      !statement.groupBy &&
+      (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined)
     ) {
-      throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or pagination');
+      throw new Error(
+        'GPUSQL aggregate queries without GROUP BY do not yet support ordering or pagination'
+      );
+    }
+    let aggregateJoin: GPUAggregateJoin | undefined;
+    if (statement.join) {
+      const {right, leftKey, rightKey} = bindJoin(statement.join);
+      const type = statement.join.type;
+      const join = query[joinMethods[type]](right, {leftOn: leftKey, rightOn: rightKey});
+      aggregateJoin = {right, type, options: join.options};
     }
     const definitions: GPUSQLAggregationDefinitions = {};
     const reservedNames = new Set(frame.columnNames);
@@ -461,7 +503,8 @@ function buildGPUSQLPlan(
                 graph,
                 columns,
                 ordering,
-                having
+                having,
+                aggregateJoin
               )
           },
           'observed-grouping',
@@ -487,7 +530,8 @@ function buildGPUSQLPlan(
               graph,
               {key: key.output!, columns},
               ordering,
-              having
+              having,
+              aggregateJoin
             )
         },
         'dense-grouping',
@@ -499,8 +543,23 @@ function buildGPUSQLPlan(
     if (aggregates.length !== statement.items.length) {
       throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
     }
+    const aggregate = query.aggregate(definitions);
+    const {predicates, selectedColumns, derivedColumns} = query;
     return describe(
-      query.aggregate(definitions),
+      aggregateJoin
+        ? {
+            compile: graph =>
+              compileGPUDataFrameAggregation(
+                frame,
+                predicates,
+                selectedColumns,
+                derivedColumns,
+                aggregate.definitions,
+                graph,
+                aggregateJoin
+              )
+          }
+        : aggregate,
       'global-aggregation',
       statement.items.map(item => outputNames.get(item)!),
       query.selectedColumns
@@ -534,36 +593,12 @@ function buildGPUSQLPlan(
     if (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined) {
       throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
-    const right = tables[statement.join.table.toLowerCase()];
-    if (!right) throw new Error(`GPUSQL table "${statement.join.table}" is not registered`);
-    const rightQualifier = statement.join.alias ?? statement.join.table;
-    const {left: firstOperand, right: secondOperand} = statement.join;
-    const matchesLeft = (reference: GPUSQLColumnReference) =>
-      matchesGPUSQLColumn(reference, qualifier, frame.columnNames);
-    const matchesRight = (reference: GPUSQLColumnReference) =>
-      matchesGPUSQLColumn(reference, rightQualifier, right.columnNames);
-    const forward = matchesLeft(firstOperand) && matchesRight(secondOperand);
-    const reversed = matchesLeft(secondOperand) && matchesRight(firstOperand);
-    if (forward && reversed) {
-      throw new Error('GPUSQL JOIN key references are ambiguous; qualify the columns');
-    }
-    const leftKey = resolve(reversed ? secondOperand : firstOperand);
-    const rightKey = resolveGPUSQLColumn(
-      reversed ? firstOperand : secondOperand,
-      rightQualifier,
-      right.columnNames
-    );
+    const {right, leftKey, rightKey} = bindJoin(statement.join);
     const keyIsSelected = selected.includes(leftKey);
     const workingColumns = keyIsSelected ? selected : [...selected, leftKey];
     const workingQuery = query.select(workingColumns);
     const joinType = statement.join.type;
-    const method = {
-      left: 'leftJoin',
-      semi: 'semiJoin',
-      anti: 'antiJoin',
-      inner: 'innerJoin'
-    } as const;
-    const join = workingQuery[method[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
+    const join = workingQuery[joinMethods[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
     if (keyIsSelected) return describe(join, 'unique-right-join', selected, workingColumns, 1);
 
     const {predicates, derivedColumns} = workingQuery;
