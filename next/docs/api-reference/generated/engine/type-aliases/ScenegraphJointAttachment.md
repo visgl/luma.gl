@@ -2,7 +2,7 @@
 
 > **ScenegraphJointAttachment** = `object`
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L28)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L30)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:28](h
 
 > **body**: [`ScenegraphNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md) | `null`
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L30)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L32)
 
 Null means the attachment is fixed in world space.
 
@@ -20,7 +20,7 @@ Null means the attachment is fixed in world space.
 
 > **orientation**: \[`number`, `number`, `number`, `number`]
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L32)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L34)
 
 ***
 
@@ -28,4 +28,4 @@ Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:32](h
 
 > **position**: \[`number`, `number`, `number`]
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L31)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L33)

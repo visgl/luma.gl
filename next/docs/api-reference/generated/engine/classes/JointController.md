@@ -1,6 +1,6 @@
 # Class: JointController
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L41)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L43)
 
 Resolves authored attachment nodes independently of file format and physics backend.
 
@@ -10,7 +10,7 @@ Resolves authored attachment nodes independently of file format and physics back
 
 > **new JointController**(`joints`): `JointController`
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L42)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L44)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -28,7 +28,7 @@ readonly [`ScenegraphJoint`](https://luma.gl/next/docs/api-reference/generated/e
 
 > `readonly` **joints**: readonly [`ScenegraphJoint`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphJoint.md)\[]
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L42)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L44)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -36,7 +36,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:42](h
 
 > **resolve**(`roots`, `bodyNodes`): [`ResolvedScenegraphJoint`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedScenegraphJoint.md)\[]
 
-Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L44)
+Defined in: [modules/engine/src/scenegraph/controllers/joint-controller.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/joint-controller.ts#L46)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 

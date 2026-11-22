@@ -821,7 +821,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: GroupNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md): Defined in36
 - [Class: IcoSphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/IcoSphereGeometry.md): Defined in99
 - [Class: Interactivity](https://luma.gl/next/docs/api-reference/generated/engine/classes/Interactivity.md): Defined in128
-- [Class: JointController](https://luma.gl/next/docs/api-reference/generated/engine/classes/JointController.md): Defined in41
+- [Class: JointController](https://luma.gl/next/docs/api-reference/generated/engine/classes/JointController.md): Defined in43
 - [Class: KeyFrames<T>](https://luma.gl/next/docs/api-reference/generated/engine/classes/KeyFrames.md): Defined in9
 - [Class: LegacyPickingManager](https://luma.gl/next/docs/api-reference/generated/engine/classes/LegacyPickingManager.md): Defined in13
 - [Class: Material<TModuleProps, TBindings>](https://luma.gl/next/docs/api-reference/generated/engine/classes/Material.md): Defined in84
