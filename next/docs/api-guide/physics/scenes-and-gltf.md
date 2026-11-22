@@ -146,6 +146,12 @@ To make a ragdoll, author dynamic limb bodies and physical joints around a norma
 3. At release, leave those nodes out of the active set. The bodies resume their authored dynamic mode from the last accepted pose and velocity. After encoding that step, call `ragdoll.encode(encoder, session.publication, meshWorldMatrix)` with a `ScenegraphRagdoll` connected to the existing skin binding. The mesh matrix uses the same origin-relative space as the simulation. Submit before drawing.
 4. To resume animation, reset the ragdoll's palette ownership and then sample the clip. Dispose the ragdoll before disposing the skin controller or its composition.
 
-The palette transfer reads the GPU-published body matrices and writes the same storage buffer the skin shader already uses. Ordinary CPU-authored animation can continue on another instance of the same asset. The current path uses ordered rigid-body joints and WebGPU storage palettes. It covers passive ragdolls with authored rigid colliders and fixed body-to-bone offsets.
+The palette transfer reads the GPU-published body matrices and writes the same storage buffer the skin shader already uses. Ordinary CPU-authored animation can continue on another instance of the same asset. The current path uses ordered rigid-body joints and WebGPU storage palettes. It supports passive and motor-driven ragdolls with authored rigid colliders and fixed body-to-bone offsets.
 
 [Try Marionette Theater](https://luma.gl/next/examples/gltf/marionette-theater).
+
+### Recovering an animated joint pose[​](#recovering-an-animated-joint-pose "Direct link to Recovering an animated joint pose")
+
+Marionette Theater gives each puppet three angular drive rows per articulation. Release a puppet to disable its motors. **Recover pose** enables its motors with the last sampled dance pose as their target. The puppet stays where it fell while its limbs move toward that held pose. **Reset** returns it to the strings.
+
+For a programmatic scene, bind both bodies to scene nodes and author single-axis angular drives with a stiffness, damping, and maximum torque. After sampling animation, pass their compiled row indices to `session.encode(encoder, {angularDriveRows})`. The engine measures each target in its two joint attachment frames. Sample once for a held pose, or sample each fixed step to follow a clip. Contacts and the torque cap determine how closely the dynamic bodies can follow. The GPU skin palette continues to use the solved body transforms.
