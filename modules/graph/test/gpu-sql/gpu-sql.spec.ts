@@ -751,6 +751,116 @@ it('GPUSQL groups nullable dictionary pairs across batches without confusing nul
   }
 });
 
+it('GPUSQL groups numeric keys across Arrow batches and preserves their storage types', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const columns = [
+    arrow.vectorFromArray([4294967295, null, 0, 4294967295, null, 0], new arrow.Uint32()),
+    arrow.vectorFromArray([-2147483648, -1, 2147483647, -2147483648, -1, null], new arrow.Int32()),
+    arrow.vectorFromArray([-0, NaN, Infinity, 0, NaN, null], new arrow.Float32()),
+    arrow.vectorFromArray(
+      ['other', 'basic', 'basic', 'other', 'basic', null],
+      new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 23)
+    )
+  ];
+  const fields = ['unsignedKey', 'signedKey', 'floatKey', 'category'].map(
+    (name, index) => new arrow.Field(name, columns[index].type, true)
+  );
+  const schema = new arrow.Schema(fields);
+  const input = new arrow.Table(
+    schema,
+    [
+      [0, 3],
+      [3, 3],
+      [3, 6]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(fields),
+            length: end - start,
+            children: columns.map(column => column.slice(start, end).data[0])
+          })
+        )
+    )
+  );
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, input),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({numbers: frame});
+  try {
+    for (const {sql, names, types, expected} of [
+      {
+        sql: 'SELECT floatKey, COUNT(*) AS rows FROM numbers GROUP BY floatKey',
+        names: ['floatKey', 'rows'],
+        types: [arrow.Float32, arrow.Uint32],
+        expected: [
+          [0, 2],
+          [Infinity, 1],
+          [NaN, 2],
+          [null, 1]
+        ]
+      },
+      {
+        sql: 'SELECT signedKey, unsignedKey, COUNT(*) AS rows FROM numbers GROUP BY unsignedKey, signedKey',
+        names: ['signedKey', 'unsignedKey', 'rows'],
+        types: [arrow.Int32, arrow.Uint32, arrow.Uint32],
+        expected: [
+          [2147483647, 0, 1],
+          [null, 0, 1],
+          [-2147483648, 4294967295, 2],
+          [-1, null, 2]
+        ]
+      },
+      {
+        sql: 'SELECT category AS label, unsignedKey, COUNT(*) AS rows FROM numbers GROUP BY label, unsignedKey',
+        names: ['label', 'unsignedKey', 'rows'],
+        types: [arrow.Dictionary, arrow.Uint32, arrow.Uint32],
+        expected: [
+          ['other', 4294967295, 2],
+          ['basic', 0, 1],
+          ['basic', null, 2],
+          [null, 0, 1]
+        ]
+      },
+      {
+        sql: 'SELECT unsignedKey, COUNT(*) AS rows FROM numbers WHERE unsignedKey IS NOT NULL GROUP BY unsignedKey',
+        names: ['unsignedKey', 'rows'],
+        types: [arrow.Uint32, arrow.Uint32],
+        expected: [
+          [0, 2],
+          [4294967295, 2]
+        ]
+      }
+    ]) {
+      const result = context.query(sql).compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const actual = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(actual.schema.fields.map(field => field.name)).toEqual(names);
+        types.forEach((type, index) =>
+          expect(actual.schema.fields[index].type).toBeInstanceOf(type)
+        );
+        expect(Array.from(actual, row => names.map(name => row[name]))).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('GPUSQL returns an empty observed group table for an empty Arrow source', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

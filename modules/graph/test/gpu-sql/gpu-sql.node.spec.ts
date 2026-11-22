@@ -288,7 +288,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       context.query(
         'SELECT category, identifier, COUNT(*) FROM trips GROUP BY category, identifier'
       )
-    ).toThrow(/two-key GROUP BY requires/);
+    ).not.toThrow();
     expect(() =>
       context.query('SELECT category, COUNT(*) FROM trips GROUP BY category, category')
     ).toThrow(/each GROUP BY key exactly once/);
