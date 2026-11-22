@@ -98,6 +98,10 @@ Unsupported statements, unknown columns, unregistered tables, unsupported string
 
 The loaders.gl adapter currently supports predicate pushdown and output projection. It accepts finite numeric, Boolean, and null predicate values, including reusable named parameters. Portable source-order `limit`, streaming, in-flight cancellation, string/binary/date values, and relational extensions are reported or rejected as unsupported instead of silently falling back to CPU work.
 
+## Inspecting a plan[​](#inspecting-a-plan "Direct link to Inspecting a plan")
+
+Call `context.query(sql).explain()` to inspect the bound execution route, projected and working columns, key count, join type, and pagination before compiling. The frozen description is generated during CPU planning and allocates no GPU buffers.
+
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
 * [GPU Dataframe](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md)
