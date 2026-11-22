@@ -62,6 +62,8 @@ it('restores all active contact pairs after overflow and resumes from that exact
     fixture.step();
     /** A read made during resync resumes from the recovered cursor. */
     const afterwards = fixture.world.readContactEvents();
+    expect(fixture.world.readContactEvents()).toBe(afterwards);
+    fixture.step();
     expect(await delta).toMatchObject({sequence: 3, step: 1, dropped: 2});
     expect(await recovery).toEqual({
       sequence: 3,
@@ -137,7 +139,15 @@ it('recovers compound overlaps and excludes completed swept crossings', async co
     expect(() => checkpoint.restore()).toThrow('idle live world');
     fixture.world.setColliderTransform(2, [0, 5, 0], [0, 0, 0, 1]);
     fixture.step();
+    /** Register the restore attempt ahead of the delta's recovery continuation. */
+    const remainsBusy = recovery.then(() =>
+      expect(() => checkpoint.restore()).toThrow('idle live world')
+    );
+    /** Queue the delta's GPU copy before another step can advance the ring header. */
     const next = fixture.world.readTriggerEvents();
+    expect(fixture.world.readTriggerEvents()).toBe(next);
+    fixture.step();
+    await remainsBusy;
     expect(await recovery).toEqual({
       sequence: 4,
       step: 1,
