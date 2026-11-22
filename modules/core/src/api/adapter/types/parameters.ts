@@ -87,6 +87,18 @@ export type StencilOperation =
   | 'increment-wrap'
   | 'decrement-wrap';
 
+/** Comparison and operations for one stencil face. Omitted fields inherit the flat parameters. */
+export type StencilFaceState = {
+  /** Comparison of the masked reference against the masked stored value. */
+  compare?: CompareFunction;
+  /** Operation on stencil failure. */
+  failOp?: StencilOperation;
+  /** Operation on stencil success followed by depth failure. */
+  depthFailOp?: StencilOperation;
+  /** Operation when both tests pass. */
+  passOp?: StencilOperation;
+};
+
 export type DepthStencilParameters = {
   /** Whether this GPURenderPipeline can modify depthStencilAttachment depth values. */
   depthWriteEnabled?: boolean;
@@ -110,6 +122,10 @@ export type DepthStencilParameters = {
   stencilFailOperation?: StencilOperation;
   /** The StencilOperation performed if the fragment stencil comparison test passes but the depth comparison described by depthCompare fails. */
   stencilDepthFailOperation?: StencilOperation;
+  /** Overrides individual stencil settings for front-facing primitives. */
+  stencilFront?: StencilFaceState;
+  /** Overrides individual stencil settings for back-facing primitives. */
+  stencilBack?: StencilFaceState;
 };
 
 // Color Parameters

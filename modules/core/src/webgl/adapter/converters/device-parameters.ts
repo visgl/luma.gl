@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '../../../index';
-import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '../../../index';
+import {Device, Parameters, PolygonMode, ProvokingVertex} from '../../../index';
+import {hasStencilFaceState, resolveStencilFace} from '../../../api/adapter/types/stencil-state';
 import {GL} from '../../../webgl-constants/index';
 import type {
   GLBlendEquation,
@@ -250,42 +251,28 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.stencilMask(parameters.stencilWriteMask);
   }
 
-  if (parameters.stencilReadMask) {
-    // stencilReadMask is handle inside stencil***Compare.
-    log.warn('stencilReadMask not supported under WebGL');
-  }
-
-  if (parameters.stencilCompare) {
-    const mask = parameters.stencilReadMask || 0xffffffff;
-    const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
-    // Even an always-passing stencil test must run to apply stencil operations.
+  if (hasStencilFaceState(parameters) || parameters.stencilReadMask !== undefined) {
+    const mask = parameters.stencilReadMask ?? 0xffffffff;
     gl.enable(GL.STENCIL_TEST);
-    gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
-    gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
+    for (const face of [GL.FRONT, GL.BACK] as const) {
+      const state = resolveStencilFace(
+        parameters,
+        face === GL.FRONT ? parameters.stencilFront : parameters.stencilBack
+      );
+      gl.stencilFuncSeparate(
+        face,
+        convertCompareFunction('stencilCompare', state.compare ?? 'always'),
+        0,
+        mask
+      );
+      gl.stencilOpSeparate(
+        face,
+        convertStencilOperation('stencilFailOperation', state.failOp),
+        convertStencilOperation('stencilDepthFailOperation', state.depthFailOp),
+        convertStencilOperation('stencilPassOperation', state.passOp)
+      );
+    }
   }
-
-  if (
-    parameters.stencilPassOperation ||
-    parameters.stencilFailOperation ||
-    parameters.stencilDepthFailOperation
-  ) {
-    const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
-    const sfail = convertStencilOperation('stencilFailOperation', parameters.stencilFailOperation);
-    const dpfail = convertStencilOperation(
-      'stencilDepthFailOperation',
-      parameters.stencilDepthFailOperation
-    );
-    gl.stencilOpSeparate(GL.FRONT, sfail, dpfail, dppass);
-    gl.stencilOpSeparate(GL.BACK, sfail, dpfail, dppass);
-  }
-
-  // stencilDepthFailOperation() {
-  //   // handled by stencilPassOperation
-  // },
-
-  // stencilFailOperation() {
-  //   // handled by stencilPassOperation
-  // },
 
   // COLOR STATE
   if (parameters.colorMask !== undefined) {

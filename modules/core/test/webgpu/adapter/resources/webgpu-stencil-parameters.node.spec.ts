@@ -66,3 +66,23 @@ test('one stencil parameter leaves the other face members at the WebGPU defaults
   expect(pipelineDescriptor.depthStencil.stencilFront).toEqual({passOp: 'replace'});
   expect(pipelineDescriptor.depthStencil.stencilBack).toEqual({passOp: 'replace'});
 });
+
+test('face overrides inherit unspecified flat stencil parameters', () => {
+  const pipelineDescriptor = makePipelineDescriptor();
+  pipelineDescriptor.depthStencil = {format: 'depth24plus-stencil8'};
+  applyParametersToRenderPipelineDescriptor(pipelineDescriptor, {
+    stencilBack: {passOp: 'decrement-wrap'},
+    stencilCompare: 'equal',
+    stencilPassOperation: 'increment-wrap',
+    stencilReadMask: 0
+  });
+  expect(pipelineDescriptor.depthStencil.stencilFront).toEqual({
+    compare: 'equal',
+    passOp: 'increment-wrap'
+  });
+  expect(pipelineDescriptor.depthStencil.stencilBack).toEqual({
+    compare: 'equal',
+    passOp: 'decrement-wrap'
+  });
+  expect(pipelineDescriptor.depthStencil.stencilReadMask).toBe(0);
+});
