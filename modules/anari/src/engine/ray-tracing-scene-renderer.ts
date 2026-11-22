@@ -50,6 +50,8 @@ import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.g
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
+  RAY_BLEND_ALPHA_MODE,
+  RAY_OPAQUE_ALPHA_MODE,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   getRayTracingMomentShader,
   RAY_TRACING_SCENE_SHADER,
@@ -4262,7 +4264,11 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 51] = geometryLayout?.blasLeafCapacity ?? 0;
       primitiveValues.set(previousTransform, primitiveOffset + 52);
       primitiveValues[primitiveOffset + 68] =
-        surface.material.alphaMode === 'MASK' ? (materialUniforms?.alphaCutoff ?? 0.5) : -1;
+        surface.material.alphaMode === 'MASK'
+          ? (materialUniforms?.alphaCutoff ?? 0.5)
+          : surface.material.alphaMode === 'BLEND'
+            ? RAY_BLEND_ALPHA_MODE
+            : RAY_OPAQUE_ALPHA_MODE;
       primitiveValues[primitiveOffset + 69] = materialUniforms?.transmissionFactor ?? 0;
       primitiveValues[primitiveOffset + 70] = materialUniforms?.ior ?? 1.5;
       primitiveValues[primitiveOffset + 71] = surfaceIndex;
@@ -4635,6 +4641,9 @@ function makeUniformData(props: {
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
   unsignedData[88] = Number(props.options.filteredCutouts ?? false);
+  unsignedData[89] = Number(
+    props.options.surfaces.some(surface => surface.material.alphaMode === 'BLEND')
+  );
   unsignedData[24] = props.internalWidth;
   unsignedData[25] = props.internalHeight;
   unsignedData[26] = props.primitiveCount;

@@ -4,6 +4,11 @@
 
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 
+/** Packed alpha selector for opaque ray materials. Nonnegative values are MASK cutoffs. */
+export const RAY_OPAQUE_ALPHA_MODE = -1;
+/** Packed alpha selector for stochastic blend coverage. */
+export const RAY_BLEND_ALPHA_MODE = -2;
+
 const RAY_TRACING_SCENE_TYPES = /* wgsl */ `
 struct RayTracingUniforms {
   inverseViewProjection: mat4x4<f32>,
@@ -188,10 +193,12 @@ struct Ray {
   origin: vec3<f32>,
   direction: vec3<f32>,
   footprint: vec2<f32>,
+  // Zero selects deterministic visibility for picking and guide buffers.
+  coverageSeed: u32,
 };
 
 fn makeRay(origin: vec3<f32>, direction: vec3<f32>) -> Ray {
-  return Ray(origin, direction, vec2<f32>(0.0));
+  return Ray(origin, direction, vec2<f32>(0.0), 0u);
 }
 
 struct RayHit {
@@ -252,11 +259,14 @@ const MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE = 0.06;
 const MAXIMUM_EXACT_HISTORY_PRIMITIVE_INDEX = 2047u;
 const OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER = 65504.0;
 
-fn makeRandom(seed: u32) -> f32 {
+fn hashRaySample(seed: u32) -> u32 {
   var value = seed * 747796405u + 2891336453u;
   value = ((value >> ((value >> 28u) + 4u)) ^ value) * 277803737u;
-  value = (value >> 22u) ^ value;
-  return f32(value) / 4294967295.0;
+  return (value >> 22u) ^ value;
+}
+
+fn makeRandom(seed: u32) -> f32 {
+  return f32(hashRaySample(seed)) / 4294967295.0;
 }
 
 fn makeCameraRayAtFullCoordinates(coordinates: vec2<f32>) -> Ray {
@@ -276,6 +286,11 @@ const FILTERED_CUTOUTS = /* FILTERED_CUTOUTS */ true;
 // Continuation and explicit light rays from the same vertex share an incident cone.
 fn makeSurfaceRay(incoming: Ray, distance: f32, origin: vec3<f32>, direction: vec3<f32>) -> Ray {
   var outgoing = makeRay(origin, direction);
+  if (incoming.coverageSeed != 0u) {
+    let directionBits = bitcast<vec3<u32>>(direction);
+    outgoing.coverageSeed = hashRaySample(incoming.coverageSeed ^
+      directionBits.x ^ (directionBits.y * 1973u) ^ (directionBits.z * 26699u)) | 1u;
+  }
   if (FILTERED_CUTOUTS && MATERIAL_HAS_MIPMAPS) {
     outgoing.footprint = vec2<f32>(incoming.footprint.x + incoming.footprint.y * distance,
       incoming.footprint.y);
@@ -349,7 +364,13 @@ fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
 }
 
 fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
-  return makeCameraRayAtOffset(pixel, makeRadianceSampleOffset(pixel, sampleIndex));
+  var ray = makeCameraRayAtOffset(pixel, makeRadianceSampleOffset(pixel, sampleIndex));
+  if (uniforms.visibility.y != 0u) {
+    let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
+    ray.coverageSeed = hashRaySample(uniforms.sampling.x ^ 0xa11faceu ^
+      (getSamplingPixelIndex(pixel) * 1973u) ^ (sequenceIndex * 26699u)) | 1u;
+  }
+  return ray;
 }
 
 fn makeGuideCameraRay(pixel: vec2<u32>) -> Ray {
@@ -500,7 +521,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
       let worldNormal = normalize((transpose(primitive.inverseTransform) *
         vec4<f32>(localNormal, 0.0)).xyz);
       let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0), vec2<f32>(0.0));
-      if (isMaterialVisible(candidate)) { return candidate; }
+      if (isMaterialVisible(candidate, ray.coverageSeed)) { return candidate; }
       minimumDistance = distance;
     }
     return closestHit;
@@ -564,10 +585,10 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
               vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * intersection.z,
               triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z, triangleIndex, 0.0,
               triangle.colors[0] * normalWeight + triangle.colors[1] * intersection.y + triangle.colors[2] * intersection.z, intersection.yz);
-            if (primitive.material.x >= 0.0) {
+            if (primitive.material.x != OPAQUE_ALPHA_MODE) {
               candidate.footprint = getCutoutFootprint(ray, candidate);
             }
-            if (isMaterialVisible(candidate)) { closestHit = candidate; }
+            if (isMaterialVisible(candidate, ray.coverageSeed)) { closestHit = candidate; }
           }
         }
       }
@@ -608,8 +629,8 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
 
 fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> bool {
   let primitive = primitives[primitiveIndex];
-  // Share masked traversal with primary rays, including UVs and both sphere interfaces.
-  if (primitive.material.x >= 0.0) {
+  // Share alpha traversal with primary rays, including UVs and both sphere interfaces.
+  if (primitive.material.x != OPAQUE_ALPHA_MODE) {
     return intersectPrimitive(ray, primitiveIndex, maximumDistance).distance < maximumDistance;
   }
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
@@ -842,11 +863,23 @@ fn getMaterialFootprint(hit: RayHit, transform: mat3x3<f32>, secondary: bool) ->
     length(firstGradient * firstUV.y + secondGradient * secondUV.y));
 }
 
-fn isMaterialVisible(hit: RayHit) -> bool {
-  let primitive = primitives[hit.primitiveIndex];
-  if (primitive.material.x < 0.0) { return true; }
-  return getMaterialOpacity(hit) >= primitive.material.x;
+// Negative sentinels leave the nonnegative range available for alpha cutoffs.
+const OPAQUE_ALPHA_MODE = ${RAY_OPAQUE_ALPHA_MODE}.0;
+const BLEND_ALPHA_MODE = ${RAY_BLEND_ALPHA_MODE}.0;
+
+fn isMaterialVisible(hit: RayHit, coverageSeed: u32) -> bool {
+  let alphaMode = primitives[hit.primitiveIndex].material.x;
+  if (alphaMode == OPAQUE_ALPHA_MODE) { return true; }
+  let opacity = getMaterialOpacity(hit);
+  if (alphaMode != BLEND_ALPHA_MODE) { return opacity >= alphaMode; }
+  if (opacity <= 0.0) { return false; }
+  if (opacity >= 1.0 || coverageSeed == 0u) { return true; }
+  // Key each candidate independently so BVH traversal order cannot change coverage.
+  let candidateSeed = hashRaySample(hit.primitiveIndex ^ 0x92d68ca2u) ^
+    hashRaySample(hit.triangleIndex ^ select(0x85ebca6bu, 0u, hit.entering));
+  return makeRandom(coverageSeed ^ candidateSeed) < opacity;
 }
+
 fn getMaterialOpacity(hit: RayHit) -> f32 {
   var opacity = primitives[hit.primitiveIndex].baseColor.a * hit.vertexColor.a;
   switch u32(primitives[hit.primitiveIndex].material.w) {
@@ -1180,7 +1213,7 @@ fn findInitialShadowMedium(origin: vec3<f32>) -> u32 {
     let primitiveIndex = leafPrimitiveIds[node - uniforms.acceleration.x];
     if (primitiveIndex >= uniforms.dimensions.z) { continue; }
     let primitive = primitives[primitiveIndex];
-    if (primitive.properties.y <= 0.0 || primitive.material.x >= 0.0 || primitive.materialFlags.x > 0.0 ||
+    if (primitive.properties.y <= 0.0 || primitive.material.x != OPAQUE_ALPHA_MODE || primitive.materialFlags.x > 0.0 ||
         primitive.material.z != 1.0 || primitive.material.y <= 0.0) { continue; }
     let localOrigin = (primitive.inverseTransform * vec4<f32>(origin, 1.0)).xyz;
     if (dot(localOrigin, localOrigin) < primitive.properties.y * primitive.properties.y) {
@@ -1224,7 +1257,7 @@ fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
     if (material.materialFlags.x > 0.0) { return vec3<f32>(0.0); }
     let distance = traveled + blocker.distance;
     if (MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION && material.properties.y > 0.0 &&
-        material.material.x < 0.0 && material.material.z == 1.0 && material.material.y > 0.0) {
+        material.material.x == OPAQUE_ALPHA_MODE && material.material.z == 1.0 && material.material.y > 0.0) {
       if (blocker.entering && medium == 0xffffffffu) {
         medium = blocker.primitiveIndex;
         mediumStart = distance;
@@ -1926,9 +1959,13 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   var emitterHit = RayHit(shadowDistance, lightNormal, primitiveIndex, true,
     emitterCoordinates, emitterSecondaryCoordinates, emitterTriangleIndex, 0.0, emitterVertexColor, vec2<f32>(0.0));
-  if (emitter.material.x >= 0.0) {
+  var emitterCoverage = 1.0;
+  if (emitter.material.x != OPAQUE_ALPHA_MODE) {
     emitterHit.footprint = getCutoutFootprint(shadowRay, emitterHit);
-    if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }
+    if (emitter.material.x == BLEND_ALPHA_MODE) {
+      // Continuation rays reach this emitter with the same coverage probability.
+      emitterCoverage = clamp(getMaterialOpacity(emitterHit), 0.0, 1.0);
+    } else if (!isMaterialVisible(emitterHit, 0u)) { return vec3<f32>(0.0); }
     // Both emitter estimators evaluate emission at mip zero.
     emitterHit.footprint = 0.0;
   }
@@ -1943,7 +1980,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     }
     weight = getMISWeight(lightDensity, materialDensity);
   }
-  return response * getMaterialEmission(emitterHit) * (weight / lightDensity) * visibility;
+  return response * getMaterialEmission(emitterHit) * (emitterCoverage * weight / lightDensity) * visibility;
 }
 
 // Scale before squaring to keep the power heuristic finite for grazing connections.
@@ -2685,7 +2722,10 @@ fn bakeIrradiance(@builtin(global_invocation_id) invocation: vec3u) {
   let reference = select(vec3f(0,0,1), vec3f(0,1,0), abs(normal.z) > 0.999);
   let tangent = normalize(cross(reference, normal));
   let direction = tangent * (sqrt(radial) * cos(angle)) + cross(normal,tangent) * (sqrt(radial) * sin(angle)) + normal * sqrt(1.0-radial);
-  let ray = makeRay(position.xyz + normal * 0.002, direction);
+  var ray = makeRay(position.xyz + normal * 0.002, direction);
+  if (uniforms.visibility.y != 0u) {
+    ray.coverageSeed = hashRaySample(seed ^ 0xa11faceu ^ (uniforms.acceleration.w * 26699u)) | 1u;
+  }
   let hit = intersectScene(ray, RAY_INFINITY);
   var irradiance = vec3f(0.0);
   if (hit.distance < RAY_INFINITY) {

@@ -60,7 +60,7 @@ weights change. Skeletal skinning applies the retained CPU joint palette to
 `JOINTS_0` and `WEIGHTS_0` after morphing, including position, normal and
 tangent deformation. Joint changes rebuild ray acceleration geometry. All
 placements of a surface share its pose. GPU-only and per-instance joint palettes
-and alpha blending require a compatible raster renderer.
+require a compatible raster renderer.
 
 ## Material support
 
@@ -69,7 +69,7 @@ and alpha blending require a compatible raster renderer.
 | Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
 | Unlit | glTF `KHR_materials_unlit` and retained unlit surfaces display base color without light response. They terminate camera and bounce rays and participate in silhouettes and shadows. |
 | Vertex color | Interpolated glTF `COLOR_0` RGB multiplies the base color. RGBA vertex alpha participates in `MASK` visibility. |
-| Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
+| Visibility | Alpha masks and stochastic alpha blending for rendering and shadows |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
 | Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
 | Dielectric specular | RGB color and alpha intensity maps |
@@ -90,6 +90,16 @@ Interpolated vertex alpha is an additional multiplier for triangle masks.
 Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres
 check both interfaces. `OPAQUE` ignores texture alpha.
+
+`BLEND` uses the product of base-color factor alpha, texture alpha, and vertex
+alpha as the probability of a surface hit. Primary and secondary rays can pass
+through rejected layers, and progressive linear radiance converges to
+source-over compositing for layered surfaces. Shadow rays sample the same
+coverage, and explicit emitter samples weight radiance by coverage.
+Picking, depth, and normal channels deterministically return the nearest
+intersection with nonzero coverage. Low sample counts can show visible noise
+in translucent layers and their shadows. The existing filtered-cutout option
+also filters blend coverage for mipmapped triangle textures.
 
 Triangle mesh normal maps use linear RGB and the interpolated glTF `TANGENT`
 frame when available, including its handedness and retained morph deltas. Meshes
