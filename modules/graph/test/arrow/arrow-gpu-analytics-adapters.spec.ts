@@ -119,9 +119,12 @@ it('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and dic
   void 0;
 });
 
-it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU batch', async () => {
+it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU batch', async ({
+  skip
+}) => {
   const device = await getWebGPUTestDevice();
   if (!device) {
+    skip('WebGPU unavailable');
     return;
   }
 
