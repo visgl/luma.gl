@@ -32,6 +32,9 @@ import {
   DOMINO_PHYSICS
 } from './scenes';
 
+const ARM_CAMERA_POSITION = [5, -8, 5] as const;
+const ARM_CAMERA_TARGET = [1.8, 0, 1.5] as const;
+
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scene = document.querySelector<HTMLSelectElement>('#scene')!;
@@ -81,7 +84,7 @@ try {
   const camera = new PerspectiveCamera(45, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
   if (scene.value === 'wreckingBall') camera.position.set(19, -21, 16);
-  else if (scene.value === 'robotArm') camera.position.set(5, -8, 5);
+  else if (scene.value === 'robotArm') camera.position.set(...ARM_CAMERA_POSITION);
   else camera.position.set(13, -19, 19);
   const controls = new OrbitControls(camera, canvas);
   controls.autoRotate = true;
@@ -90,11 +93,13 @@ try {
     controls.autoRotate = false;
   });
   let lastOrbitTime = performance.now();
-  controls.target.set(
-    scene.value === 'robotArm' ? 1.8 : scene.value === 'wreckingBall' ? -2 : 0,
-    0,
-    scene.value === 'wreckingBall' ? 4 : 2
-  );
+  if (scene.value === 'robotArm') controls.target.set(...ARM_CAMERA_TARGET);
+  else
+    controls.target.set(
+      scene.value === 'wreckingBall' ? -2 : 0,
+      0,
+      scene.value === 'wreckingBall' ? 4 : 2
+    );
   controls.update();
   const cameraBuffer = device.createBuffer({
     id: 'rigid-body-camera',
@@ -476,8 +481,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           camera.position.set(19, -21, 16);
           controls.target.set(-2, 0, 4);
         } else if (resources.sceneName === 'robotArm') {
-          camera.position.set(5, -8, 5);
-          controls.target.set(1.8, 0, 1.5);
+          camera.position.set(...ARM_CAMERA_POSITION);
+          controls.target.set(...ARM_CAMERA_TARGET);
         } else {
           camera.position.set(
             resources.sceneName === 'mixed' ? 24 : 11,
