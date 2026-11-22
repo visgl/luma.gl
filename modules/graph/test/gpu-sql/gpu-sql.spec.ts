@@ -757,9 +757,13 @@ it('GPUSQL groups numeric keys across Arrow batches and preserves their storage 
   const columns = [
     arrow.vectorFromArray([4294967295, null, 0, 4294967295, null, 0], new arrow.Uint32()),
     arrow.vectorFromArray([-2147483648, -1, 2147483647, -2147483648, -1, null], new arrow.Int32()),
-    arrow.vectorFromArray([-0, NaN, Infinity, 0, NaN, null], new arrow.Float32())
+    arrow.vectorFromArray([-0, NaN, Infinity, 0, NaN, null], new arrow.Float32()),
+    arrow.vectorFromArray(
+      ['other', 'basic', 'basic', 'other', 'basic', null],
+      new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 23)
+    )
   ];
-  const fields = ['unsignedKey', 'signedKey', 'floatKey'].map(
+  const fields = ['unsignedKey', 'signedKey', 'floatKey', 'category'].map(
     (name, index) => new arrow.Field(name, columns[index].type, true)
   );
   const schema = new arrow.Schema(fields);
@@ -808,6 +812,17 @@ it('GPUSQL groups numeric keys across Arrow batches and preserves their storage 
           [null, 0, 1],
           [-2147483648, 4294967295, 2],
           [-1, null, 2]
+        ]
+      },
+      {
+        sql: 'SELECT category AS label, unsignedKey, COUNT(*) AS rows FROM numbers GROUP BY label, unsignedKey',
+        names: ['label', 'unsignedKey', 'rows'],
+        types: [arrow.Dictionary, arrow.Uint32, arrow.Uint32],
+        expected: [
+          ['other', 4294967295, 2],
+          ['basic', 0, 1],
+          ['basic', null, 2],
+          [null, 0, 1]
         ]
       },
       {
