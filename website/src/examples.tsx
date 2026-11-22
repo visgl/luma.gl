@@ -1066,6 +1066,13 @@ function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['device
   }
 }
 
+/** Graph splat rendering reads 2 storage buffers in the vertex stage and sorts in 256-wide workgroups. */
+const GAUSSIAN_SPLAT_DEVICE_LIMITS = {
+  maxStorageBuffersInVertexStage: 2,
+  maxComputeInvocationsPerWorkgroup: 256,
+  maxComputeWorkgroupSizeX: 256
+} as const;
+
 export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
   if (typeof window !== 'undefined') {
     delete window.__lumaGaussianSplatsLoaderBundleUrl;
@@ -1080,6 +1087,7 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
       devices={['webgpu', 'webgl2']}
       // Vertex-stage storage buffers and large sort workgroups exceed compatibility defaults
       compatibilityMax
+      requiredDeviceLimits={GAUSSIAN_SPLAT_DEVICE_LIMITS}
       loadTemplate={props.embedded ? loadGaussianSplatsApp : loadGaussianSplatsShowcaseApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
@@ -1126,6 +1134,7 @@ export const GaussianSplatViewerExample: React.FC<
       devices={['webgpu', 'webgl2']}
       // Vertex-stage storage buffers and large sort workgroups exceed compatibility defaults
       compatibilityMax
+      requiredDeviceLimits={GAUSSIAN_SPLAT_DEVICE_LIMITS}
       loadTemplate={loadAnimationTemplate}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"

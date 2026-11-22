@@ -115,9 +115,11 @@ export type LumaExampleProps = React.PropsWithChildren<
     showHeader?: boolean;
     showStats?: boolean;
     devices?: DeviceTabSelection[];
-    requiredDeviceLimits?: Partial<
-      Pick<DeviceLimits, 'maxColorAttachments' | 'maxColorAttachmentBytesPerSample'>
-    >;
+    /**
+     * Minimum device limits the example needs. A device below them shows an unsupported message
+     * instead of a blank canvas. Storage-buffer and compute limits are checked on WebGPU only.
+     */
+    requiredDeviceLimits?: Partial<Pick<DeviceLimits, ExampleDeviceLimitName>>;
     canvasContextProfile?: CanvasContextProfile;
     xrCompatible?: boolean;
     /**
@@ -133,6 +135,21 @@ export type LumaExampleProps = React.PropsWithChildren<
 const defaultProps = {
   name: 'luma-example'
 };
+
+/** Device limits that examples can require. */
+type ExampleDeviceLimitName =
+  | 'maxColorAttachments'
+  | 'maxColorAttachmentBytesPerSample'
+  | 'maxStorageBuffersInVertexStage'
+  | 'maxComputeInvocationsPerWorkgroup'
+  | 'maxComputeWorkgroupSizeX';
+
+/** Limits that only WebGPU devices provide, so WebGL fallbacks skip them. */
+const WEBGPU_ONLY_EXAMPLE_DEVICE_LIMITS: ReadonlySet<ExampleDeviceLimitName> = new Set([
+  'maxStorageBuffersInVertexStage',
+  'maxComputeInvocationsPerWorkgroup',
+  'maxComputeWorkgroupSizeX'
+]);
 
 const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
   boxSizing: 'border-box',
@@ -699,6 +716,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     props.compatibilityMax,
     props.requiredDeviceLimits?.maxColorAttachments,
     props.requiredDeviceLimits?.maxColorAttachmentBytesPerSample,
+    props.requiredDeviceLimits?.maxStorageBuffersInVertexStage,
+    props.requiredDeviceLimits?.maxComputeInvocationsPerWorkgroup,
+    props.requiredDeviceLimits?.maxComputeWorkgroupSizeX,
     requestedDeviceTypesKey,
     mobileUnsupportedReason
   ]);
@@ -1028,24 +1048,22 @@ function assertExampleDeviceLimits(
   device: Device,
   requiredLimits: LumaExampleProps['requiredDeviceLimits']
 ): void {
-  const requiredColorAttachments = requiredLimits?.maxColorAttachments;
-  if (
-    requiredColorAttachments !== undefined &&
-    device.limits.maxColorAttachments < requiredColorAttachments
-  ) {
-    throw new Error(
-      `This example requires ${requiredColorAttachments} color attachments, but the selected GPU supports ${device.limits.maxColorAttachments}.`
-    );
-  }
-
-  const requiredAttachmentBytes = requiredLimits?.maxColorAttachmentBytesPerSample;
-  if (
-    requiredAttachmentBytes !== undefined &&
-    device.limits.maxColorAttachmentBytesPerSample < requiredAttachmentBytes
-  ) {
-    throw new Error(
-      `This example requires ${requiredAttachmentBytes} color-attachment bytes per sample, but the selected GPU supports ${device.limits.maxColorAttachmentBytesPerSample}.`
-    );
+  for (const [limitName, requiredLimit] of Object.entries(requiredLimits ?? {}) as [
+    ExampleDeviceLimitName,
+    number | undefined
+  ][]) {
+    if (
+      requiredLimit === undefined ||
+      (device.type !== 'webgpu' && WEBGPU_ONLY_EXAMPLE_DEVICE_LIMITS.has(limitName))
+    ) {
+      continue;
+    }
+    const deviceLimit = device.limits[limitName];
+    if (deviceLimit < requiredLimit) {
+      throw new Error(
+        `This example requires ${limitName} ${requiredLimit}, but the selected GPU supports ${deviceLimit}.`
+      );
+    }
   }
 }
 
