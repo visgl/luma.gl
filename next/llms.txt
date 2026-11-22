@@ -871,6 +871,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Function: loadImageBitmap()](https://luma.gl/next/docs/api-reference/generated/engine/functions/loadImageBitmap.md): loadImageBitmap(url, opts?): Promise\
 - [Function: makeAdapterAnimationBinding()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAdapterAnimationBinding.md): makeAdapterAnimationBinding(adapter, pointer): AnimationBinding
 - [Function: makeAnimationLoop()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAnimationLoop.md): makeAnimationLoop(AnimationLoopTemplateCtor, props?): TemplateAnimationLoop
+- [Function: makeDepthIntervalPlugin()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeDepthIntervalPlugin.md): makeDepthIntervalPlugin(sampleCount, bindGroup?): ShaderPlugin
 - [Function: makeEdgeGeometry()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometry.md): makeEdgeGeometry(geometry, options?): Geometry
 - [Function: makeEdgeGeometryFromGeometries()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometryFromGeometries.md): makeEdgeGeometryFromGeometries(geometries, options?): Geometry
 - [Function: makeGPUVectorGeometry()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeGPUVectorGeometry.md): makeGPUVectorGeometry(device, geometry): GPUVectorGeometry

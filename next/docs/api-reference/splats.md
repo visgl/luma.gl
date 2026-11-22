@@ -12,7 +12,7 @@ Explore a deterministic generated Gaussian scene without downloading a third-par
 
 ### Gaussian Splats
 
-Progressive HDR Gaussian splat rendering
+Moving glass and Gaussian splat compositing
 
 [GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/gaussian-splats)Info
 

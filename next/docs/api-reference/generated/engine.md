@@ -258,6 +258,7 @@
 * [loadImageBitmap](https://luma.gl/next/docs/api-reference/generated/engine/functions/loadImageBitmap.md)
 * [makeAdapterAnimationBinding](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAdapterAnimationBinding.md)
 * [makeAnimationLoop](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAnimationLoop.md)
+* [makeDepthIntervalPlugin](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeDepthIntervalPlugin.md)
 * [makeEdgeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometry.md)
 * [makeEdgeGeometryFromGeometries](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometryFromGeometries.md)
 * [makeGPUVectorGeometry](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeGPUVectorGeometry.md)
