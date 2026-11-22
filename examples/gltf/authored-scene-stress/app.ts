@@ -9,8 +9,10 @@ import {
 } from '@luma.gl/engine/physics';
 import {
   makeGLTFPhysicsScene,
+  exportGLTFPhysicsState,
   parseGLTFPhysics,
-  snapshotGLTFPhysicsScene
+  snapshotGLTFPhysicsScene,
+  type GLTFPhysicsDescription
 } from '@luma.gl/engine/gltf-physics';
 import PhysicsApp from '../physics/app';
 import {showError} from '../physics/app-ui';
@@ -18,7 +20,8 @@ import {showError} from '../physics/app-ui';
 /** Exercise the same scene session used by applications, using the standard glTF PBR renderer. */
 export default class AuthoredSceneStress extends PhysicsApp {
   session?: ScenegraphPhysicsSession;
-  captured?: ScenegraphPhysicsSessionCapture;
+  /** Native export uses the source description belonging to the captured collider revision. */
+  captured?: {state: ScenegraphPhysicsSessionCapture; description: GLTFPhysicsDescription};
   animationOwns = true;
   holdPose = false;
   stressRunning = false;
@@ -27,6 +30,12 @@ export default class AuthoredSceneStress extends PhysicsApp {
   private operation?: Promise<void>;
   private sceneLoading = false;
   private activeNodes = new Set<ScenegraphNode>();
+  /** Timing instrumentation is enabled only in the qualification runner. */
+  private readonly qualify = new URLSearchParams(location.search).has('qualify');
+  /** Keep render and accepted physics progress independent. */
+  private qualifiedFrames = 0;
+  /** Count completed simulation ticks without reading GPU poses. */
+  private qualifiedSteps = 0;
 
   constructor(props: AnimationProps) {
     super(props);
@@ -48,6 +57,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
 <button data-action="recook">Recook scene</button>
 <button data-action="capture">Capture</button>
 <button data-action="restore">Restore</button>
+<button data-action="export">Export live state</button>
 <button data-action="stress">Run stress cycle</button>
 </div><p data-status role="status">Preparing scene session…</p>`;
     document.querySelector('#physics-status')?.after(controls);
@@ -57,8 +67,22 @@ export default class AuthoredSceneStress extends PhysicsApp {
       );
       if (!button || this.sceneLoading || this.operation || !this.session) return;
       this.operation = Promise.resolve(this.snapshot)
-        .then(() => this.act(button.dataset.action!, button))
-        .catch(showError)
+        .then(async () => {
+          await this.act(button.dataset.action!, button);
+          if (this.qualify) {
+            /** Tell the runner when an editing operation has settled before timing again. */
+            const status = this.controls?.querySelector<HTMLElement>('[data-status]');
+            if (status) status.dataset['action'] = button.dataset.action;
+          }
+        })
+        .catch(error => {
+          if (this.qualify) {
+            /** Make failure details available to the qualification runner. */
+            const status = this.controls?.querySelector<HTMLElement>('[data-status]');
+            if (status) status.dataset['actionError'] = String(error);
+          }
+          showError(error);
+        })
         .finally(() => {
           this.operation = undefined;
         });
@@ -174,11 +198,37 @@ export default class AuthoredSceneStress extends PhysicsApp {
         break;
       }
       case 'capture':
-        this.captured = await session.capture();
+        this.captured = {state: await session.capture(), description: this.description!};
         break;
       case 'restore':
-        if (this.captured) await session.restore(this.captured);
+        if (this.captured) {
+          await session.restore(this.captured.state);
+          this.description = this.captured.description;
+        }
         break;
+      case 'export': {
+        /** Settle the current GPU revision and retain authored source resources. */
+        const source = this.description!;
+        /** Match live transforms to the same scene the render path is using. */
+        const sceneNodes = this.scenegraphsFromGLTF!.gltfNodeIndexToNodeMap;
+        /** Export readback is explicit and outside the frame loop. */
+        const exported = await session.withWorld(world =>
+          exportGLTFPhysicsState(source.source, source, world, {sceneNodes})
+        );
+        /** Download native draft glTF JSON. Embedded resource URIs remain intact. */
+        const url = URL.createObjectURL(
+          new Blob([JSON.stringify(exported, null, 2)], {
+            type: 'model/gltf+json'
+          })
+        );
+        /** Let the browser resolve the download before revoking its temporary URL. */
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'authored-physics.gltf';
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        break;
+      }
       case 'stress':
         this.stressRunning = !this.stressRunning;
         button.textContent = this.stressRunning ? 'Stop stress cycle' : 'Run stress cycle';
@@ -196,9 +246,17 @@ export default class AuthoredSceneStress extends PhysicsApp {
     this.updateStatus();
   }
   private updateStatus() {
-    const status = this.controls?.querySelector('[data-status]');
-    if (status && this.session)
+    const status = this.controls?.querySelector<HTMLElement>('[data-status]');
+    if (status && this.session) {
       status.textContent = `${this.session.world.count} bodies · revision ${this.session.revision} · ${this.stressCycles} reset/restore cycles · GPU poses (no frame readback)`;
+      if (this.qualify) {
+        status.dataset['revision'] = String(this.session.revision);
+        status.dataset['sample'] = this.loadedSample;
+        status.dataset['bodies'] = String(this.session.world.count);
+        status.dataset['steps'] = String(this.qualifiedSteps);
+        status.dataset['adapter'] ??= JSON.stringify(this.device.info);
+      }
+    }
   }
 
   override onRender(props: AnimationProps): void {
@@ -234,6 +292,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
               this.diagnostics.encode(graph, encoder, {parameters: undefined});
             }
           );
+          if (this.qualify) this.qualifiedSteps++;
         }
         if (this.stressRunning && this.simulationTime >= 3) {
           const capture = await session.capture();
@@ -257,6 +316,14 @@ export default class AuthoredSceneStress extends PhysicsApp {
     this.paused = true;
     super.onRender(props);
     this.paused = paused;
+    if (this.qualify && this.session && !this.loading) {
+      /** Report only frames that used the engine render path with its current GPU publication. */
+      const status = this.controls?.querySelector<HTMLElement>('[data-status]');
+      if (status && this.world?.poseMatrices) {
+        status.dataset['frames'] = String(++this.qualifiedFrames);
+        status.dataset['published'] = String(this.session.publication.bindings.size);
+      }
+    }
   }
 
   override onFinalize(): void {

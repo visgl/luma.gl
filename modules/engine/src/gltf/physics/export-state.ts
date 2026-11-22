@@ -3,32 +3,43 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core/matrix';
-import {decomposePhysicsTransform} from '@luma.gl/engine';
+import {decomposePhysicsTransform, type ScenegraphNode} from '@luma.gl/engine';
 import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
 import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {GLTFPhysicsDescription, GLTFPhysicsDocument} from './physics-types';
 import {makeGLTFPhysicsProperties} from './property-bindings';
 
+/** Authored input from the same settled session as the GPU world. */
+export type GLTFPhysicsExportOptions = {
+  /** Current local scene transforms for animated analytic collider frames and scales. */
+  sceneNodes?: ReadonlyMap<number, ScenegraphNode>;
+};
+
 /** Export a settled revision as native draft glTF JSON, preserving source assets and provenance.
  * This explicit editing operation reads GPU state. It is not a simulation/render bridge.
- * Geometry/topology changes must first be reimported so the description matches the live world.
+ * Recook mesh deformation and topology changes first. Current analytic animation can
+ * be exported directly when the scene node map represents the same accepted revision.
  * Animation clips remain authored: replaying a clip can intentionally replace the saved pose.
  */
 export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
   source: T,
   description: GLTFPhysicsDescription,
-  world: GPURigidBodyWorld
+  world: GPURigidBodyWorld,
+  {sceneNodes}: GLTFPhysicsExportOptions = {}
 ): Promise<T> {
   if (world.count !== description.bodies.length)
     throw new Error('Recook before exporting topology');
   const output = structuredClone(source);
   const nodes = output.nodes ?? [];
+  if (sceneNodes) writeLiveTransforms(output, sceneNodes);
   const parents = new Map<number, number>();
   for (const [index, node] of nodes.entries())
     for (const child of node.children ?? []) {
       if (parents.has(child)) throw new Error('Ambiguous export hierarchy');
       parents.set(child, index);
     }
+  /** Capture the local-frame origin before queuing the corresponding GPU state read. */
+  const origin = world.origin;
   const states = await world.readState();
   const matrices = new Map<number, Matrix4>();
   const locals = new Map<number, Matrix4>();
@@ -77,14 +88,8 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
           : target.joints.map(joint => ({...target, joints: [joint]}));
       for (const candidate of candidates) {
         const binding = new ScenegraphPhysicsProperties(world, new Map([[pointer, candidate]]));
-        if (JSON.stringify(binding.get(pointer)) !== JSON.stringify(value))
+        if (!equalProperty(binding.get(pointer), value))
           throw new Error('Shared physics resource diverged');
-      }
-    }
-    if (target.type === 'shape') {
-      for (const collider of target.colliders) {
-        if (world.getColliderShapeScale(collider.index).some(component => component !== 1))
-          throw new Error('Recook animated scale before exporting');
       }
     }
     writePointer(output, pointer, value.length === 1 ? value[0] : value);
@@ -97,9 +102,9 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       world.getBodyParameters(body.bodyIndex).centerOfMass ?? [0, 0, 0]
     );
     const matrix = new Matrix4()
-      .translate(state.position.map((value, axis) => value - center[axis]))
+      .translate(state.position.map((value, axis) => value + origin[axis] - center[axis]))
       .multiplyRight(rotation)
-      .scale(decomposePhysicsTransform(new Matrix4(body.worldMatrix)).scale);
+      .scale(decomposePhysicsTransform(authored(body.nodeIndex)).scale);
     bodyMatrices.set(body.nodeIndex, matrix);
   }
   matrices.clear();
@@ -114,6 +119,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     matrices.set(index, matrix);
     return matrix;
   };
+  validateColliderFrames(description, world, currentWorld);
   const bodyNodes = new Set(description.bodies.map(body => body.nodeIndex));
   for (const body of description.bodies) {
     if (body.nodeIndex < 0) continue;
@@ -208,6 +214,133 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     }
   }
   return output;
+}
+
+/** Keep animated nodes in TRS form so their existing channels remain valid glTF. */
+function writeLiveTransforms(
+  output: GLTFPhysicsDocument,
+  sceneNodes: ReadonlyMap<number, ScenegraphNode>
+): void {
+  /** Only node TRS channels require decomposition of a supplied local transform. */
+  const animated = new Set<number>();
+  for (const animation of output.animations ?? []) {
+    for (const {target} of animation.channels) {
+      if (
+        target.node !== undefined &&
+        ['translation', 'rotation', 'scale'].includes(target.path ?? '')
+      )
+        animated.add(target.node);
+      /** KHR_animation_pointer can target the same authored TRS fields. */
+      const extension = target.extensions?.['KHR_animation_pointer'];
+      if (
+        extension &&
+        typeof extension === 'object' &&
+        'pointer' in extension &&
+        typeof extension.pointer === 'string'
+      ) {
+        /** Snapshot node indices remain identical to source indices. */
+        const match = /^\/nodes\/(\d+)\/(translation|rotation|scale)$/.exec(extension.pointer);
+        if (match) animated.add(Number(match[1]));
+      }
+    }
+  }
+  for (const [index, current] of sceneNodes) {
+    /** Render-only matrices retain their exact affine transform. */
+    const node = output.nodes?.[index];
+    if (!node) throw new Error('Unknown export scene node');
+    if (animated.has(index)) {
+      /** Retain valid glTF authoring channels for non-body animated descendants as well. */
+      const transform = decomposePhysicsTransform(new Matrix4(current.matrix));
+      delete node.matrix;
+      node.translation = transform.position;
+      node.rotation = transform.rotation;
+      node.scale = transform.scale;
+    } else {
+      node.matrix = Array.from(current.matrix);
+      delete node.translation;
+      delete node.rotation;
+      delete node.scale;
+    }
+  }
+}
+
+/** Check that the native scene reproduces the live collider geometry and placement. */
+function validateColliderFrames(
+  description: GLTFPhysicsDescription,
+  world: GPURigidBodyWorld,
+  getWorldMatrix: (index: number) => Matrix4
+): void {
+  for (const collider of description.colliders) {
+    /** Compute the candidate native collider frame after accepted GPU body poses are substituted. */
+    const authored = decomposePhysicsTransform(
+      new Matrix4(getWorldMatrix(collider.nodeIndex)).multiplyRight(collider.localMatrix)
+    );
+    /** Authored absolute scale must match the live cooked dimensions without baking scale twice. */
+    const liveScale = world.getColliderShapeScale(collider.colliderIndex);
+    if (
+      !authored.scale.every((value, axis) =>
+        closeComponent(Math.abs(value), collider.cookedScale[axis] * liveScale[axis], 1e-15)
+      )
+    )
+      throw new Error(
+        'Export scene scale does not match the live collider. Supply the settled scene nodes or recook.'
+      );
+    if (collider.shapeIndex === undefined && liveScale.some(component => component !== 1))
+      throw new Error('Recook mesh geometry before export');
+
+    /** Express the collider in the accepted body's unscaled local frame. */
+    const body = description.bodies[collider.bodyIndex];
+    if (body.nodeIndex < 0) continue;
+    /** Strip visual scale using the same body frame convention as the importer. */
+    const bodyTransform = decomposePhysicsTransform(getWorldMatrix(body.nodeIndex));
+    /** Apply the inverse node-origin frame to the candidate collider pose. */
+    const frame = decomposePhysicsTransform(
+      new Matrix4()
+        .translate(bodyTransform.position)
+        .multiplyRight(new Matrix4().fromQuaternion(bodyTransform.rotation))
+        .invert()
+        .translate(authored.position)
+        .multiplyRight(new Matrix4().fromQuaternion(authored.rotation))
+    );
+    /** The two quaternion signs represent the same accepted collider orientation. */
+    const live = world.getColliderTransform(collider.colliderIndex);
+    /** Quaternion alignment tests orientation independently of quaternion sign. */
+    const alignment = frame.rotation.reduce(
+      (sum, value, axis) => sum + value * live.orientation[axis],
+      0
+    );
+    if (
+      !frame.position.every((value, axis) => closeComponent(value, live.position[axis])) ||
+      !closeComponent(Math.abs(alignment), 1)
+    )
+      throw new Error(
+        'Export scene pose does not match the live collider. Supply the settled scene nodes or recook.'
+      );
+  }
+}
+
+/** Allow roundoff when a shared value has been independently scaled and unscaled. */
+function equalProperty(
+  actual: readonly unknown[] | undefined,
+  expected: readonly unknown[]
+): boolean {
+  return (
+    actual?.length === expected.length &&
+    actual.every((value, index) => {
+      /** Boolean pointer values must still match exactly. */
+      const other = expected[index];
+      return typeof value === 'number' && typeof other === 'number'
+        ? closeComponent(value, other, 1e-15)
+        : value === other;
+    })
+  );
+}
+
+/** Browser GPU poses are float32 while source transforms and export are JavaScript numbers. */
+function closeComponent(first: number, second: number, minimumMagnitude = 1): boolean {
+  return (
+    Math.abs(first - second) <= Math.max(minimumMagnitude, Math.abs(first), Math.abs(second)) * 2e-6
+  );
 }
 
 function writePointer(document: object, pointer: string, value: unknown): void {

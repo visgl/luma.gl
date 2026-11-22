@@ -2760,6 +2760,21 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.props.publicationBounds = structuredClone(bounds);
   }
 
+  /** Read the authored collider frame relative to its body's node origin, excluding COM offset. */
+  getColliderTransform(colliderIndex: number): {
+    position: [number, number, number];
+    orientation: [number, number, number, number];
+  } {
+    /** This frame is metadata, so reading it does not synchronize the device. */
+    const collider = this.colliders[colliderIndex];
+    if (!Number.isInteger(colliderIndex) || !collider || this.destroyed)
+      throw new Error('Invalid collider');
+    return {
+      position: [...(collider.position ?? [0, 0, 0])],
+      orientation: normalizeRigidBodyRotation(collider.orientation)
+    };
+  }
+
   /** Applied scale relative to the initially cooked analytic shape. */
   getColliderShapeScale(colliderIndex: number): number[] {
     this.getColliderShape(colliderIndex);

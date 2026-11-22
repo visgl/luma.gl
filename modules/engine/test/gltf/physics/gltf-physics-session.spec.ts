@@ -235,3 +235,92 @@ it('rejects exporting explicit inertia under unequal scale instead of returning 
     await session.destroy();
   }
 });
+
+it('exports a settled animated collider frame and shared analytic scale without recooking', async context => {
+  /** This round trip exercises the same CPU-independent physics world used by rendering. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  /** Move the first collider to an independently animated child; both bodies share one shape. */
+  const original = document();
+  const nodes = [...original.nodes!];
+  nodes[1].children = [3];
+  const extension = nodes[1].extensions!['KHR_physics_rigid_bodies'] as Record<string, unknown>;
+  delete extension['collider'];
+  nodes.push({
+    translation: [1, 0, 0],
+    extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}, physicsMaterial: 0}}}
+  });
+  /** The exported child must remain a valid target of an authored TRS channel. */
+  const source: GLTFPhysicsDocument = {
+    ...original,
+    nodes,
+    animations: [{channels: [{target: {node: 3, path: 'scale'}}]}]
+  };
+  /** Reuse the real importer and the engine's animation/physics session. */
+  const options = {animationOwnership: 'scenegraph', propertyBindings: true} as const;
+  const description = parseGLTFPhysics(source, options);
+  expect(description.issues).toEqual([]);
+  /** The child is the only edited transform and the shared shape stays shared. */
+  const child = description.sceneNodes.get(3)!;
+  const session = await ScenegraphPhysicsSession.create(
+    device,
+    makeGLTFPhysicsScene(description, undefined, {gravity: [0, 0, 0]})
+  );
+  try {
+    await session.step(new Set([child]), () => {
+      child.setPosition([2, 0, 0]);
+      child.setScale([1.5, 2, 1]);
+      child.updateMatrix();
+    });
+    /** Source-only export cannot reconstruct a child changed by live animation. */
+    await expect(exportGLTFPhysicsState(source, description, session.world)).rejects.toThrow(
+      'Export scene scale does not match'
+    );
+    /** Export applies the accepted GPU pose and original shared primitive declaration. */
+    const saved = await session.withWorld(world =>
+      exportGLTFPhysicsState(source, description, world, {sceneNodes: description.sceneNodes})
+    );
+    expect(saved.nodes![3].matrix).toBeUndefined();
+    expect(saved.nodes![3].translation).toEqual([2, 0, 0]);
+    expect(saved.nodes![3].scale).toEqual([1.5, 2, 1]);
+    expect(source.nodes![3].translation).toEqual([1, 0, 0]);
+    /** Reimport must recook the same live dimensions exactly once. */
+    const roundTrip = parseGLTFPhysics(saved, options);
+    expect(roundTrip.issues).toEqual([]);
+    for (const collider of roundTrip.colliders) {
+      /** The imported collider's bounds and frame must agree with the accepted revision. */
+      const old = description.colliders.find(
+        candidate => candidate.nodeIndex === collider.nodeIndex
+      )!;
+      expect(collider.shapeIndex).toBe(0);
+      expect(collider.collider.shape).toEqual(session.world.getColliderShape(old.colliderIndex));
+      expect(collider.collider.position).toEqual(
+        session.world.getColliderTransform(old.colliderIndex).position
+      );
+    }
+  } finally {
+    await session.destroy();
+  }
+}, 120000);
+
+it('exports absolute body poses after a physics origin shift', async context => {
+  /** Source coordinates should not become simulation-local after rebasing. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const source = document();
+  source.nodes![0].translation = [129, 0, 0];
+  const description = parseGLTFPhysics(source);
+  const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
+  try {
+    session.world.shiftOrigin([128, 0, 0]);
+    const live = await session.world.readState();
+    expect(live[0].position[0]).toBeCloseTo(1.1, 4);
+    const saved = await exportGLTFPhysicsState(source, description, session.world);
+    const imported = parseGLTFPhysics(saved);
+    expect(imported.issues).toEqual([]);
+    expect(imported.bodies[0].worldMatrix[12]).toBeCloseTo(129, 4);
+    expect(imported.bodies[1].worldMatrix[12]).toBeCloseTo(134, 4);
+  } finally {
+    await session.destroy();
+  }
+}, 120000);
