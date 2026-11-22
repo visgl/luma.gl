@@ -355,6 +355,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
     const paceRayFrame = this.rendererSubtype === 'raytrace' && !this.captureFrameLimit;
     if (paceRayFrame && !this.raySubmissionPacer.isReady()) return;
+    if (paceRayFrame) {
+      scene.frame
+        .getParameter('renderer')
+        ?.setParameter(
+          'previousFrameExecutionMilliseconds',
+          this.raySubmissionPacer.lastSubmissionMilliseconds
+        )
+        .commitParameters();
+    }
     if (paceRayFrame) this.refinementRenderTime = time;
     const timedFrame =
       this.captureGpuTiming && this.rendererSubtype === 'raytrace'
@@ -1012,6 +1021,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       const previousScene = this.scene;
       this.refinementGeneration++;
+      this.raySubmissionPacer.resetCooldown();
       this.scene = nextScene;
       this.renderedFrameCount = 0;
       this.selectedPlacementId = null;

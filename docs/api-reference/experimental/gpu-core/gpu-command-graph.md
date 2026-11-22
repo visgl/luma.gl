@@ -956,7 +956,9 @@ Check `isReady()` before encoding a batch. Submit with the application's usual
 queue ownership, then pass its completion promise to `trackSubmission()`. The
 pacer preserves completion errors and can accept later submissions after the
 minimum cooldown. The ANARI Observatory and Playground use this policy for live
-ray tracing. Offline captures retain their deterministic scheduling.
+ray tracing. They feed `lastSubmissionMilliseconds` into the renderer budget
+so intentional idle time does not lower ray resolution. Offline captures retain
+their deterministic scheduling.
 
 The pacer controls how often work is submitted. Use the execution budget
 controller and bounded dispatches for graphs that also need to reduce work per

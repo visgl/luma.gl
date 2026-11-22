@@ -186,6 +186,15 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
 
     const paceRayFrame = this.frame.getParameter('renderer')?.subtype === 'raytrace';
     if (paceRayFrame && !this.raySubmissionPacer.isReady()) return;
+    if (paceRayFrame) {
+      this.frame
+        .getParameter('renderer')
+        ?.setParameter(
+          'previousFrameExecutionMilliseconds',
+          this.raySubmissionPacer.lastSubmissionMilliseconds
+        )
+        .commitParameters();
+    }
     const statistics = this.frame.render();
     if (paceRayFrame) {
       void submitPacedRayFrame(device, this.raySubmissionPacer).catch(() => {
@@ -287,6 +296,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           ) {
             return;
           }
+          this.raySubmissionPacer.resetCooldown();
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
@@ -339,6 +349,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   }
 
   private selectScene(sceneIndex: number): void {
+    this.raySubmissionPacer.resetCooldown();
     const scene = this.scenes[sceneIndex];
     this.activeSceneIndex = sceneIndex;
     this.orbitControls?.setProps({

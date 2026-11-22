@@ -310,6 +310,8 @@ export type ANARIRendererParameters = {
   minimumResolutionScale?: number;
   adaptiveResolution?: boolean;
   targetFrameTimeMilliseconds?: number;
+  /** Previous execution time excluding intentional idle time. Null skips this observation. */
+  previousFrameExecutionMilliseconds?: number | null;
   /**
    * Enables camera-reprojection temporal antialiasing for raster renderers. Defaults to true.
    */

@@ -17,9 +17,10 @@ test('waits for completion and adapts cooldown from observed queue time', async 
   const tracked = pacer.trackSubmission(signal.promise);
   time = 20;
   expect(pacer.isReady()).toBe(false);
-  await expect(pacer.trackSubmission(Promise.resolve())).rejects.toThrow('already being tracked');
+  await expect(pacer.trackSubmission(Promise.resolve())).rejects.toThrow();
   signal.resolve();
   await tracked;
+  expect(pacer.lastSubmissionMilliseconds).toBe(20);
   time = 39;
   expect(pacer.isReady()).toBe(false);
   time = 40;
@@ -28,6 +29,7 @@ test('waits for completion and adapts cooldown from observed queue time', async 
   const slow = pacer.trackSubmission(Promise.resolve());
   time = 140;
   await slow;
+  expect(pacer.lastSubmissionMilliseconds).toBe(100);
   time = 179;
   expect(pacer.isReady()).toBe(false);
   time = 180;
@@ -47,5 +49,19 @@ test('allows later work after a rejected submission and applies the minimum cool
   time = 15;
   expect(pacer.isReady()).toBe(false);
   time = 16;
+  expect(pacer.isReady()).toBe(true);
+});
+
+test('drops stale cooldown and timing after a workload change without overlapping submissions', async () => {
+  let time = 0;
+  const pacer = new GPUCommandGraphSubmissionPacer({now: () => time});
+  const signal = Promise.withResolvers<void>();
+  const tracked = pacer.trackSubmission(signal.promise);
+  pacer.resetCooldown();
+  expect(pacer.isReady()).toBe(false);
+  time = 50;
+  signal.resolve();
+  await tracked;
+  expect(pacer.lastSubmissionMilliseconds).toBeNull();
   expect(pacer.isReady()).toBe(true);
 });
