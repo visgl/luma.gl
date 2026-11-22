@@ -4,7 +4,7 @@
 
 import {selectAudioEnvironmentZone, type AudioEnvironmentZone} from '@luma.gl/engine';
 import {expect, test} from 'vitest';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 test('environment zones prioritize authored precedence then transformed volume', () => {
   const zones: AudioEnvironmentZone[] = [

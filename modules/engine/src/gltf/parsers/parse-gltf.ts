@@ -32,6 +32,7 @@ import {
 } from '../gltf/gltf-lightmap';
 import type {PrimitiveMaterialVariants} from '@luma.gl/engine';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
+import {type PBRLightingEnvironment} from '../../lighting/pbr-environment';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {resolveTextureCoordinateSet} from '../pbr/texture-transform';
 import {
@@ -51,8 +52,11 @@ export type ParseGLTFOptions = {
   modelOptions?: Partial<ModelProps>;
   /** Enables shader-level PBR debug output. */
   pbrDebug?: boolean;
-  /** Optional image-based lighting environment. */
-  imageBasedLightingEnvironment?: PBREnvironment;
+  /**
+   * Optional image-based lighting environment: a loaded `PBREnvironment`, or a
+   * `PBRLightingEnvironment` such as the textures of `createPrefilteredEnvironment`.
+   */
+  imageBasedLightingEnvironment?: PBREnvironment | PBRLightingEnvironment;
   /** Enables punctual light extraction. */
   lights?: boolean;
   /** Enables tangent usage when available. */

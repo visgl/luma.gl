@@ -23,8 +23,39 @@ export {makeSphereBoxPlanes, getBodyInertia, type GPUSphereBox} from './sphere-s
 export {
   makeConvexHullGeometry,
   makeTriangleMeshGeometry,
+  makeStaticTriangleMeshGeometry,
   type RigidBodyMeshGeometry
 } from './rigid-body-mesh';
+export {
+  makeRigidBodyHeightField,
+  type GPURigidBodyHeightField,
+  type GPURigidBodyHeightFieldSource
+} from './rigid-body-height-field';
+export {
+  stitchRigidBodyTerrainTiles,
+  type GPURigidBodyTerrainEdge,
+  type GPURigidBodyTerrainSeam,
+  type GPURigidBodyTerrainTile
+} from './rigid-body-terrain-stitch';
+export {
+  GPURigidBodyTerrainStream,
+  makeRigidBodyTerrainFetchProvider,
+  type GPURigidBodyTerrainFetchProps,
+  type GPURigidBodyTerrainProvider,
+  type GPURigidBodyTerrainSlot,
+  type GPURigidBodyTerrainStreamProps,
+  type GPURigidBodyTerrainWindow
+} from './rigid-body-terrain-stream';
+export {
+  GPURigidBodyTerrainSelector,
+  getRigidBodyTerrainTileBounds,
+  type GPURigidBodyTerrainAddress,
+  type GPURigidBodyTerrainBounds,
+  type GPURigidBodySelectedTerrainTile,
+  type GPURigidBodyTerrainFocus,
+  type GPURigidBodyTerrainSelection,
+  type GPURigidBodyTerrainSelectorProps
+} from './rigid-body-terrain-lod';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 export {
   getSphereClothReference,
@@ -63,6 +94,8 @@ export type {
   GPURigidBodySphereCastQuery,
   GPURigidBodyOverlapQuery,
   GPURigidBodyQueryFilter,
+  GPURigidBodyBatchCast,
+  GPURigidBodyBatchCastOptions,
   GPURigidBodyQueryHit,
   GPURigidBodyQueryResult
 } from './rigid-body-queries';
@@ -74,6 +107,13 @@ export type {
   GPURigidBodyTriggerEvent,
   GPURigidBodyTriggerBatch
 } from './rigid-body-triggers';
+export type {
+  GPURigidBodyActiveContact,
+  GPURigidBodyActiveTrigger,
+  GPURigidBodyContactSnapshot,
+  GPURigidBodyEventSnapshot,
+  GPURigidBodyTriggerSnapshot
+} from './rigid-body-event-snapshot';
 export {decodeRigidBodyTriggerEvents} from './rigid-body-triggers';
 
 export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joints';
@@ -81,6 +121,7 @@ export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joint
 export type {
   GPURigidBodyCapture,
   GPURigidBodyGPUCheckpoint,
+  GPURigidBodyHeightFieldEdit,
   GPURigidBodyParameters
 } from './gpu-rigid-body-world';
 
@@ -111,8 +152,14 @@ export type {
 } from './gpu-physics-batch';
 
 export {GPUPhysicsEnsemble, type GPUPhysicsEnsembleProps} from './gpu-physics-ensemble';
+export type {
+  GPUPhysicsTerrainAtlasPool,
+  GPUPhysicsTerrainAtlasStats
+} from './rigid-body-terrain-atlas';
+export {GPUPhysicsEnsembleTerrain} from './gpu-physics-ensemble-terrain';
 
 export type {GPURigidBodyJointLimit, GPURigidBodyJointDrive} from './joint-types';
 
 export {rotateRigidBodyVector, normalizeRigidBodyRotation} from './rigid-body-properties';
 export type {GPURigidBodyGeneralConstraint} from './rigid-body-general-joints';
+export type {GPURigidBodyVehicle} from './rigid-body-vehicle';

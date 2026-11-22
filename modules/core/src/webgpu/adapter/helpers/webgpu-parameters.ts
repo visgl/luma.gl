@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Parameters, log} from '../../../index';
+import {type DeviceFeatures, Parameters, log} from '../../../index';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -231,7 +231,17 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     blend.alpha.dstFactor = value;
   },
 
-  unclippedDepth: notSupported,
+  unclippedDepth: (
+    _: keyof Parameters,
+    value: boolean,
+    descriptor: GPURenderPipelineDescriptor,
+    features?: Pick<DeviceFeatures, 'has'>
+  ) => {
+    descriptor.primitive = {
+      ...descriptor.primitive,
+      unclippedDepth: value && Boolean(features?.has('depth-clip-control'))
+    };
+  },
   provokingVertex: notSupported,
   polygonMode: notSupported,
   polygonOffsetLine: notSupported,
@@ -285,11 +295,12 @@ const DEFAULT_PIPELINE_DESCRIPTOR: GPURenderPipelineDescriptor = {
 
 export function applyParametersToRenderPipelineDescriptor(
   pipelineDescriptor: GPURenderPipelineDescriptor,
-  parameters: Parameters = {}
+  parameters: Parameters = {},
+  features?: Pick<DeviceFeatures, 'has'>
 ): void {
   // Apply defaults
   Object.assign(pipelineDescriptor, {...DEFAULT_PIPELINE_DESCRIPTOR, ...pipelineDescriptor});
-  setParameters(pipelineDescriptor, parameters);
+  setParameters(pipelineDescriptor, parameters, features);
   // Factor setters create blend state; explicit disabling must win regardless of key order.
   if (parameters.blend === false) {
     for (const target of pipelineDescriptor.fragment?.targets || []) {
@@ -301,7 +312,8 @@ export function applyParametersToRenderPipelineDescriptor(
 // Apply any supplied parameters
 function setParameters(
   pipelineDescriptor: GPURenderPipelineDescriptor,
-  parameters: Parameters
+  parameters: Parameters,
+  features?: Pick<DeviceFeatures, 'has'>
 ): void {
   for (const [key, value] of Object.entries(parameters)) {
     if (value === undefined) {
@@ -309,7 +321,7 @@ function setParameters(
     }
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];
     if (setterFunction) {
-      setterFunction(key, value, pipelineDescriptor);
+      setterFunction(key, value, pipelineDescriptor, features);
     } else {
       log.error(`Illegal parameter ${key} in WebGPU`)();
     }

@@ -4,7 +4,7 @@
 
 import {isGLTFPhysicsPropertyPointer} from '../parsers/parse-gltf-physics-pointer';
 import {parsePhysicsJoints} from './parse-physics-joints';
-import {Matrix4, Quaternion} from '@math.gl/core';
+import {Matrix4, Quaternion} from '@math.gl/core/matrix';
 import {collectNodeCollisionGeometry} from './node-collision-geometry';
 import {getMeshBoxBounds} from './mesh-box-shape';
 import {

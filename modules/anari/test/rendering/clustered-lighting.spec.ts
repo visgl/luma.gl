@@ -13,7 +13,7 @@ import {
   type DeferredPointLight
 } from '@luma.gl/anari';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 
 it('clustered lighting exposes one composable fullscreen resolve', () => {
   const pipeline = createClusteredDeferredLightingCompositeShaderPass();

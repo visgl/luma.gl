@@ -21,7 +21,7 @@ import {
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/graph/gpu-data';
-import type {TypedArray, TypedArrayConstructor} from '@math.gl/core';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/core/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 import type {GPUEvaluationScope} from './gpu-evaluation-scope';

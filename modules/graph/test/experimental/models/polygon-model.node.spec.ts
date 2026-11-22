@@ -11,7 +11,7 @@ import {
   createPolygonShaderInputs,
   PolygonStorageModel
 } from '@luma.gl/engine/models';
-import {POLYGON_GPU_INPUT_SCHEMA, type PolygonGPUVectors} from '@luma.gl/graph/experimental/models';
+import {POLYGON_GPU_INPUT_SCHEMA, type PolygonGPUVectors} from '@luma.gl/graph/experimental-models';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import type {ShaderModule} from '@luma.gl/shaders';
 

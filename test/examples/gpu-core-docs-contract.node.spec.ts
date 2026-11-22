@@ -294,6 +294,7 @@ function collectTableOfContentsIdentifiers(value: unknown): string[] {
   const record = value as Record<string, unknown>;
   return [
     ...(typeof record.id === 'string' ? [record.id] : []),
+    ...collectTableOfContentsIdentifiers(record.link),
     ...collectTableOfContentsIdentifiers(record.items)
   ];
 }

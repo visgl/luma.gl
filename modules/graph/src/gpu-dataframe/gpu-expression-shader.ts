@@ -11,6 +11,7 @@ import {getGPUExpressionCastWGSL, GPU_EXPRESSION_CAST_WGSL} from '../gpu-core/gp
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUDataFrame} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
+import {isGPUScalarFunction, type GPUExpressionUnaryOperator} from './gpu-expression';
 import type {
   GPUExpression,
   GPUExpressionBinaryOperator,
@@ -82,13 +83,8 @@ export function makeGPUQueryExpressionShaderPlan<T extends GPUTypeMap>(
   source: GPUDataFrame<T>,
   predicates: readonly GPUExpression<boolean, string>[],
   derivedColumns: readonly GPUDataFrameDerivedColumn[] = [],
-  selectedColumns: readonly string[] = [],
-  allowEmptyPredicates = false
+  selectedColumns: readonly string[] = []
 ): GPUQueryExpressionShaderPlan {
-  if (predicates.length === 0 && derivedColumns.length === 0 && !allowEmptyPredicates) {
-    throw new Error('GPUDataFrame filtering requires at least one predicate');
-  }
-
   const planner = new GPUQueryExpressionShaderPlanner(source, derivedColumns);
   const outputs = selectedColumns.flatMap(name => {
     const derived = derivedColumns.find(column => column.name === name);
@@ -246,6 +242,21 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return this.emitControl(node.value, undefined, expected);
       case 'parameter':
         return this.emitControl(node.value, node.name, expected);
+      case 'conditional': {
+        const condition = this.emit(node.condition, 'boolean');
+        this.assertBoolean(condition);
+        const format =
+          this.inferFormat(node) ?? (expected === 'boolean' ? undefined : expected) ?? 'float32';
+        const whenTrue = this.emit(node.whenTrue, format);
+        const otherwise = this.emit(node.otherwise, format);
+        const match = `(${condition.valid} && ${condition.value})`;
+        return this.addValue(
+          format,
+          `select(${otherwise.value}, ${whenTrue.value}, ${match})`,
+          `select(${otherwise.valid}, ${whenTrue.valid}, ${match})`,
+          whenTrue.nullable || otherwise.nullable
+        );
+      }
       case 'unary':
         return this.emitUnary(node.operator, node.operand, expected);
       case 'binary':
@@ -304,7 +315,34 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private emitCast(
     node: Extract<GPUExpressionNode, {kind: 'cast'}>
   ): GPUQueryExpressionShaderValue {
-    return this.emitConversion(node.operand, node.format);
+    if (getGPUVectorWGSLLayout(node.format).components > 1) {
+      return this.emitConversion(node.operand, node.format);
+    }
+    const format = node.format;
+    if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+      throw new Error('GPUDataFrame casts require scalar 32-bit formats');
+    }
+    const operand = this.emit(node.operand, this.inferFormat(node.operand) ?? 'float32');
+    if (
+      operand.format !== 'float32' &&
+      operand.format !== 'uint32' &&
+      operand.format !== 'sint32'
+    ) {
+      throw new Error('GPUDataFrame scalar casts require scalar numeric expressions');
+    }
+    const floatToInteger = operand.format === 'float32' && format !== 'float32';
+    const valid = floatToInteger
+      ? `(${operand.valid} && (bitcast<u32>(${operand.value}) & 0x7fffffffu) < 0x7f800000u)`
+      : operand.valid;
+    const input = floatToInteger ? `select(0.0, ${operand.value}, ${valid})` : operand.value;
+    if (floatToInteger && !this.helpers.includes(GPU_EXPRESSION_CAST_WGSL))
+      this.helpers.push(GPU_EXPRESSION_CAST_WGSL);
+    return this.addValue(
+      format,
+      getGPUExpressionCastWGSL(input, operand.format, format, 'truncate'),
+      valid,
+      operand.nullable || floatToInteger
+    );
   }
 
   /** Encodes integer controls directly and lowers other conversions into WGSL. */
@@ -400,7 +438,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   }
 
   private emitUnary(
-    operator: 'not' | 'is-valid' | 'is-null' | 'negate',
+    operator: GPUExpressionUnaryOperator,
     operandNode: GPUExpressionNode,
     expected?: GPUQueryValueFormat
   ): GPUQueryExpressionShaderValue {
@@ -417,6 +455,52 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'is-null': {
         const operand = this.emit(operandNode, this.inferFormat(operandNode));
         return this.addValue('boolean', `!${operand.valid}`, 'true');
+      }
+      case 'sqrt':
+      case 'ln':
+      case 'log10':
+      case 'asin':
+      case 'acos': {
+        const operand = this.emit(operandNode, this.inferFormat(operandNode) ?? 'float32');
+        if (operand.format !== 'float32') {
+          throw new Error('GPUDataFrame domain-sensitive functions require Float32 input');
+        }
+        const value = operand.value;
+        const domain =
+          operator === 'sqrt'
+            ? `${value} >= 0.0`
+            : operator === 'ln' || operator === 'log10'
+              ? `${value} > 0.0`
+              : `abs(${value}) <= 1.0`;
+        const valid = `(${operand.valid} && (bitcast<u32>(${value}) & 0x7fffffffu) < 0x7f800000u && (${domain}))`;
+        const input = `select(1.0, ${value}, ${valid})`;
+        const result =
+          operator === 'log10'
+            ? `(log2(${input}) / log2(10.0))`
+            : `${operator === 'ln' ? 'log' : operator}(${input})`;
+        return this.addValue('float32', result, valid, true);
+      }
+      case 'abs':
+      case 'floor':
+      case 'ceiling':
+      case 'round':
+      case 'trunc': {
+        const format = this.inferFormat(operandNode) ?? 'float32';
+        if (format === 'boolean' || (operator === 'abs' && format === 'sint32')) {
+          throw new Error('GPUDataFrame scalar function requires a supported numeric format');
+        }
+        const operand = this.emit(operandNode, format);
+        if (format !== 'float32') {
+          return operand;
+        }
+        const value = operand.value;
+        const functionName = operator === 'ceiling' ? 'ceil' : operator;
+        const rounded = `trunc(${value})`;
+        const result =
+          operator === 'round'
+            ? `(${rounded} + select(0.0, sign(${value}), abs(${value} - ${rounded}) >= 0.5))`
+            : `${functionName}(${value})`;
+        return this.addValue(format, result, operand.valid, operand.nullable);
       }
       case 'negate': {
         const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
@@ -472,6 +556,22 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     }
     const left = this.emit(leftNode, format);
     const right = this.emit(rightNode, format);
+    if (operator === 'coalesce') {
+      return this.addValue(
+        format,
+        `select(${right.value}, ${left.value}, ${left.valid})`,
+        `(${left.valid} || ${right.valid})`,
+        left.nullable && right.nullable
+      );
+    }
+    if (operator === 'nullif') {
+      return this.addValue(
+        format,
+        left.value,
+        `(${left.valid} && !(${right.valid} && ${left.value} == ${right.value}))`,
+        true
+      );
+    }
     const symbol = getGPUQueryBinaryOperator(operator);
     let value = `(${left.value} ${symbol} ${right.value})`;
     if (format !== 'boolean' && getGPUVectorWGSLLayout(format).components > 1 && !arithmetic) {
@@ -500,10 +600,27 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
+      case 'conditional': {
+        const whenTrue = this.inferFormat(node.whenTrue);
+        const otherwise = this.inferFormat(node.otherwise);
+        if (
+          whenTrue === 'boolean' ||
+          otherwise === 'boolean' ||
+          (whenTrue && otherwise && whenTrue !== otherwise)
+        ) {
+          throw new Error('GPUDataFrame CASE branches require matching numeric formats');
+        }
+        return whenTrue ?? otherwise;
+      }
       case 'unary':
+        if (isGPUScalarFunction(node.operator)) {
+          return this.inferFormat(node.operand) ?? 'float32';
+        }
         return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
       case 'binary':
         if (
+          node.operator === 'coalesce' ||
+          node.operator === 'nullif' ||
           node.operator === 'add' ||
           node.operator === 'subtract' ||
           node.operator === 'multiply' ||

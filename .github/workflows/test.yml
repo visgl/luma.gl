@@ -119,11 +119,7 @@ jobs:
 
       - name: Check WebGPU and WebGL canvas capture
         timeout-minutes: 2
-        run: |
-          for CAPTURE_ITERATION in 1 2 3; do
-            echo "Presentation repetition ${CAPTURE_ITERATION}/3"
-            xvfb-run -a yarn test-presentation
-          done
+        run: xvfb-run -a yarn test-presentation
 
   browser_coverage:
     name: Browser coverage (${{ matrix.group }} ${{ matrix.shard }})
@@ -144,7 +140,7 @@ jobs:
             {"group":"general","runner":"ubuntu-22.04","shard":"2/3"},
             {"group":"general","runner":"ubuntu-22.04","shard":"3/3"},
             {"group":"compute","runner":"ubuntu-22.04","shard":"1/1"},
-            {"group":"physics","runner":"macos-15","shard":"1/1"}]') }}
+            {"group":"physics","runner":"macos-15","shard":"1/2"},{"group":"physics","runner":"macos-15","shard":"2/2"}]') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -290,7 +286,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Run all Node tests
+      - name: Run Node tests outside the focused coverage pass
+        env:
+          LUMA_TEST_NODE_SKIP_COVERED: 'true'
         run: yarn test-node
 
       - name: Collect focused Node coverage

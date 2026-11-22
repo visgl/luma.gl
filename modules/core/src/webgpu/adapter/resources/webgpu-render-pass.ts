@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray, NumberArray4} from '@math.gl/core';
+import type {TypedArray, NumberArray4} from '@math.gl/core/types';
 import type {
   RenderBundle,
   RenderPassProps,
@@ -54,6 +54,10 @@ export class WebGPURenderPass extends RenderPass {
     props: RenderPassProps = {},
     commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
   ) {
+    if (props.clipDepthMode === 'negative-one-to-one') {
+      // WebGPU clip-space depth is always 'zero-to-one'.
+      throw new Error('clipDepthMode');
+    }
     super(device, props);
     this.device = device;
     const {props: renderPassProps} = this;

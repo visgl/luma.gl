@@ -17,7 +17,7 @@ import {
   invertProjectionProgram,
   type ProjectionPlanningResult
 } from '@luma.gl/graph/gpu-project';
-import {ProjectionPlanningError as CRSPlanningError} from '@luma.gl/graph/gpu-project/crs';
+import {ProjectionPlanningError as CRSPlanningError} from '@luma.gl/graph/gpu-project-crs';
 
 const bounds = [-1, -1, 1, 1] as const;
 const options = {bounds, tolerance: 1e-6};

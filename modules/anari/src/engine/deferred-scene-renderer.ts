@@ -5,7 +5,8 @@
 import {Buffer, type Device, type Texture, type TextureFormatColor} from '@luma.gl/core';
 import {type ModelProps, type ScenegraphNode, ShaderPassRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shaders';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {
   createDeferredLightingCompositeShaderPass,
   type DeferredPointLight,

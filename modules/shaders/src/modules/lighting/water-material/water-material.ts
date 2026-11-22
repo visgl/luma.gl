@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray2, NumberArray3, Vector2, Vector3} from '@math.gl/core';
+import type {NumberArray2, NumberArray3} from '@math.gl/core/types';
+import type {Vector2, Vector3} from '@math.gl/core/matrix';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
 import {WATER_FS, WATER_VS} from './water-shaders-glsl';

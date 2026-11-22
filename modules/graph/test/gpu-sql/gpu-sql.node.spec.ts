@@ -133,30 +133,39 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     frame.destroy();
   });
 
-  test('matches column case exactly and distinguishes column names from clause boundaries', () => {
+  test('matches quoted column names exactly and keeps SQL keywords case-insensitive', () => {
     const device = new NullDevice({id: 'ludf-sql-keyword-columns'});
     const batch = new GPURecordBatch({
       gpuData: {
         limit: createGPUSQLNodeData(device, Float32Array.of(4), 'float32'),
         Limit: createGPUSQLNodeData(device, Float32Array.of(6), 'float32'),
-        order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32')
+        order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32'),
+        'trips.limit': createGPUSQLNodeData(device, Float32Array.of(10), 'float32')
       },
       fields: [
         {name: 'limit', format: 'float32', nullable: false},
         {name: 'Limit', format: 'float32', nullable: false},
-        {name: 'order', format: 'float32', nullable: false}
+        {name: 'order', format: 'float32', nullable: false},
+        {name: 'trips.limit', format: 'float32', nullable: false}
       ]
     });
     const frame = new GPUDataFrame({table: new GPUTable({batches: [batch]}), ownership: 'owned'});
     const context = new GPUSQLContext({trips: frame});
 
-    expect(context.query('sElEcT limit, Limit fRoM trips')).toBeInstanceOf(GPUSQLQuery);
-    expect(() => context.query('SELECT LIMIT FROM trips')).toThrow(/does not exist/);
-    expect(() => context.query('SELECT limit, Limit FROM trips ORDER BY LIMIT')).toThrow(
-      /does not exist/
-    );
     expect(
-      context.query('SELECT limit, order FROM trips WHERE order > limit ORDER BY order LIMIT 1')
+      context.query('SELECT "trips.limit", trips."limit" FROM trips ORDER BY "trips.limit"')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(
+      context.query('SELECT SUM("trips.limit"), SUM(trips."limit") FROM trips')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT missing."trips.limit" FROM trips')).toThrow(/qualifier/);
+    expect(context.query('sElEcT "limit", "Limit" fRoM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT limit FROM trips')).toThrow(/SQL expression/i);
+    expect(() => context.query('SELECT "LIMIT" FROM trips')).toThrow(/does not exist/);
+    expect(
+      context.query(
+        'SELECT trips."limit", "order" FROM trips WHERE "order" > "limit" ORDER BY "order" LIMIT 1'
+      )
     ).toBeInstanceOf(GPUSQLQuery);
 
     frame.destroy();
@@ -195,10 +204,32 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     ]) {
       expect(
         context.query(
-          `SELECT source.identifier FROM trips AS source ${operator} accounts AS target ON source.identifier = target.identifier`
+          `SELECT source.fare FROM trips AS source ${operator} accounts AS target ON source.identifier = target.identifier`
         )
       ).toBeInstanceOf(GPUSQLQuery);
     }
+
+    for (const equality of [
+      'target.identifier = source.identifier',
+      'target.identifier = identifier'
+    ]) {
+      expect(
+        context.query(
+          `SELECT source.identifier FROM trips AS source LEFT JOIN accounts AS target ON ${equality}`
+        )
+      ).toBeInstanceOf(GPUSQLQuery);
+    }
+    expect(() =>
+      context.query(
+        'SELECT source.identifier FROM trips AS source JOIN accounts AS target ON source.identifier = source.identifier'
+      )
+    ).toThrow(/qualifier/);
+
+    expect(() =>
+      context.query(
+        'SELECT source.fare FROM trips AS source JOIN accounts AS target ON identifier = identifier'
+      )
+    ).toThrow(/ambiguous/i);
 
     left.frame.destroy();
     right.frame.destroy();
@@ -213,21 +244,75 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
         'SELECT fare FROM trips WHERE fare IS NULL OR NOT (fare < 4 AND fare IS NOT NULL)'
       )
     ).toBeInstanceOf(GPUSQLQuery);
+    expect(() =>
+      context.query('SELECT * FROM trips CROSS JOIN UNNEST(fare) AS other(value)')
+    ).toThrow(/does not support JOIN UNNEST/i);
+    expect(() => context.query('SELECT * FROM trips(trips)')).toThrow(/table functions/i);
+    expect(() =>
+      context.query('SELECT * FROM trips JOIN trips(trips) AS other ON trips.fare = other.fare')
+    ).toThrow(/table functions/i);
+    expect(() => context.query('SELECT COUNT("*") FROM trips')).toThrow(/does not exist/);
+    expect(() => context.query('SELECT ":missing" FROM trips')).toThrow(/column.*does not exist/i);
     expect(() => context.query('DELETE FROM trips')).toThrow(/SELECT/i);
     expect(() => context.query('SELECT missing FROM trips')).toThrow(/exist/i);
     expect(() => context.query('SELECT fare FROM missing')).toThrow(/registered/i);
     expect(() => context.query('SELECT fare FROM trips WHERE fare > :minimum')).toThrow(
       /parameter/i
     );
-    expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
-    expect(() => context.query('SELECT COUNT(fare) FROM trips')).toThrow(/COUNT\(\*\)/i);
-    expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
-    expect(() => context.query('SELECT fare FROM trips ORDER BY fare, identifier')).toThrow(
-      /one ORDER BY/i
+    expect(() =>
+      context.query('SELECT fare FROM trips WHERE trips.fare NOT IN (:minimum, NULL)', {
+        parameters: {minimum: 4}
+      })
+    ).not.toThrow();
+    expect(() => context.query('SELECT fare FROM trips WHERE fare IN (identifier)')).toThrow(
+      /literal or parameter/
     );
-    expect(() => context.query('SELECT * FROM trips; DROP TABLE trips')).toThrow(/unexpected/i);
+    const oversized = Array.from({length: 65}, (_, index) => index).join(', ');
+    expect(() => context.query(`SELECT fare FROM trips WHERE fare IN (${oversized})`)).toThrow(
+      /64 candidates/
+    );
+    expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
+    expect(context.query('SELECT COUNT(fare) FROM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(
+      context.query('SELECT SUM(fare * :scale) AS scaled FROM trips', {
+        parameters: {scale: 2}
+      })
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT SUM(fare * 2) FROM trips')).toThrow(/explicit AS alias/);
+    expect(() => context.query('SELECT SUM(missing * 2) AS total FROM trips')).toThrow(
+      /does not exist/
+    );
+    expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
+    expect(() => context.query('SELECT fare FROM trips GROUP BY 0')).toThrow(/aggregation/);
+
+    expect(context.query('SELECT * FROM trips ORDER BY 1')).toBeInstanceOf(GPUSQLQuery);
+    for (const position of [0, 1.5, 2]) {
+      expect(() => context.query(`SELECT fare FROM trips ORDER BY ${position}`)).toThrow(
+        /one-based SELECT column/
+      );
+    }
+    expect(() => context.query('SELECT category, COUNT(*) FROM trips GROUP BY 2')).toThrow(
+      /group key directly/
+    );
+    expect(() => context.query('SELECT category, COUNT(*) FROM trips GROUP BY 0')).toThrow(
+      /one-based SELECT column/
+    );
+    expect(() => context.query('SELECT fare FROM trips OFFSET 1')).toThrow(/ORDER BY/i);
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 1')).not.toThrow();
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 4294967296')).toThrow(
+      /OFFSET.*32-bit/i
+    );
+    expect(
+      context.query('SELECT fare FROM trips ORDER BY fare NULLS FIRST, identifier DESC')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare, 2')).toThrow(
+      /one-based SELECT column/
+    );
+    expect(() => context.query('SELECT * FROM trips; DROP TABLE trips')).toThrow(
+      /unsupported SQL query syntax/i
+    );
     expect(() => context.query("SELECT fare FROM trips WHERE fare = 'unsafe'")).toThrow(
-      /unsupported token/i
+      /does not support SQL expression/i
     );
     expect(() => new GPUSQLContext({'invalid-name': frame})).toThrow(/valid names/i);
 

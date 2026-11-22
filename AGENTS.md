@@ -6,8 +6,7 @@
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
 - Run tests: `yarn test`
-- Check website build `yarn website:build`
-- Check website package build: `(cd website && yarn build)`
+- Check the website once from the repository root with `yarn website:build`. This delegates to the website workspace’s `build` script.
 
 ## LLM-friendly test setup
 - Use the repo root scripts as the stable interface:
@@ -38,10 +37,10 @@
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
 - Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
-- In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, `yarn website:build`, and `(cd website && yarn build)`.
+- In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, and `yarn website:build`. Report the node and headless outcomes separately if they ran as separate commands.
 - Run `yarn build` after the final code and formatting changes, and treat it as a required pre-merge gate. It compiles every module with `tspc` and catches cross-package TypeScript API breakage that `yarn test-node` does not cover.
-- Run `yarn test` after the final code and formatting changes, and treat it as a required pre-merge gate. It runs both node and headless coverage; targeted `yarn test-node` runs are focused checks and are not sufficient on their own.
-- Do not rely on `yarn test-node` as a substitute for `yarn build` or `yarn test`; run all three when table or shared package APIs change.
+- Run both the full node and headless phases after final code and formatting changes. Use `yarn test` to run them together, or run `yarn test-node` and `yarn test-headless` separately. If the normal commit hook already passed the full node phase on the same source, run only `yarn test-headless` to complete local test validation.
+- For table or shared package API changes, require `yarn build` and both test phases. Targeted tests can diagnose failures but do not satisfy the full test gate.
  
 ## Code style
 - Add TSDoc comments to all source code declarations, including functions, classes, methods, types, interfaces, fields, and constants.
@@ -68,7 +67,7 @@
 ## GPU table API boundaries
 - `@luma.gl/graph/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
 - `@luma.gl/graph/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
-- `@luma.gl/engine/models` owns specialized path and polygon rendering models. GPU path expansion and input preparation remain in `@luma.gl/graph/experimental/models`.
+- `@luma.gl/engine/models` owns specialized path and polygon rendering models. GPU path expansion and input preparation remain in `@luma.gl/graph/experimental-models`.
 - `@luma.gl/engine/tables` owns TableTransform, table rendering models, and geometry adapters; `@luma.gl/engine/physics` owns scenegraph physics integration.
 - `@luma.gl/graph/gpu-simple-graph` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/graph/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.

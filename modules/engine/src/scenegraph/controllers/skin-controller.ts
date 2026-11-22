@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, Texture} from '@luma.gl/core';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {GroupNode} from '../group-node';
 import type {ModelNode} from '../model-node';
 import {updateSkinJointMatrices} from '../../animation/skin';

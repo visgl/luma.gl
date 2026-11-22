@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {GroupNode, Geometry} from '@luma.gl/engine';
 import {getPBRMaterialMapUniforms} from '@luma.gl/engine/lighting';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import {pbrMaterial, type Light} from '@luma.gl/shaders';
 import type {ANARIDevice} from './anari-device';
 import type {ANARIWorld, ANARIGeometry, ANARIMaterial} from './anari-objects';

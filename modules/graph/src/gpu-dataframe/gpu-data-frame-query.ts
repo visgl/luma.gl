@@ -15,6 +15,7 @@ import {
   getGPUExpressionColumnNames,
   GPUExpression,
   isBooleanExpressionNode,
+  isGPUScalarFunction,
   type GPUExpressionNode
 } from './gpu-expression';
 import {
@@ -445,17 +446,29 @@ function assertSelectedQueryColumns(
 
 function isNumericExpressionNode(node: GPUExpressionNode): boolean {
   switch (node.kind) {
-    case 'vector':
+    case 'conditional':
+      return (
+        (isBooleanExpressionNode(node.condition) ||
+          ((node.condition.kind === 'literal' || node.condition.kind === 'parameter') &&
+            node.condition.value === null)) &&
+        isNumericExpressionNode(node.whenTrue) &&
+        isNumericExpressionNode(node.otherwise)
+      );
     case 'cast':
+      return isNumericExpressionNode(node.operand);
+    case 'vector':
+      return node.components.every(isNumericExpressionNode);
     case 'column':
       return true;
     case 'literal':
     case 'parameter':
       return node.value === null || typeof node.value === 'number';
     case 'unary':
-      return node.operator === 'negate';
+      return node.operator === 'negate' || isGPUScalarFunction(node.operator);
     case 'binary':
       return (
+        node.operator === 'coalesce' ||
+        node.operator === 'nullif' ||
         node.operator === 'add' ||
         node.operator === 'subtract' ||
         node.operator === 'multiply' ||
@@ -503,11 +516,17 @@ function inferNumericFormat(
       if (typeof node.value === 'boolean') throw new Error('Numeric expression required');
       return undefined;
     case 'unary':
+      if (isGPUScalarFunction(node.operator))
+        return inferNumericFormat(node.operand, formats) ?? 'float32';
       if (node.operator !== 'negate') throw new Error('Numeric expression required');
       return inferNumericFormat(node.operand, formats);
-    case 'binary': {
-      const left = inferNumericFormat(node.left, formats);
-      const right = inferNumericFormat(node.right, formats);
+    case 'binary':
+    case 'conditional': {
+      const left = inferNumericFormat(node.kind === 'binary' ? node.left : node.whenTrue, formats);
+      const right = inferNumericFormat(
+        node.kind === 'binary' ? node.right : node.otherwise,
+        formats
+      );
       if (left && right && left !== right)
         throw new Error('GPUDataFrame derived column mixes scalar formats');
       return left ?? right;

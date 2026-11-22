@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import type {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

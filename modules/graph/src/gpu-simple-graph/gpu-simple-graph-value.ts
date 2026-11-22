@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/core';
+import type {TypedArray} from '@math.gl/core/types';
 import type {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
 import {type GPUVectorEvaluator} from './operation/gpu-vector-evaluator';

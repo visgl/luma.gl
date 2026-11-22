@@ -5,7 +5,7 @@
 import {expect, test, vi} from 'vitest';
 import * as arrow from 'apache-arrow';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {CoordinateProjectionGraph} from '@luma.gl/graph/gpu-project/graph';
+import {CoordinateProjectionGraph} from '@luma.gl/graph/gpu-project-graph';
 import {projectArrowCoordinates} from '@luma.gl/graph/arrow';
 
 test('Arrow and GPU coordinates share a reusable graph with independent result ownership', async () => {

@@ -45,6 +45,8 @@ Global reductions support packed `float32`, `sint32`, and `uint32` metric column
 
 ```ts
 const totals = dataframe.aggregate({
+  knownFares: {count: 'fare'},
+
   rows: 'count',
   totalFare: {sum: 'fare'},
   minimumFare: {min: 'fare'},

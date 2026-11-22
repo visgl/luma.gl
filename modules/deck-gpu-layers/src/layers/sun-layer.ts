@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {_GlobeViewport, type DefaultProps} from '@deck.gl/core';
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray3} from '@math.gl/core/types';
 import {getSunPosition, getSkyDirection, getSunLight} from '@math.gl/earth/sun';
 import {SkyBodyLayer, type SkyBodyLayerProps} from './sky-body-layer';
 

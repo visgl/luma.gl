@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js curve utilities (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Vector2} from '@math.gl/core';
+import {Vector2} from '@math.gl/core/matrix';
 
 /** Factory for creating new point instances when sampling curves. */
 type PointFactory<T> = () => T;

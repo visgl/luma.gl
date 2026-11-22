@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {equals, config} from '@math.gl/core';
+import {equals, config} from '@math.gl/core/matrix';
 import {fp64arithmetic, fp64ify} from '@luma.gl/shaders';
 
 config.EPSILON = 1e-11;

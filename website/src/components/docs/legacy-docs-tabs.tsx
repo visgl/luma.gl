@@ -15,8 +15,8 @@ export type LegacyDocsTabId = 'porting-guide' | 'legacy-upgrade-guide' | 'legacy
 
 const LEGACY_DOCS_TABS: LegacyDocsTab[] = [
   {id: 'porting-guide', label: 'Porting', href: '/docs/legacy/porting-guide'},
-  {id: 'legacy-upgrade-guide', label: 'Upgrade', href: '/docs/legacy/legacy-upgrade-guide'},
-  {id: 'legacy-whats-new', label: "What's New", href: '/docs/legacy/legacy-whats-new'}
+  {id: 'legacy-upgrade-guide', label: 'Upgrade', href: '/docs/upgrade-guide'},
+  {id: 'legacy-whats-new', label: "What's New", href: '/docs/whats-new'}
 ];
 
 /**

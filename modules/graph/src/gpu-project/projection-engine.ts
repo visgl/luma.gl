@@ -8,8 +8,8 @@ import type {SpatialReference} from '@math.gl/geospatial/crs';
 import type {
   CRSNormalizationOptions,
   TypeScriptCRSInput
-} from '@math.gl/geospatial/projection/core';
-import type {ProjectionEngine, Projection} from '@math.gl/geospatial/projection/types';
+} from '@math.gl/geospatial/projection-core';
+import type {ProjectionEngine, Projection} from '@math.gl/geospatial/projection-types';
 import {prepareProjectionReferences} from './projection-crs-input';
 import {
   planProjection,

@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {Matrix3, Matrix4, Vector2, Vector3, Vector4} from '@math.gl/core/matrix';
 import type {
-  Matrix3,
-  Matrix4,
-  Vector2,
-  Vector3,
-  Vector4,
   NumberArray2,
   NumberArray3,
   NumberArray4,
@@ -16,7 +12,7 @@ import type {
   NumberArray9,
   NumberArray12,
   NumberArray16
-} from '@math.gl/core';
+} from '@math.gl/core/types';
 
 import type {CompositeShaderType} from '../../types';
 

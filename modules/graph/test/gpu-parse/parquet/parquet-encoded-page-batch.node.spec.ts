@@ -5,12 +5,15 @@ import {expect, it} from 'vitest';
 
 import type {ParquetEncodedPageBatch} from '@loaders.gl/tables/parquet';
 import {parse} from '@loaders.gl/core';
-import {ParquetJSWriter, ParquetLoader} from '@loaders.gl/tables/parquet';
-import {createParquetSource} from '@loaders.gl/tables/parquet-source-loader';
+import {
+  createParquetSource,
+  ParquetWriter,
+  ParquetLoaderWithParser
+} from '@loaders.gl/tables/parquet';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/graph/gpu-parse';
 
 it('loaders.gl Parquet V1 and V2 pages produce mixed GPU batch plans', async () => {
-  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-beta.10');
+  expect(ParquetWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-rc.2');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);
@@ -319,7 +322,7 @@ function makeSinglePageBatch(
 }
 
 async function makeEncodedPageBatch(useDataPageV2: boolean): Promise<ParquetEncodedPageBatch> {
-  const bytes = await ParquetJSWriter.encode(
+  const bytes = await ParquetWriter.encode(
     {
       shape: 'object-row-table',
       data: [
@@ -330,7 +333,7 @@ async function makeEncodedPageBatch(useDataPageV2: boolean): Promise<ParquetEnco
     },
     {parquet: {dictionary: false, pageSize: 2, useDataPageV2}}
   );
-  const decoded = await parse(bytes, ParquetLoader, {
+  const decoded = await parse(bytes, ParquetLoaderWithParser, {
     worker: false,
     parquet: {shape: 'object-row-table'}
   });

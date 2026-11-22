@@ -30,7 +30,11 @@ import {
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/graph/gpu-core';
 import {GPUVisibilityWorkflow} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
-import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
+import {
+  GPUDataFrame,
+  type GPUDataFrameDictionaries,
+  type GPUDataFrameValidity
+} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
@@ -42,6 +46,24 @@ import {
 } from './gpu-expression-shader';
 
 const LU_QUERY_WORKGROUP_SIZE = 256;
+
+/** Borrows projected columns while the query owns its working table. @internal */
+export function projectGPUDataFrameQueryResult<Selection extends GPUTypeMap>(
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  columns: readonly (keyof Selection & string)[]
+): GPUDataFrame<Selection> {
+  const working = new GPUDataFrame<Selection>({
+    table: context.table,
+    validity: context.validity,
+    dictionaries: context.dictionaries,
+    ownership: 'borrowed'
+  });
+  try {
+    return working.select(columns) as GPUDataFrame<Selection>;
+  } finally {
+    working.destroy();
+  }
+}
 
 /** Caller-owned scalar values supplied to an already compiled dataframe filter. */
 export type GPUDataFrameQueryParameters = Readonly<Record<string, number | boolean | null>>;
@@ -107,7 +129,6 @@ export type GPUDataFrameQueryCompilationExtension<
   Result extends GPUTypeMap,
   Compiled extends CompiledGPUDataFrameQuery<Result> = CompiledGPUDataFrameQuery<Result>
 > = {
-  allowEmptyPredicates?: boolean;
   prepare: (
     context: GPUDataFrameQueryExtensionContext<Row>
   ) => GPUDataFrameQueryExtensionResult<Result, Compiled>;
@@ -219,8 +240,7 @@ export function compileGPUDataFrameQuery<
       retainedSource,
       predicates,
       derivedColumns,
-      selectedColumns,
-      predicates.length === 0 || extension?.allowEmptyPredicates === true
+      selectedColumns
     );
     validateGPUQueryBatchCapacity(retainedSource, graph);
     validateGPUQueryBindingCapacity(plan, graph);

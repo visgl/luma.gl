@@ -1,7 +1,7 @@
 import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {UniformStore} from '@luma.gl/core';
 import type {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';

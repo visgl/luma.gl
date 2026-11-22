@@ -19,7 +19,7 @@ import {
 } from '@luma.gl/anari';
 import type {SpotLight} from '@luma.gl/shaders';
 import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {CradleGeometryNode} from './cradle-geometry';
 import {captureReflectionProbe} from './reflection-probe';
 

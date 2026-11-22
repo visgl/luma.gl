@@ -2975,19 +2975,18 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
   return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };
 
-export const SpaceSalvageExample: React.FC = () => {
-  const source = useBaseUrl('/standalone-examples/space-salvage/index.html');
-  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
-    <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
-  </ExamplePage>;
-};
-
-
 export const GPURigidBodyWorldExample: React.FC<{scene?: RigidBodyScene; title?: string}> = ({scene, title = 'Rigid Body Lab'}) => {
   const baseSource = useBaseUrl('/standalone-examples/gpu-rigid-body-world/index.html');
   const source = scene ? `${baseSource}?scene=${encodeURIComponent(scene)}` : baseSource;
   return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
     <iframe title={title} src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const OffroadBuggyExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/offroad-buggy/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Off-road Buggy" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
 
@@ -3042,7 +3041,7 @@ export const GPUSphereScaleExample: React.FC = () => {
 export const GPUPoolExample: React.FC = () => {
   const source = useBaseUrl('/standalone-examples/gpu-pool/index.html');
   return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
-    <iframe title="Pool" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+    <iframe title="GPU Pool Practice" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
 

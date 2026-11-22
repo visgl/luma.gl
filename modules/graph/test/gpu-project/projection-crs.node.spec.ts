@@ -11,7 +11,7 @@ import {
   planCRSProjection,
   planProjectionPipeline,
   type ProjectionPlanningResult
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {evaluateProjectionProgram, invertProjectionProgram} from '@luma.gl/graph/gpu-project';
 
 function requireReady(result: ProjectionPlanningResult) {
@@ -63,7 +63,7 @@ describe('optional CRS planner', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     );
-    expect(packageJson.exports['./gpu-project/crs'].types).toBe('./dist/gpu-project/crs.d.ts');
+    expect(packageJson.exports['./gpu-project-crs'].types).toBe('./dist/gpu-project/crs.d.ts');
     expect(packageJson.dependencies['@math.gl/geospatial']).toBeDefined();
   });
 

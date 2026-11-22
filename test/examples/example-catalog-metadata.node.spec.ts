@@ -36,7 +36,7 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'api/baked-cornell-box',
 
   'three/galactic-vortex',
-  'three/domino-junction',
+  'experimental/offroad-buggy',
   'gltf/physics',
   'gltf/authored-scene-stress',
   'api/render-bundles',
@@ -73,7 +73,7 @@ describe('live example catalog metadata', () => {
       )
     ).toEqual([
       'three/galactic-vortex',
-      'three/domino-junction',
+      'experimental/offroad-buggy',
       'three/deck-layers',
       'experimental/three'
     ]);
@@ -148,7 +148,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(143);
+    expect(LIVE_EXAMPLES).toHaveLength(142);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

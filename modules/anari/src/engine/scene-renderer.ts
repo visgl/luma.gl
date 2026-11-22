@@ -33,7 +33,8 @@ import {
   type SkinProps,
   skin
 } from '@luma.gl/shaders';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import {
   createPBRMaterial,
   createPBRMaterialFactory,

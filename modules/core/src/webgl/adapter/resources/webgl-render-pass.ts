@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core';
+import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core/types';
 import type {
   Bindings,
   BindingsByGroup,
@@ -60,6 +60,10 @@ export class WEBGLRenderPass extends RenderPass {
   vertexArray: VertexArray | null = null;
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
+    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
+      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
+      throw new Error('clip-control-webgl');
+    }
     super(device, props);
     this.device = device;
     const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
@@ -148,6 +152,13 @@ export class WEBGLRenderPass extends RenderPass {
     glParameters.stencilMask = this.props.stencilReadOnly ? 0 : 1;
 
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
+
+    if (this.props.clipDepthMode) {
+      glParameters[GL.CLIP_DEPTH_MODE_EXT] =
+        this.props.clipDepthMode === 'zero-to-one'
+          ? GL.ZERO_TO_ONE_EXT
+          : GL.NEGATIVE_ONE_TO_ONE_EXT;
+    }
 
     // Map the four renderpass parameters to WebGL parameters
     if (parameters.viewport) {
