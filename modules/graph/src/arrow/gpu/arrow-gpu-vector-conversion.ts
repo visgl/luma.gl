@@ -95,6 +95,8 @@ export type ArrowGPUConversionCost = {
   sourceByteLength: number;
   /** Bytes expected in the prepared GPU payload, excluding auxiliary metadata. */
   targetByteLength: number;
+  /** Estimated transient GPU source and configuration storage during conversion. */
+  temporaryGPUByteLength: number;
   /** Number of Arrow chunks that must be uploaded. */
   uploadCount: number;
   /** Number of CPU transformation passes over source values. */
@@ -226,6 +228,11 @@ export function planArrowGPUConversion(
     cost: {
       sourceByteLength,
       targetByteLength,
+      temporaryGPUByteLength:
+        sourceIsArrow && backend === 'webgpu'
+          ? Math.max(sourceByteLength, chunkCount * Float64Array.BYTES_PER_ELEMENT) +
+            (strategy === 'convert-temporal' ? chunkCount * 3 * Uint32Array.BYTES_PER_ELEMENT : 0)
+          : 0,
       uploadCount,
       cpuPassCount: transforms && backend === 'cpu' ? 1 : 0,
       gpuPassCount: transforms && (backend === 'webgpu' || backend === 'webgl') ? 1 : 0,

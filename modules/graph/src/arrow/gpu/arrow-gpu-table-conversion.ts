@@ -44,6 +44,8 @@ export type ArrowGPUTableConversionPlan = {
   length: number;
   /** Aggregate cost across selected columns. */
   cost: ArrowGPUConversionCost;
+  /** Estimated peak retained and temporary GPU bytes while converting columns serially. */
+  estimatedPeakGPUBytes: number;
 };
 
 /** Prepared generic GPU table plus its inspectable conversion plan. */
@@ -70,6 +72,8 @@ export type ArrowRecordBatchConversionOptions = {
   signal?: AbortSignal;
   /** Maximum estimated GPU payload bytes per batch. Checked before conversion. */
   maxBatchPayloadBytes?: number;
+  /** Maximum estimated peak GPU bytes per batch, including conversion scratch. */
+  maxBatchGPUBytes?: number;
 };
 
 /** One independently owned GPU record batch produced from an Arrow stream. */
@@ -108,7 +112,8 @@ export function planArrowTableGPUConversion(
   return {
     columns,
     length: table.numRows,
-    cost: sumConversionCosts(columns.map(column => column.plan.cost))
+    cost: sumConversionCosts(columns.map(column => column.plan.cost)),
+    estimatedPeakGPUBytes: estimatePeakGPUBytes(columns)
   };
 }
 
@@ -231,13 +236,19 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   device: Device,
   source: ArrowRecordBatchConversionSource,
   schema: ArrowGPUTableConversionSchema,
-  {signal, maxBatchPayloadBytes}: ArrowRecordBatchConversionOptions = {}
+  {signal, maxBatchPayloadBytes, maxBatchGPUBytes}: ArrowRecordBatchConversionOptions = {}
 ): AsyncGenerator<PreparedArrowGPURecordBatch> {
   if (
     maxBatchPayloadBytes !== undefined &&
     (!Number.isSafeInteger(maxBatchPayloadBytes) || maxBatchPayloadBytes < 0)
   ) {
     throw new Error('Arrow GPU stream payload budget must be a nonnegative safe integer');
+  }
+  if (
+    maxBatchGPUBytes !== undefined &&
+    (!Number.isSafeInteger(maxBatchGPUBytes) || maxBatchGPUBytes < 0)
+  ) {
+    throw new Error('Arrow GPU stream peak budget must be a nonnegative safe integer');
   }
   const temporalOrigins = new Map<string, number | bigint>();
   const formats = new Map<string, string | undefined>();
@@ -253,11 +264,20 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
           : {...column, temporal: {...column.temporal, origin}};
       })
     };
-    if (maxBatchPayloadBytes !== undefined) {
-      const {cost} = planArrowTableGPUConversion(device, new Table([recordBatch]), batchSchema);
-      if (cost.targetByteLength > maxBatchPayloadBytes) {
+    if (maxBatchPayloadBytes !== undefined || maxBatchGPUBytes !== undefined) {
+      const {cost, estimatedPeakGPUBytes} = planArrowTableGPUConversion(
+        device,
+        new Table([recordBatch]),
+        batchSchema
+      );
+      if (maxBatchPayloadBytes !== undefined && cost.targetByteLength > maxBatchPayloadBytes) {
         throw new Error(
           `Arrow GPU stream batch ${sourceBatchIndex} needs ${cost.targetByteLength} payload bytes, exceeding the ${maxBatchPayloadBytes} byte budget`
+        );
+      }
+      if (maxBatchGPUBytes !== undefined && estimatedPeakGPUBytes > maxBatchGPUBytes) {
+        throw new Error(
+          `Arrow GPU stream batch ${sourceBatchIndex} needs an estimated ${estimatedPeakGPUBytes} peak GPU bytes, exceeding the ${maxBatchGPUBytes} byte budget`
         );
       }
     }
@@ -376,11 +396,25 @@ function captureStreamingTemporalOrigins(
   }
 }
 
+/** Estimates peak bytes from previously retained outputs and one active column conversion. */
+function estimatePeakGPUBytes(columns: ArrowGPUTableConversionPlan['columns']): number {
+  let retained = 0;
+  let peak = 0;
+  for (const {plan} of columns) {
+    if (!plan.cost.allocatesGPUStorage) continue;
+    // Reserve padding and minimum-sized allocations for each destination chunk.
+    retained += plan.cost.targetByteLength + plan.chunkCount * 8;
+    peak = Math.max(peak, retained + plan.cost.temporaryGPUByteLength);
+  }
+  return peak;
+}
+
 function sumConversionCosts(costs: readonly ArrowGPUConversionCost[]): ArrowGPUConversionCost {
   return costs.reduce<ArrowGPUConversionCost>(
     (sum, cost) => ({
       sourceByteLength: sum.sourceByteLength + cost.sourceByteLength,
       targetByteLength: sum.targetByteLength + cost.targetByteLength,
+      temporaryGPUByteLength: sum.temporaryGPUByteLength + cost.temporaryGPUByteLength,
       uploadCount: sum.uploadCount + cost.uploadCount,
       cpuPassCount: sum.cpuPassCount + cost.cpuPassCount,
       gpuPassCount: sum.gpuPassCount + cost.gpuPassCount,
@@ -389,6 +423,7 @@ function sumConversionCosts(costs: readonly ArrowGPUConversionCost[]): ArrowGPUC
     {
       sourceByteLength: 0,
       targetByteLength: 0,
+      temporaryGPUByteLength: 0,
       uploadCount: 0,
       cpuPassCount: 0,
       gpuPassCount: 0,
