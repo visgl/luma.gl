@@ -175,6 +175,8 @@ function prepareBindings(
   const storageInputs = gpuInputSchema.filter(
     input => input.storageBindingName && storageBindingNames.has(input.storageBindingName)
   );
+  // Check storage views before any reused buffer is written, so a failed update leaves them intact.
+  assertStorageOffsetsAligned(device, table, storageInputs);
   const varyingLayouts = getVaryingAttributeLayouts(table, attributeInputs);
   const constantAttributes: Record<string, TypedArray> = {};
   const constantLayouts: BufferLayout[] = [];
@@ -267,7 +269,7 @@ function prepareBindings(
     [...varyingLayouts, ...constantLayouts],
     shaderLayout
   );
-  const batches = table.batches.map((batch, batchIndex) => {
+  const batches = table.batches.map(batch => {
     const attributes: Record<string, GPUBuffer> = {};
     const attributeByteOffsets: Record<string, number> = {};
     for (const layout of varyingLayouts) {
@@ -299,13 +301,6 @@ function prepareBindings(
       }
       const data = batch.gpuData[input.columnName];
       if (data) {
-        assertStorageBufferOffsetAligned(
-          device,
-          'GPUTableShaderBindings',
-          input.columnName,
-          batchIndex,
-          data.byteOffset
-        );
         bindings[storageBindingName] = getGPUDataBinding(data);
       }
     }
@@ -326,6 +321,29 @@ function prepareBindings(
       0
     )
   };
+}
+
+/** Checks that every varying storage view in a non-empty batch starts at an aligned byte offset. */
+function assertStorageOffsetsAligned(
+  device: Device,
+  table: GPUTable,
+  storageInputs: GPUInputSchema
+): void {
+  table.batches.forEach((batch, batchIndex) => {
+    for (const input of storageInputs) {
+      const data = batch.gpuData[input.columnName];
+      if (data && !table.gpuConstants[input.columnName]) {
+        assertStorageBufferOffsetAligned(
+          device,
+          'GPUTableShaderBindings',
+          input.columnName,
+          batchIndex,
+          data.byteOffset,
+          batch.numRows
+        );
+      }
+    }
+  });
 }
 
 function sortBufferLayoutsByShaderLocation(

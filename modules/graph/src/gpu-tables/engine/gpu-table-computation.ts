@@ -166,7 +166,7 @@ function requiresBatchBinding(vector: GPUVector): boolean {
 
 /**
  * Checks that every chunk bound as storage starts at an aligned byte offset.
- * Chunks of empty batches are skipped because they are never bound.
+ * Chunks of skipped batches count as zero rows, because `dispatchBatches` never binds them.
  */
 function assertInputVectorOffsetsAligned(
   device: Device,
@@ -176,15 +176,15 @@ function assertInputVectorOffsetsAligned(
   for (const [name, vector] of Object.entries(inputVectors)) {
     const batched = requiresBatchBinding(vector);
     vector.data.forEach((data, batchIndex) => {
-      if (!batched || !batchState.emptyBatches[batchIndex]) {
-        assertStorageBufferOffsetAligned(
-          device,
-          'GPUTableComputation',
-          name,
-          batchIndex,
-          data.byteOffset
-        );
-      }
+      const numRows = batched && batchState.emptyBatches[batchIndex] ? 0 : data.length;
+      assertStorageBufferOffsetAligned(
+        device,
+        'GPUTableComputation',
+        name,
+        batchIndex,
+        data.byteOffset,
+        numRows
+      );
     });
   }
 }

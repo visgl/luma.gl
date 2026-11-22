@@ -127,7 +127,8 @@ and uploaded byte size. Constants produce aligned one-row storage buffers.
 WebGPU requires each storage binding to start at a multiple of
 `device.limits.minStorageBufferOffsetAlignment` (256 bytes by default), so a varying
 chunk whose `byteOffset` is not a multiple of that alignment is rejected when bindings
-are prepared.
+are prepared, before any buffer is written. Chunks of zero-row batches are not checked,
+because callers skip those batches.
 The `residualVector` (`<name>64Low`) from a GPU Float64 split shares the high part's
 buffer and starts one high-part row into it, so on WebGPU it can be bound as a vertex
 attribute but not as a storage binding.
