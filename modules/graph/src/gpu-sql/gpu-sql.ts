@@ -283,7 +283,7 @@ function buildGPUSQLPlan(
         definitions
       );
 
-      if (keys.length === 2 || !frame.dictionaries[keys[0].source]) {
+      if (keys.length > 1 || !frame.dictionaries[keys[0].source]) {
         for (const {source} of keys) {
           const format = frame.schema.fields.find(field => field.name === source)?.format;
           if (format !== 'uint32' && format !== 'sint32' && format !== 'float32') {
@@ -532,9 +532,6 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     throw new Error('GPUSQL OFFSET must fit an unsigned 32-bit row count');
   }
   if (statement.joins.length > 1) throw new Error('GPUSQL currently supports one JOIN');
-  if ((statement.groupBy?.length ?? 0) > 2) {
-    throw new Error('GPUSQL currently supports at most two GROUP BY columns');
-  }
   if (statement.limit !== undefined && statement.limit > 0xffffffff) {
     throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
   }

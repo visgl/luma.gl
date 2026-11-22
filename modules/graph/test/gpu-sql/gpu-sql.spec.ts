@@ -761,9 +761,10 @@ it('GPUSQL groups numeric keys across Arrow batches and preserves their storage 
     arrow.vectorFromArray(
       ['other', 'basic', 'basic', 'other', 'basic', null],
       new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 23)
-    )
+    ),
+    arrow.vectorFromArray([0, 1, 0, 0, 2, 0], new arrow.Uint32())
   ];
-  const fields = ['unsignedKey', 'signedKey', 'floatKey', 'category'].map(
+  const fields = ['unsignedKey', 'signedKey', 'floatKey', 'category', 'bucket'].map(
     (name, index) => new arrow.Field(name, columns[index].type, true)
   );
   const schema = new arrow.Schema(fields);
@@ -823,6 +824,25 @@ it('GPUSQL groups numeric keys across Arrow batches and preserves their storage 
           ['basic', 0, 1],
           ['basic', null, 2],
           [null, 0, 1]
+        ]
+      },
+      {
+        sql: 'SELECT category AS label, unsignedKey, signedKey, floatKey, bucket, COUNT(*) AS rows FROM numbers GROUP BY label, 2, numbers.signedKey, floatKey, bucket',
+        names: ['label', 'unsignedKey', 'signedKey', 'floatKey', 'bucket', 'rows'],
+        types: [
+          arrow.Dictionary,
+          arrow.Uint32,
+          arrow.Int32,
+          arrow.Float32,
+          arrow.Uint32,
+          arrow.Uint32
+        ],
+        expected: [
+          ['other', 4294967295, -2147483648, 0, 0, 2],
+          ['basic', 0, 2147483647, Infinity, 0, 1],
+          ['basic', null, -1, NaN, 1, 1],
+          ['basic', null, -1, NaN, 2, 1],
+          [null, 0, null, null, 0, 1]
         ]
       },
       {

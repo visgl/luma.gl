@@ -420,7 +420,7 @@ function addGPUObservedGroups(
   const count = allocate('-result-count', 1);
   const countView = graph.importGPUVector(prefix + '-count-view', count).data[0];
   if (length === 0) {
-    addGPUPairPass(graph, prefix + '-empty', 1, {}, {count: countView}, 'count[0] = 0u;');
+    addGPUGroupingPass(graph, prefix + '-empty', 1, {}, {count: countView}, 'count[0] = 0u;');
     return {keys: selectionMask, rows, count, mask};
   }
 
@@ -452,7 +452,7 @@ function addGPUObservedGroups(
     if (selection.length > 0) {
       for (const [index, {input, values, classes}] of staged.entries()) {
         const validity = nullableKeys[index]?.input?.data[batchIndex];
-        addGPUPairPass(
+        addGPUGroupingPass(
           graph,
           prefix + '-stage-' + batchIndex + '-' + index,
           selection.length,
@@ -508,27 +508,23 @@ function addGPUObservedGroups(
   }
   const order = orders[orderIndex];
   const first = staged[0];
-  const second = staged[1];
-  addGPUPairPass(
-    graph,
-    prefix + '-heads-pass',
-    length,
-    {
-      order,
-      firstValues: first.values,
-      firstClasses: first.classes,
-      ...(second ? {secondValues: second.values, secondClasses: second.classes} : {})
-    },
-    {heads},
-    `
-    let row = order[index];
-    let previous = order[max(index, 1u) - 1u];
-    heads[index] = u32(firstClasses[row] != 2u &&
-      (index == 0u || firstClasses[row] != firstClasses[previous] ||
-        firstValues[row] != firstValues[previous]
-        ${second ? '|| secondClasses[row] != secondClasses[previous] || secondValues[row] != secondValues[previous]' : ''}));
-  `
-  );
+  for (const [index, {values, classes}] of staged.entries()) {
+    const firstKey = index === 0;
+    addGPUGroupingPass(
+      graph,
+      prefix + '-heads-' + index,
+      length,
+      {order, values, classes, ...(firstKey ? {} : {firstClasses: first.classes})},
+      {heads},
+      `
+        let row = order[index];
+        let previous = order[max(index, 1u) - 1u];
+        let changed = classes[row] != classes[previous] || values[row] != values[previous];
+        let selected = ${firstKey ? 'classes' : 'firstClasses'}[row] != 2u;
+        heads[index] = u32(selected && (${firstKey ? 'index == 0u' : 'heads[index] != 0u'} || changed));
+      `
+    );
+  }
   graph.add(
     new GPUScan({id: prefix + '-scan-heads', input: heads, output: ranks, mode: 'inclusive'})
   );
@@ -540,7 +536,7 @@ function addGPUObservedGroups(
       operation: 'sum'
     })
   );
-  addGPUPairPass(
+  addGPUGroupingPass(
     graph,
     prefix + '-scatter-ids',
     length,
@@ -553,7 +549,7 @@ function addGPUObservedGroups(
   );
   for (const [index, {values, classes}] of staged.entries()) {
     const validity = nullableKeys[index]?.output;
-    addGPUPairPass(
+    addGPUGroupingPass(
       graph,
       prefix + '-publish-key-' + index,
       length,
@@ -569,7 +565,7 @@ function addGPUObservedGroups(
       `
     );
   }
-  addGPUPairPass(
+  addGPUGroupingPass(
     graph,
     prefix + '-result-selection',
     length,
@@ -595,8 +591,8 @@ function addGPUObservedGroups(
   return {keys, rows, count, mask};
 }
 
-/** Binds packed uint32 views and accounts for source chunk offsets in pair-grouping shaders. */
-function addGPUPairPass(
+/** Binds packed uint32 views and accounts for source chunk offsets in grouping shaders. */
+function addGPUGroupingPass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
   length: number,

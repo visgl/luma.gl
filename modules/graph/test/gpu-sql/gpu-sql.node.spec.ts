@@ -296,7 +296,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       context.query(
         'SELECT category, identifier, fare, COUNT(*) FROM trips GROUP BY category, identifier, fare'
       )
-    ).toThrow(/at most two GROUP BY columns/);
+    ).not.toThrow();
 
     expect(context.query('SELECT * FROM trips ORDER BY 1')).toBeInstanceOf(GPUSQLQuery);
     for (const position of [0, 1.5, 2]) {
