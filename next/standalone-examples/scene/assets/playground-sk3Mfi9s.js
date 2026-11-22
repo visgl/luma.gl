@@ -1,5 +1,5 @@
 const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./jsonMode-15ydIK1U.js","./editor.api-DndMM8sp.js","./chunk-BRNzzbbm.js","./editor-CJEeZjoM.css"])))=>i.map(i=>d[i]);
-import{_ as e,a as t,c as n,d as r,f as i,g as a,h as o,i as s,l as c,m as l,n as u,o as d,p as f,r as p,s as m,t as ee,u as te,v as ne,y as re}from"./usd-samples-DBZD36Ke.js";import"./log-6ICLTgtF.js";import{N as ie,f as h,j as g}from"./buffer-layout-utils-C86dOL7x.js";import{G as _}from"./gltf-loader-D70F3jU8.js";import{i as ae}from"./log-CZ1LPg_y.js";import{t as oe}from"./gltf-CoGOvsFe.js";import"./draco-loader-types-ChJo9A85.js";import{a as se,i as ce,n as le,o as ue,r as de,s as fe,t as pe}from"./editor.api-DndMM8sp.js";var me=`
+import{_ as e,a as t,c as n,d as r,f as i,g as a,h as o,i as s,l as c,m as l,n as u,o as d,p as f,r as p,s as m,t as ee,u as te,v as ne,y as re}from"./usd-samples-CWQt78pb.js";import"./log-6ICLTgtF.js";import{N as ie,f as h,j as g}from"./buffer-layout-utils-C86dOL7x.js";import{G as _}from"./gltf-loader-D70F3jU8.js";import{i as ae}from"./log-CZ1LPg_y.js";import{t as oe}from"./gltf-CoGOvsFe.js";import"./draco-loader-types-ChJo9A85.js";import{a as se,i as ce,n as le,o as ue,r as de,s as fe,t as pe}from"./editor.api-DndMM8sp.js";var me=`
 struct OutlineUniforms {
   color: vec4<f32>,
   selectedIdentifier: u32,
