@@ -1772,8 +1772,6 @@ export const GlobeExample: React.FC = props => (
     id="globe"
     title="Globe"
     directory="showcase"
-    // Vertex-stage storage buffers and large workgroups exceed compatibility defaults
-    compatibilityMax
     loadTemplate={loadGlobeApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
