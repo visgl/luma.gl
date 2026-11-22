@@ -304,7 +304,7 @@ export type ANARIRendererParameters = {
   shadows?: boolean;
   /** Filters mipmapped triangle alpha masks for camera rays, secondary rays, shadows, and hit queries. */
   filteredCutouts?: boolean;
-  /** Approximates thin-material transmission in analytic-light shadows in PBR mode. */
+  /** Allows thin transmission and index-matched analytic spheres in PBR analytic-light shadows. */
   transmissiveShadows?: boolean;
   resolutionScale?: number;
   minimumResolutionScale?: number;

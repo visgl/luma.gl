@@ -136,8 +136,11 @@ cutouts, shared by primary color and queries. A separate PBR option approximates
 tinted straight-line shadows through thin diffuse-transmission layers for analytic
 lights. With cutout filtering enabled, continuation and explicit light samples
 share a camera footprint propagated along the path. This includes triangle
-emitter endpoints and analytic-light shadow blockers. Refractive shadow transport
-remains open.
+emitter endpoints and analytic-light shadow blockers. Finite analytic visibility
+rays now aim at the light from their biased origin. The opt-in shadow mode applies
+Beer–Lambert attenuation to index-matched analytic spheres and clips that
+attenuation at point and spot light endpoints. Bent and nested dielectric
+connections remain open.
 
 
 The reconstruction benchmark compares unfiltered, spatial, and variance-guided

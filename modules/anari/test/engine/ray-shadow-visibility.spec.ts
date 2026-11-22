@@ -83,6 +83,13 @@ it('tints an analytic shadow through a thin layer and retains opaque blocking', 
     expect(red).toBeGreaterThan(unoccluded * 0.35);
     expect(red).toBeLessThan(unoccluded * 0.55);
     expect([green, blue]).toEqual([0, 0]);
+    options.surfaces.push({
+      ...sheet,
+      id: 'second-sheet',
+      transforms: [new Matrix4().translate([2, 0, 2]).scale([0.22, 0.22, 0.22])]
+    });
+    const [stackedRed] = await readPixel();
+    expect(stackedRed / unoccluded).toBeCloseTo((red / unoccluded) ** 2, 1);
     sheet.material.uniforms.diffuseTransmissionFactor = 0;
     expect(await readPixel()).toEqual([0, 0, 0]);
   } finally {
@@ -126,6 +133,99 @@ it('filters cutouts on analytic shadow rays while keeping the camera receiver vi
     expect(await readPixel()).toEqual([0, 0, 0]);
     options.shadows = false;
     expect(await readPixel()).toEqual(lit);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('attenuates index-matched analytic spheres over the traversed light segment', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  try {
+    options.transportMode = 'pbr';
+    options.progressive = false;
+    options.samplingFrameIndex = 0;
+    options.cameraProjection = 'orthographic';
+    options.camera = {
+      ...options.camera,
+      projectionMatrix: new Matrix4().ortho({
+        left: -0.45,
+        right: 0.35,
+        bottom: -0.35,
+        top: 0.45,
+        near: 0.1,
+        far: 20
+      })
+    };
+    options.lights = [{type: 'directional', direction: [-1, 0, -1], intensity: 2}];
+    const receiver = {...surface, material: {id: 'receiver', uniforms: {}}};
+    const sphere = {
+      ...surface,
+      id: 'shadow-sphere',
+      transforms: [new Matrix4().translate([1.2, 0, 1.2])],
+      material: {
+        id: 'absorbing',
+        uniforms: {
+          transmissionFactor: 1,
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          ior: 1,
+          attenuationDistance: 0.8,
+          attenuationColor: [0.25, 0.5, 1] as [number, number, number]
+        }
+      }
+    };
+    options.primitives = {[sphere.id]: {type: 'sphere', radius: 0.4}};
+    options.surfaces = [receiver];
+    const unoccluded = await readPixel();
+    expect(unoccluded[0]).toBeGreaterThan(50);
+
+    options.surfaces = [receiver, sphere];
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.transmissiveShadows = true;
+    const throughSphere = await readPixel();
+    expect(throughSphere[0] / unoccluded[0]).toBeCloseTo(0.25, 1);
+    expect(throughSphere[1] / unoccluded[1]).toBeCloseTo(0.5, 1);
+    expect(throughSphere[2]).toBe(unoccluded[2]);
+
+    sphere.material.uniforms.transmissionFactor = 0.5;
+    const fractional = await readPixel();
+    expect(fractional[2] / unoccluded[2]).toBeCloseTo(0.25, 1);
+    sphere.material.uniforms.transmissionFactor = 1;
+
+    options.lights = [{type: 'point', position: [1.2, 0, 1.2], intensity: 2}];
+    options.surfaces = [receiver];
+    const pointUnoccluded = await readPixel();
+    expect(pointUnoccluded[0]).toBeGreaterThan(30);
+    options.surfaces = [receiver, sphere];
+    const insideSphere = await readPixel();
+    expect(insideSphere[0] / pointUnoccluded[0]).toBeCloseTo(0.5, 1);
+    expect(insideSphere[1] / pointUnoccluded[1]).toBeCloseTo(Math.sqrt(0.5), 1);
+    expect(insideSphere[2]).toBe(pointUnoccluded[2]);
+
+    sphere.material.uniforms.ior = 1.5;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    sphere.transforms = [new Matrix4().translate([1.8, 0, 1.8])];
+    expect(await readPixel()).toEqual(pointUnoccluded);
+
+    // Place the receiver and camera inside the sphere, then move the light through the boundary.
+    options.camera = {
+      ...options.camera,
+      position: [0, 0, 0.2],
+      viewMatrix: new Matrix4().lookAt({eye: [0, 0, 0.2], center: [0, 0, 0], up: [0, 1, 0]})
+    };
+    sphere.material.uniforms.ior = 1;
+    sphere.transforms = [new Matrix4()];
+    for (const lightHeight of [0.2, 1]) {
+      options.lights = [{type: 'point', position: [0, 0, lightHeight], intensity: 0.5}];
+      options.surfaces = [receiver];
+      const noSphere = await readPixel();
+      expect(noSphere[0]).toBeGreaterThan(20);
+      options.surfaces = [receiver, sphere];
+      const interior = await readPixel();
+      const distance = Math.min(0.4, lightHeight) - 0.002;
+      expect(interior[0] / noSphere[0]).toBeCloseTo(0.25 ** (distance / 0.8), 1);
+      expect(interior[2]).toBe(noSphere[2]);
+    }
   } finally {
     destroy();
   }
