@@ -1,8 +1,10 @@
 # Depth buffers
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
+[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md)[Stencil buffers](https://luma.gl/next/docs/api-guide/gpu/stencil-buffers.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
 
 A depth attachment stores a depth value per framebuffer sample. For overlapping opaque draws, the depth comparison decides which surface is visible. The projection, render pass and pipeline must agree on which end of the depth range is closer.
+
+For masks and per-sample tags, see [Stencil buffers](https://luma.gl/next/docs/api-guide/gpu/stencil-buffers.md).
 
 ## Configure opaque rendering[​](#configure-opaque-rendering "Direct link to Configure opaque rendering")
 

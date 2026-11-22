@@ -209,6 +209,7 @@ Follow the GPU lifecycle from device creation and resource ownership through bin
 - [Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md): Uniforms are shader variables whose values can be set from JavaScript.
 - [HTML-in-Canvas](https://luma.gl/next/docs/api-guide/gpu/html-in-canvas.md): HTML-in-Canvas is an emerging browser API for drawing laid out DOM descendants of a
 - [Resource ownership](https://luma.gl/next/docs/api-guide/gpu/resource-ownership.md): luma.gl resources have explicit lifetimes. An owner destroys its owned resources when it is
+- [Stencil buffers](https://luma.gl/next/docs/api-guide/gpu/stencil-buffers.md): A stencil attachment stores a small unsigned integer at each framebuffer sample. Draws can
 - [Tabular Data in WGSL](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md): Many GPU workloads start with tabular data: each logical row describes one
 - [Working With Video Textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md): From v9.4
 
