@@ -17,7 +17,7 @@ struct PaneVertex {
 
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> PaneVertex {
   let local = vec2f(select(-1.0, 1.0, (index & 1u) != 0u), select(-1.0, 1.0, index >= 2u));
-  return PaneVertex(paneTransform * vec4f(local * vec2f(2.25, 1.65), 0.0, 1.0), local);
+  return PaneVertex(paneTransform * vec4f(local * vec2f(2.65, 1.95), 0.0, 1.0), local);
 }
 
 `;
@@ -72,7 +72,8 @@ export class GaussianSplatGlassPane {
     batches: readonly GPUSplatData[],
     props: SplatRendererProps & {modelViewProjectionMatrix: readonly number[]},
     elapsedMilliseconds: number,
-    clearColor: [number, number, number, number]
+    clearColor: [number, number, number, number],
+    {center, scale, zUp}: {center: [number, number, number]; scale: number; zUp?: boolean}
   ): void {
     const {device, splats} = this;
     const framebuffer = device.getCanvasContext().getCurrentFramebuffer();
@@ -95,8 +96,11 @@ export class GaussianSplatGlassPane {
 
     const phase = elapsedMilliseconds * 0.00065;
     const transform = new Matrix4(props.modelViewProjectionMatrix)
-      .translate([0.7 * Math.sin(phase), 0, 1.25 * Math.sin(phase * 0.85)])
-      .rotateY(phase * 0.75)
+      .translate(center)
+      .rotateX(zUp ? Math.PI / 2 : 0)
+      .scale(scale)
+      .translate([1.8 * Math.sin(phase), 0, 1.25 * Math.cos(phase)])
+      .rotateY(0.7 * Math.sin(phase))
       .rotateZ(0.17 * Math.sin(phase));
     this.transform.write(new Float32Array(transform));
 

@@ -1070,7 +1070,7 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
     <LumaExample
       id="gaussian-splats"
       title="Gaussian Splats"
-      subtitle="Progressive HDR Gaussian splat rendering"
+      subtitle="Moving glass and Gaussian splat compositing"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
       loadTemplate={loadGaussianSplatsApp}
@@ -1084,16 +1084,12 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
 
 export const GaussianSplatViewerExample: React.FC<
   WebsiteExampleProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}
-> = ({defaultScene, ...props}) => {
+> = ({defaultScene = 'train', ...props}) => {
   const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
   const loadAnimationTemplate = useMemo(
     () => async () => {
       const {default: GaussianSplatsApp} = await loadGaussianSplatsApp();
       const makeAnimationTemplate = () => {
-        if (!defaultScene) {
-          return GaussianSplatsApp;
-        }
-
         return class GaussianSplatSceneAnimationTemplate extends GaussianSplatsApp {
           constructor(animationProps: AnimationProps) {
             super({...animationProps, defaultScene});
