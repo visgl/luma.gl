@@ -11,6 +11,8 @@ import {
   GPUDataFrameQuery,
   type GPUDataFrameDerivedColumn
 } from '../gpu-dataframe/gpu-data-frame-query';
+import {compileGPUDataFrameGroupedAggregation} from '../gpu-dataframe/gpu-group-aggregation-compiler';
+import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
 import {compileGPUDataFrameGlobalSort} from '../gpu-dataframe/gpu-global-sort-compiler';
 import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-query';
 import {
@@ -82,6 +84,7 @@ type GPUSQLSortPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormal
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
 type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
+  readonly selectedColumns: readonly string[];
   readonly predicates: readonly GPUExpression<boolean, string>[];
   readonly derivedColumns: readonly GPUDataFrameDerivedColumn[];
   filter: (predicate: GPUExpression<boolean, string>) => GPUSQLDynamicQuery;
@@ -91,7 +94,10 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
     expression: GPUExpression<number | null, string>
   ) => GPUSQLDynamicQuery;
   groupBy: (key: string) => {
-    aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
+    aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan & {
+      readonly groupCount: number;
+      readonly definitions: readonly GPUDataFrameAggregationDefinition[];
+    };
   };
   aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
   sortByGlobal: (
@@ -190,6 +196,7 @@ function buildGPUSQLPlan(
     }
     const definitions: GPUSQLAggregationDefinitions = {};
     const reservedNames = new Set(frame.columnNames);
+    const outputNames = new Map<GPUSQLSelectItem, string>();
     let inputIndex = 0;
     for (const item of aggregates) {
       const input =
@@ -206,6 +213,7 @@ function buildGPUSQLPlan(
         query = query.withColumn(inputColumn, new GPUExpression<number | null, string>(input));
       }
       const name = item.alias ?? `${item.aggregate}_${inputColumn ?? 'all'}`;
+      outputNames.set(item, name);
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
@@ -219,21 +227,49 @@ function buildGPUSQLPlan(
               | {mean: string});
     }
     if (statement.groupBy !== undefined) {
-      const key =
-        typeof statement.groupBy === 'number'
-          ? resolveGPUSQLProjectionName(
-              getGPUSQLProjectionItem(statement.items, statement.groupBy, 'GROUP BY'),
-              resolve
-            )
-          : resolve(statement.groupBy);
       const nonAggregates = statement.items.filter(item => !item.aggregate);
-      if (
-        nonAggregates.length !== 1 ||
-        resolveGPUSQLProjectionName(nonAggregates[0], resolve) !== key
-      ) {
+      if (nonAggregates.length !== 1) {
         throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
       }
-      return query.groupBy(key).aggregate(definitions);
+      const keyItem = nonAggregates[0];
+      const selectedKey = resolveGPUSQLProjectionName(keyItem, resolve);
+      const groupReference = statement.groupBy;
+      const key =
+        typeof groupReference === 'number'
+          ? resolveGPUSQLProjectionName(
+              getGPUSQLProjectionItem(statement.items, groupReference, 'GROUP BY'),
+              resolve
+            )
+          : groupReference.qualifier === undefined &&
+              groupReference.name === keyItem.alias &&
+              !frame.columnNames.includes(groupReference.name)
+            ? selectedKey
+            : resolve(groupReference);
+      if (selectedKey !== key) {
+        throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
+      }
+      const outputKey = keyItem.alias ?? key;
+      if (Object.hasOwn(definitions, outputKey)) {
+        throw new Error('GPUSQL output column "' + outputKey + '" is duplicated');
+      }
+      outputNames.set(keyItem, outputKey);
+      const grouped = query.groupBy(key).aggregate(definitions);
+      const columns = statement.items.map(item => outputNames.get(item)!);
+      const {predicates, selectedColumns, derivedColumns} = query;
+      return {
+        compile: graph =>
+          compileGPUDataFrameGroupedAggregation(
+            frame,
+            predicates,
+            selectedColumns,
+            derivedColumns,
+            key,
+            grouped.groupCount,
+            grouped.definitions,
+            graph,
+            {key: outputKey, columns}
+          )
+      };
     }
     if (aggregates.length !== statement.items.length) {
       throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
