@@ -6,13 +6,15 @@
 import {parseSQLSelectStatement} from '@math.gl/sql/parser';
 import type {Expression} from '@math.gl/sql/expressions';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
+
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
 import {
   GPUDataFrameQuery,
   type GPUDataFrameDerivedColumn
 } from '../gpu-dataframe/gpu-data-frame-query';
 import {compileGPUDataFrameGroupedAggregation} from '../gpu-dataframe/gpu-group-aggregation-compiler';
-import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
+import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
 import {compileGPUDataFrameGlobalSort} from '../gpu-dataframe/gpu-global-sort-compiler';
 import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-query';
 import {
@@ -94,10 +96,7 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
     expression: GPUExpression<number | null, string>
   ) => GPUSQLDynamicQuery;
   groupBy: (key: string) => {
-    aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan & {
-      readonly groupCount: number;
-      readonly definitions: readonly GPUDataFrameAggregationDefinition[];
-    };
+    readonly groupCount: number;
   };
   aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
   sortByGlobal: (
@@ -253,7 +252,12 @@ function buildGPUSQLPlan(
         throw new Error('GPUSQL output column "' + outputKey + '" is duplicated');
       }
       outputNames.set(keyItem, outputKey);
-      const grouped = query.groupBy(key).aggregate(definitions);
+      const {groupCount} = query.groupBy(key);
+      const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
+        {...query, source: frame},
+        outputKey,
+        definitions
+      );
       const columns = statement.items.map(item => outputNames.get(item)!);
       const {predicates, selectedColumns, derivedColumns} = query;
       return {
@@ -264,8 +268,8 @@ function buildGPUSQLPlan(
             selectedColumns,
             derivedColumns,
             key,
-            grouped.groupCount,
-            grouped.definitions,
+            groupCount,
+            normalized,
             graph,
             {key: outputKey, columns}
           )
