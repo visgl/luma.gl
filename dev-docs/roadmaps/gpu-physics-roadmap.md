@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 21, 2026
+Updated: November 22, 2026
 
 ## Goal and current status
 
@@ -28,6 +28,22 @@ Implementation references on master:
 - [Module API and limitations](../../modules/graph/src/gpu-physics/README.md)
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
+
+## glTF 2.1 composition and passive ragdolls
+
+The composed-scene adapter mounts independently owned instances of decoded external
+assets under their referencing nodes. It targets the Khronos
+[glTF 2.1 draft c330f9e5](https://github.com/KhronosGroup/glTF/tree/c330f9e5a324c9858145be183d2a1e63718fd3e8)
+and accepts core analytic shapes as an additional input profile for the existing
+[rigid-body review draft](https://github.com/KhronosGroup/glTF/pull/2424).
+The loaders.gl adapter handles file and GLB v3 decoding. An embedded external asset in
+a multi-chunk GLB is exercised end to end. Authored bounding volumes are resolved as
+scenegraph metadata.
+
+Marionette Theater uses the same glTF-authored joints and skins as the engine, with
+two independent physics sessions. A fixed-step animation release feeds live pose
+matrices to the standard skin palette on the GPU. Active ragdolls, progressive asset
+materialization, broader draft conformance, and cross-device limits remain open.
 
 ## G7 glTF physics qualification checkpoint
 

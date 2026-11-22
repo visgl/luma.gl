@@ -33,3 +33,4 @@ export type {
   PhysicsBodyPose,
   PhysicsUpdateResult
 } from './physics-controller';
+export {ScenegraphRagdoll} from './scenegraph-ragdoll';
