@@ -42,6 +42,10 @@ hardware and browsers, then expand the timed envelope to dense worlds, moving
 meshes, and authored scenes with rendering active. G8 and later continue to track
 broader library capabilities separately from the pinned glTF profile.
 
+The rendered authored-scene gate adds capture, recook, restore, and native export
+to the GPU presentation qualification. It records frame intervals with rendering
+and simulation active. Cross-vendor and mobile evidence remain open.
+
 ## Authored qualification closure — October 24, 2026
 
 The executable G4/G5 profile now has 12 passing rows with no missing checks in the
@@ -73,9 +77,8 @@ The four broad G6 rows now have executable import/behavior/performance selectors
 Their pass status must come from the qualification report, not this roadmap. The
 publication benchmark measures 10,000 transforms and AABBs on Apple hardware and
 SwiftShader separately. This closes a bounded publication measurement obligation;
-it does not establish multi-vendor hardware or whole-step performance. Explicit
-recooking remains required for skin/morph topology changes and scale reconciliation
-before native export. Mutable animated nodes are instance-local; immutable resources
+it does not establish multi-vendor hardware or whole-step performance. Native export now reconciles settled analytic scale and collider frames in the live
+scene. Mesh deformation and topology changes still require explicit recooking. Mutable animated nodes are instance-local; immutable resources
 may be shared. Cross-device release qualification remains G7 work.
 
 ## Authored runtime and GPU execution checkpoint — October 23, 2026
