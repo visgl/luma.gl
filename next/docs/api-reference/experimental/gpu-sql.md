@@ -86,7 +86,7 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with optional `GROUP BY`. `COUNT(column)` counts valid values after filtering, while `COUNT(*)` counts all selected rows. Numeric aggregate expressions such as `SUM(fare * 2) AS total` require an explicit output alias.
 
-  Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column. Grouped results preserve SELECT column order and retain key dictionaries under their output names. Single-key grouping returns the full category domain. Two-key grouping requires two non-null uint32 dictionary columns and returns only pairs observed after WHERE. For two-key results, pass the compiled query’s `rowIndices` and `selectedCounts` to Arrow readback to read the observed rows from the capacity-backed result.
+  Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column. Grouped results preserve SELECT column order and retain key dictionaries under their output names. Single-key grouping returns the full category domain. Two-key grouping accepts uint32 dictionary columns and returns only pairs observed after WHERE. Nulls in either key form a group when observed, including pairs with two null keys. For two-key results, pass the compiled query’s `rowIndices` and `selectedCounts` to Arrow readback to read the observed rows from the capacity-backed result.
 
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
