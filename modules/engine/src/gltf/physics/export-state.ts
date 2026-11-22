@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core/matrix';
-import {decomposePhysicsTransform, type ScenegraphNode} from '@luma.gl/engine';
+import {decomposePhysicsTransform, readPhysicsRotation, type ScenegraphNode} from '@luma.gl/engine';
 import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
 import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {GLTFPhysicsDescription, GLTFPhysicsDocument} from './physics-types';
@@ -294,8 +294,8 @@ function getLiveNodeComponents(
   if (!source.matrix) {
     /** Authored local translation with the glTF identity default. */
     const authoredPosition = source.translation ?? [0, 0, 0];
-    /** Authored quaternion with the glTF identity default. */
-    const authoredRotation = source.rotation ?? [0, 0, 0, 1];
+    /** Normalize exactly as the physics importer does when initializing the local matrix. */
+    const authoredRotation = readPhysicsRotation(source.rotation);
     /** Authored scale with the glTF identity default. */
     const authoredScale = source.scale ?? [1, 1, 1];
     /** Match the import-time matrix before using source components. */

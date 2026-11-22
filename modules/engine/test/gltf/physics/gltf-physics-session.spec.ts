@@ -252,8 +252,8 @@ it('exports a settled animated collider frame and shared analytic scale without 
     translation: [1, 0, 0],
     extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}, physicsMaterial: 0}}}
   });
-  // Render-only siblings may have singular scales both before and after animation.
-  nodes.push({scale: [0, 1, 1]}, {scale: [1, 0, 1]});
+  // Use a rounded source quaternion to exercise the physics importer's normalization.
+  nodes.push({scale: [0, 1, 1]}, {scale: [1, 0, 1], rotation: [0, 0, 0.70710677, 0.70710677]});
   /** Exercise both standard and pointer-targeted scale channels. */
   const source: GLTFPhysicsDocument = {
     ...original,
@@ -309,6 +309,7 @@ it('exports a settled animated collider frame and shared analytic scale without 
     expect(saved.nodes![4].scale).toEqual([0, -2, 3]);
     expect(saved.nodes![5].matrix).toBeUndefined();
     expect(saved.nodes![5].scale).toEqual([1, 0, 1]);
+    expect(saved.nodes![5].rotation![2]).toBeCloseTo(Math.SQRT1_2, 12);
     expect(source.nodes![3].translation).toEqual([1, 0, 0]);
     /** Reimport the exported pose to compare the newly cooked colliders. */
     const roundTrip = parseGLTFPhysics(saved, options);
