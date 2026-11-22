@@ -58,6 +58,12 @@ const MATERIAL_MAPS = [
   ]
 ] as const;
 
+/** Marks materials that can contribute an index-matched straight shadow path. */
+function hasIndexMatchedTransmission(surface: SceneSurface): boolean {
+  const uniforms = surface.material.uniforms;
+  return uniforms?.ior === 1 && (uniforms.transmissionFactor ?? 0) > 0;
+}
+
 /** Borrowed material maps; ownership remains with the scene adapter. */
 export function getRayMaterialTextures(
   surfaces: readonly SceneSurface[],
@@ -93,6 +99,7 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
       surface.id,
       surface.material.uniforms?.normalScale,
       (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0,
+      hasIndexMatchedTransmission(surface),
       (surface.material.uniforms?.anisotropyStrength ?? 0) > 0,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
@@ -214,6 +221,10 @@ export function getRayMaterialTextureShader(
         !opacityOnly &&
           surfaces.some(surface => (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0)
       )
+    )
+    .replace(
+      '/* MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION */ false',
+      String(!opacityOnly && surfaces.some(hasIndexMatchedTransmission))
     )
     .replace('/* MATERIAL_HAS_ANISOTROPY */ false', String(hasAnisotropy))
     .replace(

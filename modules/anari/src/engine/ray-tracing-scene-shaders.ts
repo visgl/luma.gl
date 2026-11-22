@@ -1121,34 +1121,86 @@ fn getDiffuseTransmissionTint(primitive: RayPrimitive, hit: RayHit,
 
 const TRANSMISSIVE_SHADOWS = /* TRANSMISSIVE_SHADOWS */ false;
 
-// Straight-line visibility through thin diffuse-transmission layers. Closed dielectric
-// interfaces still occlude this connection because their transport changes direction.
+const MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION = /* MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION */ false;
+
+// Both camera and shadow paths use the same Beer–Lambert material convention.
+fn getVolumeTransmission(attenuation: vec4<f32>, distance: f32) -> vec3<f32> {
+  if (attenuation.w <= 0.0 || distance <= 0.0) { return vec3<f32>(1.0); }
+  return pow(clamp(attenuation.rgb, vec3<f32>(0.0), vec3<f32>(1.0)),
+    vec3<f32>(distance / attenuation.w));
+}
+
+// Analytic connections remain straight. Index matching allows closed analytic
+// spheres to transmit without bending the ray. Nested media remain opaque.
 fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
-  if (uniforms.settings.w <= 0.5) { return vec3<f32>(1.0); }
-  if (!TRANSMISSIVE_SHADOWS || !MATERIAL_HAS_DIFFUSE_TRANSMISSION || !usePBRTransport()) {
+  if (uniforms.settings.w <= 0.5 || maximumDistance <= RAY_EPSILON) { return vec3<f32>(1.0); }
+  if (!TRANSMISSIVE_SHADOWS || !usePBRTransport() ||
+      (!MATERIAL_HAS_DIFFUSE_TRANSMISSION && !MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION)) {
     return vec3<f32>(select(1.0, 0.0, intersectsScene(ray, maximumDistance)));
   }
   var segment = ray;
-  var remaining = maximumDistance;
+  var traveled = 0.0;
   var transmission = vec3<f32>(1.0);
-  for (var layer = 0u; layer < 8u; layer++) {
+  var medium = 0xffffffffu;
+  var mediumStart = 0.0;
+  for (var interfaceIndex = 0u; interfaceIndex <= 8u; interfaceIndex++) {
+    let remaining = maximumDistance - traveled;
     let blocker = intersectScene(segment, remaining);
-    if (blocker.distance >= remaining) { return transmission; }
+    if (blocker.distance >= remaining) {
+      if (medium == 0xffffffffu) { return transmission; }
+      if (maximumDistance >= RAY_INFINITY) { return vec3<f32>(0.0); }
+      return transmission * getVolumeTransmission(primitives[medium].attenuation, maximumDistance - mediumStart);
+    }
+    if (interfaceIndex == 8u) { return vec3<f32>(0.0); }
+
     var materialHit = blocker;
     materialHit.footprint = 0.0;
     let material = getShadedPrimitive(materialHit);
-    let fraction = getDiffuseTransmission(material);
-    if (fraction <= 0.0 || material.material.y > 0.0) { return vec3<f32>(0.0); }
-    let cosine = abs(dot(getFaceNormal(blocker, segment), segment.direction));
-    transmission *= fraction * getDiffuseTransmissionTint(
-      material, materialHit, -segment.direction, cosine, cosine);
+    let distance = traveled + blocker.distance;
+    if (MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION && material.properties.y > 0.0 &&
+        material.material.x < 0.0 && material.material.z == 1.0 && material.material.y > 0.0) {
+      if (blocker.entering && medium == 0xffffffffu) {
+        medium = blocker.primitiveIndex;
+        mediumStart = distance;
+      } else if (!blocker.entering && medium == blocker.primitiveIndex) {
+        transmission *= getVolumeTransmission(material.attenuation, distance - mediumStart);
+        medium = 0xffffffffu;
+      } else {
+        return vec3<f32>(0.0);
+      }
+      transmission *= clamp(material.material.y, 0.0, 1.0) *
+        (1.0 - clamp(material.emissive.w, 0.0, 1.0)) *
+        clamp(material.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+    } else {
+      let fraction = getDiffuseTransmission(material);
+      if (medium != 0xffffffffu || fraction <= 0.0 || material.material.y > 0.0) {
+        return vec3<f32>(0.0);
+      }
+      let cosine = abs(dot(getFaceNormal(blocker, segment), segment.direction));
+      transmission *= fraction * getDiffuseTransmissionTint(
+        material, materialHit, -segment.direction, cosine, cosine);
+    }
     if (all(transmission <= vec3<f32>(0.0))) { return vec3<f32>(0.0); }
     let advance = blocker.distance + RAY_EPSILON;
-    remaining -= advance;
-    if (remaining <= RAY_EPSILON) { return transmission; }
+    traveled += advance;
     segment = makeSurfaceRay(segment, advance, segment.origin + segment.direction * advance, segment.direction);
   }
-  return select(transmission, vec3<f32>(0.0), intersectsScene(segment, remaining));
+  return vec3<f32>(0.0);
+}
+
+// Aim finite-light visibility from the biased origin to the actual light position.
+fn evaluateAnalyticLightVisibility(ray: Ray, hit: RayHit, origin: vec3<f32>, direction: vec3<f32>,
+    light: RayLight, lightType: u32) -> vec3<f32> {
+  var shadowDirection = direction;
+  var shadowDistance = RAY_INFINITY;
+  if (lightType >= 2u) {
+    let offset = light.positionInnerCone.xyz - origin;
+    shadowDistance = length(offset);
+    shadowDirection = offset / max(shadowDistance, RAY_EPSILON);
+    shadowDistance -= RAY_EPSILON;
+  }
+  let shadowRay = makeSurfaceRay(ray, hit.distance, origin, shadowDirection);
+  return getAnalyticShadowTransmission(shadowRay, shadowDistance);
 }
 
 fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<f32> {
@@ -1231,9 +1283,8 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
 
     let faceLight = dot(transmissionNormal, lightDirection);
     if (diffuseTransmission > 0.0 && faceLight < 0.0 && attenuation > 0.0) {
-      let shadowRay = makeSurfaceRay(ray, hit.distance, hitPosition - transmissionNormal * 0.002, lightDirection);
-      let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
-      let shadowTransmission = getAnalyticShadowTransmission(shadowRay, shadowDistance);
+      let shadowTransmission = evaluateAnalyticLightVisibility(ray, hit,
+      hitPosition - transmissionNormal * 0.002, lightDirection, light, lightType);
       if (any(shadowTransmission > vec3<f32>(0.0))) {
         let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(transmissionNormal, viewDirection)), -faceLight);
         result += tint * lightColor * shadowTransmission * (-faceLight / PI) * diffuseTransmission *
@@ -1246,9 +1297,8 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
         dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
       continue;
     }
-    let shadowRay = makeSurfaceRay(ray, hit.distance, hitPosition + faceNormal * 0.002, lightDirection);
-    let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
-    let shadowTransmission = getAnalyticShadowTransmission(shadowRay, shadowDistance);
+    let shadowTransmission = evaluateAnalyticLightVisibility(ray, hit,
+      hitPosition + faceNormal * 0.002, lightDirection, light, lightType);
     if (all(shadowTransmission <= vec3<f32>(0.0))) { continue; }
 
     let halfDirection = normalize(lightDirection + viewDirection);
@@ -2033,8 +2083,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     if (medium != 0xffffffffu) {
       let attenuation = primitives[medium].attenuation;
       let segmentLength = length(ray.origin + ray.direction * hit.distance - position);
-      throughput *= pow(clamp(attenuation.rgb, vec3<f32>(0.0), vec3<f32>(1.0)),
-        vec3<f32>(segmentLength / attenuation.w));
+      throughput *= getVolumeTransmission(attenuation, segmentLength);
     }
     if (MATERIAL_HAS_MIPMAPS) {
       coneWidth += coneSpread * hit.distance;

@@ -289,12 +289,14 @@ endpoints use that footprint for alpha testing and mip zero for paired emission
 evaluation. Analytic sphere masks use mip zero.
 
 With PBR transport, `transmissiveShadows` lets analytic lights pass attenuated RGB
-through thin diffuse-transmission materials. The renderer follows the original
-light direction and multiplies the transmission of up to eight layers. Opaque
-blockers, smooth refractive interfaces, and deeper stacks still block the connection.
-This approximation leaves emitter and environment visibility unchanged. Both
-settings are off by default.
-
+through thin diffuse-transmission materials and unmasked analytic spheres with
+IOR exactly 1. The renderer follows the straight connection and processes up to
+eight surface crossings. An index-matched sphere applies the transmission factor
+and base-color tint at each crossing, then Beer–Lambert attenuation over the
+distance traveled inside. Point and spot light connections end at the light,
+including when it is inside the sphere. Opaque blockers, nested media, and
+dielectrics that bend the ray still block the connection. Emitter and environment
+visibility are unchanged. Both settings are off by default.
 
 ## Reconstruction benchmarks
 
