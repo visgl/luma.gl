@@ -304,6 +304,15 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
         /one-based SELECT column/
       );
     }
+    expect(
+      context.query('SELECT FLOOR(fare) AS bucket, COUNT(*) FROM trips GROUP BY bucket')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() =>
+      context.query('SELECT FLOOR(fare) AS bucket, COUNT(*) FROM trips GROUP BY CEILING(fare)')
+    ).toThrow(/each GROUP BY key exactly once/);
+    expect(() => context.query('SELECT FLOOR(fare), COUNT(*) FROM trips GROUP BY 1')).toThrow(
+      /computed group keys require an explicit AS alias/
+    );
     expect(() => context.query('SELECT category, COUNT(*) FROM trips GROUP BY 2')).toThrow(
       /group key directly/
     );
