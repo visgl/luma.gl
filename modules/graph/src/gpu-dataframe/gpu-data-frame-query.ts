@@ -3,12 +3,16 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import type {GPUExpressionNumericValue} from './gpu-expression';
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrame} from './gpu-data-frame';
 import {
   getGPUExpressionColumnNames,
-  getGPUExpressionResultFormats,
   GPUExpression,
   isBooleanExpressionNode,
   isGPUScalarFunction,
@@ -43,14 +47,14 @@ import {
 } from './gpu-sort-query';
 
 /** Portable scalar storage formats supported by computed dataframe columns. */
-export type GPUDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
+export type GPUDataFrameDerivedColumnFormat = GPUExpressionNumericFormat;
 
 /** Immutable numerical expression materialized only when its dataframe query is compiled. */
 export type GPUDataFrameDerivedColumn = Readonly<{
   /** Logical dataframe field name, distinct from every existing source and derived field. */
   name: string;
   /** Numeric expression referencing currently available source or derived columns. */
-  expression: GPUExpression<number | null, string>;
+  expression: GPUExpression<GPUExpressionNumericValue | boolean, string>;
   /** Optional explicit scalar format, which must agree with the referenced input format. */
   format?: GPUDataFrameDerivedColumnFormat;
 }>;
@@ -96,7 +100,10 @@ export class GPUDataFrameQuery<
     selectedColumns: readonly SelectedColumns[],
     derivedColumns: readonly GPUDataFrameDerivedColumn[] = []
   ) {
-    const logicalColumns = assertDataFrameDerivedColumns(source, derivedColumns);
+    const {logicalColumns, resolvedColumns} = resolveDataFrameDerivedColumns(
+      source,
+      derivedColumns
+    );
     assertSelectedQueryColumns(selectedColumns, logicalColumns);
     for (const predicate of predicates) {
       assertDataFrameQueryPredicate(source, predicate, logicalColumns, logicalColumns);
@@ -105,7 +112,7 @@ export class GPUDataFrameQuery<
     this.source = source;
     this.predicates = Object.freeze([...predicates]);
     this.selectedColumns = Object.freeze([...selectedColumns]);
-    this.derivedColumns = Object.freeze([...derivedColumns]);
+    this.derivedColumns = Object.freeze(resolvedColumns);
     Object.freeze(this);
   }
 
@@ -148,6 +155,17 @@ export class GPUDataFrameQuery<
   withColumn<
     Name extends string,
     ReferencedColumns extends SelectedColumns,
+    Format extends GPUDataFrameDerivedColumnFormat
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue, ReferencedColumns> & {
+      readonly node: {readonly kind: 'cast'; readonly format: Format};
+    },
+    options?: GPUDataFrameDerivedColumnOptions<Format>
+  ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends SelectedColumns,
     Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
       Logical,
       ReferencedColumns
@@ -155,6 +173,23 @@ export class GPUDataFrameQuery<
   >(
     name: Name,
     expression: GPUExpression<number | null, ReferencedColumns>,
+    options?: GPUDataFrameDerivedColumnOptions<Format>
+  ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
+  withColumn<Name extends string, Format extends GPUDataFrameDerivedColumnFormat>(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
+    options: GPUDataFrameDerivedColumnOptions<Format> & {format: Format}
+  ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends SelectedColumns,
+    Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
+      Logical,
+      ReferencedColumns
+    >
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
     options: GPUDataFrameDerivedColumnOptions<Format> = {}
   ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source> {
     assertDataFrameDerivedColumnName(name);
@@ -320,10 +355,11 @@ export function assertDataFrameQueryPredicate<T extends GPUTypeMap>(
 }
 
 /** Validates computed definitions in dependency order and returns all available logical fields. */
-function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
+function resolveDataFrameDerivedColumns<T extends GPUTypeMap>(
   source: GPUDataFrame<T>,
   derivedColumns: readonly GPUDataFrameDerivedColumn[]
-): string[] {
+) {
+  const resolvedColumns: GPUDataFrameDerivedColumn[] = [];
   const logicalColumns = [...source.columnNames];
   const logicalFormats = new Map<string, string | undefined>(
     source.schema.fields.map(
@@ -338,35 +374,23 @@ function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
     }
     assertDataFrameDerivedExpression(derivedColumn.expression, logicalColumns);
 
-    const referencedFormats = getGPUExpressionResultFormats(
-      derivedColumn.expression.node,
-      logicalFormats
-    );
-    if (referencedFormats.size > 1) {
-      throw new Error(`GPUDataFrame derived column "${derivedColumn.name}" mixes scalar formats`);
-    }
-    const inferredFormat = referencedFormats.values().next().value ?? 'float32';
-    if (
-      inferredFormat !== 'float32' &&
-      inferredFormat !== 'sint32' &&
-      inferredFormat !== 'uint32'
-    ) {
-      throw new Error(`GPUDataFrame derived column "${derivedColumn.name}" requires scalar inputs`);
-    }
+    const inferredFormat =
+      inferNumericFormat(derivedColumn.expression.node, logicalFormats) ?? 'float32';
     if (derivedColumn.format !== undefined && derivedColumn.format !== inferredFormat) {
       throw new Error(`GPUDataFrame derived column "${derivedColumn.name}" format does not match`);
     }
 
+    resolvedColumns.push(Object.freeze({...derivedColumn, format: inferredFormat}));
     logicalFormats.set(derivedColumn.name, inferredFormat);
     logicalColumns.push(derivedColumn.name);
   }
 
-  return logicalColumns;
+  return {logicalColumns, resolvedColumns};
 }
 
 /** Validates one numerical derived expression against its currently selected logical inputs. */
 function assertDataFrameDerivedExpression(
-  expression: GPUExpression<number | null, string>,
+  expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
   selectedColumns: readonly string[]
 ): void {
   if (!(expression instanceof GPUExpression) || !isNumericExpressionNode(expression.node)) {
@@ -431,7 +455,9 @@ function isNumericExpressionNode(node: GPUExpressionNode): boolean {
         isNumericExpressionNode(node.otherwise)
       );
     case 'cast':
-      return !node.format.includes('x') && isNumericExpressionNode(node.operand);
+      return isNumericExpressionNode(node.operand);
+    case 'vector':
+      return node.components.every(isNumericExpressionNode);
     case 'column':
       return true;
     case 'literal':
@@ -450,5 +476,60 @@ function isNumericExpressionNode(node: GPUExpressionNode): boolean {
       );
     default:
       return false;
+  }
+}
+
+/** Checks numeric shape and explicit casts before any GPU resources are allocated. */
+function inferNumericFormat(
+  node: GPUExpressionNode,
+  formats: ReadonlyMap<string, string | undefined>
+): GPUExpressionNumericFormat | undefined {
+  switch (node.kind) {
+    case 'vector': {
+      const layout = getGPUVectorWGSLLayout(node.format);
+      if (layout.components === 1 || node.components.length !== layout.components)
+        throw new Error('Vector width must match its format');
+      for (const component of node.components) {
+        if (
+          getGPUVectorWGSLLayout(inferNumericFormat(component, formats) ?? 'float32').components !==
+          1
+        )
+          throw new Error('Vector components must be scalar');
+      }
+      return node.format;
+    }
+    case 'cast': {
+      const source = inferNumericFormat(node.operand, formats) ?? 'float32';
+      if (
+        getGPUVectorWGSLLayout(source).components !== getGPUVectorWGSLLayout(node.format).components
+      )
+        throw new Error('Numeric casts must preserve width');
+      return node.format;
+    }
+    case 'column': {
+      const format = formats.get(node.name) as GPUExpressionNumericFormat;
+      getGPUVectorWGSLLayout(format);
+      return format;
+    }
+    case 'literal':
+    case 'parameter':
+      if (typeof node.value === 'boolean') throw new Error('Numeric expression required');
+      return undefined;
+    case 'unary':
+      if (isGPUScalarFunction(node.operator))
+        return inferNumericFormat(node.operand, formats) ?? 'float32';
+      if (node.operator !== 'negate') throw new Error('Numeric expression required');
+      return inferNumericFormat(node.operand, formats);
+    case 'binary':
+    case 'conditional': {
+      const left = inferNumericFormat(node.kind === 'binary' ? node.left : node.whenTrue, formats);
+      const right = inferNumericFormat(
+        node.kind === 'binary' ? node.right : node.otherwise,
+        formats
+      );
+      if (left && right && left !== right)
+        throw new Error('GPUDataFrame derived column mixes scalar formats');
+      return left ?? right;
+    }
   }
 }

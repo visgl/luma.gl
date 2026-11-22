@@ -3,9 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
+import {getGPUExpressionCastWGSL, GPU_EXPRESSION_CAST_WGSL} from '../gpu-core/gpu-expression-cast';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUDataFrame} from './gpu-data-frame';
-import {getGPUExpressionCastWGSL} from '../gpu-core/gpu-expression-cast';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import {isGPUScalarFunction, type GPUExpressionUnaryOperator} from './gpu-expression';
 import type {
@@ -25,7 +29,7 @@ export type GPUQueryScalarFormat = 'float32' | 'sint32' | 'uint32';
 /** One deduplicated source vector and optional validity sidecar consumed by a predicate. @internal */
 export type GPUQueryExpressionColumn = {
   name: string;
-  format: GPUQueryScalarFormat;
+  format: GPUExpressionNumericFormat;
   nullable: boolean;
   index: number;
 };
@@ -33,6 +37,7 @@ export type GPUQueryExpressionColumn = {
 /** One fixed-size literal or caller-controlled parameter stored outside shader source. @internal */
 export type GPUQueryExpressionControl = {
   name?: string;
+  convertInteger?: boolean;
   value: GPUExpressionValue;
   format: GPUQueryScalarFormat | 'boolean';
   index: number;
@@ -41,7 +46,7 @@ export type GPUQueryExpressionControl = {
 /** One selected numeric expression materialized into a source-aligned GPU vector. @internal */
 export type GPUQueryExpressionOutput = {
   name: string;
-  format: GPUQueryScalarFormat;
+  format: GPUExpressionNumericFormat;
   nullable: boolean;
   value: string;
   valid: string;
@@ -54,11 +59,12 @@ export type GPUQueryExpressionShaderPlan = {
   controls: readonly GPUQueryExpressionControl[];
   outputs: readonly GPUQueryExpressionOutput[];
   statements: readonly string[];
-  usesCasts: boolean;
+  helpers: readonly string[];
   condition: string;
 };
 
-type GPUQueryValueFormat = GPUQueryScalarFormat | 'boolean';
+/** The WGSL value formats accepted by DataFrame expression lowering. */
+type GPUQueryValueFormat = GPUExpressionNumericFormat | 'boolean';
 
 type GPUQueryExpressionShaderValue = {
   format: GPUQueryValueFormat;
@@ -116,7 +122,7 @@ export function makeGPUQueryExpressionShaderPlan<T extends GPUTypeMap>(
     controls: planner.controls,
     outputs,
     statements: planner.statements,
-    usesCasts: planner.usesCasts,
+    helpers: planner.helpers,
     condition: conditions.join(' && ') || 'true'
   };
 }
@@ -130,7 +136,7 @@ export function encodeGPUQueryExpressionControls(
   const floatingPointWords = new Float32Array(words.buffer);
 
   for (const control of controls) {
-    const value =
+    let value =
       control.name !== undefined && Object.prototype.hasOwnProperty.call(parameters, control.name)
         ? parameters[control.name]
         : control.value;
@@ -161,6 +167,7 @@ export function encodeGPUQueryExpressionControls(
     } else {
       const minimum = control.format === 'sint32' ? MINIMUM_SINT32 : 0;
       const maximum = control.format === 'sint32' ? MAXIMUM_SINT32 : MAXIMUM_UINT32;
+      if (control.convertInteger) value = Math.min(maximum, Math.max(minimum, Math.trunc(value)));
       if (!Number.isInteger(value) || value < minimum || value > maximum) {
         throw new Error('GPUDataFrame numeric parameters must fit their integer column');
       }
@@ -177,7 +184,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   readonly columns: GPUQueryExpressionColumn[] = [];
   readonly controls: GPUQueryExpressionControl[] = [];
   readonly statements: string[] = [];
-  usesCasts = false;
+  readonly helpers: string[] = [];
 
   private readonly source: GPUDataFrame<T>;
   private readonly columnsByName = new Map<string, GPUQueryExpressionColumn>();
@@ -225,34 +232,16 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
 
   emit(node: GPUExpressionNode, expected?: GPUQueryValueFormat): GPUQueryExpressionShaderValue {
     switch (node.kind) {
+      case 'vector':
+        return this.emitVector(node);
+      case 'cast':
+        return this.emitCast(node);
       case 'column':
         return this.emitColumn(node.name, expected);
       case 'literal':
         return this.emitControl(node.value, undefined, expected);
       case 'parameter':
         return this.emitControl(node.value, node.name, expected);
-      case 'cast': {
-        const format = node.format;
-        if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
-          throw new Error('GPUDataFrame casts require scalar 32-bit formats');
-        }
-        const operand = this.emit(node.operand, this.inferFormat(node.operand) ?? 'float32');
-        if (operand.format === 'boolean') {
-          throw new Error('GPUDataFrame casts require numeric expressions');
-        }
-        const floatToInteger = operand.format === 'float32' && format !== 'float32';
-        const valid = floatToInteger
-          ? `(${operand.valid} && (bitcast<u32>(${operand.value}) & 0x7fffffffu) < 0x7f800000u)`
-          : operand.valid;
-        const input = floatToInteger ? `select(0.0, ${operand.value}, ${valid})` : operand.value;
-        this.usesCasts ||= floatToInteger;
-        return this.addValue(
-          format,
-          getGPUExpressionCastWGSL(input, operand.format, format, 'truncate'),
-          valid,
-          operand.nullable || floatToInteger
-        );
-      }
       case 'conditional': {
         const condition = this.emit(node.condition, 'boolean');
         this.assertBoolean(condition);
@@ -297,26 +286,141 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     if (expected && expected !== column.format && expected !== 'boolean') {
       throw new Error('GPUDataFrame expression combines incompatible scalar column formats');
     }
-    const value = `input${column.index}[INPUT_${column.index}_OFFSET + index]`;
+    const value = `readInput${column.index}(index)`;
     const valid = column.nullable
       ? `validity${column.index}[VALIDITY_${column.index}_OFFSET + index] != 0u`
       : 'true';
     return this.addValue(column.format, value, valid, column.nullable);
   }
 
+  /** Constructs a vector and combines validity across all of its components. */
+  private emitVector(
+    node: Extract<GPUExpressionNode, {kind: 'vector'}>
+  ): GPUQueryExpressionShaderValue {
+    const layout = getGPUVectorWGSLLayout(node.format);
+    if (layout.components === 1 || node.components.length !== layout.components)
+      throw new Error('Vector width must match its format');
+    const components = node.components.map(component =>
+      this.emitConversion(component, layout.componentType)
+    );
+    return this.addValue(
+      node.format,
+      `${layout.shaderType}(${components.map(component => component.value).join(', ')})`,
+      components.map(component => component.valid).join(' && '),
+      components.some(component => component.nullable)
+    );
+  }
+
+  /** Lowers a width-preserving numeric cast. */
+  private emitCast(
+    node: Extract<GPUExpressionNode, {kind: 'cast'}>
+  ): GPUQueryExpressionShaderValue {
+    if (getGPUVectorWGSLLayout(node.format).components > 1) {
+      return this.emitConversion(node.operand, node.format);
+    }
+    const format = node.format;
+    if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+      throw new Error('GPUDataFrame casts require scalar 32-bit formats');
+    }
+    const operand = this.emit(node.operand, this.inferFormat(node.operand) ?? 'float32');
+    if (
+      operand.format !== 'float32' &&
+      operand.format !== 'uint32' &&
+      operand.format !== 'sint32'
+    ) {
+      throw new Error('GPUDataFrame scalar casts require scalar numeric expressions');
+    }
+    const floatToInteger = operand.format === 'float32' && format !== 'float32';
+    const valid = floatToInteger
+      ? `(${operand.valid} && (bitcast<u32>(${operand.value}) & 0x7fffffffu) < 0x7f800000u)`
+      : operand.valid;
+    const input = floatToInteger ? `select(0.0, ${operand.value}, ${valid})` : operand.value;
+    if (floatToInteger && !this.helpers.includes(GPU_EXPRESSION_CAST_WGSL))
+      this.helpers.push(GPU_EXPRESSION_CAST_WGSL);
+    return this.addValue(
+      format,
+      getGPUExpressionCastWGSL(input, operand.format, format, 'truncate'),
+      valid,
+      operand.nullable || floatToInteger
+    );
+  }
+
+  /** Encodes integer controls directly and lowers other conversions into WGSL. */
+  private emitConversion(
+    node: GPUExpressionNode,
+    target: GPUExpressionNumericFormat
+  ): GPUQueryExpressionShaderValue {
+    if (
+      (target === 'sint32' || target === 'uint32') &&
+      (node.kind === 'literal' || node.kind === 'parameter') &&
+      (node.value === null || typeof node.value === 'number')
+    ) {
+      // Convert controls before upload to retain values above f32 integer precision.
+      return this.emitControl(
+        node.value,
+        node.kind === 'parameter' ? node.name : undefined,
+        target,
+        true
+      );
+    }
+    return this.convertValue(this.emit(node, this.inferFormat(node) ?? 'float32'), target);
+  }
+
+  /** Converts each component while preserving width and row validity. */
+  private convertValue(
+    source: GPUQueryExpressionShaderValue,
+    target: GPUExpressionNumericFormat
+  ): GPUQueryExpressionShaderValue {
+    if (source.format === 'boolean') throw new Error('Numeric casts require numeric inputs');
+    const sourceLayout = getGPUVectorWGSLLayout(source.format);
+    const targetLayout = getGPUVectorWGSLLayout(target);
+    if (sourceLayout.components !== targetLayout.components)
+      throw new Error('Numeric casts must preserve width');
+    if (source.format === target) return source;
+    if (!this.helpers.includes(GPU_EXPRESSION_CAST_WGSL))
+      this.helpers.push(GPU_EXPRESSION_CAST_WGSL);
+    const components = Array.from({length: sourceLayout.components}, (_, index) => {
+      const value = sourceLayout.components === 1 ? source.value : `${source.value}[${index}]`;
+      return getGPUExpressionCastWGSL(
+        value,
+        sourceLayout.componentType,
+        targetLayout.componentType,
+        'truncate'
+      );
+    });
+    // Float NaN/Inf has no portable integer value: mark the entire row invalid.
+    const finite =
+      sourceLayout.componentType === 'float32' && targetLayout.componentType !== 'float32';
+    const valid = finite
+      ? `${source.valid} && ${sourceLayout.components === 1 ? `abs(${source.value}) <= 3.4028234663852886e38f` : `all(abs(${source.value}) <= ${sourceLayout.shaderType}(3.4028234663852886e38f))`}`
+      : source.valid;
+    return this.addValue(
+      target,
+      targetLayout.components === 1
+        ? components[0]
+        : `${targetLayout.shaderType}(${components.join(', ')})`,
+      valid,
+      source.nullable || finite
+    );
+  }
+
   private emitControl(
     value: GPUExpressionValue,
     name: string | undefined,
-    expected?: GPUQueryValueFormat
+    expected?: GPUQueryValueFormat,
+    convertInteger = false
   ): GPUQueryExpressionShaderValue {
     const inferred = typeof value === 'boolean' ? 'boolean' : (expected ?? 'float32');
+    if (inferred !== 'boolean' && getGPUVectorWGSLLayout(inferred).components !== 1)
+      throw new Error('Scalar literals cannot broadcast to vectors');
     if (value !== null && (typeof value === 'boolean') !== (inferred === 'boolean')) {
       throw new Error('GPUDataFrame expression combines incompatible literal and column formats');
     }
     const control: GPUQueryExpressionControl = {
       ...(name !== undefined ? {name} : {}),
       value,
-      format: inferred,
+      ...(convertInteger ? {convertInteger} : {}),
+      format: inferred as GPUQueryScalarFormat | 'boolean',
       index: this.controls.length
     };
     this.controls.push(control);
@@ -382,7 +486,10 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'round':
       case 'trunc': {
         const format = this.inferFormat(operandNode) ?? 'float32';
-        if (format === 'boolean' || (operator === 'abs' && format === 'sint32')) {
+        if (
+          (format !== 'float32' && format !== 'sint32' && format !== 'uint32') ||
+          (operator === 'abs' && format === 'sint32')
+        ) {
           throw new Error('GPUDataFrame scalar function requires a supported numeric format');
         }
         const operand = this.emit(operandNode, format);
@@ -400,7 +507,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       }
       case 'negate': {
         const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
-        if (format === 'boolean' || format === 'uint32') {
+        if (format === 'boolean' || getGPUVectorWGSLLayout(format).componentType === 'uint32') {
           throw new Error('GPUDataFrame negation requires a signed numeric expression');
         }
         const operand = this.emit(operandNode, format);
@@ -460,16 +567,23 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         left.nullable && right.nullable
       );
     }
+    const vector = format !== 'boolean' && getGPUVectorWGSLLayout(format).components > 1;
     if (operator === 'nullif') {
+      const equals = `(${left.value} == ${right.value})`;
       return this.addValue(
         format,
         left.value,
-        `(${left.valid} && !(${right.valid} && ${left.value} == ${right.value}))`,
+        `(${left.valid} && !(${right.valid} && ${vector ? `all(${equals})` : equals}))`,
         true
       );
     }
     const symbol = getGPUQueryBinaryOperator(operator);
-    const value = `(${left.value} ${symbol} ${right.value})`;
+    let value = `(${left.value} ${symbol} ${right.value})`;
+    if (vector && !arithmetic) {
+      if (operator !== 'equal' && operator !== 'not-equal')
+        throw new Error('Vector ordering is unsupported');
+      value = `${operator === 'equal' ? 'all' : 'any'}(${value})`;
+    }
     const valid = `${left.valid} && ${right.valid}`;
     return this.addValue(
       arithmetic ? format : 'boolean',
@@ -481,6 +595,9 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
 
   private inferFormat(node: GPUExpressionNode): GPUQueryValueFormat | undefined {
     switch (node.kind) {
+      case 'vector':
+      case 'cast':
+        return node.format;
       case 'column':
         return this.derivedByName.has(node.name)
           ? this.emitDerived(this.derivedByName.get(node.name)!).format
@@ -488,11 +605,6 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
-      case 'cast':
-        if (node.format === 'float32' || node.format === 'sint32' || node.format === 'uint32') {
-          return node.format;
-        }
-        throw new Error('GPUDataFrame casts require scalar 32-bit formats');
       case 'conditional': {
         const whenTrue = this.inferFormat(node.whenTrue);
         const otherwise = this.inferFormat(node.otherwise);
@@ -571,14 +683,27 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       throw new Error(`GPUDataFrame expression column "${name}" is not a GPU vector`);
     }
     const format = vector?.format ?? field.format;
-    if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
-      throw new Error(`GPUDataFrame expression column "${name}" requires a 32-bit scalar format`);
+    const layout = getGPUVectorWGSLLayout(format as GPUExpressionNumericFormat);
+    if (
+      vector?.data.some(
+        chunk =>
+          chunk.byteStride !== layout.packedByteStride ||
+          chunk.rowByteLength !== layout.byteLength ||
+          chunk.byteOffset % 4 !== 0
+      )
+    ) {
+      throw new Error('GPUDataFrame expressions require packed, 32-bit-aligned numeric columns');
     }
     const nullable = field.nullable === true;
     if (nullable && this.source.numRows > 0 && !this.source.validity[name as keyof T & string]) {
       throw new Error(`GPUDataFrame nullable column "${name}" requires an explicit validity mask`);
     }
-    const column = {name, format, nullable, index: this.columns.length};
+    const column = {
+      name,
+      format: format as GPUExpressionNumericFormat,
+      nullable,
+      index: this.columns.length
+    };
     this.columns.push(column);
     this.columnsByName.set(name, column);
     return column;
@@ -607,19 +732,8 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
 }
 
 /** Converts a closed scalar format to the corresponding native WGSL scalar type. @internal */
-export function getGPUQueryShaderType(format: GPUQueryValueFormat): 'f32' | 'i32' | 'u32' | 'bool' {
-  switch (format) {
-    case 'float32':
-      return 'f32';
-    case 'sint32':
-      return 'i32';
-    case 'uint32':
-      return 'u32';
-    case 'boolean':
-      return 'bool';
-    default:
-      throw new Error('GPUDataFrame expression contains an unsupported scalar format');
-  }
+export function getGPUQueryShaderType(format: GPUQueryValueFormat): string {
+  return format === 'boolean' ? 'bool' : getGPUVectorWGSLLayout(format).shaderType;
 }
 
 /** Maps only known discriminants to WGSL operators without accepting application shader text. */
