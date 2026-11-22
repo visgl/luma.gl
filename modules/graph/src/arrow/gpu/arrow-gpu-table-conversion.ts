@@ -74,6 +74,8 @@ export type ArrowRecordBatchConversionOptions = {
   maxBatchPayloadBytes?: number;
   /** Maximum estimated peak GPU bytes per batch, including conversion scratch. */
   maxBatchGPUBytes?: number;
+  /** Split an oversized batch into contiguous rows before uploading. Defaults to false. */
+  splitOversizedBatches?: boolean;
 };
 
 /** One independently owned GPU record batch produced from an Arrow stream. */
@@ -236,7 +238,12 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   device: Device,
   source: ArrowRecordBatchConversionSource,
   schema: ArrowGPUTableConversionSchema,
-  {signal, maxBatchPayloadBytes, maxBatchGPUBytes}: ArrowRecordBatchConversionOptions = {}
+  {
+    signal,
+    maxBatchPayloadBytes,
+    maxBatchGPUBytes,
+    splitOversizedBatches
+  }: ArrowRecordBatchConversionOptions = {}
 ): AsyncGenerator<PreparedArrowGPURecordBatch> {
   if (
     maxBatchPayloadBytes !== undefined &&
@@ -255,56 +262,68 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
   for await (const recordBatch of iterateRecordBatches(source, signal)) {
-    signal?.throwIfAborted();
-    const batchSchema: ArrowGPUTableConversionSchema = {
-      columns: schema.columns.map(column => {
-        const origin = temporalOrigins.get(column.name);
-        return origin === undefined || column.temporal?.origin !== undefined
-          ? column
-          : {...column, temporal: {...column.temporal, origin}};
-      })
-    };
-    if (maxBatchPayloadBytes !== undefined || maxBatchGPUBytes !== undefined) {
-      const {cost, estimatedPeakGPUBytes} = planArrowTableGPUConversion(
-        device,
-        new Table([recordBatch]),
-        batchSchema
-      );
-      if (maxBatchPayloadBytes !== undefined && cost.targetByteLength > maxBatchPayloadBytes) {
-        throw new Error(
-          `Arrow GPU stream batch ${sourceBatchIndex} needs ${cost.targetByteLength} payload bytes, exceeding the ${maxBatchPayloadBytes} byte budget`
-        );
-      }
-      if (maxBatchGPUBytes !== undefined && estimatedPeakGPUBytes > maxBatchGPUBytes) {
-        throw new Error(
-          `Arrow GPU stream batch ${sourceBatchIndex} needs an estimated ${estimatedPeakGPUBytes} peak GPU bytes, exceeding the ${maxBatchGPUBytes} byte budget`
-        );
-      }
-    }
-    const prepared = await convertArrowRecordBatchToGPURecordBatch(
-      device,
-      recordBatch,
-      batchSchema,
-      {sourceBatchIndex, sourceRowIndexOffset}
-    );
-    try {
+    let rowOffset = 0;
+    do {
       signal?.throwIfAborted();
-      for (const [name, vector] of Object.entries(prepared.vectors)) {
-        const expected = formats.get(name);
-        if (formats.has(name) && vector.format !== expected) {
-          throw new Error(
-            `Arrow stream column "${name}" format changed: ${expected} -> ${vector.format}`
-          );
+      const batchSchema: ArrowGPUTableConversionSchema = {
+        columns: schema.columns.map(column => {
+          const origin = temporalOrigins.get(column.name);
+          return origin === undefined || column.temporal?.origin !== undefined
+            ? column
+            : {...column, temporal: {...column.temporal, origin}};
+        })
+      };
+      let slice = rowOffset === 0 ? recordBatch : recordBatch.slice(rowOffset);
+      if (maxBatchPayloadBytes !== undefined || maxBatchGPUBytes !== undefined) {
+        while (true) {
+          const plan = planArrowTableGPUConversion(device, new Table([slice]), batchSchema);
+          const payload = plan.cost.targetByteLength;
+          const peak = plan.estimatedPeakGPUBytes;
+          const exceedsPayload =
+            maxBatchPayloadBytes !== undefined && payload > maxBatchPayloadBytes;
+          const exceedsPeak = maxBatchGPUBytes !== undefined && peak > maxBatchGPUBytes;
+          if (!exceedsPayload && !exceedsPeak) break;
+          if (!splitOversizedBatches || slice.numRows <= 1) {
+            const location = splitOversizedBatches ? ' at row ' + sourceRowIndexOffset : '';
+            const requirement = exceedsPayload
+              ? payload + ' payload bytes, exceeding the ' + maxBatchPayloadBytes
+              : 'an estimated ' + peak + ' peak GPU bytes, exceeding the ' + maxBatchGPUBytes;
+            throw new Error(
+              'Arrow GPU stream batch ' +
+                sourceBatchIndex +
+                location +
+                ' needs ' +
+                requirement +
+                ' byte budget'
+            );
+          }
+          slice = recordBatch.slice(rowOffset, rowOffset + Math.floor(slice.numRows / 2));
         }
-        formats.set(name, vector.format);
       }
-      captureStreamingTemporalOrigins(recordBatch, schema, prepared.batch, temporalOrigins);
-    } catch (error) {
-      prepared.destroy();
-      throw error;
-    }
-    yield prepared;
-    sourceRowIndexOffset += recordBatch.numRows;
+      const prepared = await convertArrowRecordBatchToGPURecordBatch(device, slice, batchSchema, {
+        sourceBatchIndex,
+        sourceRowIndexOffset
+      });
+      try {
+        signal?.throwIfAborted();
+        for (const [name, vector] of Object.entries(prepared.vectors)) {
+          const expected = formats.get(name);
+          if (formats.has(name) && vector.format !== expected) {
+            throw new Error(
+              `Arrow stream column "${name}" format changed: ${expected} -> ${vector.format}`
+            );
+          }
+          formats.set(name, vector.format);
+        }
+        captureStreamingTemporalOrigins(slice, schema, prepared.batch, temporalOrigins);
+      } catch (error) {
+        prepared.destroy();
+        throw error;
+      }
+      yield prepared;
+      sourceRowIndexOffset += slice.numRows;
+      rowOffset += slice.numRows;
+    } while (rowOffset < recordBatch.numRows);
     sourceBatchIndex++;
   }
 }

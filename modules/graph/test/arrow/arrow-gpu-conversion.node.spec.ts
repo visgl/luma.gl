@@ -386,6 +386,48 @@ it('bounds planned Arrow payloads before allocating and serializes borrowed batc
   }
 });
 
+it('splits oversized Arrow batches into budgeted source-aligned slices', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n, 1020n, 1030n, 1040n]);
+  const schema = {columns: [{name: 'time'}]};
+  const peak = planArrowTableGPUConversion(
+    device,
+    new arrow.Table([batch.slice(0, 2)]),
+    schema
+  ).estimatedPeakGPUBytes;
+  const readback: number[] = [];
+  const offsets: number[] = [];
+  const indices: number[] = [];
+  try {
+    await consumeArrowGPURecordBatches(
+      device,
+      [batch, makeTimestampBatch([1050n])],
+      schema,
+      async prepared => {
+        offsets.push(prepared.batch.sourceInfo!.sourceRowIndexOffset!);
+        indices.push(prepared.batch.sourceInfo!.sourceBatchIndex!);
+        expect(prepared.plan.estimatedPeakGPUBytes).toBeLessThanOrEqual(peak);
+        readback.push(...Array.from(await readArrowGPUVectorAsync(prepared.vectors.time), Number));
+      },
+      {maxBatchGPUBytes: peak, maxBatchPayloadBytes: 8, splitOversizedBatches: true}
+    );
+    expect(readback).toEqual([0, 10, 20, 30, 40, 50]);
+    expect(offsets).toEqual([0, 2, 3, 5]);
+    expect(indices).toEqual([0, 0, 0, 1]);
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, vi.fn(), {
+        maxBatchPayloadBytes: 0,
+        splitOversizedBatches: true
+      })
+    ).rejects.toThrow(/batch 0 at row 0 needs/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    createBuffer.mockRestore();
+  } finally {
+    device.destroy();
+  }
+});
+
 it('rejects a peak budget that fits output but omits temporary GPU conversion storage', async () => {
   const device = new NullDevice({});
   const batch = makeTimestampBatch([1000n, 1010n]);
