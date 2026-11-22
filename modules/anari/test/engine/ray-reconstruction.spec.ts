@@ -116,3 +116,50 @@ it('reduces guided spatial filtering as the retained sample count grows', async 
     destroy();
   }
 }, 180_000);
+
+it('retains separate luminance moments and shows variance at a sampled texture edge', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, renderer, readPixel, readRadiance, destroy} =
+    await createMaterialFixture();
+  try {
+    options.camera = makeCamera(-0.5);
+    options.cameraProjection = 'orthographic';
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    options.varianceGuidance = true;
+    options.debugView = 'variance';
+
+    // A constant colored surface has zero variance even when it is bright.
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.surfaces = [
+      {
+        ...surface,
+        geometry: new Geometry({
+          topology: 'triangle-list',
+          attributes: {
+            ...geometry.attributes,
+            TEXCOORD_0: {size: 2, value: new Float32Array([0, 0.5, 1, 0.5, 0.5, 0.5])}
+          }
+        })
+      }
+    ];
+    const noisy = await readPixel();
+    expect(noisy[0]).toBeGreaterThan(3);
+    expect(noisy[1]).toBe(noisy[0]);
+    expect(noisy[2]).toBe(noisy[0]);
+
+    const previous = await readRadiance();
+    expect(previous?.data.length).toBe(8 * 8 * 8);
+    options.debugView = 'color';
+    options.denoiseRadius = 1;
+    const color = await readPixel();
+    expect(color[0]).toBeGreaterThan(0);
+    expect(color[2]).toBeGreaterThan(0);
+    expect(await readRadiance()).not.toBeNull();
+
+    renderer.destroyFrame(options.id);
+    expect(await readRadiance()).toBeNull();
+  } finally {
+    destroy();
+  }
+}, 180_000);

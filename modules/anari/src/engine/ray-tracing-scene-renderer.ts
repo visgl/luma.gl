@@ -44,6 +44,7 @@ import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
+  getRayTracingMomentShader,
   RAY_TRACING_SCENE_SHADER,
   RAY_TRACING_IRRADIANCE_SHADER,
   RAY_TRACING_PICK_SHADER,
@@ -491,7 +492,9 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   historySampleLimit?: number;
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
   denoiseRadius?: 0 | 1 | 2;
-  /** Presentation-only primary-hit diagnostics; defaults to color. */
+  /** Retains log-luminance moments for variance-guided spatial filtering. */
+  varianceGuidance?: boolean;
+  /** Presentation diagnostics; defaults to color. */
   debugView?: RayTracingDebugView;
   /** Diffuse legacy transport or opt-in opaque metallic/roughness transport. */
   transportMode?: 'diffuse' | 'pbr';
@@ -637,6 +640,8 @@ type RayTracingPresentationOptions = {
 };
 
 type RayTracingShaderOptions = {
+  /** Whether the trace graph retains luminance moments. */
+  trackMoments: boolean;
   /** Whether the color pipeline computes alpha-mask footprints. */
   filteredCutouts: boolean;
   /** Whether analytic shadow rays support thin transmission. */
@@ -681,6 +686,8 @@ type RayTracingFrameResources = {
   bvhOverflowBuffer: Buffer;
   colorHistory: GPUTextureHistory;
   metadataHistory: GPUTextureHistory;
+  /** Optional retained first and second log-luminance moments. */
+  momentHistory?: GPUTextureHistory;
   topologyGraph: CompiledGPUCommandGraph;
   accelerationGraph: CompiledGPUCommandGraph;
   refitGraph: CompiledGPUCommandGraph;
@@ -812,6 +819,7 @@ export class RayTracingSceneRenderer {
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const shaderOptions: RayTracingShaderOptions = {
+      trackMoments: options.varianceGuidance === true || options.debugView === 'variance',
       filteredCutouts: options.filteredCutouts === true,
       transmissiveShadows: options.transmissiveShadows === true,
       environmentLighting: Boolean(
@@ -1111,6 +1119,7 @@ export class RayTracingSceneRenderer {
       resources.resolutionScale
     );
     if (
+      resources.shaderOptions.trackMoments !== shaderOptions.trackMoments ||
       resources.displayWidth !== displayWidth ||
       resources.displayHeight !== displayHeight ||
       resources.internalWidth !== internalDimensions.width ||
@@ -1226,11 +1235,13 @@ export class RayTracingSceneRenderer {
       },
       textures: {
         ...resources.colorHistory.getBindings('history', 'output'),
-        ...resources.metadataHistory.getBindings('history-metadata', 'output-metadata')
+        ...resources.metadataHistory.getBindings('history-metadata', 'output-metadata'),
+        ...resources.momentHistory?.getBindings('history-moments', 'output-moments')
       }
     }).stats;
     resources.colorHistory.advance();
     resources.metadataHistory.advance();
+    resources.momentHistory?.advance();
     resources.previousViewProjection = new Matrix4(viewProjection);
     resources.previousCameraPosition = Array.from(options.camera.position);
     resources.historyNeedsReset = false;
@@ -1679,6 +1690,7 @@ export class RayTracingSceneRenderer {
     resources.bvhOverflowBuffer.destroy();
     resources.colorHistory.destroy();
     resources.metadataHistory.destroy();
+    resources.momentHistory?.destroy();
     this.frames.delete(frameIdentifier);
   }
 
@@ -1812,6 +1824,15 @@ export class RayTracingSceneRenderer {
       internalDimensions.width,
       internalDimensions.height
     );
+    const momentHistory = props.shaderOptions.trackMoments
+      ? this.createTextureHistory(
+          frameIdentifier,
+          'history-moments',
+          internalDimensions.width,
+          internalDimensions.height,
+          'rg32float'
+        )
+      : undefined;
     const topologyGraph = this.createTopologyGraph({
       frameIdentifier,
       topology: props.topology,
@@ -1866,7 +1887,8 @@ export class RayTracingSceneRenderer {
       blasNodesBuffer,
       blasTriangleIdsBuffer,
       colorHistory,
-      metadataHistory
+      metadataHistory,
+      momentHistory
     });
 
     return {
@@ -1900,6 +1922,7 @@ export class RayTracingSceneRenderer {
       bvhOverflowBuffer,
       colorHistory,
       metadataHistory,
+      momentHistory,
       topologyGraph,
       accelerationGraph,
       refitGraph,
@@ -1953,6 +1976,7 @@ export class RayTracingSceneRenderer {
     resources.traceGraph.destroy();
     resources.colorHistory.destroy();
     resources.metadataHistory.destroy();
+    resources.momentHistory?.destroy();
     resources.colorHistory = this.createTextureHistory(
       frameIdentifier,
       'history',
@@ -1965,6 +1989,15 @@ export class RayTracingSceneRenderer {
       internalWidth,
       internalHeight
     );
+    resources.momentHistory = shaderOptions.trackMoments
+      ? this.createTextureHistory(
+          frameIdentifier,
+          'history-moments',
+          internalWidth,
+          internalHeight,
+          'rg32float'
+        )
+      : undefined;
     resources.traceGraph = this.createTraceGraph({
       surfaces: resources.retainedSurfaces,
       shaderOptions,
@@ -1982,7 +2015,8 @@ export class RayTracingSceneRenderer {
       blasNodesBuffer: resources.blasNodesBuffer,
       blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
       colorHistory: resources.colorHistory,
-      metadataHistory: resources.metadataHistory
+      metadataHistory: resources.metadataHistory,
+      momentHistory: resources.momentHistory
     });
     resources.displayWidth = displayWidth;
     resources.shaderOptions = shaderOptions;
@@ -2017,7 +2051,8 @@ export class RayTracingSceneRenderer {
       blasNodesBuffer: resources.blasNodesBuffer,
       blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
       colorHistory: resources.colorHistory,
-      metadataHistory: resources.metadataHistory
+      metadataHistory: resources.metadataHistory,
+      momentHistory: resources.momentHistory
     });
     resources.traceGraph.destroy();
     resources.traceGraph = traceGraph;
@@ -2029,13 +2064,14 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string,
     suffix: string,
     width: number,
-    height: number
+    height: number,
+    format: TextureFormatColor = 'rgba16float'
   ): GPUTextureHistory {
     return new GPUTextureHistory(this.device, {
       id: `${frameIdentifier}-ray-tracing-${suffix}`,
       width,
       height,
-      format: 'rgba16float',
+      format,
       usage: Texture.SAMPLE | Texture.STORAGE | (suffix === 'history' ? Texture.COPY_SRC : 0)
     });
   }
@@ -3163,11 +3199,15 @@ export class RayTracingSceneRenderer {
     blasTriangleIdsBuffer: Buffer;
     colorHistory: GPUTextureHistory;
     metadataHistory: GPUTextureHistory;
+    /** Optional retained moments shared by carry, trace, and presentation. */
+    momentHistory?: GPUTextureHistory;
   }): CompiledGPUCommandGraph<RayTracingTraceGraphParameters> {
     const graph = new GPUCommandGraph<RayTracingTraceGraphParameters>(this.device, {
       id: `scene-${props.frameIdentifier}-ray-tracing-trace`
     });
-    const materialTextures = getRayMaterialTextures(props.surfaces);
+    // CORE guarantees 16 sampled textures per stage, including the history inputs.
+    const materialTextureLimit = props.momentHistory ? 13 : 14;
+    const materialTextures = getRayMaterialTextures(props.surfaces, false, materialTextureLimit);
     const materialViews = materialTextures.map((texture, index) =>
       graph.createTextureView(
         graph.importTexture(
@@ -3304,6 +3344,55 @@ export class RayTracingSceneRenderer {
     const outputView = graph.createTextureView(output);
     const outputMetadataView = graph.createTextureView(outputMetadata);
 
+    /** Imports a role of the optional ping-pong moments as a sampled/storage view. */
+    const importMomentView = (id: string, texture: Texture) =>
+      graph.createTextureView(
+        graph.importTexture(
+          {
+            id,
+            format: 'rg32float',
+            width: props.internalWidth,
+            height: props.internalHeight,
+            usage: Texture.SAMPLE | Texture.STORAGE
+          },
+          texture
+        )
+      );
+    const momentViews = props.momentHistory && {
+      history: importMomentView('history-moments', props.momentHistory.previousTexture),
+      output: importMomentView('output-moments', props.momentHistory.currentTexture)
+    };
+    const momentResources = momentViews
+      ? [
+          {texture: momentViews.history, usage: 'sampled' as const},
+          {texture: momentViews.output, usage: 'storage-write' as const}
+        ]
+      : [];
+    /** Declares the moment bindings after each compute pipeline's existing bindings. */
+    const momentLayout = (location: number) =>
+      momentViews
+        ? ([
+            {
+              name: 'historyMoments',
+              type: 'texture',
+              group: 0,
+              location,
+              sampleType: 'unfilterable-float'
+            },
+            {
+              name: 'outputMoments',
+              type: 'storage',
+              group: 0,
+              location: location + 1,
+              access: 'write-only',
+              format: 'rg32float'
+            }
+          ] as const)
+        : [];
+    const presentMoments =
+      momentViews &&
+      (props.presentation.denoiseRadius > 0 || props.presentation.debugView === 'variance');
+
     graph.addComputePass({
       id: `${props.frameIdentifier}-carry-ray-tracing-history`,
       resources: [
@@ -3311,12 +3400,15 @@ export class RayTracingSceneRenderer {
         {texture: historyView, usage: 'sampled'},
         {texture: historyMetadataView, usage: 'sampled'},
         {texture: outputView, usage: 'storage-write'},
-        {texture: outputMetadataView, usage: 'storage-write'}
+        {texture: outputMetadataView, usage: 'storage-write'},
+        ...momentResources
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: `${props.frameIdentifier}-ray-tracing-history-carry-computation`,
-          source: RAY_TRACING_HISTORY_CARRY_SHADER,
+          source: momentViews
+            ? getRayTracingMomentShader(RAY_TRACING_HISTORY_CARRY_SHADER, true)
+            : RAY_TRACING_HISTORY_CARRY_SHADER,
           shaderLayout: {
             bindings: [
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
@@ -3349,7 +3441,8 @@ export class RayTracingSceneRenderer {
                 location: 4,
                 access: 'write-only',
                 format: 'rgba16float'
-              }
+              },
+              ...momentLayout(5)
             ]
           }
         });
@@ -3363,7 +3456,11 @@ export class RayTracingSceneRenderer {
               historyImage: getTextureView(historyView),
               historyMetadata: getTextureView(historyMetadataView),
               outputImage: getTextureView(outputView),
-              outputMetadata: getTextureView(outputMetadataView)
+              outputMetadata: getTextureView(outputMetadataView),
+              ...(momentViews && {
+                historyMoments: getTextureView(momentViews.history),
+                outputMoments: getTextureView(momentViews.output)
+              })
             });
             computation.dispatch(
               computePass,
@@ -3393,17 +3490,22 @@ export class RayTracingSceneRenderer {
         {texture: historyView, usage: 'sampled'},
         {texture: historyMetadataView, usage: 'sampled'},
         {texture: outputView, usage: 'storage-write'},
-        {texture: outputMetadataView, usage: 'storage-write'}
+        {texture: outputMetadataView, usage: 'storage-write'},
+        ...momentResources
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: `${props.frameIdentifier}-ray-tracing-computation`,
           // Avoid compiling the transport and sampling paths the frame cannot use.
           source: getRayMaterialTextureShader(
-            RAY_TRACING_SCENE_SHADER.replace(
-              '/* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u',
-              String(props.shaderOptions.pbrTransport)
+            (momentViews
+              ? getRayTracingMomentShader(RAY_TRACING_SCENE_SHADER)
+              : RAY_TRACING_SCENE_SHADER
             )
+              .replace(
+                '/* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u',
+                String(props.shaderOptions.pbrTransport)
+              )
               .replace('/* PATH_BOUNCES_ENABLED */ true', String(props.shaderOptions.hasBounces))
               .replace('/* FILTERED_CUTOUTS */ true', String(props.shaderOptions.filteredCutouts))
               .replace(
@@ -3426,7 +3528,9 @@ export class RayTracingSceneRenderer {
                 '/* EMITTER_MIS_ENABLED */ true',
                 String(props.shaderOptions.emitterSampling && props.shaderOptions.hasBounces)
               ),
-            props.surfaces
+            props.surfaces,
+            false,
+            materialTextureLimit
           ),
           shaderLayout: {
             bindings: [
@@ -3469,7 +3573,8 @@ export class RayTracingSceneRenderer {
                 location: 12,
                 access: 'write-only',
                 format: 'rgba16float'
-              }
+              },
+              ...momentLayout(13)
             ]
           }
         });
@@ -3494,7 +3599,11 @@ export class RayTracingSceneRenderer {
               historyImage: getTextureView(historyView),
               historyMetadata: getTextureView(historyMetadataView),
               outputImage: getTextureView(outputView),
-              outputMetadata: getTextureView(outputMetadataView)
+              outputMetadata: getTextureView(outputMetadataView),
+              ...(momentViews && {
+                historyMoments: getTextureView(momentViews.history),
+                outputMoments: getTextureView(momentViews.output)
+              })
             });
             computation.dispatch(
               computePass,
@@ -3512,6 +3621,7 @@ export class RayTracingSceneRenderer {
       id: `${props.frameIdentifier}-present-ray-tracing`,
       resources: [
         {texture: outputView, usage: 'sampled'},
+        ...(presentMoments ? [{texture: momentViews.output, usage: 'sampled' as const}] : []),
         ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
           ? [{texture: outputMetadataView, usage: 'sampled' as const}]
           : [])
@@ -3523,7 +3633,8 @@ export class RayTracingSceneRenderer {
             toneMapMode: props.presentation.toneMapMode,
             outputEncoding: props.presentation.outputEncoding,
             denoiseRadius: props.presentation.denoiseRadius,
-            debugView: props.presentation.debugView
+            debugView: props.presentation.debugView,
+            varianceGuidance: Boolean(presentMoments)
           }),
           vertexCount: 3,
           colorAttachmentFormats: [props.presentation.colorFormat],
@@ -3540,6 +3651,17 @@ export class RayTracingSceneRenderer {
                 location: 0,
                 sampleType: 'unfilterable-float'
               },
+              ...(presentMoments
+                ? [
+                    {
+                      name: 'momentsImage',
+                      type: 'texture' as const,
+                      group: 0,
+                      location: 2,
+                      sampleType: 'unfilterable-float' as const
+                    }
+                  ]
+                : []),
               ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
                 ? [
                     {
@@ -3566,6 +3688,7 @@ export class RayTracingSceneRenderer {
           encode: ({renderPass, getTextureView}) => {
             model.setBindings({
               image: getTextureView(outputView),
+              ...(presentMoments ? {momentsImage: getTextureView(momentViews.output)} : {}),
               ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
                 ? {metadata: getTextureView(outputMetadataView)}
                 : {})
@@ -4649,7 +4772,8 @@ function getRayTracingMemoryStatistics(
     resources.bvhOverflowBuffer
   ].reduce((total, buffer) => total + buffer.byteLength, 0);
   // Two double-buffered rgba16float histories, eight bytes per pixel per texture.
-  const historyTextureBytes = resources.internalWidth * resources.internalHeight * 32;
+  const historyTextureBytes =
+    resources.internalWidth * resources.internalHeight * (resources.momentHistory ? 48 : 32);
   const graphTransientBytes = [
     resources.topologyGraph,
     resources.accelerationGraph,

@@ -129,6 +129,7 @@ ${RAY_TRACING_SCENE_TYPES}
 @group(0) @binding(2) var historyMetadata: texture_2d<f32>;
 @group(0) @binding(3) var outputImage: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(4) var outputMetadata: texture_storage_2d<rgba16float, write>;
+/* MOMENT_BINDINGS */
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
@@ -155,6 +156,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let pixel = vec2<i32>(i32(pixelX), i32(invocation.y));
   textureStore(outputImage, pixel, textureLoad(historyImage, pixel, 0));
   textureStore(outputMetadata, pixel, textureLoad(historyMetadata, pixel, 0));
+  /* MOMENT_CARRY */
 }
 `;
 
@@ -209,6 +211,7 @@ struct HistoricalRaySample {
   color: vec3<f32>,
   sampleCount: f32,
   valid: bool,
+  moments: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: RayTracingUniforms;
@@ -224,6 +227,12 @@ struct HistoricalRaySample {
 @group(0) @binding(10) var historyMetadata: texture_2d<f32>;
 @group(0) @binding(11) var outputImage: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(12) var outputMetadata: texture_storage_2d<rgba16float, write>;
+/* MOMENT_BINDINGS */
+
+fn loadHistoryMoments(pixel: vec2<i32>) -> vec2<f32> {
+  /* MOMENT_LOAD */
+  return vec2<f32>(0.0);
+}
 
 const RAY_EPSILON = 0.0005;
 const RAY_INFINITY = 1.0e20;
@@ -1278,7 +1287,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
 }
 
 fn rejectHistoricalRaySample() -> HistoricalRaySample {
-  return HistoricalRaySample(vec3<f32>(0.0), 0.0, false);
+  return HistoricalRaySample(vec3<f32>(0.0), 0.0, false, vec2<f32>(0.0));
 }
 
 fn signNotZero(value: f32) -> f32 {
@@ -1394,7 +1403,8 @@ fn loadHistoricalRaySample(
   return HistoricalRaySample(
     historicalColor.rgb,
     min(historicalColor.a, getHistorySampleLimit()),
-    true
+    true,
+    loadHistoryMoments(historyPixel)
   );
 }
 
@@ -1411,7 +1421,7 @@ fn getHistoricalRaySample(
   // Unchanged static progressive samples must average without per-sample clipping.
   if (uniforms.temporal.w <= 0.5) {
     let previous = textureLoad(historyImage, vec2<i32>(pixel), 0);
-    return HistoricalRaySample(previous.rgb, previous.a, previous.a > 0.0);
+    return HistoricalRaySample(previous.rgb, previous.a, previous.a > 0.0, loadHistoryMoments(vec2<i32>(pixel)));
   }
 
   var historySamplePosition = vec2<f32>(pixel);
@@ -1459,12 +1469,14 @@ fn getHistoricalRaySample(
   let bottomLeftWeight = (1.0 - historyFraction.x) * historyFraction.y;
   let bottomRightWeight = historyFraction.x * historyFraction.y;
   var historicalColor = vec3<f32>(0.0);
+  var historicalMoments = vec2<f32>(0.0);
   var historicalSampleCount = 0.0;
   var totalWeight = 0.0;
   if (topLeftWeight > 0.0) {
     let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance);
     if (topLeftSample.valid) {
       historicalColor += topLeftSample.color * topLeftWeight;
+      historicalMoments += topLeftSample.moments * topLeftWeight;
       historicalSampleCount += topLeftSample.sampleCount * topLeftWeight;
       totalWeight += topLeftWeight;
     }
@@ -1477,6 +1489,7 @@ fn getHistoricalRaySample(
     );
     if (topRightSample.valid) {
       historicalColor += topRightSample.color * topRightWeight;
+      historicalMoments += topRightSample.moments * topRightWeight;
       historicalSampleCount += topRightSample.sampleCount * topRightWeight;
       totalWeight += topRightWeight;
     }
@@ -1489,6 +1502,7 @@ fn getHistoricalRaySample(
     );
     if (bottomLeftSample.valid) {
       historicalColor += bottomLeftSample.color * bottomLeftWeight;
+      historicalMoments += bottomLeftSample.moments * bottomLeftWeight;
       historicalSampleCount += bottomLeftSample.sampleCount * bottomLeftWeight;
       totalWeight += bottomLeftWeight;
     }
@@ -1497,6 +1511,7 @@ fn getHistoricalRaySample(
     let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance);
     if (bottomRightSample.valid) {
       historicalColor += bottomRightSample.color * bottomRightWeight;
+      historicalMoments += bottomRightSample.moments * bottomRightWeight;
       historicalSampleCount += bottomRightSample.sampleCount * bottomRightWeight;
       totalWeight += bottomRightWeight;
     }
@@ -1515,7 +1530,8 @@ fn getHistoricalRaySample(
       hit, previousDistance),
     // Normalize radiance, but discount confidence when part of the footprint was occluded.
     min(historicalSampleCount, getHistorySampleLimit()),
-    true
+    true,
+    historicalMoments / totalWeight
   );
 }
 
@@ -2140,6 +2156,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
   var accumulatedColor = vec3<f32>(0.0);
+  /* MOMENT_INITIALIZE */
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
     let sampleOffset = makeRadianceSampleOffset(pixel, sampleIndex);
     let ray = makeCameraRay(pixel, sampleIndex);
@@ -2156,10 +2173,12 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       }
     }
     accumulatedColor += color;
+    /* MOMENT_SAMPLE */
   }
 
   var color = accumulatedColor / f32(sampleCount) * uniforms.settings.x;
   let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color);
+  /* MOMENT_AVERAGE */
   var totalSampleCount = min(f32(sampleCount), getHistorySampleLimit());
   if (historicalSample.valid) {
     totalSampleCount = min(
@@ -2168,6 +2187,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     );
     let currentWeight = min(f32(sampleCount) / totalSampleCount, 1.0);
     color = mix(historicalSample.color, color, currentWeight);
+    /* MOMENT_BLEND */
   }
   let guideHitPosition = guideRay.origin +
     guideRay.direction * min(guideHit.distance, 65504.0);
@@ -2182,8 +2202,44 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   );
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
   textureStore(outputMetadata, vec2<i32>(pixel), metadata);
+  /* MOMENT_STORE */
 }
 `;
+
+/** Adds moment history to the trace or sparse carry shader when requested. */
+export function getRayTracingMomentShader(source: string, carry = false): string {
+  const historyLocation = carry ? 5 : 13;
+  return source
+    .replace(
+      '/* MOMENT_BINDINGS */',
+      `@group(0) @binding(${historyLocation}) var historyMoments: texture_2d<f32>;
+@group(0) @binding(${historyLocation + 1}) var outputMoments: texture_storage_2d<rg32float, write>;`
+    )
+    .replace(
+      '/* MOMENT_CARRY */',
+      'textureStore(outputMoments, pixel, textureLoad(historyMoments, pixel, 0));'
+    )
+    .replace(
+      '/* MOMENT_LOAD */\n  return vec2<f32>(0.0);',
+      'return textureLoad(historyMoments, pixel, 0).xy;'
+    )
+    .replace('/* MOMENT_INITIALIZE */', 'var moments = vec2<f32>(0.0);')
+    .replace(
+      '/* MOMENT_SAMPLE */',
+      `let luminance = dot(color, vec3<f32>(0.2126, 0.7152, 0.0722)) * uniforms.settings.x;
+    let logLuminance = log2(1.0 + clamp(luminance, 0.0, 65504.0));
+    moments += vec2<f32>(logLuminance, logLuminance * logLuminance);`
+    )
+    .replace('/* MOMENT_AVERAGE */', 'moments /= f32(sampleCount);')
+    .replace(
+      '/* MOMENT_BLEND */',
+      'moments = mix(historicalSample.moments, moments, currentWeight);'
+    )
+    .replace(
+      '/* MOMENT_STORE */',
+      'textureStore(outputMoments, vec2<i32>(pixel), vec4<f32>(moments, 0.0, 0.0));'
+    );
+}
 
 /** On-demand full-resolution picking reuses the exact primary-ray traversal. */
 export const RAY_TRACING_PICK_SHADER = /* wgsl */ `
@@ -2256,6 +2312,8 @@ export type RayTracingPresentationOptions = {
   /** Zero preserves linear color; one applies the exact sRGB transfer function. */
   outputEncoding: number;
   denoiseRadius?: 0 | 1 | 2;
+  /** Uses retained log-luminance variance to guide spatial filtering. */
+  varianceGuidance?: boolean;
   debugView?: RayTracingDebugView;
 };
 
@@ -2269,9 +2327,21 @@ export function getRayTracingScenePresentationShader(
   const denoiseRadius = typeof options === 'boolean' ? 0 : (options.denoiseRadius ?? 0);
   const debugView = typeof options === 'boolean' ? 'color' : (options.debugView ?? 'color');
   const useMetadata = denoiseRadius > 0 || debugView !== 'color';
+  const useMoments =
+    debugView === 'variance' ||
+    (typeof options !== 'boolean' && options.varianceGuidance && denoiseRadius > 0);
 
   return /* wgsl */ `
 @group(0) @binding(0) var image: texture_2d<f32>;
+${
+  useMoments
+    ? `@group(0) @binding(2) var momentsImage: texture_2d<f32>;
+fn loadLogLuminanceVariance(pixel: vec2<i32>) -> f32 {
+  let moments = textureLoad(momentsImage, pixel, 0).xy;
+  return max(moments.y - moments.x * moments.x, 0.0);
+}`
+    : ''
+}
 ${
   useMetadata
     ? `@group(0) @binding(1) var metadata: texture_2d<f32>;
@@ -2289,7 +2359,14 @@ fn loadGuidedColor(pixel: vec2<i32>) -> vec3<f32> {
   if (center.a <= 0.0 || center.a >= 65504.0 || centerSample.a <= 0.0) { return centerSample.rgb; }
   // Preserve detail as the retained estimate accumulates samples.
   let filterStrength = 1.0 - smoothstep(8.0, 64.0, centerSample.a);
-  if (filterStrength <= 0.0) { return centerSample.rgb; }
+  ${
+    useMoments
+      ? `let estimatedError = loadLogLuminanceVariance(pixel) / max(centerSample.a, 1.0);
+  // A single sample cannot estimate variance.
+  let varianceWeight = select(1.0, smoothstep(0.0, 0.0025, estimatedError), centerSample.a >= 2.0);`
+      : 'let varianceWeight = 1.0;'
+  }
+  if (filterStrength * varianceWeight <= 0.0) { return centerSample.rgb; }
   let normal = decodeGuidanceNormal(center.xy);
   var color = vec3<f32>(0.0);
   var totalWeight = 0.0;
@@ -2311,7 +2388,7 @@ fn loadGuidedColor(pixel: vec2<i32>) -> vec3<f32> {
       totalWeight += weight;
     }
   }
-  return mix(centerSample.rgb, color / max(totalWeight, 0.0001), filterStrength);
+  return mix(centerSample.rgb, color / max(totalWeight, 0.0001), filterStrength * varianceWeight);
 }`
     : ''
 }
@@ -2416,6 +2493,11 @@ fn fragmentMain(@location(0) textureCoordinates: vec2<f32>) -> @location(0) vec4
 function getRayTracingDebugFragmentShader(debugView: RayTracingDebugView): string {
   const pixelShader = `let pixel = clamp(vec2<i32>(textureCoordinates * vec2<f32>(textureDimensions(image))),
     vec2<i32>(0), vec2<i32>(textureDimensions(image)) - vec2<i32>(1));`;
+  if (debugView === 'variance') {
+    return `${pixelShader}
+      let deviation = sqrt(loadLogLuminanceVariance(pixel));
+      return vec4<f32>(vec3<f32>(deviation / (1.0 + deviation)), 1.0);`;
+  }
   if (debugView === 'history') {
     return `${pixelShader}
       let confidence = log2(1.0 + textureLoad(image, pixel, 0).a) / log2(257.0);

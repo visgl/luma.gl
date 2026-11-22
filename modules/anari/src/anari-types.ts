@@ -288,8 +288,10 @@ export type ANARIRendererParameters = {
   historySampleLimit?: number;
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
   denoiseRadius?: 0 | 1 | 2;
-  /** Presentation-only primary-hit diagnostics for ray tracing. */
-  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
+  /** Retains log-luminance moments for variance-guided ray tracing. */
+  varianceGuidance?: boolean;
+  /** Presentation diagnostics for ray tracing. */
+  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history' | 'variance';
   /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
   transportMode?: 'diffuse' | 'pbr';
   /** Explicit emissive geometry connections for ray lighting. */
