@@ -145,6 +145,24 @@ test('binds quoted dotted columns separately from table-qualified columns', asyn
   expect(Array.from(output.getChild('score') ?? [])).toEqual([4, 3]);
 });
 
+test('sorts by hidden source and computed keys without publishing either key', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const orderedQueries = [
+    {clause: 'score DESC NULLS LAST', expectedIdentifiers: [4, 6, 3]},
+    {clause: 'ABS(score) DESC NULLS LAST', expectedIdentifiers: [2, 4, 6]}
+  ];
+  for (const {clause, expectedIdentifiers} of orderedQueries) {
+    const result = await executeGPUQuery(
+      device,
+      samples,
+      'SELECT id FROM samples ORDER BY ' + clause + ' LIMIT 3 OFFSET 1'
+    );
+    expect(result.schema.fields.map(field => field.name)).toEqual(['id']);
+    expect(Array.from(result.getChild('id') ?? [])).toEqual(expectedIdentifiers);
+  }
+});
+
 /** Builds a native Arrow table with stable input types and nullable scores. */
 function makeSamples(identifiers: number[], scores: (number | null)[]): arrow.Table {
   return arrow.tableFromArrays({

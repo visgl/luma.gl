@@ -7,7 +7,12 @@ import {parseSQLSelectStatement} from '@math.gl/sql/parser';
 import type {Expression} from '@math.gl/sql/expressions';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
-import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
+import {
+  GPUDataFrameQuery,
+  type GPUDataFrameDerivedColumn
+} from '../gpu-dataframe/gpu-data-frame-query';
+import {compileGPUDataFrameGlobalSort} from '../gpu-dataframe/gpu-global-sort-compiler';
+import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-query';
 import {
   GPUExpression,
   column,
@@ -55,7 +60,7 @@ type GPUSQLStatement = Readonly<{
   predicate?: Expression;
   groupBy?: GPUSQLProjectionReference;
   orderBy?: Readonly<{
-    column: GPUSQLProjectionReference;
+    expression: Expression;
     direction: 'ascending' | 'descending';
     nulls?: 'first' | 'last';
   }>;
@@ -72,8 +77,13 @@ type GPUSQLAggregationDefinitions = Record<
   'count' | {count: string} | {sum: string} | {min: string} | {max: string} | {mean: string}
 >;
 
+/** Existing global-sort plan and its already-validated controls. */
+type GPUSQLSortPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedSortOptions};
+
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
 type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
+  readonly predicates: readonly GPUExpression<boolean, string>[];
+  readonly derivedColumns: readonly GPUDataFrameDerivedColumn[];
   filter: (predicate: GPUExpression<boolean, string>) => GPUSQLDynamicQuery;
   select: (names: readonly string[]) => GPUSQLDynamicQuery;
   withColumn: (
@@ -87,7 +97,7 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
   sortByGlobal: (
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
-  ) => GPUSQLCompiledPlan & {page: (offset: number, limit?: number) => GPUSQLCompiledPlan};
+  ) => GPUSQLSortPlan & {page: (offset: number, limit?: number) => GPUSQLSortPlan};
   innerJoin: (
     right: GPUDataFrame,
     options: {leftOn: string; rightOn: string}
@@ -292,23 +302,53 @@ function buildGPUSQLPlan(
   }
 
   if (statement.orderBy) {
-    const {column: requested, direction, nulls} = statement.orderBy;
-    const orderColumn =
-      typeof requested === 'number'
-        ? getGPUSQLProjectionItem(selected, requested, 'ORDER BY')
-        : requested.qualifier === undefined && selected.includes(requested.name)
-          ? requested.name
-          : resolve(requested);
-    if (!selected.includes(orderColumn)) {
-      throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
+    const {expression, direction, nulls} = statement.orderBy;
+    let orderColumn: string;
+    if (expression.type === 'Literal' && typeof expression.value === 'number') {
+      orderColumn = getGPUSQLProjectionItem(selected, expression.value, 'ORDER BY');
+    } else if (
+      expression.type === 'Identifier' &&
+      !('gpuSQLParameter' in expression) &&
+      selected.includes(expression.name)
+    ) {
+      orderColumn = expression.name;
+    } else {
+      const sortExpression = lowerSQLExpression(expression, parameters, resolve);
+      if (sortExpression.kind === 'column') {
+        orderColumn = sortExpression.name;
+      } else {
+        orderColumn = '__sqlOrderKey';
+        while (frame.columnNames.includes(orderColumn) || selected.includes(orderColumn)) {
+          orderColumn += '_';
+        }
+        query = query.withColumn(
+          orderColumn,
+          new GPUExpression<number | null, string>(sortExpression)
+        );
+      }
     }
-    const sort = query.select(selected).sortByGlobal(orderColumn, {
-      direction,
-      ...(nulls ? {nulls} : {})
-    });
-    return statement.limit === undefined && statement.offset === undefined
-      ? sort
-      : sort.page(statement.offset ?? 0, statement.limit);
+    const hidden = !selected.includes(orderColumn);
+    const workingColumns = hidden ? [...selected, orderColumn] : selected;
+    const sort = query.select(workingColumns).sortByGlobal(orderColumn, {direction, nulls});
+    const page =
+      statement.limit === undefined && statement.offset === undefined
+        ? sort
+        : sort.page(statement.offset ?? 0, statement.limit);
+    if (!hidden) return page;
+    const {predicates, derivedColumns} = query;
+    return {
+      compile: graph =>
+        compileGPUDataFrameGlobalSort(
+          frame,
+          predicates,
+          workingColumns,
+          derivedColumns,
+          orderColumn,
+          page.options,
+          graph,
+          selected
+        )
+    };
   }
   if (statement.limit !== undefined || statement.offset !== undefined)
     throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
@@ -438,7 +478,7 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     predicate: statement.where as Expression | undefined,
     groupBy: statement.groupBy?.[0] && readGPUSQLProjectionReference(statement.groupBy[0]),
     orderBy: sort && {
-      column: readGPUSQLProjectionReference(sort.expression),
+      expression: sort.expression as Expression,
       direction: sort.direction === 'desc' ? 'descending' : 'ascending',
       nulls: sort.nulls
     },
