@@ -42,6 +42,7 @@ struct RayPrimitive {
   iridescence: vec4<f32>, // Strength, film IOR, minimum thickness, effective thickness in nm.
   anisotropy: vec4<f32>, // Tangent-space direction, strength, rotation in radians.
   diffuseTransmission: vec4<f32>, // Tint and fraction of the diffuse lobe.
+  materialFlags: vec4<f32>, // Unlit flag and reserved channels.
 };
 
 struct RayBlasNode {
@@ -173,6 +174,7 @@ struct RayTriangle {
   thirdNormal: vec4<f32>,
   secondaryCoordinates: array<vec4<f32>, 2>,
   colors: array<vec4<f32>, 3>,
+  tangents: array<vec4<f32>, 3>,
 };
 
 struct RayLight {
@@ -202,6 +204,7 @@ struct RayHit {
   triangleIndex: u32,
   footprint: f32,
   vertexColor: vec4<f32>,
+  barycentrics: vec2<f32>,
 };
 
 struct PendingRayNode {
@@ -481,7 +484,7 @@ fn intersectBlasNodeBounds(
 }
 
 fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> RayHit {
-  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
+  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0), vec2<f32>(0.0));
   let primitive = primitives[primitiveIndex];
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
@@ -496,7 +499,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
       let localNormal = normalize(localOrigin + localDirection * distance);
       let worldNormal = normalize((transpose(primitive.inverseTransform) *
         vec4<f32>(localNormal, 0.0)).xyz);
-      let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
+      let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0), vec2<f32>(0.0));
       if (isMaterialVisible(candidate)) { return candidate; }
       minimumDistance = distance;
     }
@@ -560,7 +563,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
               vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w) * intersection.y +
               vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * intersection.z,
               triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z, triangleIndex, 0.0,
-              triangle.colors[0] * normalWeight + triangle.colors[1] * intersection.y + triangle.colors[2] * intersection.z);
+              triangle.colors[0] * normalWeight + triangle.colors[1] * intersection.y + triangle.colors[2] * intersection.z, intersection.yz);
             if (primitive.material.x >= 0.0) {
               candidate.footprint = getCutoutFootprint(ray, candidate);
             }
@@ -697,7 +700,7 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
 }
 
 fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
-  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0));
+  var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0), vec2<f32>(0.0));
   if (uniforms.dimensions.z == 0u) {
     return closestHit;
   }
@@ -871,11 +874,26 @@ fn getShadedPrimitive(hit: RayHit) -> RayPrimitive {
   return primitive;
 }
 
-// Derive the frame from world-space triangle edges and the sampled UV chart.
+// Use authored tangents when available, or derive the frame from the sampled UV chart.
 fn getTriangleTangentFrame(hit: RayHit, normal: vec3<f32>, uvTransform: mat3x3<f32>,
     secondary: bool) -> mat2x3<f32> {
   if (hit.triangleIndex == 0xffffffffu) { return mat2x3<f32>(); }
   let triangle = triangles[hit.triangleIndex];
+  let weights = vec3<f32>(1.0 - hit.barycentrics.x - hit.barycentrics.y, hit.barycentrics);
+  let authored = triangle.tangents[0] * weights.x +
+    triangle.tangents[1] * weights.y + triangle.tangents[2] * weights.z;
+  let transform = primitives[hit.primitiveIndex].transform;
+  if (authored.w != 0.0) {
+    let direction = (transform * vec4<f32>(authored.xyz, 0.0)).xyz;
+    let projected = direction - normal * dot(normal, direction);
+    if (dot(projected, projected) > 0.0) {
+      let tangent = normalize(projected);
+      let linearTransform = mat3x3<f32>(transform[0].xyz, transform[1].xyz, transform[2].xyz);
+      let orientation = select(-1.0, 1.0, determinant(linearTransform) >= 0.0);
+      let bitangent = cross(normal, tangent) * sign(authored.w) * orientation;
+      return mat2x3<f32>(tangent, bitangent);
+    }
+  }
   let first = select(vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w),
     triangle.secondaryCoordinates[0].xy, secondary);
   let second = select(vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w),
@@ -889,7 +907,6 @@ fn getTriangleTangentFrame(hit: RayHit, normal: vec3<f32>, uvTransform: mat3x3<f
     return mat2x3<f32>();
   }
 
-  let transform = primitives[hit.primitiveIndex].transform;
   let firstEdge = (transform * vec4<f32>(triangle.secondPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
   let secondEdge = (transform * vec4<f32>(triangle.thirdPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
   let tangentDirection = (firstEdge * secondUVEdge.y - secondEdge * firstUVEdge.y) * sign(determinant);
@@ -1163,7 +1180,7 @@ fn findInitialShadowMedium(origin: vec3<f32>) -> u32 {
     let primitiveIndex = leafPrimitiveIds[node - uniforms.acceleration.x];
     if (primitiveIndex >= uniforms.dimensions.z) { continue; }
     let primitive = primitives[primitiveIndex];
-    if (primitive.properties.y <= 0.0 || primitive.material.x >= 0.0 ||
+    if (primitive.properties.y <= 0.0 || primitive.material.x >= 0.0 || primitive.materialFlags.x > 0.0 ||
         primitive.material.z != 1.0 || primitive.material.y <= 0.0) { continue; }
     let localOrigin = (primitive.inverseTransform * vec4<f32>(origin, 1.0)).xyz;
     if (dot(localOrigin, localOrigin) < primitive.properties.y * primitive.properties.y) {
@@ -1204,6 +1221,7 @@ fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
     var materialHit = blocker;
     materialHit.footprint = 0.0;
     let material = getShadedPrimitive(materialHit);
+    if (material.materialFlags.x > 0.0) { return vec3<f32>(0.0); }
     let distance = traveled + blocker.distance;
     if (MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION && material.properties.y > 0.0 &&
         material.material.x < 0.0 && material.material.z == 1.0 && material.material.y > 0.0) {
@@ -1907,7 +1925,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   }
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   var emitterHit = RayHit(shadowDistance, lightNormal, primitiveIndex, true,
-    emitterCoordinates, emitterSecondaryCoordinates, emitterTriangleIndex, 0.0, emitterVertexColor);
+    emitterCoordinates, emitterSecondaryCoordinates, emitterTriangleIndex, 0.0, emitterVertexColor, vec2<f32>(0.0));
   if (emitter.material.x >= 0.0) {
     emitterHit.footprint = getCutoutFootprint(shadowRay, emitterHit);
     if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }
@@ -2071,7 +2089,17 @@ fn evaluateEnvironmentRadiance(direction: vec3<f32>, receiverDistance: f32) -> v
   return vec4<f32>(radiance * exp(-max(uniforms.fog.w, 0.0) * receiverDistance), density);
 }
 
+// Unlit surfaces are terminal visibility hits, with no light sampling or bounce.
+fn getUnlitRadiance(hit: RayHit) -> vec3<f32> {
+  let color = getShadedPrimitive(hit).baseColor.rgb;
+  let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
+  return mix(uniforms.fog.rgb, color, visibility);
+}
+
 fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+  if (primitives[primaryHit.primitiveIndex].materialFlags.x > 0.0) {
+    return getUnlitRadiance(primaryHit);
+  }
   var ray = primaryRay;
   var hit = primaryHit;
   var coneWidth = 0.0;
@@ -2139,6 +2167,10 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       coneWidth += coneSpread * hit.distance;
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
+    if (primitives[hit.primitiveIndex].materialFlags.x > 0.0) {
+      radiance += throughput * getUnlitRadiance(hit);
+      break;
+    }
     var illumination = evaluateDirectLighting(ray, hit, sample.delta || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u);
     if (pairEmission && any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
       let emitterDensity = getEmitterHitDensity(ray, hit, position);
@@ -2162,6 +2194,9 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
 
 // Cosine-weighted Lambertian transport. The BRDF cosine and sampling PDF cancel.
 fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+  if (primitives[primaryHit.primitiveIndex].materialFlags.x > 0.0) {
+    return getUnlitRadiance(primaryHit);
+  }
   var ray = primaryRay;
   var hit = primaryHit;
   var coneWidth = 0.0;
@@ -2214,6 +2249,10 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     if (MATERIAL_HAS_MIPMAPS) {
       coneWidth += coneSpread * hit.distance;
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
+    }
+    if (primitives[hit.primitiveIndex].materialFlags.x > 0.0) {
+      radiance += throughput * getUnlitRadiance(hit);
+      break;
     }
     var illumination = evaluateDirectLighting(ray, hit, true);
     if (EMITTER_SAMPLING_ENABLED && uniforms.emitters.y != 0u && uniforms.emitters.x > 0u) {

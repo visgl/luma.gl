@@ -64,6 +64,7 @@ renderer.
 | Material feature | Ray-traced support |
 | --- | --- |
 | Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
+| Unlit | glTF `KHR_materials_unlit` and retained unlit surfaces display base color without light response. They terminate camera and bounce rays and participate in silhouettes and shadows. |
 | Vertex color | Interpolated glTF `COLOR_0` RGB multiplies the base color. RGBA vertex alpha participates in `MASK` visibility. |
 | Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
@@ -87,11 +88,11 @@ Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, pick
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres
 check both interfaces. `OPAQUE` ignores texture alpha.
 
-Triangle mesh normal maps use linear RGB and a tangent frame derived from the
-transformed UV chart. They affect lighting and opaque bounce shading. Analytic spheres and
-degenerate UV charts use the surface normal, which also remains the normal for picking, hit
-channels and smooth dielectric refraction. The tangent frame is derived from the triangle UVs
-and does not use authored vertex tangents.
+Triangle mesh normal maps use linear RGB and the interpolated glTF `TANGENT`
+frame when available, including its handedness and retained morph deltas. Meshes
+without usable tangents derive the frame from the transformed UV chart. They affect lighting and opaque bounce shading. Analytic spheres and
+triangles without a usable tangent frame use the surface normal. Picking, hit
+channels and smooth dielectric refraction continue to use the unperturbed normal.
 Dielectric specular color and intensity factors affect direct lighting and opaque PBR bounce
 shading. The color map uses RGB with texture-format color decoding, and the intensity map uses
 alpha. Both use the same UV selection and transforms as the other material maps. Smooth dielectric
