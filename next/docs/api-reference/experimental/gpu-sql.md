@@ -78,7 +78,7 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * Named `:parameter` values with planning defaults and encoding-time updates.
 
-* One numeric `ORDER BY` expression with direction, null ordering, and optional bounded `LIMIT`. Sort keys can use source fields outside the projection and are excluded from the output schema.
+* One or more numeric `ORDER BY` expressions, each with its own direction and null ordering, and an optional bounded `LIMIT`. Keys are evaluated in priority order. Rows that tie on every key retain their input order. Sort keys can use source fields outside the projection and are excluded from the output schema.
 
   A one-based position refers to the SELECT output, including computed aliases and expanded `*`.
 
@@ -94,7 +94,7 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 SQL keywords and registered table names are case-insensitive. Column names must match the dataframe schema exactly, even when unquoted. Double-quote reserved names such as `"limit"` and `"order"`. A quoted identifier such as `"fare.total"` names a single field. In `trips."fare.total"`, `trips` qualifies the field. The period inside the quotes remains part of its name.
 
-Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous expressions, multiple sort/group keys, and pagination without ordering fail during CPU-only planning. Applications still own command submission, synchronization, result readback, and cleanup.
+Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous expressions, multiple group keys, and pagination without ordering fail during CPU-only planning. Applications still own command submission, synchronization, result readback, and cleanup.
 
 The loaders.gl adapter currently supports predicate pushdown and output projection. It accepts finite numeric, Boolean, and null predicate values, including reusable named parameters. Portable source-order `limit`, streaming, in-flight cancellation, string/binary/date values, and relational extensions are reported or rejected as unsupported instead of silently falling back to CPU work.
 
