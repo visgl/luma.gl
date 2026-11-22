@@ -48,6 +48,8 @@ import {
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
+// Dictionary codes below this value remain distinct from null and excluded rows.
+const NULL_GROUP_KEY = MAXIMUM_UINT32 - 1;
 
 type GPUGroupedMetricState = {
   values: GraphVectorView<'float32'>;
@@ -227,14 +229,42 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
     const baseMask = keyValidity
       ? combineGPUGroupingMasks(graph, `${prefix}-key-validity`, context.selectionMask, keyValidity)
       : context.selectionMask;
+    const validity: Record<string, GPUVector<'uint32'>> = {};
+    const nullableKeys = observed
+      ? groupingKeys.map(({source, output}, index) => {
+          const field = context.table.schema.fields.find(field => field.name === source);
+          if (!field?.nullable) return undefined;
+          const dictionary = context.dictionaries[source as keyof Selection & string];
+          const labels =
+            dictionary && !Array.isArray(dictionary)
+              ? (dictionary as {values: readonly unknown[]}).values
+              : (dictionary as readonly unknown[] | undefined);
+          if (labels && labels.length > NULL_GROUP_KEY) {
+            throw new Error(
+              'GPUDataFrame nullable grouping dictionary exceeds the available key range'
+            );
+          }
+          const mask = createGPUGroupedOutputVector(
+            graph.device,
+            prefix + '-key-mask-' + index,
+            groupCount,
+            'uint32'
+          );
+          ownedVectors.push(mask);
+          validity[output] = mask;
+          return {
+            input: getGPUGroupingValidity(context, source, inputs[index]),
+            output: graph.importGPUVector(prefix + '-key-mask-view-' + index, mask).data[0]
+          };
+        })
+      : [];
     const rowSelection = observed
-      ? addGPUObservedPairGroups(context, prefix, inputs, outputs, ownedVectors)
+      ? addGPUObservedPairGroups(context, prefix, inputs, outputs, nullableKeys, ownedVectors)
       : undefined;
     const keys = rowSelection?.keys ?? inputs[0];
     if (!observed) addGPUGroupIdentityPass(graph, `${prefix}-output-key-identity`, outputs[0]);
 
     const metricStates = new Map<string, GPUGroupedMetricState>();
-    const validity: Record<string, GPUVector<'uint32'>> = {};
 
     for (const [definitionIndex, definition] of definitions.entries()) {
       const metricId = `${prefix}-metric-${definitionIndex}`;
@@ -312,7 +342,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       groupingKeys,
       definitions,
       outputVectors,
-      columns
+      columns,
+      observed
     );
     const dictionaries = Object.freeze(
       Object.fromEntries(
@@ -368,6 +399,10 @@ function addGPUObservedPairGroups(
   prefix: string,
   inputs: readonly GraphVectorView<'uint32'>[],
   outputs: readonly GraphDataView<'uint32'>[],
+  nullableKeys: readonly (
+    | {input?: GraphVectorView<'uint32'>; output: GraphDataView<'uint32'>}
+    | undefined
+  )[],
   ownedVectors: GPUVector[]
 ): {
   keys: GraphVectorView<'uint32'>;
@@ -406,19 +441,32 @@ function addGPUObservedPairGroups(
   const ranks = scratch('-ranks');
   const groupIds = scratch('-group-ids');
   const excluded = '0xffffffffu';
+  const nullKey = NULL_GROUP_KEY + 'u';
+  const encodedOutputs = outputs.map((output, index) =>
+    nullableKeys[index] ? scratch('-nullable-key-' + index) : output
+  );
   let offset = 0;
   for (const [batchIndex, selection] of selectionMask.data.entries()) {
     if (selection.length > 0) {
+      const leftValidity = nullableKeys[0]?.input?.data[batchIndex];
+      const rightValidity = nullableKeys[1]?.input?.data[batchIndex];
       addGPUPairPass(
         graph,
         prefix + '-stage-' + batchIndex,
         selection.length,
-        {left: inputs[0].data[batchIndex], right: inputs[1].data[batchIndex], selection},
+        {
+          left: inputs[0].data[batchIndex],
+          right: inputs[1].data[batchIndex],
+          selection,
+          ...(leftValidity ? {leftValidity} : {}),
+          ...(rightValidity ? {rightValidity} : {})
+        },
         {first, second, ordinals},
         `
           let row = ${offset}u + index;
-          first[row] = select(${excluded}, left[index], selection[index] != 0u);
-          second[row] = right[index];
+          let firstKey = ${leftValidity ? `select(${nullKey}, left[index], leftValidity[index] != 0u)` : 'left[index]'};
+          first[row] = select(${excluded}, firstKey, selection[index] != 0u);
+          second[row] = ${rightValidity ? `select(${nullKey}, right[index], rightValidity[index] != 0u)` : 'right[index]'};
           ordinals[row] = row;
         `
       );
@@ -480,7 +528,7 @@ function addGPUObservedPairGroups(
     prefix + '-scatter',
     length,
     {first, second, pairOrder, heads, ranks},
-    {groupIds, firstOutput: outputs[0], secondOutput: outputs[1]},
+    {groupIds, firstOutput: encodedOutputs[0], secondOutput: encodedOutputs[1]},
     `
       let row = pairOrder[index];
       groupIds[row] = 0u;
@@ -505,6 +553,27 @@ function addGPUObservedPairGroups(
     },
     'rows[index] = index; mask[index] = u32(index < count[0]);'
   );
+
+  for (const [index, key] of nullableKeys.entries()) {
+    if (!key) continue;
+    addGPUPairPass(
+      graph,
+      prefix + '-decode-key-' + index,
+      length,
+      {encoded: encodedOutputs[index], count: countView},
+      {decoded: outputs[index], validity: key.output},
+      `
+        if (index < count[0]) {
+          let valid = encoded[index] != ${nullKey};
+          validity[index] = u32(valid);
+          decoded[index] = select(0u, encoded[index], valid);
+        } else {
+          validity[index] = 0u;
+          decoded[index] = 0u;
+        }
+      `
+    );
+  }
 
   let byteOffset = 0;
   const data = selectionMask.data.map(chunk => {
@@ -683,7 +752,8 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
   keys: GPUGroupingKeys,
   definitions: readonly GPUDataFrameAggregationDefinition[],
   vectors: ReadonlyMap<string, GPUVector<'uint32'> | GPUVector<'float32'>>,
-  columns?: readonly string[]
+  columns?: readonly string[],
+  observed = false
 ): GPUTable<Result> {
   const outputFields: GPUField[] = [
     ...keys.map(({source: name, output}) => {
@@ -692,7 +762,7 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
       return {
         name: output,
         format: 'uint32' as const,
-        nullable: false,
+        nullable: observed && field.nullable === true,
         metadata: new Map(field.metadata)
       };
     }),
