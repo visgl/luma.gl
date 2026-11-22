@@ -46,8 +46,13 @@ import type {
 /** Explicit GPU dataframe registrations; Arrow remains exclusively an adapter boundary. */
 export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
 
-/** Defaults for named SQL parameters such as `:minimumFare`; values remain caller-controlled. */
-export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParameters}>;
+/** Configuration for GPU-only SQL planning. */
+export type GPUSQLQueryOptions = Readonly<{
+  /** Defaults for named SQL parameters such as :minimumFare. */
+  parameters?: GPUDataFrameQueryParameters;
+  /** Maximum temporary count bytes per grouped AVG operation. */
+  maxMeanScratchBytes?: number;
+}>;
 
 /** A source column name with its optional, separately parsed table qualifier. */
 type GPUSQLColumnReference = Readonly<{name: string; qualifier?: string}>;
@@ -189,7 +194,7 @@ export class GPUSQLContext {
     const statement = parseGPUSQLStatement(source);
     return new GPUSQLQuery(
       source,
-      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {})
+      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {}, options.maxMeanScratchBytes)
     );
   }
 }
@@ -221,7 +226,8 @@ export class GPUSQLQuery {
 function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
   statement: GPUSQLStatement,
-  parameters: GPUDataFrameQueryParameters
+  parameters: GPUDataFrameQueryParameters,
+  maxMeanScratchBytes?: number
 ): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
@@ -348,6 +354,12 @@ function buildGPUSQLPlan(
               | {mean: string});
     }
     if (statement.groupBy !== undefined) {
+      if (
+        maxMeanScratchBytes !== undefined &&
+        (!Number.isSafeInteger(maxMeanScratchBytes) || maxMeanScratchBytes < 4)
+      ) {
+        throw new Error('GPUSQL mean scratch budget requires at least four bytes');
+      }
       const keyItems = statement.items.filter(item => !item.aggregate);
       const occupied = new Set(Object.keys(definitions));
       const selectedKeys = new Map<string, {source: string; output: string}>();
@@ -504,7 +516,8 @@ function buildGPUSQLPlan(
                 columns,
                 ordering,
                 having,
-                aggregateJoin
+                aggregateJoin,
+                maxMeanScratchBytes
               )
           },
           'observed-grouping',
@@ -531,7 +544,8 @@ function buildGPUSQLPlan(
               {key: key.output!, columns},
               ordering,
               having,
-              aggregateJoin
+              aggregateJoin,
+              maxMeanScratchBytes
             )
         },
         'dense-grouping',

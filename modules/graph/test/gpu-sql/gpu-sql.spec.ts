@@ -857,7 +857,8 @@ it('GPUSQL feeds unique-right join matches into global and grouped aggregates on
 
     const grouped = context
       .query(
-        'SELECT category, COUNT(*) AS trips, SUM(fare) AS total FROM trips INNER JOIN accounts ON trips.identifier = accounts.identifier GROUP BY category HAVING trips > 0 ORDER BY total DESC LIMIT 1'
+        'SELECT category, COUNT(*) AS trips, AVG(fare) AS total FROM trips INNER JOIN accounts ON trips.identifier = accounts.identifier GROUP BY category HAVING trips > 0 ORDER BY total DESC LIMIT 1',
+        {maxMeanScratchBytes: 4}
       )
       .compile(new GPUCommandGraph(device));
     try {
@@ -874,7 +875,7 @@ it('GPUSQL feeds unique-right join matches into global and grouped aggregates on
         globalSelectedCount: grouped.globalSelectedCount
       });
       expect(Array.from(rows, row => [row.category, row.trips, row.total])).toEqual([
-        ['premium', 2, 18]
+        ['premium', 2, 9]
       ]);
     } finally {
       grouped.destroy();
