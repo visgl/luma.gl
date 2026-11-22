@@ -896,3 +896,5 @@ Use `GPUCommandGraphSubmissionPacer` when an animation loop owns submission and 
 Check `isReady()` before encoding a batch. Submit with the application's usual queue ownership, then pass its completion promise to `trackSubmission()`. The pacer preserves completion errors and can accept later submissions after the minimum cooldown. The ANARI Observatory and Playground use this policy for live ray tracing. They feed `lastSubmissionMilliseconds` into the renderer budget so intentional idle time does not lower ray resolution. Offline captures retain their deterministic scheduling.
 
 The pacer controls how often work is submitted. Use the execution budget controller and bounded dispatches for graphs that also need to reduce work per submission.
+
+For application-sized dispatches, call the budget controller's `observeInvocations()` with the measured invocation count, GPU duration, and budget used for that submission. Its recommendation applies to future batches. The live ANARI examples use this to vary trace coverage at sweep boundaries while reusing their progressive history.
