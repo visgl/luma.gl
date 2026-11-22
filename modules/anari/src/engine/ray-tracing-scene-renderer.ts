@@ -707,6 +707,10 @@ type RayTracingFrameResources = {
   traceGraph: CompiledGPUCommandGraph<RayTracingTraceGraphParameters>;
   shaderOptions: RayTracingShaderOptions;
   topologyRevision: string;
+  /** Retained topology commits also include pose-only edits. */
+  retainedTopologyRevision?: string;
+  /** Snapshot of CPU morph weights and skin palettes used by the packed triangles. */
+  deformationRevision: string;
   primitiveRevision: string;
   transformRevision: string;
   materialRevision?: number;
@@ -853,11 +857,21 @@ export class RayTracingSceneRenderer {
       options.camera.viewMatrix
     );
     const inverseViewProjection = new Matrix4(viewProjection).invert();
-    const topologyRevision = getTopologyRevision(options);
+    /** Pose data can change without altering the compiled graph layout. */
+    const deformationRevision = getDeformationRevision(options);
     const transformRevision = getTransformRevision(options);
     const primitiveRevision = getPrimitiveRevision(options, transformRevision);
     const lightRevision = getLightRevision(options, lights);
     let resources = this.frames.get(options.id);
+    /** Retained commits can skip comparing the structural snapshot on steady frames. */
+    const retainedTopologyRevision = options.sceneRevisions
+      ? `${options.sceneRevisions.identity}:${options.sceneRevisions.topology}`
+      : undefined;
+    /** Identity of the packed scene structure, independent of CPU pose. */
+    const topologyRevision =
+      retainedTopologyRevision && resources?.retainedTopologyRevision === retainedTopologyRevision
+        ? resources.topologyRevision
+        : getTopologyRevision(options);
     const currentTimeMilliseconds = getTimestampMilliseconds();
     /** Sparse batches carry metadata only when the view and scene pose are stable. */
     const stationaryBatch =
@@ -903,6 +917,8 @@ export class RayTracingSceneRenderer {
         cameraPosition: options.camera.position
       });
       resources.topologyRevision = topologyRevision;
+      resources.retainedTopologyRevision = retainedTopologyRevision;
+      resources.deformationRevision = deformationRevision;
       resources.primitiveRevision = primitiveRevision;
       resources.transformRevision = transformRevision;
       resources.materialRevision = options.sceneRevisions?.materials;
@@ -918,7 +934,25 @@ export class RayTracingSceneRenderer {
         resources.historyNeedsReset = true;
       }
 
-      const topologyChanged = resources.topologyRevision !== topologyRevision;
+      /** Repack CPU-deformed triangles while retaining the graph when its layout still matches. */
+      const deformationChanged = resources.deformationRevision !== deformationRevision;
+      /** Retained pose commits may advance the world revision without altering its structure. */
+      const topologyChanged =
+        resources.topologyRevision !== topologyRevision ||
+        (!deformationChanged && resources.retainedTopologyRevision !== retainedTopologyRevision);
+      let topology: RayTracingTopology | undefined;
+      if (topologyChanged || deformationChanged) {
+        topology = makeRayTracingTopology(
+          options.surfaces,
+          options.primitives ?? {},
+          this.geometryCache
+        );
+      }
+      /** Pose changes can split or combine previously shared packed mesh layouts. */
+      const recreateTopology =
+        topologyChanged ||
+        (topology !== undefined &&
+          !hasMatchingPackedGeometryLayout(resources.geometryLayouts, topology.geometryLayouts));
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
       const transformChanged = resources.transformRevision !== transformRevision;
       const environmentMapChanged = resources.environmentMap !== options.environmentMap;
@@ -936,28 +970,20 @@ export class RayTracingSceneRenderer {
       const sparseTransformInstanceIds = getSparseTransformInstanceIds(
         options,
         resources,
-        topologyChanged,
+        topology !== undefined,
         transformChanged
       );
       const sparsePreviousTransformCommit =
-        !topologyChanged &&
+        !topology &&
         !primitiveChanged &&
         resources.previousTransformsNeedCommit &&
         resources.pendingPreviousTransformInstanceIds.size > 0 &&
         resources.pendingPreviousTransformInstanceIds.size <=
           getMaximumSparsePrimitiveUpdateCount(resources);
-      let topology: RayTracingTopology | undefined;
       let primitiveData: RayTracingPrimitiveData | undefined;
       let lightData: Float32Array | undefined;
 
-      if (topologyChanged) {
-        topology = makeRayTracingTopology(
-          options.surfaces,
-          options.primitives ?? {},
-          this.geometryCache
-        );
-      }
-      if (topologyChanged || (primitiveChanged && !sparseTransformInstanceIds)) {
+      if (topology || (primitiveChanged && !sparseTransformInstanceIds)) {
         primitiveData = makePrimitiveData(
           options.surfaces,
           options.primitives ?? {},
@@ -979,7 +1005,7 @@ export class RayTracingSceneRenderer {
       const emitterPrimitiveIndices = primitiveData
         ? getEmissivePrimitiveIndices(primitiveData.primitives)
         : resources.emitterPrimitiveIndices;
-      if (lightsChanged || (options.emitterSampling && (primitiveChanged || topologyChanged))) {
+      if (lightsChanged || (options.emitterSampling && (primitiveChanged || topology))) {
         lightData = makeLightData(
           lights,
           options.emitterSampling ? emitterPrimitiveIndices : [],
@@ -989,7 +1015,7 @@ export class RayTracingSceneRenderer {
       }
 
       if (
-        topologyChanged ||
+        recreateTopology ||
         (primitiveData &&
           resources.primitiveBuffer.byteLength < primitiveData.primitives.byteLength) ||
         (topology && resources.triangleBuffer.byteLength < topology.triangles.byteLength) ||
@@ -1041,6 +1067,8 @@ export class RayTracingSceneRenderer {
             : []
         );
         resources.topologyRevision = topologyRevision;
+        resources.retainedTopologyRevision = retainedTopologyRevision;
+        resources.deformationRevision = deformationRevision;
         resources.primitiveRevision = primitiveRevision;
         resources.transformRevision = transformRevision;
         resources.materialRevision = options.sceneRevisions?.materials;
@@ -1051,7 +1079,8 @@ export class RayTracingSceneRenderer {
           resources.triangleBuffer.write(topology.triangles);
           resources.geometryLayouts = topology.geometryLayouts;
           resources.historyNeedsReset = true;
-          resources.accelerationUpdateMode = 'rebuild';
+          resources.topologyNeedsUpdate = true;
+          scheduleRefittableAccelerationUpdate(resources);
         }
         if (primitiveData) {
           resources.primitiveBuffer.write(primitiveData.primitives);
@@ -1072,7 +1101,7 @@ export class RayTracingSceneRenderer {
           resources.primitiveCount = primitiveData.primitiveCount;
           resources.triangleCount = primitiveData.triangleCount;
           if (transformChanged) {
-            scheduleTransformAccelerationUpdate(resources);
+            scheduleRefittableAccelerationUpdate(resources);
             if (!(options.temporalReprojection ?? true)) {
               resources.historyNeedsReset = true;
             }
@@ -1082,7 +1111,7 @@ export class RayTracingSceneRenderer {
         } else if (sparseTransformInstanceIds || sparsePreviousTransformCommit) {
           updateSparsePrimitiveTransforms(resources, sparseTransformInstanceIds ?? []);
           if (transformChanged) {
-            scheduleTransformAccelerationUpdate(resources);
+            scheduleRefittableAccelerationUpdate(resources);
             if (!(options.temporalReprojection ?? true)) {
               resources.historyNeedsReset = true;
             }
@@ -1098,6 +1127,8 @@ export class RayTracingSceneRenderer {
           }
         }
         resources.topologyRevision = topologyRevision;
+        resources.retainedTopologyRevision = retainedTopologyRevision;
+        resources.deformationRevision = deformationRevision;
         resources.primitiveRevision = primitiveRevision;
         resources.transformRevision = transformRevision;
         resources.materialRevision = options.sceneRevisions?.materials;
@@ -1987,6 +2018,7 @@ export class RayTracingSceneRenderer {
       traceGraph,
       shaderOptions: props.shaderOptions,
       topologyRevision: '',
+      deformationRevision: '',
       primitiveRevision: '',
       transformRevision: '',
       lightRevision: '',
@@ -3954,7 +3986,8 @@ function updateSparsePrimitiveTransforms(
   resources.previousTransformsNeedCommit = changedInstances.size > 0;
 }
 
-function scheduleTransformAccelerationUpdate(resources: RayTracingFrameResources): void {
+/** Requests a TLAS refit with a periodic rebuild to restore spatial ordering. */
+function scheduleRefittableAccelerationUpdate(resources: RayTracingFrameResources): void {
   if (resources.accelerationUpdateMode === 'rebuild') {
     return;
   }
@@ -3968,24 +4001,45 @@ function getRaySkinRevision(surface: SceneSurface): number[] | undefined {
   return palette && Array.from(palette);
 }
 
-function getTopologyRevision(options: RayTracingSceneRenderOptions): string {
-  if (options.sceneRevisions) {
-    const poses = options.surfaces
-      .filter(surface => surface.morphTargets?.length || surface.skin?.jointMatrices?.length)
-      .map(surface => [surface.id, surface.morphWeights, getRaySkinRevision(surface)]);
-    return `${options.sceneRevisions.identity}:${options.sceneRevisions.topology}:${JSON.stringify(poses)}`;
-  }
+/** Compares the ordered mesh ranges used by the compiled bottom-level graph. */
+function hasMatchingPackedGeometryLayout(
+  previous: ReadonlyMap<string, RayTracingGeometryLayout>,
+  next: ReadonlyMap<string, RayTracingGeometryLayout>
+): boolean {
+  if (previous.size !== next.size) return false;
+  /** Packed offsets and capacities derive from the ordered triangle counts. */
+  const previousLayouts = Array.from(previous.values());
+  return Array.from(next.values()).every(
+    (layout, index) => layout.triangleCount === previousLayouts[index].triangleCount
+  );
+}
+
+/** Snapshots CPU deformation inputs separately from structural scene changes. */
+function getDeformationRevision(options: RayTracingSceneRenderOptions): string {
   return JSON.stringify(
+    options.surfaces
+      .filter(
+        surface =>
+          options.primitives?.[surface.id]?.type !== 'sphere' &&
+          (surface.morphTargets?.length || surface.skin?.jointMatrices?.length)
+      )
+      .map(surface => [surface.id, surface.morphWeights, getRaySkinRevision(surface)])
+  );
+}
+
+/** Identifies changes to geometry, placements, or primitive types that require new graphs. */
+function getTopologyRevision(options: RayTracingSceneRenderOptions): string {
+  return JSON.stringify([
+    options.sceneRevisions?.identity,
     options.surfaces.map(surface => [
       surface.id,
       surface.geometry.id,
       surface.geometryVersion,
       surface.transforms.length,
-      surface.morphWeights,
-      getRaySkinRevision(surface),
+      (surface as RayTracingSceneSurface).instanceIds,
       options.primitives?.[surface.id]
     ])
-  );
+  ]);
 }
 
 function getPrimitiveRevision(

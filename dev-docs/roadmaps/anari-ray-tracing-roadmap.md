@@ -155,5 +155,8 @@ factor participates in triangle mask visibility and sampled emitter endpoints.
 The next increment preserves glTF unlit base color and interpolates authored
 tangents, including handedness and morph deltas. Skeletal skinning now supports retained CPU joint palettes with four influences
 per vertex, after morphing positions, normals, and tangents. GPU-only and
-per-instance palettes, deformation refits, alpha blending, and dispersion remain
-open on the ray path.
+per-instance palettes, bottom-level deformation refits, alpha blending, and
+dispersion remain open on the ray path. Stable CPU pose updates reuse the packed
+mesh layout and compiled graphs, rebuild the affected frame's bottom-level
+hierarchies from the updated triangles, and refit the top-level hierarchy with
+periodic Morton rebuilds. Deformation still invalidates progressive history.

@@ -9,7 +9,8 @@ import {createMaterialFixture} from './ray-material-fixture';
 
 it('updates skinned ray geometry after an in-place joint edit and composes morphs', async () => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, geometry, surface, renderer, readPixel, destroy} = await createMaterialFixture();
+  const {options, geometry, surface, renderer, readPixel, getStatistics, destroy} =
+    await createMaterialFixture();
   try {
     options.background = [0, 0, 0, 1];
     options.progressive = false;
@@ -43,10 +44,14 @@ it('updates skinned ray geometry after an in-place joint edit and composes morph
     options.surfaces = [skinned];
     const before = await readPixel();
     expect(before).toEqual([255, 0, 0]);
+    expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeDefined();
     expect((await renderer.pick(options.id, 4, 4))?.surfaceId).toBe(skinned.id);
 
     jointMatrices.set(new Matrix4().translate([16, 0, 0]), 16);
     expect(await readPixel()).toEqual([0, 0, 0]);
+    expect(getStatistics()?.rayTracing?.graph?.topology).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeUndefined();
     expect(await renderer.pick(options.id, 4, 4)).toBeNull();
 
     options.surfaces = [
@@ -60,12 +65,20 @@ it('updates skinned ray geometry after an in-place joint edit and composes morph
     options.sceneRevisions.topology++;
     expect(await readPixel()).toEqual(before);
     expect((await renderer.pick(options.id, 4, 4))?.surfaceId).toBe('other-pose');
+    expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeDefined();
 
     options.surfaces = [skinned];
     options.sceneRevisions.topology++;
+    expect(await readPixel()).toEqual([0, 0, 0]);
     skinned.morphWeights[0] = 1;
+    options.sceneRevisions.topology++;
     expect(await readPixel()).toEqual(before);
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeDefined();
     expect((await renderer.pick(options.id, 4, 4))?.surfaceId).toBe(skinned.id);
+
+    expect(await readPixel()).toEqual(before);
+    expect(getStatistics()?.rayTracing?.graph?.topology).toBeUndefined();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeUndefined();
   } finally {
     destroy();
   }
