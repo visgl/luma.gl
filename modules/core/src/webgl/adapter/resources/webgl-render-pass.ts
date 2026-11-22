@@ -389,9 +389,7 @@ export class WEBGLRenderPass extends RenderPass {
           stencilMask: 0xffffffff,
           scissorTest: false
         },
-        () => {
-          this.device.gl.clear(GL.STENCIL_BUFFER_BIT);
-        }
+        () => this.device.gl.clear(GL.STENCIL_BUFFER_BIT)
       );
     }
   }

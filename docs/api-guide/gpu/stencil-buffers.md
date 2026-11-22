@@ -206,4 +206,4 @@ For offscreen rendering, create a framebuffer with `samples: 4` and a packed
 `depthStencilAttachment: 'depth24plus-stencil8'`. Set `sampleCount: 4` on each pipeline
 drawing into it. The pass resolves color into the public single-sample color attachments.
 Depth and stencil remain in multisampled storage for subsequent passes on the same
-framebuffer. Clear either aspect independently with the usual render-pass properties.
+framebuffer. Only the resolved color attachments are portable sampling targets. Clear either aspect independently with the usual render-pass properties.
