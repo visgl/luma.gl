@@ -47,6 +47,12 @@ export class RayBatchBudget {
       statistics.graph?.refit
     )
       return;
+    /** Coverage requested by the controller for the measured frame. */
+    const requestedPhaseCount = this.phaseCount;
+    // Motion and sweep boundaries can temporarily override the requested batch size.
+    if (requestedPhaseCount && statistics.sampledPixelCoverage !== 1 / requestedPhaseCount) {
+      return;
+    }
     /** Identity of the scene that produced this measurement. */
     const generation = this.generation;
     /** Dispatch height rounded to the trace workgroup size. */
