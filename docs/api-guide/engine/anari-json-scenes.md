@@ -25,6 +25,13 @@ WebGPU/WebGL selection, a renderer selector for frame presentation, automatic HD
 available, orbit controls, validation feedback, and live instance, draw-call, and triangle
 statistics.
 
+On WebGPU, choose **Ray tracing** in the renderer selector. **Chart Materials** shows a
+metal roughness sweep, glossy reflections, and matte surfaces. **Chart Lighting** and
+**Indirect Light Study** show emissive lighting, shadows, and color bleeding. **Antique
+Camera · Ray Study** adds an imported glTF asset. In the stationary lighting studies, the
+**Refinement** indicator shows accumulated samples toward the configured target. Image
+noise can remain at 100%, particularly around small emitters.
+
 Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. Export bakes procedural
 geometry, starfield distributions, and retained instances into a static snapshot; transfers mesh
 positions, normals, UVs, vertex colors, materials, texture images, camera, and supported lights;
@@ -339,7 +346,7 @@ animation.seek(1.5);
 
 `update()` receives an absolute monotonic time in seconds. The handle shares the engine animation
 mixer and commits each changed retained object at most once per frame. See
-[ANARI glTF and keyframe animation](/docs/api-reference/scene/anari-animation) and
+[ANARI glTF and keyframe animation](/docs/api-reference/anari/anari-animation) and
 [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) for complete bindings,
 interpolation modes, ownership, and playback examples. Local file selection supports standalone
 `.gltf` and `.glb` assets as well as supported OpenUSD files.
@@ -376,5 +383,5 @@ URL.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

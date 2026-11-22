@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, _getDefaultBindGroupFactory} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const RENDER_SOURCE = /* WGSL */ `
 struct ColorUniforms {
@@ -74,6 +74,8 @@ it('RenderPipeline can infer an empty shader layout for builtin-only WGSL shader
   }
 
   const shader = webgpuDevice.createShader({source: BUILTIN_ONLY_RENDER_SOURCE});
+  const counts = webgpuDevice.statsManager.getStats('GPU Resource Counts');
+  const activeBefore = counts.get('Resources Active').count;
   const renderPipeline = webgpuDevice.createRenderPipeline({
     vs: shader,
     fs: shader,
@@ -85,7 +87,14 @@ it('RenderPipeline can infer an empty shader layout for builtin-only WGSL shader
   );
   expect(renderPipeline.shaderLayout.bindings, 'builtin-only WGSL infers no bindings').toEqual([]);
 
+  const ownedLayouts = renderPipeline.ownedResources;
+  expect(ownedLayouts).toHaveLength(1);
+  expect(ownedLayouts[0].owner).toBe(renderPipeline);
   renderPipeline.destroy();
+  renderPipeline.destroy();
+  expect(ownedLayouts[0].destroyed).toBe(true);
+  expect(shader.destroyed).toBe(false);
+  expect(counts.get('Resources Active').count).toBe(activeBefore);
   shader.destroy();
   void 0;
 });

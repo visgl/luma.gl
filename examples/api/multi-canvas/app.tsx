@@ -14,7 +14,7 @@ import {
   Model,
   ShaderInputs
 } from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {makeMultiCanvasLayout} from './app-ui';

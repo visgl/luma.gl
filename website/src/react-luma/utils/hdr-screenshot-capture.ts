@@ -4,7 +4,7 @@
 
 import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import type {AnimationLoop, AnimationProps} from '@luma.gl/engine';
-import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shaders';
 
 const HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL = 8;
 const STANDARD_DYNAMIC_RANGE_BYTES_PER_PIXEL = 4;

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUVectorChunks, type GPUVectorChunk} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorLike} from '@luma.gl/graph/gpu-data';
+import {getGPUVectorChunks, type GPUVectorChunk} from '@luma.gl/graph/gpu-data';
 
 import type {
   Buffer,
@@ -14,12 +14,13 @@ import type {
   ExternalTexture,
   RenderPass,
   RenderPassProps,
+  ComputeShaderLayout,
   Texture,
   TextureFormat,
   TextureView
 } from '@luma.gl/core';
-import type {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 /** Internal identity shared by graph-owned handles without importing the graph implementation. */
 export type GPUCommandGraphOwner = {
@@ -549,6 +550,8 @@ export type GPUCommandGraphNodeConditionPreflight = {
 };
 
 type GPUCommandGraphNodeBase<Condition> = {
+  /** @internal Logical result buffers kept live across the containing operation. */
+  retainedBuffers?: readonly GraphBufferHandle[];
   /** Optional plain-text explanation shown in debugging tools and retained in traces. */
   description?: string;
   /** Graph-wide node identifier. */
@@ -610,6 +613,22 @@ export type GPUCommandGraphResourceSummary = Readonly<{
   depth?: number;
 }>;
 
+/** Static description of a compute kernel supplied by a command node. */
+export type GPUCommandGraphKernelMetadata = Readonly<{
+  entryPoint: string;
+  workgroupSize: readonly [number, number, number];
+  bindings: readonly Readonly<
+    Pick<ComputeShaderLayout['bindings'][number], 'name' | 'type' | 'group' | 'location'>
+  >[];
+  source?: string;
+}>;
+
+/** Controls which kernel details a compiled graph exposes to inspectors. */
+export type GPUCommandGraphCompileOptions = {
+  /** Collect declared kernel metadata. Use 'source' to also include WGSL text. */
+  kernelMetadata?: 'layout' | 'source';
+};
+
 /** Immutable per-node workload entry in a compiled graph preflight report. */
 export type GPUCommandGraphNodePreflight = Readonly<
   Required<Omit<GPUCommandGraphNodeWorkloadEstimate, 'operation' | 'variant'>> & {
@@ -617,6 +636,7 @@ export type GPUCommandGraphNodePreflight = Readonly<
     type: GPUCommandGraphNodeType;
     description?: string;
     resources?: readonly GPUCommandGraphResourceSummary[];
+    kernel?: GPUCommandGraphKernelMetadata;
     operation?: string;
     variant?: string;
     publication?: Readonly<GPUCommandGraphNodePublication>;
@@ -649,6 +669,8 @@ export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase<
 > & {
   /** Node discriminator. */
   type: 'compute';
+  /** Optional kernel details for graph inspection. */
+  kernel?: GPUCommandGraphKernelMetadata;
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
   /** Creates reusable node resources through asynchronous backend compilation when available. */

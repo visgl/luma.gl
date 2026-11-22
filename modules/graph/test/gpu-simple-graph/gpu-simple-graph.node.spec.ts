@@ -3,9 +3,16 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply, sqrt} from '@luma.gl/gpgpu';
+import {
+  GPUDataEvaluator,
+  GPUVectorEvaluator,
+  add,
+  multiply,
+  sqrt
+} from '@luma.gl/graph/gpu-simple-graph';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
+  GPURenderOperation,
   GPUGraph,
   GPUGraphScalarLiteral,
   GPUGraphScalarOperation,
@@ -13,7 +20,7 @@ import {
   GPULoopOperation,
   composite
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 describe('GPUSimpleGraph prototype', () => {
   it('resolves authored metadata without inspecting each dependency tree', () => {
@@ -179,8 +186,8 @@ describe('GPUSimpleGraph semantic composition', () => {
     expect(Array.from(await output.readValue())).toEqual([12]);
     expect(graph.capabilities).toEqual({
       callerControlledSubmission: false,
-      dynamicBindings: false,
-      transientAllocation: false
+      dynamicBindings: true,
+      transientAllocation: true
     });
     output.destroy();
     source.destroy();
@@ -509,4 +516,18 @@ it('binds chunked output targets without retargeting borrowed evaluators', async
     for (const target of targets) target.destroy();
     device.destroy();
   }
+});
+
+it('keeps mixed render/evaluator additions atomic and rejects evaluator work after render work', () => {
+  const device = new NullDevice({});
+  const graph = new GPUSimpleGraph(device);
+  const render = new GPURenderOperation({id: 'render', createNodes: () => []});
+  const evaluator = GPUDataEvaluator.fromConstant(1);
+  const operation = new GPUSimpleGraphOperation({id: 'input', evaluator});
+  expect(() => graph.add([render, operation])).toThrow();
+  expect(graph.operationTree).toEqual([]);
+  graph.add([operation, render]);
+  expect(() => graph.add(operation)).toThrow();
+  evaluator.destroy();
+  device.destroy();
 });

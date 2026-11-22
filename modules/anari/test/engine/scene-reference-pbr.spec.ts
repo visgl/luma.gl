@@ -5,8 +5,8 @@
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 type ReferenceRenderTarget = {

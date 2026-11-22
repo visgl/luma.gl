@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {type GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {GPUHistogram} from '@luma.gl/graph/gpu-core';
@@ -84,7 +84,6 @@ export function compileGPUDataFrameHistogram<
     GPUHistogramResult,
     CompiledGPUDataFrameHistogram
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context => addGPUHistogramToGraph(context, column, options)
   });
 }

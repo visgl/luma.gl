@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type ComputePassProps, type Device} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   type CompiledGPUCommandGraph,
   DrawCommandBuffer,
@@ -11,7 +11,7 @@ import {
   GPUGridIndex,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {GPUPointSpatialQuery, type GPUSpatialQueryOutput} from '../../src/geospatial';
 

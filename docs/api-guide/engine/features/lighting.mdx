@@ -18,7 +18,7 @@ The **LightsPunctualLamp** sample demonstrates this capability. Drag to orbit an
 The shared `lighting` shader module accepts `LightingProps`. A compatible model receives scene lighting through `model.shaderInputs.setProps({lighting: ...})`. Directional lights use a direction vector; point and spot lights add position and attenuation controls. Lighting is scene-shared state, separate from material state.
 
 ```ts
-import type {LightingProps} from '@luma.gl/shadertools';
+import type {LightingProps} from '@luma.gl/shaders';
 
 const sceneLighting = {
   lights: [

@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {loadImageTexture} from '@loaders.gl/textures';
+import {load} from '@loaders.gl/core';
+import {ImageLoader} from '@loaders.gl/images';
 import {RenderPass, log} from '@luma.gl/core';
 import {type AnimationLoopMode, AnimationProps, ClipSpace} from '@luma.gl/engine';
-import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/gltf';
-import {type LightingProps} from '@luma.gl/shadertools';
+import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/engine/gltf';
+import {type LightingProps} from '@luma.gl/shaders';
 import {
   ColumnPanel,
   type Panel,
@@ -205,7 +206,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     try {
       log.log(0, 'Loading showcase PBR environment')();
       const imageBasedLightingEnvironment = loadPBREnvironment(this.device, {
-        loadImage: loadImageTexture,
+        loadImage: url => load(url, ImageLoader),
         brdfLutUrl: `${PBR_ENVIRONMENT_BASE_URL}/brdfLUT.png`,
         getTexUrl: (type, face, mipLevel) =>
           `${PBR_ENVIRONMENT_BASE_URL}/papermill/${type}/${type}_${CUBE_FACE_TO_DIRECTION[face]}_${mipLevel}.jpg`,

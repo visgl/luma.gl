@@ -3,7 +3,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Computation, Model, type AnimationProps} from '@luma.gl/engine';
-import {WGSLShaderAssembler, type ShaderTranspiler} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler, type ShaderTranspiler} from '@luma.gl/shaders';
 import {
   transpileSlangWGSL,
   packSlangUniforms,

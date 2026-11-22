@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GPUDataEvaluator, add, multiply} from '@luma.gl/gpgpu';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {GPUDataEvaluator, add, multiply} from '@luma.gl/graph/gpu-simple-graph';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUGraph,

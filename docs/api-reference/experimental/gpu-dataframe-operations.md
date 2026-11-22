@@ -51,12 +51,12 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 | Execution | One browser WebGPU device and caller-owned command encoding, submission, and optional readback. |
 
 Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
-`@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
+`@luma.gl/graph/arrow`; generic GPU storage remains in `@luma.gl/graph/gpu-data`, while record batches and
 tables come from `@luma.gl/graph/gpu-tables`. Neither GPU package requires Apache Arrow as a
 runtime dependency.
 
 ```ts
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
@@ -197,3 +197,78 @@ the underlying WebGPU execution infrastructure.
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU tables](/docs/api-reference/experimental/gpu-tables)
 - [GPU data analysis example](/examples/experimental/gpu-data-analysis)
+
+## Vector expressions
+
+DataFrame expressions use packed rows for compute and rendering. The compiler
+accesses those rows through scalar storage arrays so Arrow FixedSizeList and
+vertex consumers can use the same bytes. See [GPUVectorFormat and WGSL storage](/docs/api-reference/graph/gpu-vector-format#wgsl-storage-layout)
+for the shared layout rules.
+
+`vector('float32x3', [column('x'), column('y'), column('z')])` creates immutable
+syntax. `cast(expression, format)` requests an explicit numeric conversion.
+`makeGPUExpressionFromPortableAST(parseSQLExpression('ARRAY[x,y,z]::REAL[3]'))`
+bridges math.gl's portable AST. Supported nodes are numeric/boolean/null literals,
+columns, arithmetic, comparisons, boolean operators, unary negation/not,
+`array_float32` of width 2–4, and `cast` to float32/int32. Other nodes fail closed.
+The bridge does not parse SQL itself or execute arbitrary callbacks.
+Pass `makeGPUPredicateFromPortableAST(parseSQLExpression('x > 0'))` to
+`frame.filter()` to require a boolean result.
+
+Vector execution uses the packed layout described below. Unsupported scope includes
+float64, normalized/packed integer formats, arbitrary lists, CASE/functions,
+implicit scalar broadcasting, vector ordering and SQL unsigned array syntax.
+
+### Executing packed vector expressions
+
+```ts
+const position = vector('float32x3', [column('x'), column('y'), column('z')]);
+const query = frame.withColumn('position', position, {format: 'float32x3'});
+const compiled = query.compile(graph);
+```
+
+Use `vectorColumn('position')` to reference an existing packed vector column in
+arithmetic expressions. The planner reads its component type and width from the schema.
+
+Supply the explicit output `format` when adding vector or portable AST expressions.
+This preserves precise output schema typing; existing scalar `withColumn` calls
+retain their inferred formats. Vector arithmetic requires matching component type
+and width; equality uses all components, inequality uses any differing component.
+Ordering, implicit broadcasting, and vector reductions are not implemented.
+
+The compiler emits scalar-array read accessors and component writes. Output buffers
+have STORAGE, VERTEX and COPY usage with 8/12/16-byte packed strides. Source chunks
+must be packed and four-byte aligned; padded native WGSL arrays and interleaved
+sources are rejected, never implicitly repacked. Source batch boundaries, including
+empty batches, survive execution.
+
+Vector construction converts scalar components explicitly to the requested type.
+Numeric casts preserve width, truncate floats toward zero, saturate out-of-range
+finite integers, and round integer-to-float conversion to f32 precision. Signed to
+unsigned clamps negative values to zero; unsigned to signed clamps at INT32_MAX.
+These are the shared graph GPU cast rules, not an assertion of full SQL CPU cast
+conformance. Float NaN/Infinity converted to integers makes the row invalid.
+
+Any null component makes the entire constructed vector null. Arithmetic combines
+row validity with AND; casts preserve it, and a nullable result has one uint32
+validity word per row. Invalid rows' component bytes are unspecified. Use validity
+when rendering or reading results. Component-level nullable vectors are unsupported.
+
+### Arrow and rendering
+
+The analytics Arrow adapter accepts FixedSizeList columns of width 2–4 with
+Float32, Int32 or Uint32 children. It uploads the original packed values once and
+preserves the record batches. A null parent or child produces a null GPU row.
+Explicit analytics readback emits a FixedSizeList with a parent validity bitmap.
+
+Bind a compiled query's packed vector directly with
+`model.setAttributeVectors({position: compiled.table.gpuVectors.position})`.
+For a `vec3<f32>` vertex input the same buffer uses a 12-byte stride in the
+compute and render passes. Handle null rows through the query's validity or
+selection outputs when preparing the draw.
+
+Run the opt-in benchmark with
+`yarn test-browser-benchmarks modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts`.
+It reports the median encode, submit, and one-row readback fence time at 100,000
+and 1,000,000 rows, plus the packed and native-array value sizes. It excludes
+upload and compilation and does not time a padded GPU kernel.

@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {WebXRCameraTexture} from '@luma.gl/engine/experimental/webxr';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
+import {WebXRCameraTexture} from '@luma.gl/engine/experimental-webxr';
 
 const TEXTURE_BINDING = {
   type: 'texture',

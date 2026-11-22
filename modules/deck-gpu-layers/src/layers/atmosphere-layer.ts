@@ -5,7 +5,7 @@
 import {Layer, picking, _GlobeViewport, type LayerContext, type LayerProps} from '@deck.gl/core';
 import type {RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {atmosphere, type AtmosphereProps} from '@luma.gl/shadertools';
+import {atmosphere, type AtmosphereProps} from '@luma.gl/shaders';
 import {skyView, getSkyViewUniforms, SKY_VERTEX_SOURCE, SKY_VERTEX_SHADER} from './sky-view';
 
 export type AtmosphereLayerProps = LayerProps & AtmosphereProps;
@@ -23,6 +23,7 @@ export class AtmosphereLayer extends Layer<AtmosphereLayerProps> {
   override initializeState({device}: LayerContext): void {
     this.setState({
       model: new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: SKY_VERTEX_SHADER,

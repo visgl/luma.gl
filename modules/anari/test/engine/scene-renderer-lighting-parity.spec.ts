@@ -11,8 +11,8 @@ import {
   SceneRenderer,
   type SceneSurface
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 type LightingParityTarget = {

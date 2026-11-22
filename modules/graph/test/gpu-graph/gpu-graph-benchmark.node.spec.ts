@@ -6,13 +6,13 @@ import {readFileSync} from 'node:fs';
 
 import * as graphRootModule from '@luma.gl/graph';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
-import * as benchmarkModule from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
+import * as benchmarkModule from '@luma.gl/graph/gpu-graph-algorithms-benchmarks';
 import {
   makeGPUGraphAlgorithmsBenchmarkDataset,
   type GPUGraphAlgorithmsBenchmarkDatasetKind,
   type GPUGraphAlgorithmsBenchmarkOptions,
   type GPUGraphAlgorithmsBenchmarkPathReport
-} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
+} from '@luma.gl/graph/gpu-graph-algorithms-benchmarks';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
@@ -53,16 +53,12 @@ describe('GPU Graph benchmark optional package boundary', () => {
       optionalDependencies?: Record<string, string>;
     };
 
-    expect(packageJson.exports['./gpu-graph-algorithms/benchmarks']).toEqual({
+    expect(packageJson.exports['./gpu-graph-algorithms-benchmarks']).toEqual({
       import: './dist/gpu-graph-algorithms/benchmarks.js',
       require: './dist/gpu-graph-algorithms/benchmarks.cjs',
       types: './dist/gpu-graph-algorithms/benchmarks.d.ts'
     });
-    for (const dependencies of [
-      packageJson.dependencies,
-      packageJson.peerDependencies,
-      packageJson.optionalDependencies
-    ]) {
+    for (const dependencies of [packageJson.dependencies, packageJson.optionalDependencies]) {
       expect(dependencies?.['apache-arrow']).toBeUndefined();
     }
   });
@@ -478,7 +474,7 @@ describe('GPU Graph live documentation benchmark isolation', () => {
       'utf8'
     );
 
-    expect(component).toContain("from '@luma.gl/graph/gpu-graph-algorithms/benchmarks'");
+    expect(component).toContain("from '@luma.gl/graph/gpu-graph-algorithms-benchmarks'");
     expect(component).toContain('<LiveBenchmarkPanel');
     expect(component).toContain('onRun={async () =>');
     expect(component).toContain("typeof navigator === 'undefined'");

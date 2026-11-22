@@ -39,8 +39,6 @@ export class WebGPUVertexArray extends VertexArray {
     this.logicalBufferSlots = getBufferSlots(props.shaderLayout, props.bufferLayout);
   }
 
-  override destroy(): void {}
-
   /**
    * Set an elements buffer, for indexed rendering.
    * Must be a Buffer bound to buffer with usage bit Buffer.INDEX set.

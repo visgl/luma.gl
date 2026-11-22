@@ -13,7 +13,7 @@ import {
   type QuerySet
 } from '@luma.gl/core';
 import {GPUCommandGraph, GPUCommandGraphEncoding} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 type ComputePassFixture = {
@@ -561,10 +561,6 @@ class RecordingComputePass extends ComputePass {
   constructor(device: NullDevice, props: ComputePassProps, events: string[]) {
     super(device, props);
     this.events = events;
-  }
-
-  override destroy(): void {
-    this.destroyResource();
   }
 
   override end(): void {

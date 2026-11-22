@@ -27,7 +27,7 @@ import {
   GPUGraphAlgorithmsTopology,
   type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

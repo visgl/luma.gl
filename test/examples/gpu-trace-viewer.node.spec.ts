@@ -1106,7 +1106,7 @@ it('GPU trace adaptive LOD shaders parse as WGSL', () => {
   ).toMatch(/array<vec2<f32>, 3>/);
   expect(FillPattern.hash45, 'the default diagonal dash pattern has a stable shader value').toBe(2);
   expect(
-    Boolean(fillPatternShaderPlugin.wgsl),
+    fillPatternShaderPlugin.injections.some(injection => Boolean(injection.wgsl)),
     'the shared fill-pattern plugin supports WGSL'
   ).toBe(true);
   expect(

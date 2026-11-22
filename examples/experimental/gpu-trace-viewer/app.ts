@@ -42,7 +42,7 @@ import {
   type FlatControllerPick,
   type RectangleSelection,
   RectangleSelectController
-} from '@luma.gl/engine/experimental/controls';
+} from '@luma.gl/engine/experimental-controls';
 import {
   GPUTraceAggregation,
   GPUTraceAnomalyScoring,
@@ -54,8 +54,8 @@ import {
   GPUTraceTemporalIndexBuilder,
   GPUTraceTimeBuckets
 } from '@luma.gl/graph/gpu-trace';
-import {buildSdfFontAtlas} from '@luma.gl/text';
-import {DictionaryTextRenderer} from '@luma.gl/text/experimental';
+import {buildSdfFontAtlas} from '@luma.gl/engine/text';
+import {DictionaryTextRenderer} from '@luma.gl/engine/text-experimental';
 import {
   FillPattern,
   type FillPatternType,

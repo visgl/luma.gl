@@ -8,7 +8,7 @@ import {
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;

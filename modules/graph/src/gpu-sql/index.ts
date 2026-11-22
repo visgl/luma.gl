@@ -2,5 +2,5 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export {LuSQLContext, LuSQLQuery} from './lu-sql';
-export type {LuSQLQueryOptions, LuSQLTables} from './lu-sql';
+export {GPUSQLContext, GPUSQLQuery} from './gpu-sql';
+export type {GPUSQLExecution, GPUSQLExplanation, GPUSQLQueryOptions, GPUSQLTables} from './gpu-sql';

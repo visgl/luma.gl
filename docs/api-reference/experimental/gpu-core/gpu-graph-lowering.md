@@ -22,7 +22,7 @@ execution graph
 
 ## Lowering registry
 
-`GPUOperationLoweringRegistry` maps semantic operation types to backend implementations. Operations do not import WebGPU APIs or mutate a command graph.
+`GPUOperationLowering` descriptors map semantic operation types to backend implementations. Supply a readonly array to the compiler; it takes an immutable snapshot and combines it with the built-in lowerings. Operations do not import WebGPU APIs or mutate a command graph.
 
 A WebGPU compiler can flatten a composite because WebGPU has no child-graph primitive. A future CUDA compiler could preserve the same composite as a CUDA child graph when that improves execution.
 

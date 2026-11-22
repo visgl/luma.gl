@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 
 import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/core/webgl-constants';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {WEBGLRenderPass} from '@luma.gl/core/webgl';
 
 const VS_THREE_UBOS = /* glsl */ `\
@@ -297,7 +297,7 @@ it('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct
   expect(
     () => canonicalRenderPass.setBindings({BlockA: bufferA}),
     'pass bindings require an active pipeline'
-  ).toThrow(/setPipeline.*must be called before setBindings/);
+  ).toThrow('Call setPipeline() before setBindings()');
   canonicalRenderPass.setPipeline(renderPipeline);
   canonicalRenderPass.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
   canonicalRenderPass.setVertexArray(vertexArray);

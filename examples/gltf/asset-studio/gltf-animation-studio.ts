@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {AnimationLoopMode} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   type GLTFAnimatedCrowd,
   type GLTFCrowdActor,
   type GLTFScenegraphs,
   setGLTFMorphWeights
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 /** An authored facial-expression or morph-target control. */
 export type GLTFStudioMorphTarget = {

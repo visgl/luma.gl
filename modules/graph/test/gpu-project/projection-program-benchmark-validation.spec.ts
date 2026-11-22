@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 
 it('refuses accuracy/validity failures before warmup and does not return misleading timing', async context => {
   const device = await getWebGPUTestDevice();

@@ -4,8 +4,8 @@
 
 import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneSurface} from '@luma.gl/anari';
-import {getTestDevices} from '@luma.gl/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {getTestDevices} from '@luma.gl/core/test-utils';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('SceneRenderer draws existing skin palettes and updates morph targets on available backends', async () => {

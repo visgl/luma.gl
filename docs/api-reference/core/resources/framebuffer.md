@@ -34,7 +34,7 @@ device's default canvas. The canvas context owns those framebuffers.
 
 ### `FramebufferProps`
 
-`FramebufferProps` extends [ResourceProps](resource.md#resourceprops).
+`FramebufferProps` extends [DeviceResourceProps](device-resource.md#deviceresourceprops).
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |

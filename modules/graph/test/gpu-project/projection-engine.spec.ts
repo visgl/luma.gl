@@ -4,12 +4,12 @@
 
 import {expect, it} from 'vitest';
 import {createSpatialReference} from '@math.gl/geospatial/crs';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   prepareCRSProjection,
   createCRSProjectionCPUBenchmarks
-} from '@luma.gl/graph/gpu-project/crs';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-crs';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 
 it('executes stored-axis metadata consistently on CPU, inline GPU and materialized GPU', async context => {
   const device = await getWebGPUTestDevice();

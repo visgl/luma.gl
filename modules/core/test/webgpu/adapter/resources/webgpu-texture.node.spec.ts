@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Stats} from 'probe.gl/stats';
+import type {Buffer, TextureWriteOptions} from '@luma.gl/core';
 import {describe, expect, test, vi} from 'vitest';
 import type {WebGPUDevice} from '../../../../src/webgpu/adapter/webgpu-device';
 import {WebGPUTexture} from '../../../../src/webgpu/adapter/resources/webgpu-texture';
@@ -136,3 +137,52 @@ function makeMockGPUTexture(options: {label?: string; readOnlyLabel?: boolean} =
 
   return handle as unknown as GPUTexture;
 }
+
+test.each([
+  'data',
+  'buffer'
+] as const)('%s uploads reuse scratch options across nested and failed calls', method => {
+  const device = makeMockWebGPUDevice();
+  const writeTexture = vi.fn();
+  const copyBufferToTexture = vi.fn();
+  Object.assign(device, {
+    handle: {
+      queue: {writeTexture, submit: vi.fn()},
+      createCommandEncoder: () => ({copyBufferToTexture, finish: () => ({})})
+    },
+    getTextureFormatInfo: () => ({bytesPerPixel: 4})
+  });
+  const texture = new WebGPUTexture(device, {handle: makeMockGPUTexture(), width: 4, height: 4});
+  const normalize = vi.spyOn(texture, '_normalizeTextureWriteOptions');
+  const data = new Uint8Array(64);
+  const buffer = {handle: {}} as Buffer;
+  const upload = method === 'data' ? writeTexture : copyBufferToTexture;
+  const write = (options?: TextureWriteOptions) =>
+    method === 'data' ? texture.writeData(data, options) : texture.writeBuffer(buffer, options);
+  try {
+    upload.mockImplementationOnce(() =>
+      method === 'data'
+        ? texture.writeBuffer(buffer, {width: 1, height: 1})
+        : texture.writeData(data, {width: 1, height: 1})
+    );
+    write({width: 2, height: 2});
+    const outer = normalize.mock.results[0].value;
+    const inner = normalize.mock.results[1].value;
+    expect(outer).not.toBe(inner);
+    expect(outer.width).toBe(2);
+    expect(inner.width).toBe(1);
+    write({width: 3, height: 1});
+    expect(normalize.mock.results[2].value).toBe(outer);
+    upload.mockImplementationOnce(() => {
+      throw new Error('upload failed');
+    });
+    expect(() => write()).toThrow('upload failed');
+    write({width: 1, height: 1});
+    expect(normalize.mock.results[4].value).toBe(outer);
+    expect(() => write({bytesPerRow: 1})).toThrow('bytesPerRow');
+    write({width: 1, height: 1});
+    expect(normalize.mock.results[6].value).toBe(outer);
+  } finally {
+    texture.destroy();
+  }
+});

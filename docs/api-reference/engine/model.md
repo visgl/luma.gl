@@ -21,8 +21,9 @@ pipelines, and applies its dynamic draw state to a
 
 ## GPUVectorModel base
 
-`Model` extends `GPUVectorModel`, exported from `@luma.gl/engine`. The
-`@luma.gl/gpgpu/gpu-data` export refers to the same class.
+`Model` extends `GPUVectorModel`, owned and exported by `@luma.gl/engine`.
+Import GPUVectorModel, GPUVectorGeometry, and their batching helpers from engine;
+gpgpu/gpu-data provides the GPUData and GPUVector inputs.
 The base owns the shared rendering state, contiguous vector `setGPUVectors()` API,
 and aligned vector `drawBatches()` API. Vector byte offsets are preserved.
 `GPUVectorModel` supports shader assembly, uniforms, and resource bindings. `Model`
@@ -68,6 +69,23 @@ layouts, including packed buffers and mixed WebGPU vector/constant bindings. Web
 constants are converted to shader values; WebGPU constants use model-owned vertex buffers.
 All caller-supplied vectors and buffers remain borrowed.
 
+Omit `bufferLayouts` to infer formats, strides, and offsets from the inputs:
+
+```typescript
+model.setAttributeVectors({positions, colors, radius});
+```
+
+Within each vector input group, inferred constants share one model-owned, zero-stride
+vertex buffer on WebGPU. WebGL continues to use constant attribute values. Inferred
+vector views share one layout when every corresponding chunk uses the same buffer,
+stride, and relative attribute offsets within a row. This recognizes existing interleaved
+storage without copying it. Separate column allocations remain separate bindings;
+inference does not interleave or concatenate their data to fit device limits.
+
+Explicit layouts and layouts carried by packed vectors remain authoritative and are not
+consolidated. Geometry and supplemental attribute groups are consolidated independently.
+
+
 Geometry vectors must share logical length and chunk boundaries, as must supplemental
 attribute vectors. Non-instanced models require both groups to share their batch structure.
 `draw()` renders matching batches together for non-instanced models. Instanced models draw
@@ -77,14 +95,57 @@ restored after batched rendering. Indices remain a single contiguous stream shar
 geometry batches.
 
 `validateGPUVectorBatchStructure(vectors)`, exported from `@luma.gl/engine` and
-`@luma.gl/gpgpu/gpu-data`, validates row counts, chunk counts, and per-chunk row counts.
+`@luma.gl/graph/gpu-data`, validates row counts, chunk counts, and per-chunk row counts.
 It accepts a named map or array of vectors, ignores constants and undefined entries, and
 neither modifies nor repacks input storage.
+
+### Per-batch uniforms
+
+`drawBatches()` invokes `onBatch` before each aligned vector chunk. Set managed shader-input
+uniforms in the callback to supply batch-local state such as a picking row offset:
+
+```typescript
+model.drawBatches(renderPass, {
+  vectors: {positions, colors},
+  onBatch: ({rowIndexOffset, rowCount}) => {
+    model.shaderInputs.setProps({picking: {indexOffset: rowIndexOffset}});
+  }
+});
+```
+
+`rowIndexOffset` is cumulative within the supplied vectors; `rowCount` is the current chunk's
+length. Corresponding vectors must have equal lengths, chunk counts, and per-chunk row counts.
+This API does not pad, split, concatenate, or realign chunks. As with other `drawBatches()`
+inputs, configure matching model buffer layouts and initial attribute bindings first.
+
+On WebGPU, the model reserves one buffer for all managed uniform blocks and batches in the
+call. Each batch binds a distinct `{buffer, offset, size}` range, aligned to the device's
+`minUniformBufferOffsetAlignment`. The model grows the allocation before drawing when needed,
+keeps it for reuse, and destroys it with the model. WebGL updates uniforms immediately.
+
+**Slots are reused on every `drawBatches()` call.** Submit previous draws before another call
+changes their uniform values or requires a larger allocation:
+
+```typescript
+const pass = encoder.beginRenderPass({framebuffer});
+model.drawBatches(pass, {vectors, onBatch});
+pass.end();
+device.submit(encoder.finish());
+// The model's batch slots can now be reused with different values.
+```
+
+This matches the proposed GPU layers' per-batch style-buffer pattern. It is not an immutable
+snapshot across multiple calls before submission. Keep the model alive while pending commands
+or reusable render bundles reference its buffers. Re-record or stop replaying bundles before
+changing the slots they reference. Explicit external buffer bindings remain caller-managed.
+The callback's shader-input values remain set after the call; temporary buffer bindings,
+attributes, and draw counts are restored, including when a callback throws.
 
 ## Usage
 
 ```typescript
-import {CubeGeometry, DynamicTexture, Model} from '@luma.gl/engine';
+import {CubeGeometry, Model} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
@@ -214,12 +275,27 @@ Marks the model as needing redraw.
 
 Updates shader inputs and rebuilds the pipeline if necessary, encoding any managed uniform uploads onto the supplied command encoder before the render pass begins.
 
-### `draw(renderPass: RenderPass): boolean`
+### `draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean`
 
 Draws once into the supplied render pass. The model selects its pipeline,
 bindings, and vertex array on that pass before issuing the draw. Returns
 `false` when required resources, such as unresolved texture binding sources,
 are not ready yet.
+
+`options.parameters` accepts `viewport`, `scissorRect` (or `null` to disable scissoring), `blendConstant`, and
+`stencilReference`. Supplied values override pass state only for this draw, including
+all internal vector batches. Omitted fields inherit the current pass state. Prior
+values are restored even if drawing throws or resources are not ready. Model defaults
+and pipeline parameters are unchanged. `Model` inherits this API from `GPUVectorModel`.
+
+```typescript
+model.draw(renderPass, {
+  parameters: {blendConstant: [0.5, 0.5, 0.5, 1], stencilReference: 3}
+});
+```
+
+Dynamic overrides cannot be recorded into a render bundle. Set them on the executing
+render pass instead. Native-handle parameter mutations bypass luma's state tracking.
 
 ### `setGeometry(geometry: GPUVectorGeometry | Geometry | GPUGeometry | null): void`
 
@@ -290,3 +366,14 @@ Sets constant-valued attributes.
 - `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
 - `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
 - `DynamicTexture` and `VideoTexture` bindings are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
+
+### Draw count inference and independent lengths
+
+`inferDrawCount` accepts `'instance'`, `'vertex'`, or `'no'` and defaults to `'no'`. It selects the
+count updated from vector lengths (or each batch's row count), preserving the
+other count. `'no'` preserves both caller-supplied counts.
+
+`enforceMatchingVectorLengths` defaults to `true`. Set it to `false` together
+with `inferDrawCount: 'no'` to bind attributes with independent lengths and
+single physical chunks. Layout and buffer validation still apply.
+`drawBatches()` always requires matching lengths and chunk boundaries.

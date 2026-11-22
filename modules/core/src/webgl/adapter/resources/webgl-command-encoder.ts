@@ -37,10 +37,6 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     });
   }
 
-  override destroy(): void {
-    this.destroyResource();
-  }
-
   override finish(): WEBGLCommandBuffer {
     this.destroy();
     return this.commandBuffer;

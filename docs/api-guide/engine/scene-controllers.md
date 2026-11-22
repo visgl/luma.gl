@@ -172,7 +172,7 @@ The audio context must be resumed from a user gesture before realtime playback. 
 
 ```ts
 import {AreaLightController, AudioController, BillboardController} from '@luma.gl/engine';
-import {parseGLTFAreaLights, parseGLTFAudio, parseGLTFBillboards} from '@luma.gl/gltf';
+import {parseGLTFAreaLights, parseGLTFAudio, parseGLTFBillboards} from '@luma.gl/engine/gltf';
 
 const areaLights = new AreaLightController(parseGLTFAreaLights(scenegraphs));
 const billboards = new BillboardController(parseGLTFBillboards(scenegraphs));

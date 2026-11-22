@@ -10,7 +10,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 ```typescript
 import {OrbitControls} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
 const controls = new OrbitControls(canvas, {
@@ -210,4 +210,3 @@ Removes all pointer and wheel listeners, releases active pointer capture, and re
 - Pointer capture keeps every active touch or pointer associated with the canvas, even outside its bounds.
 - Releasing one finger resumes one-pointer orbiting without a positional jump; `pointercancel`, disabling controls, and `destroy()` release the relevant captures.
 - The controls compute camera coordinates only; rendering, camera projection, matrix updates, and redraw scheduling remain the application's responsibility.
-- `@luma.gl/engine/experimental/controls` continues to re-export `OrbitControls` for compatibility, but new applications should import the class and its types from `@luma.gl/engine`.

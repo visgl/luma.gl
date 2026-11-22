@@ -13,7 +13,7 @@ import {
 } from '@deck.gl/core';
 import {assert, type Buffer, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {ScientificFlowGraph} from '@luma.gl/graph/experimental/simulation';
+import type {ScientificFlowGraph} from '@luma.gl/graph/experimental-simulation';
 import {windStreak, SOURCE} from './wind-particle-layer-shaders';
 
 export type WindParticleLayerProps = LayerProps & {
@@ -68,6 +68,7 @@ export class WindParticleLayer extends Layer<WindParticleLayerProps> {
     });
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           modules: [project32, picking, windStreak]

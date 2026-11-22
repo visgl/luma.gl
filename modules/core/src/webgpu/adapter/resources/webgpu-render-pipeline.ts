@@ -11,6 +11,7 @@ import {
   normalizeBindingsByGroup
 } from '../../../index';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
+import {getPipelineDepthStencilFormat} from '../../../api/adapter/resources/render-pipeline';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 
@@ -112,7 +113,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._bindGroupCacheKeysByGroup = createBindGroupCacheKeys(this._bindingsByGroup);
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     // WebGPURenderPipeline has no destroy method.
     // @ts-expect-error
     this.handle = null;
@@ -207,6 +208,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const layout = this.device.createPipelineLayout({
       shaderLayout: this.shaderLayout
     });
+    layout.transferOwnershipTo(this);
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
@@ -218,10 +220,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
       layout: layout.handle
     };
 
-    // Set depth format if required, defaulting to the preferred depth format
-    const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
-
-    if (this.props.depthStencilAttachmentFormat || this.props.parameters.depthWriteEnabled) {
+    const depthFormat = getPipelineDepthStencilFormat(this.device, this.props);
+    if (depthFormat) {
       descriptor.depthStencil = {
         format: getWebGPUTextureFormat(depthFormat),
         depthWriteEnabled: false,
@@ -230,7 +230,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
 
     // Set parameters on the descriptor
-    applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    applyParametersToRenderPipelineDescriptor(
+      descriptor,
+      this.props.parameters,
+      this.device.features
+    );
+    if (depthFormat && descriptor.depthStencil) {
+      descriptor.depthStencil.format = getWebGPUTextureFormat(depthFormat);
+    }
     if (!fragment) {
       delete descriptor.fragment;
     }

@@ -9,7 +9,7 @@ import {
   type GPURasterBufferBand,
   type GPURasterConnectivity
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 type ComponentFixture = {

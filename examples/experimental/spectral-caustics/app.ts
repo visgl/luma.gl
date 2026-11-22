@@ -14,14 +14,15 @@ import {
   TruncatedConeGeometry,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {
   spectralCaustics,
   SpectralCausticsRenderer,
   type SpectralCausticsProps
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 80;

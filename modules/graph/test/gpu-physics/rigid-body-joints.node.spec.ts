@@ -26,3 +26,28 @@ it('rejects invalid joint envelopes before GPU allocation', () => {
       })
   ).toThrow();
 });
+
+it('accepts only static-anchored distance joints in parallel worlds', () => {
+  const joint: GPURigidBodyJoint = {type: 'distance', first: 0, second: 1, distance: 1};
+  expect(() => new GPURigidBodyWorld({bodies, solver: 'parallel', joints: [joint]})).toThrow();
+  const anchoredBodies = [{...bodies[0], mass: 0}, bodies[1]];
+  expect(
+    () => new GPURigidBodyWorld({bodies: anchoredBodies, solver: 'parallel', joints: [joint]})
+  ).not.toThrow();
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        bodies: anchoredBodies,
+        solver: 'parallel',
+        joints: [{...joint, type: 'fixed'}]
+      })
+  ).toThrow();
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        bodies: [{...bodies[0], mode: 'kinematic'}, bodies[1]],
+        solver: 'parallel',
+        joints: [joint]
+      })
+  ).toThrow();
+});

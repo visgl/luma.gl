@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
 it('QuerySet construct/delete', async () => {

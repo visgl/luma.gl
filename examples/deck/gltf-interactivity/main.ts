@@ -8,12 +8,12 @@ import type {GroupNode, Material} from '@luma.gl/engine';
 import {ScenegraphLayer} from '@deck.gl/mesh-layers';
 import {TextLayer} from '@deck.gl/layers';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
 import {getDeckExampleProps} from '../deck-example-device';
 import {createInteractivityInfoBox} from './info-box';
 import {INTERACTIVITY_SAMPLES} from './samples';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 let selectedSampleIndex = 0;
 let loading = true;

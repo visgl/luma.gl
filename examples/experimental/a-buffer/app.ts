@@ -24,8 +24,8 @@ import {
   wboit,
   wboitPlugin
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, radians} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type SettingsChangeDescriptor, type SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

@@ -4,7 +4,6 @@
 
 import {expect, it} from 'vitest';
 import {validateGPUVectorBatchStructure} from '../../src';
-import {validateGPUVectorBatchStructure as validateFromGPUData} from '@luma.gl/gpgpu/gpu-data';
 
 const vector = (lengths: number[]) => ({
   length: lengths.reduce((total, length) => total + length, 0),
@@ -12,7 +11,6 @@ const vector = (lengths: number[]) => ({
 });
 
 it('batch validation preserves boundaries and broadcasts constants', () => {
-  expect(validateFromGPUData).toBe(validateGPUVectorBatchStructure);
   expect(() =>
     validateGPUVectorBatchStructure({
       positions: vector([0, 2, 3]),

@@ -1,6 +1,6 @@
 # GPU Tables
 
-`@luma.gl/gpgpu/gpu-data` provides primitive GPU chunks and vectors, while the experimental
+`@luma.gl/graph/gpu-data` provides primitive GPU chunks and vectors, while the experimental
 `@luma.gl/graph/gpu-tables` subpath represents row-aligned application data as typed GPU
 columns. A
 `GPUTable` is useful when the same data must feed rendering, transforms, or compute
@@ -40,7 +40,7 @@ not appear in `table.bufferLayout`.
 ## Constructing A Table
 
 ```ts
-import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant} from '@luma.gl/graph/gpu-data';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
 
 const table = new GPUTable({
@@ -222,6 +222,6 @@ payload bytes plus any backend alignment or multiplier-buffer overhead.
   garbage collection for GPU resources.
 
 See the [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table),
-[`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant), and
+[`GPUConstant`](/docs/api-reference/graph/gpu-constant), and
 [`GPUTableShaderBindings`](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
 references for exact contracts.

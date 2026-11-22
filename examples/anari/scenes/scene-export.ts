@@ -10,8 +10,8 @@ import {
   type GLTFExportScene,
   type GLTFExportSkin
 } from '../../gltf/gltf-exporter';
-import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
-import {Matrix4} from '@math.gl/core';
+import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   type ANARIJSONScene,
   createGeneratedGeometry,
@@ -93,7 +93,7 @@ export async function exportANARIJSONSceneToGLTF(
   const lightExtension = addGLTFLights(scene, nodes);
   const gltf: GLTFExportScene = {
     name: scene.name,
-    generator: '@luma.gl/anari via @luma.gl/gltf',
+    generator: '@luma.gl/anari via @luma.gl/engine/gltf',
     nodes,
     meshes,
     materials,

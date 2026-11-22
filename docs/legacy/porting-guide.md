@@ -173,7 +173,7 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 **`@luma.gl/experimental`**
 
 - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
-- glTF exports have been moved to `@luma.gl/gltf`.
+- glTF exports have been moved to `@luma.gl/engine/gltf`.
 
 **`@luma.gl/gltools`** (removed, no longer needed, see [Upgrade Guide](/docs/upgrade-guide))
 

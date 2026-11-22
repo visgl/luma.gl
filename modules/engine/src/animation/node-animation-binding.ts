@@ -6,7 +6,14 @@ import type {AnimationBinding} from './animation-track';
 import type {GroupNode} from '../scenegraph/group-node';
 import {setMorphWeights} from '../scenegraph/controllers/morph-controller';
 
-export type NodeAnimationProperty = 'translation' | 'rotation' | 'scale' | 'weights' | 'visibility';
+export type NodeAnimationProperty =
+  | 'translation'
+  | 'rotation'
+  | 'scale'
+  | 'weights'
+  | 'visibility'
+  | 'selectable'
+  | 'hoverable';
 
 /** Bind a property once to a node reference; playback does not resolve asset IDs. */
 export function makeNodeAnimationBinding(
@@ -28,6 +35,10 @@ export function makeNodeAnimationBinding(
           return Array.from((node.userData['morphWeights'] as readonly number[] | undefined) ?? []);
         case 'visibility':
           return [node.display ? 1 : 0];
+        case 'selectable':
+          return [node.selectable ? 1 : 0];
+        case 'hoverable':
+          return [node.hoverable ? 1 : 0];
       }
     },
     setValue: value => {
@@ -43,6 +54,12 @@ export function makeNodeAnimationBinding(
           break;
         case 'weights':
           setMorphWeights(node, value);
+          break;
+        case 'selectable':
+          node.setProps({selectable: value[0] !== 0});
+          break;
+        case 'hoverable':
+          node.setProps({hoverable: value[0] !== 0});
           break;
         case 'visibility':
           node.setProps({display: value[0] !== 0});

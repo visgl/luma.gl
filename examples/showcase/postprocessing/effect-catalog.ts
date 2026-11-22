@@ -25,8 +25,8 @@ import {
   vibrance,
   vignette,
   zoomBlur
-} from '@luma.gl/effects';
-import type {ShaderPass} from '@luma.gl/shadertools';
+} from '@luma.gl/engine/effects';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 export type EffectCategory =
   | 'Color & Tone'

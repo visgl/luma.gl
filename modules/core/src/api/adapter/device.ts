@@ -342,12 +342,14 @@ export type WebGPUDeviceFeature =
 export type WebGLDeviceFeature =
   // webgl extension features
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'polygon-offset-clamp-webgl'
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'clip-control-webgl' // RenderPassProps.clipDepthMode 'zero-to-one' (EXT_clip_control)
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
+  | 'shader-conservative-depth-webgl' // GLSL conservative depth qualifiers depth_less and depth_greater permit early depth optimizations
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
 
   // texture rendering
@@ -397,7 +399,9 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
-  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
+  /** Whether destroy() releases the native handle. Defaults to true for creation and false for attachment or implicit WebGL reuse. */
+  ownsHandle?: boolean;
+  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to the platform preference. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
@@ -531,6 +535,11 @@ export interface DeviceFactory {
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
+  /** Whether destroying this device also releases its native GPU handle. */
+  get ownsHandle(): boolean {
+    return this.props.ownsHandle ?? !this.props._handle;
+  }
+
   static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
   get [Symbol.toStringTag](): string {
@@ -596,6 +605,7 @@ export abstract class Device {
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
+  /** Releases the wrapper and its owned native handle. */
   abstract destroy(): void;
 
   // TODO - just expose the shadertypes decoders?

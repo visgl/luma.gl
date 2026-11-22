@@ -16,13 +16,7 @@
       "path": "../core"
     },
     {
-      "path": "../engine"
-    },
-    {
-      "path": "../gpgpu"
-    },
-    {
-      "path": "../shadertools"
+      "path": "../shaders"
     }
   ]
 }

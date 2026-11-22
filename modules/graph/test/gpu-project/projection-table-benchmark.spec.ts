@@ -4,8 +4,8 @@
 
 import {expect, it, vi} from 'vitest';
 import type {Buffer} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {makeSourceBatches, makeTableTransform} from './projection-table-fixtures';
 
 for (const precision of ['double-single', 'local-f32'] as const) {

@@ -5,14 +5,10 @@
 import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
-import {NullDevice} from '@luma.gl/test-utils';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURecordBatch,
-  GPU_TABLE_INDEX_COLUMN_NAME,
-  GPUTable,
-  GPUTableModel
-} from '@luma.gl/graph/gpu-tables';
+import {NullDevice} from '@luma.gl/core/test-utils';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {GPURecordBatch, GPU_TABLE_INDEX_COLUMN_NAME, GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 
 const TABLE_MODEL_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
@@ -685,7 +681,7 @@ function makeIndexSliceVector(
 it('GPUTableModel preserves table batching alongside inherited vector batching', () => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 3);
-  const model = makeTableModel(device, table, {vertexCount: 1});
+  const model = makeTableModel(device, table, {vertexCount: 1, inferDrawCount: 'instance'});
   const renderPass = device.getDefaultRenderPass();
   const vectorBatchRows: number[] = [];
   const vectorTable = makeBatchedPositionsTable(device, [1, 2]);

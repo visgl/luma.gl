@@ -14,7 +14,7 @@ import {
   GPUSimilaritySearch,
   importGPUEmbeddingTable
 } from '@luma.gl/graph/gpu-vector-search';
-import {GPUData, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, type FixedSizeList} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 
 export const LUVS_BENCHMARK_WARMUP_ITERATIONS = 1;

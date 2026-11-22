@@ -11,13 +11,82 @@ import type {
 
 /** Scalar/vector formats portable across current Jarnevon execution backends. */
 export type GPUGraphScalarFormat = 'float32' | 'uint32' | 'sint32';
-export type GPUGraphVectorFormat = GPUGraphScalarFormat;
+export type GPUGraphVectorFormat = GPUGraphScalarFormat | `${GPUGraphScalarFormat}x${2 | 3 | 4}`;
+
+export type GPUGraphValueRole = 'input' | 'state' | 'value';
+export type GPUGraphScalarDescriptor<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> =
+  Readonly<{
+    type: 'scalar';
+    format: T;
+  }>;
+export type GPUGraphVectorDescriptor<T extends GPUGraphVectorFormat = GPUGraphVectorFormat> =
+  Readonly<{
+    type: 'vector';
+    format: T;
+    length?: number;
+    chunkLengths?: readonly number[];
+  }>;
+export type GPUGraphTextureExtent =
+  | Readonly<{width: number; height: number; depth?: number}>
+  | Readonly<{like: string; scale?: readonly [number, number]}>;
+export type GPUGraphTextureDescriptor<Format extends TextureFormat = TextureFormat> = Readonly<{
+  type: 'texture';
+  format: Format;
+  dimension?: GraphTextureDimension;
+  extent?: GPUGraphTextureExtent;
+  mipLevels?: number;
+  samples?: number;
+}>;
+export type GPUGraphValueDescriptor =
+  | GPUGraphScalarDescriptor
+  | GPUGraphVectorDescriptor
+  | GPUGraphTextureDescriptor;
+
+/** Pure logical descriptors: no allocation, device, or registration. */
+export const gpuGraph = {
+  texture<Format extends TextureFormat>(
+    props: Omit<GPUGraphTextureDescriptor<Format>, 'type'>
+  ): GPUGraphTextureDescriptor<Format> {
+    return Object.freeze({
+      ...props,
+      type: 'texture',
+      ...(props.extent
+        ? {
+            extent: Object.freeze({
+              ...props.extent,
+              ...('scale' in props.extent && props.extent.scale
+                ? {scale: Object.freeze([...props.extent.scale]) as readonly [number, number]}
+                : {})
+            })
+          }
+        : {})
+    });
+  },
+  scalar<T extends GPUGraphScalarFormat>(format: T): GPUGraphScalarDescriptor<T> {
+    return Object.freeze({type: 'scalar', format});
+  },
+  vector<T extends GPUGraphVectorFormat>(
+    format: T,
+    shape: {length?: number; chunkLengths?: readonly number[]} = {}
+  ): GPUGraphVectorDescriptor<T> {
+    return Object.freeze({
+      type: 'vector',
+      format,
+      ...shape,
+      ...(shape.chunkLengths ? {chunkLengths: Object.freeze([...shape.chunkLengths])} : {})
+    });
+  }
+};
 
 /** Backend-independent scalar state owned by a GPUGraph. */
 export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> {
   readonly id: string;
   readonly format: T;
-  constructor(id: string, format: T) {
+  constructor(
+    id: string,
+    format: T,
+    readonly role?: GPUGraphValueRole
+  ) {
     if (!id) throw new Error('GPUGraphScalar id is required');
     this.id = id;
     this.format = format;
@@ -29,34 +98,40 @@ export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarForma
  *
  * A vector describes logical shape/type only. It is not a WebGPU Buffer or GraphDataView. Backend
  * compilers decide allocation, packing and binding. `external` vectors represent program I/O whose
- * concrete storage is supplied to compilation; transient vectors are compiler-owned scratch/state.
+ * concrete storage is supplied to the legacy compiler; transient vectors are compiler-owned scratch/state.
+ * Reusable programs bind storage at execution. An omitted length is resolved from those bindings.
  */
 export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorFormat> {
   readonly id: string;
   readonly format: T;
-  readonly length: number;
+  /** Optional fixed-length constraint; undefined means execution-sized. */
+  readonly length?: number;
   readonly external: boolean;
+  readonly role?: GPUGraphValueRole;
   /** Optional physical partition lengths; omitted external topology is supplied by its binding. */
   readonly chunkLengths?: readonly number[];
   constructor(props: {
     id: string;
     format: T;
-    length: number;
+    length?: number;
     external?: boolean;
     chunkLengths?: readonly number[];
+    role?: GPUGraphValueRole;
   }) {
     if (!props.id) throw new Error('GPUGraphVector id is required');
-    if (!Number.isSafeInteger(props.length) || props.length < 0) {
+    if (props.length !== undefined && (!Number.isSafeInteger(props.length) || props.length < 0)) {
       throw new Error(`${props.id} vector length must be a non-negative safe integer`);
     }
     this.id = props.id;
     this.format = props.format;
     this.length = props.length;
     this.external = props.external ?? false;
+    this.role = props.role;
     if (props.chunkLengths) {
       if (
         props.chunkLengths.some(length => !Number.isSafeInteger(length) || length < 0) ||
-        props.chunkLengths.reduce((sum, length) => sum + length, 0) !== props.length
+        (props.length !== undefined &&
+          props.chunkLengths.reduce((sum, length) => sum + length, 0) !== props.length)
       ) {
         throw new Error(`${props.id} chunk lengths must partition its logical length`);
       }
@@ -69,8 +144,10 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
 export class GPUGraphTexture<Format extends TextureFormat = TextureFormat> {
   readonly id: string;
   readonly format: Format;
-  readonly width: number;
-  readonly height: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly role?: GPUGraphValueRole;
+  readonly descriptor?: GPUGraphTextureDescriptor<Format>;
   readonly usage: number;
   readonly dimension?: GraphTextureDimension;
   readonly depth?: number;
@@ -79,7 +156,17 @@ export class GPUGraphTexture<Format extends TextureFormat = TextureFormat> {
   /** Caller-owned storage, optionally bound at compilation or supplied when encoding. */
   readonly external: boolean;
 
-  constructor(props: GPUGraphTextureProps<Format> & {id: string}) {
+  constructor(
+    props: Omit<GPUGraphTextureProps<Format>, 'width' | 'height'> & {
+      id: string;
+      width?: number;
+      height?: number;
+      role?: GPUGraphValueRole;
+      descriptor?: GPUGraphTextureDescriptor<Format>;
+    }
+  ) {
+    this.role = props.role;
+    this.descriptor = props.descriptor ? gpuGraph.texture(props.descriptor) : undefined;
     this.id = props.id;
     this.format = props.format;
     this.width = props.width;

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 
 const MAXIMUM_VERTEX_COUNT = 0xfffffffe;
 const MAXIMUM_EDGE_COUNT = 0xffffffff;

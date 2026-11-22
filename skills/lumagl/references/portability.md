@@ -33,8 +33,8 @@ rendering normally uses matching sources with one application-facing contract:
 - aligned module props, defaults, and uniform types;
 - aligned varyings and observable rendering behavior.
 
-When shadertools assembles WGSL, prefer named `@binding(auto)` resources and bind them
-by name. Raw WebGPU code that bypasses shadertools still needs concrete binding
+When shaders assembles WGSL, prefer named `@binding(auto)` resources and bind them
+by name. Raw WebGPU code that bypasses shaders still needs concrete binding
 numbers. Keep buffer layout, shader layout, and runtime bindings consistent.
 
 ## Backend comparison

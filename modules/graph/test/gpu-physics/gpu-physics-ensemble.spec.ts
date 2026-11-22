@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   GPUPhysicsEnsemble,
   GPURigidBodyWorld,
@@ -36,6 +36,46 @@ const template: GPURigidBodyWorldProps = {
     }
   ]
 };
+
+it('counts query index scratch in fused ensemble residency', async context => {
+  /** Create an ensemble that also publishes a private query index. */
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  /** Hold solver capacity constant when comparing both budgets. */
+  const props = {
+    template: {...template, enableQueries: true, queryBatchCapacity: 8},
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 64 * 1024 * 1024
+  };
+  /** Establish the full residency of the solver and its reset snapshot. */
+  const direct = await GPUPhysicsEnsemble.create(device, props);
+  /** Save the baseline before releasing the reference ensemble. */
+  const baseline = direct.getStats();
+  direct.destroy();
+
+  /** Keep the same configuration when excluding and including the index budget. */
+  const indexedProps = {...props, template: {...props.template, queryBatchIndex: true}};
+  await expect(
+    GPUPhysicsEnsemble.create(device, {
+      ...indexedProps,
+      maximumResidentBytes: baseline.residentBytes
+    })
+  ).rejects.toThrow('residency budget');
+  /** A roomy budget must report the actual private scratch exactly once. */
+  const indexed = await GPUPhysicsEnsemble.create(device, indexedProps);
+  try {
+    /** Use the physical allocation after the graph's allocator has run. */
+    const {queryIndexScratchBytes} = indexed.world.getCapacityInfo();
+    expect(queryIndexScratchBytes).toBeGreaterThan(0);
+    expect(indexed.getStats().residentBytes).toBe(baseline.residentBytes + queryIndexScratchBytes);
+    expect(indexed.getStats().graphTransientBytes).toBe(
+      baseline.graphTransientBytes + queryIndexScratchBytes
+    );
+  } finally {
+    indexed.destroy();
+  }
+}, 120000);
 
 it('fuses overlapping contact worlds without cross-world contacts or trajectory changes', async context => {
   const device = await getWebGPUTestDevice();

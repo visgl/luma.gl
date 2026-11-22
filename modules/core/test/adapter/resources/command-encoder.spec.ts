@@ -12,7 +12,7 @@ import {
   QuerySet,
   QuerySetProps,
   RenderPass,
-  type ResourceProps,
+  type DeviceResourceProps,
   Texture,
   TextureFormat
 } from '@luma.gl/core';
@@ -21,7 +21,7 @@ import {
   getTestDevices,
   getWebGLTestDevice,
   getWebGPUTestDevice
-} from '@luma.gl/test-utils';
+} from '@luma.gl/core/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
@@ -45,7 +45,7 @@ class TestCommandBuffer extends CommandBuffer {
   readonly device: Device;
   readonly handle = null;
 
-  constructor(device: Device, props: ResourceProps = {}) {
+  constructor(device: Device, props: DeviceResourceProps = {}) {
     super(device, props);
     this.device = device;
   }

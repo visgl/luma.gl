@@ -61,7 +61,7 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ### `VideoTextureProps`
 
 ```ts
-export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+export type VideoTextureProps = Pick<DeviceResourceProps, 'id'> & {
   source: HTMLVideoElement | VideoFrame;
   colorSpace?: 'srgb';
   sampler?: Sampler | SamplerProps;
@@ -154,7 +154,7 @@ texture semantics are required.
 
 ## Related APIs
 
-- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) wraps asynchronous or replaceable
+- [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture) wraps asynchronous or replaceable
   ordinary texture data.
 - [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) is the low-level concrete
   one-shot WebGPU external binding.

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {GPUDataEvaluator, GPUVectorEvaluator, getGPUDataEvaluatorFormat} from '@luma.gl/gpgpu';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
+import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
+import {GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
+import {getGPUDataEvaluatorFormat} from './operation/gpu-evaluator-inspection';
 import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/graph/gpu-core';
 
 export type GPUSimpleGraphEvaluator = GPUDataEvaluator | GPUVectorEvaluator;

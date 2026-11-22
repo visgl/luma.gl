@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
-import type {AreaLight} from '@luma.gl/shadertools';
+import {Matrix4} from '@math.gl/core/matrix';
+import type {AreaLight} from '@luma.gl/shaders';
 
 /** Project diagnostic emitter outlines without adding geometry to the imported model. */
 export class AreaLightOutlines {

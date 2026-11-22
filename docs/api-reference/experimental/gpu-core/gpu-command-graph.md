@@ -875,7 +875,7 @@ Call `readTimings()` after submission, or reuse the report returned by
 The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks,
 keeps gaps between node spans, and exposes node details on hover and keyboard focus.
 `GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with
-`update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and luSpatial Taxi use this panel.
+`update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and GPU Spatial Taxi use this panel.
 
 ### Estimated combined CPU/GPU timeline
 
@@ -928,3 +928,45 @@ retained in preflight reports and traces.
 
 See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
 views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Inspecting compute kernels
+
+Pass `{kernelMetadata: 'layout'}` to `graph.compile()` or `graph.compileAsync()` to include
+declared entry points, workgroup dimensions, and binding layouts in preflight. Use `'source'`
+to also include available WGSL. Default compilation omits these details.
+
+```ts
+const compiled = graph.compile({kernelMetadata: 'layout'});
+inspector.registerGraph(compiled);
+const nodes = inspector.getSnapshot().graphs[0].preflight?.nodes;
+```
+
+`GPUScan` and `GPUSegmentedScan` supply metadata. Custom compute nodes can supply a `kernel`
+declaration through `graph.addComputePass()` or `createGPUComputeCommandNode()`.
+
+### Pacing repeated submissions
+
+Use `GPUCommandGraphSubmissionPacer` when an animation loop owns submission and
+should leave headroom between graph executions. It allows one tracked submission
+at a time and chooses the next cooldown from the observed queue-completion time.
+The default targets a 50% duty cycle with a cooldown between 8 and 250 ms.
+Queue-completion time includes waiting behind other work on the queue.
+
+Check `isReady()` before encoding a batch. Submit with the application's usual
+queue ownership, then pass its completion promise to `trackSubmission()`. The
+pacer preserves completion errors and can accept later submissions after the
+minimum cooldown. The ANARI Observatory and Playground use this policy for live
+ray tracing. They feed `lastSubmissionMilliseconds` into the renderer budget
+so intentional idle time does not lower ray resolution. Offline captures retain
+their deterministic scheduling.
+
+The pacer controls how often work is submitted. Use the execution budget
+controller and bounded dispatches for graphs that also need to reduce work per
+submission.
+
+
+For application-sized dispatches, call the budget controller's
+`observeInvocations()` with the measured invocation count, GPU duration, and
+budget used for that submission. Its recommendation applies to future batches.
+The live ANARI examples use this to vary trace coverage at sweep boundaries
+while reusing their progressive history.

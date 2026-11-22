@@ -14,7 +14,7 @@ import {
   bloomCompositeShaderPass,
   createBloomCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -53,7 +53,7 @@ import {
   type OpticalPointLight,
   type OpticalPointLightsProps,
   type ReflectiveMaterialProps
-} from '@luma.gl/engine/experimental/materials';
+} from '@luma.gl/engine/experimental-materials';
 import {
   ABufferRenderer,
   WBOITRenderer,
@@ -66,8 +66,8 @@ import {
   wboit,
   wboitPlugin
 } from '@luma.gl/anari';
-import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shadertools';
-import {Matrix4, radians} from '@math.gl/core';
+import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -317,7 +317,7 @@ const ADDITIVE_PARAMETERS = {
 
 const networkNodePickingPlugin = {
   name: 'networkNodePicking',
-  modules: [colorPicking as ShaderModule]
+  module: colorPicking as ShaderModule
 } as const satisfies ShaderPlugin;
 
 class InstancedMesh<

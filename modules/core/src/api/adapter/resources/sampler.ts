@@ -3,50 +3,22 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {CompareFunction} from '../types/parameters';
-import {Resource, ResourceProps} from './resource';
+import type {SamplerProps as ShaderSamplerProps} from '@luma.gl/shaders/types';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Edge values sampling mode */
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 
 /** Sampler filtering mode */
 export type SamplerFilterMode = 'nearest' | 'linear';
+export type SamplerProps = DeviceResourceProps & ShaderSamplerProps;
 
-/**
- * Properties for initializing a sampler
- */
-export type SamplerProps = ResourceProps & {
-  /** Comparison / shadow samplers are used with depth textures. See the `Sampler.compare` field */
-  type?: 'color-sampler' | 'comparison-sampler';
-  /** Edge value sampling in X direction */
-  addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
-  /** Edge value sampling in Y direction */
-  addressModeV?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
-  /** Edge value sampling in Z direction */
-  addressModeW?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
-
-  /** Magnification: the area of the fragment in texture space is smaller than a texel */
-  magFilter?: 'nearest' | 'linear';
-  /** Minification: the area of the fragment in texture space is larger than a texel */
-  minFilter?: 'nearest' | 'linear';
-  /** mipmapping: select between multiple mipmaps based on angle and size of the texture relative to the screen. */
-  mipmapFilter?: 'none' | 'nearest' | 'linear';
-  /** Affects the mipmap image selection */
-  lodMinClamp?: number;
-  /** Affects the mipmap image selection */
-  lodMaxClamp?: number;
-  /** Maximum number of samples that can be taken of the texture during any one texture fetch */
-  maxAnisotropy?: number;
-  /** How to compare reference values provided in shader shadow sampler calls with those pulled from the texture */
-  compare?: CompareFunction;
-};
-
-export type SamplerParameters = Omit<SamplerProps, keyof ResourceProps>;
+export type SamplerParameters = Omit<SamplerProps, keyof DeviceResourceProps>;
 
 /** Immutable Sampler object */
-export abstract class Sampler extends Resource<SamplerProps> {
+export abstract class Sampler extends DeviceResource<SamplerProps> {
   static override defaultProps: Required<SamplerProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     type: 'color-sampler',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
@@ -71,5 +43,24 @@ export abstract class Sampler extends Resource<SamplerProps> {
 
   protected static normalizeProps(device: Device, props: SamplerProps): SamplerProps {
     return props;
+  }
+}
+
+/** Replace a texture's sampler, owning only samplers created from properties. @internal */
+export function setTextureSampler(
+  texture: DeviceResource & {sampler: Sampler},
+  sampler: Sampler | SamplerProps
+): void {
+  const nextSampler = sampler instanceof Sampler ? sampler : texture.device.createSampler(sampler);
+  if (nextSampler === texture.sampler) {
+    return;
+  }
+  if (!(sampler instanceof Sampler)) {
+    nextSampler.transferOwnershipTo(texture);
+  }
+  const previousSampler = texture.sampler;
+  texture.sampler = nextSampler;
+  if (previousSampler?.owner === texture) {
+    previousSampler.destroy();
   }
 }

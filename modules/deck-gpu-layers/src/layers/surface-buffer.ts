@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule} from '@luma.gl/shadertools';
-import type {NumberArray16} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
+import type {NumberArray16} from '@math.gl/core/types';
 
 /** Opt-in view-space normal/roughness output for auxiliary geometry passes. */
 export const surfaceBuffer = {

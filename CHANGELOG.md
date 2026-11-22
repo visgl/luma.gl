@@ -2,6 +2,127 @@
 
 ## v10.0
 
+### v10.0.0-beta.2
+
+- Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
+- Flatten public luma.gl subpaths and consolidate the release notes and upgrade guide.
+- Expand GPU DataFrame SQL with scalar functions, casts, null handling, CASE expressions, and pagination. Fix column-only projections and preserve quoted column names.
+- Add reverse-Z depth controls and improve WebGL depth bias and depth clipping support.
+- Stream GPU physics terrain with automatic level-of-detail selection and independent terrain in batched worlds.
+- Improve ANARI ray tracing with directional environment sampling and emissive geometry lighting.
+
+### v10.0.0-beta.1
+
+- Upgrade math.gl to 5.0.0-rc.2 and loaders.gl to 5.0.0-rc.1. Use the updated zero-copy GeoArrow column view API.
+- Use math.gl as GPU SQL's tokenizer and parser. Double-quote reserved column names such as "limit" and "order". Column names still match the dataframe schema exactly.
+- Make native WebGPU and WebGL device handle ownership explicit so applications can control teardown for attached devices.
+
+### v10.0.0-alpha.17
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.12. Adopt the consolidated Arrow, GeoArrow tessellation, and Parquet entry points.
+- Accept a PBR lighting environment for scene-level glTF image-based lighting and make optional scene uniforms explicit.
+- Add GPU suspension and tire dynamics for the off-road buggy, and add GPU physics shot prediction and PBR rendering to GPU Pool Practice.
+- Expand PBR use in examples and add sun reflections to riverfront windows.
+
+### v10.0.0-alpha.16
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.11 across active packages and examples.
+- Migrate GPU SQL and portable expression parsing to the new `@math.gl/sql` package and its dedicated parser and expression entry points.
+- Recognize Arrow tables and record batches across package instances when resolving nested column paths, preserving their source data.
+
+### v10.0.0-alpha.15
+
+- Add a vector DataFrame AST bridge and layout planning, Arrow column format validation, kernel inspection, and parallel segmented scan and reduction, scatter, and sparse graph operations.
+- Upgrade math.gl and loaders.gl to beta.10. Use math.gl's typed SELECT parser and adapt Parquet and Gaussian splat loading to the updated APIs.
+- Expand ANARI ray-traced materials with alpha masks, normal maps, dielectric absorption and specular maps, clearcoat, sheen, iridescence, anisotropy, transmission, and ambient occlusion textures.
+- Add budgeted GPU reflection probes and expand lightmap baking with atlas packing, tiled baking, and portable GLB export.
+- Add G8 manifold contact solving and a 3D Physics Stress Lab, and qualify glTF GPU physics geometry and dynamics.
+- Support typed shader color inputs and short integer WebGL vertex constants, and fix GPU grid cell assignment across zero.
+
+### v10.0.0-alpha.14
+
+- Preserve graph color precision and support Float16 output.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.8. Use the standalone math.gl expression parser and the updated loaders.gl Parquet source API.
+
+### v10.0.0-alpha.13
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.7. Use math.gl to parse GPU SQL expressions and match column names and sort aliases exactly.
+- Add semantic grouped aggregation and reduction to GPUGraph, and broaden default GPUData buffer usage on WebGPU.
+- Introduce Resource ownership and DeviceResource, and release WebGPU devices when initialization fails.
+- Let the platform choose GPU power preference by default. Share WebGL scalar state tracking and invalidate tracked bindings when native resources are deleted.
+- Add an opt-in display-order text source adapter and expand project credits and distributed attribution notices.
+
+### v10.0.0-alpha.12
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.6 across active packages and examples.
+- Add shared graph fullscreen shader passes and progressive diffuse lightmap baking.
+- Add static lightmap baking and HDR reuse workflows, and harden standalone lighting integration and resource lifetimes.
+- Cache readonly shader type metadata, reuse texture normalization scratch options, avoid temporary texture memory layouts, and skip redundant WebGL unpack-state scopes.
+- Improve mobile focus behavior and GitHub badges on the website.
+- Add merge-queue validation while retaining full physics qualification on pull requests.
+
+### v10.0.0-alpha.11
+
+- Upgrade loaders.gl and math.gl to beta.5, reuse shared GeoArrow adapters, support explicit table encodings, and emit canonical GeoArrow union IDs.
+- Add CPU vector storage, lazy CPU/GPU transfers, shared CPU graph operations, and Arrow and GeoArrow geometry pipelines.
+- Share SimpleGraph render operations, input invalidation, per-run bindings, and coordinate projection across deck.gl adapters.
+- Expose standalone PBR materials, models, environment prefiltering, shadow primitives, camera prepasses, contact shadows, ambient visibility, and clustered light lists; infer lightmap receiving flags.
+- Add an unlit material, shared shader types and interface metadata, and lightweight WGSL and GLSL inspection parsers with expanded WGSL support.
+- Add ANARI ray material textures and dielectric transport, and support Three.js r187 with streamed compute rendering.
+- Expose scene geometry and XMP metadata, scenegraph interactions, billboard bindings, and runtime punctual lights; qualify emissive strength rendering and animation.
+- Scope model draw parameters through render-pass snapshots, keep empty font atlases uploadable, and improve mobile documentation and example navigation.
+
+### v10.0.0-alpha.10
+
+- Rename shader hooks to injection targets and unify shader injection documentation.
+- Allow shared WGSL injection target names across vertex and fragment stages.
+- Support cancelling Arrow uploads from streams and validate requested GPU output formats.
+- Document automatic recovery from provenance transparency errors and independent npm registry propagation checks.
+
+### v10.0.0-alpha.9
+
+- Move shader injections from ShaderModule to ShaderPlugin and unify GLSL/WGSL hook descriptors and return types.
+- Expose makeGPUVectorGeometry and support independent vector lengths with explicit draw-count inference controls.
+- Add glTF Gaussian splat preparation and rendering, and inline graph texture debugging previews.
+- Apply initial WebGPU render-pass parameters correctly.
+- Finish the Lu-to-GPU naming migration and reorganize guides, API navigation, and shader and Three.js examples.
+- Keep simulation qualification in physics CI while retaining ordinary correctness checks in release tests, and build workspace packages before website publication.
+
+### v10.0.0-alpha.8
+
+- Add graph texture values and execution bindings, operation-defined results, capacity/count outputs, and shared transfer operations.
+- Support caller-owned graph encoding and reuse intermediate storage across graph execution.
+- Add path-based scenegraph lookup and physics controllers, integrate GPU physics rendering with engine PBR, and expand physics examples and guides.
+- Isolate per-batch uniforms in aligned buffer ranges and consolidate inferred vector buffer layouts.
+- Make shader, fence, and vertex-array destruction idempotent; support reverse-Z splat alpha ordering and improve glTF extension capability diagnostics.
+- Add portable ShaderPlugin hooks, align PBR directional lighting with Phong and Lambert, and add ocean velocity sampling with a geographic RK2 reference.
+- Upgrade math.gl and loaders.gl to beta.4, use the consolidated math.gl expression parser, and accept the standard ETC1 texture-format spelling while preserving its legacy alias.
+
+### v10.0.0-alpha.7
+
+- Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.
+- Add logical GPU operation contracts, typed graph rows, component access, row constructors, casts, and row-local expression functions.
+- Support transformed Arrow GPU columns and align graph declarations with expression execution.
+- Simplify ShaderPlugin language contributions and primary modules, preserve plugin composition, and improve scoped hooks, conflict reporting, and portability.
+- Fix model resource cleanup, WebGL device-loss reporting and lifecycle coverage, external canvas resizing, and storage-texture capability reporting.
+- Strengthen opaque GPU and glTF metadata types and upgrade math.gl and loaders.gl to beta.2 and dev-tools to beta.3.
+
+### v10.0.0-alpha.6
+
+- Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.
+- Rename shadertools to shaders, split GLSL and WGSL assembler entry points, and remove global assembler defaults.
+- Make shaders independent of core with explicit shader assembler ownership.
+- Move optional Arrow adapters into gpgpu, graph, and engine subpaths.
+- Add attribution and research citations and improve physics endurance test scheduling.
+
+### v10.0.0-alpha.5
+
+- Consolidate WebGL and WebGPU adapters into core and introduce public graph, ANARI, and Three.js integration packages.
+- Establish GPUGraph authoring and execution APIs, GPU data processing, scientific advection, and GPU physics ensembles.
+- Expand engine rendering, table and vector models, scenegraph integration, glTF postprocessing, materials, and Gaussian splats.
+- Add GPU geometry, point-cloud, time-series, graph inspection, and tracing capabilities with updated examples and documentation.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.1 and improve CI shard balance and test execution.
+
 ### v10.0.0-alpha.4
 
 - Align WebGL and WebGPU draw-call semantics and fix viewport, scissor, framebuffer, texture ownership, and buffer readback behavior.

@@ -14,6 +14,8 @@ export type RigidBodyShapeProperties = {
 /** Geometric properties at unit density, with the tensor measured about its own COM. */
 export function getRigidBodyShapeProperties(shape: GPURigidBodyShape): RigidBodyShapeProperties {
   if (shape.type === 'convex-hull' || shape.type === 'triangle-mesh') return shape.geometry;
+  if (shape.type === 'height-field')
+    return {volume: 0, center: [0, 0, 0], tensor: Array<number>(9).fill(0)};
   if (shape.type === 'plane') {
     if (
       [shape.sizeX, shape.sizeZ].some(

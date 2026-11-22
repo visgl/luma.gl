@@ -3,13 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
-import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrowStream} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {
-  GPUCommandGraphInspector,
-  type GPUCommandGraphInspectorGraph
-} from '@luma.gl/graph/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,
@@ -19,10 +15,16 @@ import {
   type SplatHierarchyView,
   type SplatRendererProps,
   type SplatSortMode
-} from '@luma.gl/splats';
-import {Matrix4} from '@math.gl/core';
+} from '@luma.gl/engine/splats';
+import {Matrix4} from '@math.gl/core/matrix';
 import {h, render} from 'preact';
-import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {
+  ExamplePanelManager,
+  makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {
   GAUSSIAN_SPLAT_BATCH_COUNT,
   GAUSSIAN_SPLATS_PER_BATCH,
@@ -45,6 +47,8 @@ import {
   type GaussianSplatRADWorkerDecoder
 } from './rad-worker-decoder';
 import {makeGaussianSplatInfoHtml} from './app-ui';
+import {GaussianSplatGlassPane} from './glass-pane';
+export {makeGaussianSplatInfoHtml} from './app-ui';
 
 export const title = 'Gaussian Splats';
 export const description =
@@ -107,7 +111,7 @@ export function getGaussianSplatExecutionMode(
 }
 
 export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeGaussianSplatInfoHtml();
+  static info = makeExamplePanelHostHtml();
   static props = {useDevicePixels: true};
 
   readonly device: Device;
@@ -115,10 +119,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   readonly batches: GPUSplatData[];
 
   private readonly executionMode: GaussianSplatExecutionMode;
-  private readonly graphInspector: GPUCommandGraphInspector | undefined;
+  /** Records graph and trace data for the shared InfoBox panels. */
+  private readonly diagnostics?: GPUGraphDiagnostics;
+  /** Owns the Settings, GPU Graph, and GPU Trace tabs. */
+  private panels?: ExamplePanelManager;
   private readonly renderProfile: GaussianSplatRenderProfile;
-  private inspectedGraph: GPUCommandGraphInspectorGraph | undefined;
-  private readonly graphInspectorPanels: GPUCommandGraphInspectorPanel[] = [];
   private graphFallbackReason: string | undefined;
   private readonly localLoadersConfiguration: LocalGaussianSplatLoadersConfiguration | undefined;
   private readonly cameraFieldOfView: number;
@@ -129,6 +134,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private frameIndex = 0;
   private startTimeMilliseconds: number | null = null;
   private cameraTarget: [number, number, number] = [0, 0, 0];
+  private gltfWorldMatrix: Matrix4 | undefined;
   private readonly cameraFrame: GaussianSplatCameraFrame;
   private cameraSceneRadius = INITIAL_CAMERA_DISTANCE / 2;
   private cameraHomeDistance = INITIAL_CAMERA_DISTANCE;
@@ -142,6 +148,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private expectedBatchCount = GAUSSIAN_SPLAT_BATCH_COUNT;
   private loadedSplatCount = 0;
   private autoOrbit = true;
+  /** Owns the optional depth-interval rendering path. */
+  private glassPane?: GaussianSplatGlassPane;
+  /** Whether the selected scene can use the WebGPU glass renderer. */
+  private readonly supportsGlassPane: boolean;
   private orbitControls: OrbitControls | null = null;
   private loadAbortController: AbortController | null = null;
   private radSceneController: GaussianSplatRADSceneController | null = null;
@@ -170,21 +180,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       device.type,
       typeof window === 'undefined' ? '' : window.location.search
     );
-    this.graphInspector =
-      this.executionMode === 'graph'
-        ? new GPUCommandGraphInspector({
-            maxSamples: 60,
-            getNodeGroup: node => {
-              if (node.id.includes('project')) return 'project';
-              if (node.id.includes('sort') || node.id.includes('radix')) return 'sort';
-              return node.type;
-            }
-          })
-        : undefined;
+    this.diagnostics = this.executionMode === 'graph' ? new GPUGraphDiagnostics() : undefined;
     this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration(
       defaultScene,
       this.renderProfile.maxResidentSplatCount
     );
+    this.supportsGlassPane =
+      device.type === 'webgpu' &&
+      (!this.localLoadersConfiguration || this.localLoadersConfiguration.sceneId === 'cat');
     const isRADScene = this.localLoadersConfiguration?.sourceFormat === 'RAD';
     this.clearColor =
       this.localLoadersConfiguration?.sceneId === 'coit' ? COIT_CLEAR_COLOR : CLEAR_COLOR;
@@ -194,8 +197,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.cameraFrame = makeGaussianSplatCameraFrame(
       this.localLoadersConfiguration?.up ?? [0, 1, 0]
     );
-    if (this.localLoadersConfiguration?.upAxis === 'y') {
+    if (
+      this.localLoadersConfiguration?.upAxis === 'y' &&
+      this.localLoadersConfiguration.sceneId !== 'cat'
+    ) {
       this.cameraHomePitch = REAL_SCENE_CAMERA_PITCH;
+    }
+    if (this.localLoadersConfiguration?.sceneId === 'cat') {
+      this.cameraHomeYaw = 0;
+      this.cameraHomePitch = 0.1;
     }
     if (this.localLoadersConfiguration?.camera) {
       const {position, target} = this.localLoadersConfiguration.camera;
@@ -287,10 +297,35 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     canvas.setAttribute('aria-label', 'Interactive 3D Gaussian splat observatory');
     canvas.addEventListener('dblclick', this.handleDoubleClick);
 
-    for (const panel of document.querySelectorAll<HTMLElement>('[data-gaussian-splats-panel]')) {
-      this.installPanelControls(panel);
+    const glassSetting = new URLSearchParams(window.location.search).get('glass');
+    if (
+      this.supportsGlassPane &&
+      (glassSetting === '1' ||
+        (glassSetting === null && this.localLoadersConfiguration?.sceneId === 'cat'))
+    ) {
+      this.glassPane = new GaussianSplatGlassPane(this.device);
     }
-    this.updatePanel();
+    this.panels = new ExamplePanelManager({
+      panel: makeExampleTabbedPanel({
+        id: 'gaussian-splat-panels',
+        panels: [
+          makeHtmlCustomPanel({
+            id: 'gaussian-splat-settings',
+            title: 'Settings',
+            html: makeGaussianSplatInfoHtml(),
+            onRender: panel => {
+              this.installPanelControls(panel);
+              this.updatePanel();
+              return () => this.removePanelControls();
+            }
+          }),
+          ...(this.diagnostics
+            ? [this.diagnostics.inspectorPanel.panel, this.diagnostics.tracePanel.panel]
+            : [])
+        ]
+      })
+    });
+    this.panels.mount();
 
     if (this.localLoadersConfiguration) {
       void this.loadLocalSplatData(this.localLoadersConfiguration).catch(error => {
@@ -351,13 +386,24 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const hasUpdatedBatches = this.batches.some(
       (batch, batchIndex) => batch.revision !== this.renderedBatchRevisions[batchIndex]
     );
-    if (!this.needsRedraw && !this.autoOrbit && !hasUpdatedBatches) {
+    if (!this.needsRedraw && !this.autoOrbit && !this.glassPane && !hasUpdatedBatches) {
       return;
     }
 
-    let graphChanged = false;
     const activeRenderer = this.renderer;
-    if (
+    if (this.glassPane) {
+      this.glassPane.draw(
+        this.batches,
+        activeRenderer.props,
+        elapsedTimeMilliseconds,
+        this.clearColor,
+        {
+          center: this.cameraTarget,
+          scale: this.localLoadersConfiguration ? this.cameraSceneRadius / 3.5 : 1,
+          zUp: this.localLoadersConfiguration?.upAxis === 'z'
+        }
+      );
+    } else if (
       activeRenderer instanceof GPUSplatGraphRenderer ||
       activeRenderer instanceof GPUPagedSplatRenderer
     ) {
@@ -368,14 +414,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           return;
         }
         const compiledGraph = activeRenderer.compiledGraph;
-        if (compiledGraph && this.graphInspector) {
-          if (this.inspectedGraph !== compiledGraph) {
-            this.graphInspector.registerGraph(compiledGraph);
-            this.inspectedGraph = compiledGraph;
-            graphChanged = true;
-          }
-          this.graphInspector.recordEncoding(compiledGraph.id, encoding);
-        }
+        if (compiledGraph) this.diagnostics?.record(compiledGraph, encoding);
       } catch (error) {
         if (activeRenderer instanceof GPUSplatGraphRenderer) {
           this.activateCpuRendererFallback(error);
@@ -388,7 +427,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         }
       }
     }
-    if (this.renderer instanceof SplatRenderer) {
+    if (!this.glassPane && this.renderer instanceof SplatRenderer) {
       this.renderer.predraw(device.commandEncoder);
       const renderPass = device.beginRenderPass({clearColor: this.clearColor, clearDepth: 1});
       this.renderer.draw(renderPass);
@@ -401,7 +440,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
 
     this.frameIndex++;
-    if (graphChanged || this.frameIndex % 20 === 0) {
+    if (this.frameIndex % 20 === 0) {
       this.updatePanel();
     }
   }
@@ -421,12 +460,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.canvas = null;
     }
 
-    for (const dispose of this.controlDisposers) {
-      dispose();
-    }
-    this.controlDisposers = [];
+    this.panels?.finalize();
+    this.diagnostics?.clear();
 
     // Rendering resources borrow the caller-owned source batches.
+    this.glassPane?.destroy();
     this.renderer.destroy();
     this.radSceneController?.destroy();
     this.radSceneController = null;
@@ -437,10 +475,86 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  /** Loads a single glTF Gaussian instance into the existing showcase renderer. */
+  private async loadGLTFSplatData(
+    configuration: LocalGaussianSplatLoadersConfiguration
+  ): Promise<void> {
+    const signal = this.loadAbortController!.signal;
+    const [{load}, {GLTFLoader}, {SPZLoader}, gltfModule, arrowModule] = await Promise.all([
+      import('@loaders.gl/core'),
+      import('@loaders.gl/scene/gltf'),
+      import('@loaders.gl/splats'),
+      import('@luma.gl/engine/gltf'),
+      import('@luma.gl/engine/arrow')
+    ]);
+    const loaded = await load(configuration.sourceUrl, [GLTFLoader, SPZLoader], {
+      signal,
+      splats: {shape: 'arrow', targetCoordinateSystem: 'LUF'}
+    });
+    signal.throwIfAborted();
+    const gltf = gltfModule.postProcessGLTF(
+      loaded as unknown as import('@luma.gl/engine/gltf').GLTFWithBuffers
+    );
+    if (
+      gltf.meshes.length !== 1 ||
+      gltf.meshes[0].primitives.length !== 1 ||
+      !gltf.meshes[0].primitives[0].extensions?.KHR_gaussian_splatting
+    ) {
+      throw new Error(
+        'The glTF showcase currently supports one Gaussian primitive without meshes.'
+      );
+    }
+    const scenegraphs = gltfModule.createScenegraphsFromGLTF(this.device, gltf, {
+      excludeGaussianSplatPrimitives: true
+    });
+    let groups: Awaited<ReturnType<typeof arrowModule.makeGPUSplatDataFromGLTFScene>> = [];
+    try {
+      groups = await arrowModule.makeGPUSplatDataFromGLTFScene(this.device, gltf, {signal});
+      const instances = arrowModule.getGLTFSplatSceneInstances(scenegraphs, groups);
+      if (instances.length !== 1) {
+        throw new Error('The glTF showcase currently requires one visible splat instance.');
+      }
+      const worldMatrix = new Matrix4(instances[0].worldMatrix);
+      if (Math.abs(worldMatrix.determinant()) < 1e-12) {
+        throw new Error('The glTF showcase requires an invertible node transform.');
+      }
+      signal.throwIfAborted();
+      this.gltfWorldMatrix = worldMatrix;
+      this.previousCameraState = undefined;
+      const batches = groups[0]?.batches ?? [];
+      if (!batches.length) throw new Error('The glTF scene does not contain any Gaussian splats.');
+      for (const batch of batches) this.appendRendererBatch(batch);
+      this.batches.push(...batches);
+      this.loadedSplatCount = batches.reduce((count, batch) => count + batch.length, 0);
+      groups = [];
+      this.expectedSplatCount = this.loadedSplatCount;
+      this.expectedBatchCount = this.batches.length;
+      if (!this.hasManualCameraInteraction) this.fitCameraToBatches();
+      this.isLoading = false;
+      this.requestRedraw();
+      this.updatePanel();
+    } finally {
+      try {
+        if (groups.length && !(this.renderer instanceof GPUPagedSplatRenderer)) {
+          this.renderer.setProps({data: []});
+          this.gltfWorldMatrix = undefined;
+          this.previousCameraState = undefined;
+        }
+      } finally {
+        for (const group of groups) for (const batch of group.batches) batch.destroy();
+        scenegraphs.destroy();
+      }
+    }
+  }
+
   private async loadLocalSplatData(
     configuration: LocalGaussianSplatLoadersConfiguration
   ): Promise<void> {
     this.loadAbortController = new AbortController();
+    if (configuration.sourceFormat === 'GLB') {
+      await this.loadGLTFSplatData(configuration);
+      return;
+    }
     if (configuration.sourceFormat === 'RAD' && this.renderer instanceof GPUPagedSplatRenderer) {
       if (await this.loadAdaptiveRADScene(configuration)) {
         return;
@@ -468,10 +582,30 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
       this.batches.push(batch);
       this.loadedSplatCount += batch.length;
-      this.expectedSplatCount = Math.max(this.expectedSplatCount, this.loadedSplatCount);
       this.appendRendererBatch(batch);
+      if (configuration.sceneId === 'cat') {
+        // One compact scan supplies two objects at visibly different depths.
+        const positions = new Float32Array(batch.source.positions);
+        for (let index = 0; index < positions.length; index += 3) {
+          positions[index] += 1.45;
+          positions[index + 1] += 0.65;
+        }
+        const secondFigurine = makeGPUSplatData(this.device, {
+          ...batch.source,
+          positions,
+          sourceBatchIndex: this.batches.length,
+          rowIndexBase: this.loadedSplatCount
+        });
+        this.batches.push(secondFigurine);
+        this.loadedSplatCount += secondFigurine.length;
+        this.appendRendererBatch(secondFigurine);
+      }
+      this.expectedSplatCount = Math.max(this.expectedSplatCount, this.loadedSplatCount);
       this.requestRedraw();
-      if (this.batches.length === 1 && !this.hasManualCameraInteraction) {
+      if (
+        (this.batches.length === 1 || configuration.sceneId === 'cat') &&
+        !this.hasManualCameraInteraction
+      ) {
         this.fitCameraToBatches();
       }
       this.updatePanel();
@@ -495,8 +629,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.fitCameraToBatches();
     }
     this.isLoading = false;
-    this.expectedBatchCount = configuration.expectedBatchCount ?? this.batches.length;
-    this.expectedSplatCount = configuration.expectedSplatCount ?? this.loadedSplatCount;
+    this.expectedBatchCount =
+      configuration.sceneId === 'cat'
+        ? this.batches.length
+        : (configuration.expectedBatchCount ?? this.batches.length);
+    this.expectedSplatCount = Math.max(
+      configuration.expectedSplatCount ?? 0,
+      this.loadedSplatCount
+    );
     this.updatePanel();
   }
 
@@ -630,8 +770,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       data: this.batches
     });
     previousRenderer.destroy();
-    this.inspectedGraph = undefined;
-    this.graphInspector?.clear();
+    this.diagnostics?.clear();
     this.graphFallbackReason =
       error instanceof Error ? error.message : 'The selected adapter cannot run the GPU graph.';
     this.updatePanel();
@@ -698,11 +837,19 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       up: rolledCameraUp
     });
     const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+    let rendererCameraPosition = cameraPosition;
+    if (this.gltfWorldMatrix) {
+      modelViewProjectionMatrix.multiplyRight(this.gltfWorldMatrix);
+      const localCamera = new Matrix4(this.gltfWorldMatrix)
+        .invert()
+        .transformAsPoint(cameraPosition);
+      rendererCameraPosition = [localCamera[0], localCamera[1], localCamera[2]];
+    }
     const cameraProps: Pick<SplatRendererProps, 'modelViewProjectionMatrix' | 'viewportSize'> = {
       modelViewProjectionMatrix,
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
     };
-    this.renderer.setProps({...cameraProps, cameraPosition});
+    this.renderer.setProps({...cameraProps, cameraPosition: rendererCameraPosition});
     this.hierarchyView = {
       cameraPosition,
       modelViewProjectionMatrix,
@@ -782,9 +929,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         positionIndex < positions.length;
         positionIndex += sampleStride * 3
       ) {
-        const positionX = positions[positionIndex];
-        const positionY = positions[positionIndex + 1];
-        const positionZ = positions[positionIndex + 2];
+        const position = [
+          positions[positionIndex],
+          positions[positionIndex + 1],
+          positions[positionIndex + 2]
+        ];
+        const worldPosition = this.gltfWorldMatrix
+          ? this.gltfWorldMatrix.transformAsPoint(position)
+          : position;
+        const [positionX, positionY, positionZ] = worldPosition;
         if (
           Number.isFinite(positionX) &&
           Number.isFinite(positionY) &&
@@ -806,6 +959,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const cameraBoundPercentile =
       this.localLoadersConfiguration &&
       this.localLoadersConfiguration.sceneId !== 'custom' &&
+      this.localLoadersConfiguration.sceneId !== 'cat' &&
       !this.localLoadersConfiguration.camera
         ? 0.1
         : 0.02;
@@ -862,20 +1016,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const radiusElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-radius]');
     const opacityElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-opacity]');
     const orbitElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-orbit]');
-    const graphDetails = panel.querySelector<HTMLDetailsElement>(
-      '[data-gaussian-splats-graph-details]'
-    );
-    const graphInspectorElement = panel.querySelector<HTMLElement>(
-      '[data-gaussian-splats-graph-inspector]'
-    );
-
     if (this.localLoadersConfiguration && descriptionElement) {
       descriptionElement.textContent =
-        this.localLoadersConfiguration.sceneId === 'coit'
-          ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; pinch to zoom and twist to roll.'
-          : this.localLoadersConfiguration.loaderMode === 'local'
-            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; pinch to zoom and twist to roll.'
-            : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; pinch to zoom and twist to roll.';
+        this.localLoadersConfiguration.sceneId === 'cat'
+          ? 'The moving pane tints splats behind it. Drag to orbit or scroll to zoom.'
+          : this.localLoadersConfiguration.sceneId === 'coit'
+            ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; pinch to zoom and twist to roll.'
+            : this.localLoadersConfiguration.loaderMode === 'local'
+              ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 checkout. Drag to orbit; pinch to zoom and twist to roll.'
+              : 'Complete Gaussian splat scenes streamed through loaders.gl 5. Drag to orbit; pinch to zoom and twist to roll.';
     }
 
     if (this.device.type === 'webgpu' && executionControl && executionElement) {
@@ -901,28 +1050,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.controlDisposers.push(() => render(null, executionElement));
     }
 
-    if (this.graphInspector && graphDetails && graphInspectorElement) {
-      graphDetails.hidden = false;
-      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
-        inspector: this.graphInspector
-      });
-      this.graphInspectorPanels.push(inspectorPanel);
-      this.controlDisposers.push(() => {
-        inspectorPanel.destroy();
-        const panelIndex = this.graphInspectorPanels.indexOf(inspectorPanel);
-        if (panelIndex >= 0) {
-          this.graphInspectorPanels.splice(panelIndex, 1);
-        }
-      });
-    }
-
     const hasBundledLoaders = Boolean(window.__lumaGaussianSplatsLoaderBundleUrl);
     const hasLocalLoaders = Boolean(window.__lumaGaussianSplatsLocalLoadersRoot);
-    if (
-      (this.localLoadersConfiguration || hasBundledLoaders || hasLocalLoaders) &&
-      sceneControl &&
-      sceneElement
-    ) {
+    if (sceneControl && sceneElement) {
       sceneControl.hidden = false;
       sceneControl.style.display = 'grid';
       const shouldUseLocalLoaders =
@@ -931,7 +1061,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       const sceneOptions: PanelSelectOption[] = [
         {value: 'synthetic', label: 'Synthetic chromatic showcase'},
         ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
-          source => shouldUseLocalLoaders || source.id !== 'fixture'
+          source =>
+            source.id === 'cat' ||
+            source.id === 'gltf-fixture' ||
+            ((hasBundledLoaders || hasLocalLoaders) &&
+              (shouldUseLocalLoaders || source.id !== 'fixture'))
         ).map(source => ({
           value: source.id,
           label: source.label
@@ -1036,6 +1170,19 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       });
     }
 
+    const glassElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-glass]');
+    if (glassElement && this.supportsGlassPane) {
+      const glassControl = glassElement.closest('label');
+      if (glassControl) glassControl.hidden = false;
+      glassElement.checked = Boolean(this.glassPane);
+      this.listen(glassElement, 'change', () => {
+        this.glassPane?.destroy();
+        this.glassPane = glassElement.checked ? new GaussianSplatGlassPane(this.device) : undefined;
+        this.requestRedraw();
+        this.updatePanel();
+      });
+    }
+
     if (orbitElement) {
       orbitElement.checked = this.autoOrbit;
       this.listen(orbitElement, 'change', () => {
@@ -1044,6 +1191,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         this.requestRedraw();
       });
     }
+  }
+
+  /** Detaches listeners when the Settings panel unmounts. */
+  private removePanelControls(): void {
+    for (const dispose of this.controlDisposers) dispose();
+    this.controlDisposers = [];
   }
 
   private listen(target: EventTarget, eventName: string, listener: EventListener): void {
@@ -1084,6 +1237,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     for (const pipelineElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-pipeline]'
     )) {
+      if (this.glassPane) {
+        pipelineElement.textContent = 'Depth-interval compositing';
+        continue;
+      }
       pipelineElement.textContent = this.graphFallbackReason
         ? 'CPU fallback · graph unavailable'
         : this.renderer instanceof GPUPagedSplatRenderer
@@ -1107,11 +1264,6 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       pipelineErrorElement.textContent = this.graphFallbackReason
         ? `GPU graph unavailable: ${this.graphFallbackReason}`
         : '';
-    }
-    for (const graphDetails of document.querySelectorAll<HTMLDetailsElement>(
-      '[data-gaussian-splats-graph-details]'
-    )) {
-      graphDetails.hidden = !this.graphInspector || Boolean(this.graphFallbackReason);
     }
     for (const sourceElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-source]'
@@ -1244,13 +1396,6 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       errorElement.hidden = !this.loadingError;
       errorElement.textContent = this.loadingError ?? '';
     }
-
-    if (this.graphInspector) {
-      const snapshot = this.graphInspector.getSnapshot();
-      for (const inspectorPanel of this.graphInspectorPanels) {
-        inspectorPanel.update(snapshot, this.inspectedGraph?.id);
-      }
-    }
   }
 
   private requestRedraw(): void {
@@ -1270,6 +1415,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       distance: this.cameraHomeDistance
     });
   };
+}
+
+/** Starts the full showcase with the captured figurine pair. */
+export class GaussianSplatsShowcase extends GaussianSplatsAnimationLoopTemplate {
+  /** Selects the capture when no scene was supplied in the URL. */
+  constructor(props: AnimationProps) {
+    super({...props, defaultScene: 'cat'});
+  }
 }
 
 function makeGaussianSplatCameraFrame(

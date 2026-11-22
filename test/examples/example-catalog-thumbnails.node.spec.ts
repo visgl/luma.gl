@@ -16,7 +16,7 @@ const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images
 const RECOVERED_FLAGSHIP_EXAMPLES = [
   'showcase/globe',
   'showcase/billion-point-spatial-atlas',
-  'deck/luspatial-taxi',
+  'deck/gpu-spatial-taxi',
   'deck/gpu-culled-trace',
   'showcase/postprocessing',
   'anari/scenes'

@@ -14,8 +14,8 @@ Examples belong in **glTF proposed features**. Ratified/core examples belong in 
 features**. Existing mixed-feature viewers retain explicit draft labels inside their feature lists;
 the section name describes their primary purpose, not certification of every displayed feature.
 
-Use existing owners: `@luma.gl/gltf` for glTF interpretation/controllers, `@luma.gl/engine` for reusable
-scene behavior, `@luma.gl/shadertools` for shader math, and existing scene/rendering infrastructure for
+Use existing owners: `@luma.gl/engine/gltf` for glTF interpretation/controllers, `@luma.gl/engine` for reusable
+scene behavior, `@luma.gl/shaders` for shader math, and existing scene/rendering infrastructure for
 lighting and transport. Avoid a parallel scenegraph, audio context owner, or material system.
 
 Before implementing a tranche:
@@ -213,8 +213,9 @@ Acceptance:
 ## Shared PR verification and review
 
 Each implementation PR records the actual results of `nvm use`, `yarn install`, `yarn lint fix`,
-`yarn build`, `yarn test`, `yarn website:build`, and `(cd website && yarn build)`, plus focused tests
-and reference evidence appropriate to its behavior. Run build and tests after final source/format
+`yarn build`, both phases of `yarn test`, and `yarn website:build`, plus focused tests and reference
+evidence appropriate to its behavior. Follow `AGENTS.md` to reuse the full node phase if the
+commit hook already ran it. Run build and tests after final source/format
 changes. Run expensive checks in dependency order so a clean build does not remove artifacts while
 another check is using them.
 

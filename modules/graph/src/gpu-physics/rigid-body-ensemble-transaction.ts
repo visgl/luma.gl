@@ -2,14 +2,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
+import {VEHICLE_STRIDE} from './rigid-body-vehicle';
 import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import type {GPUCommandGraph, GraphBufferHandle} from '../gpu-core/gpu-command-graph';
 
 type Resource = {buffer: Buffer; resource: GraphBufferHandle};
 
-/** Snapshot active bodies and journal contact writes without changing shared failure semantics. */
+/** Snapshot active bodies and journal contact writes and restore failed contact partitions or an entire failed shared step. */
 export function addEnsembleCheckpoint<GraphParameters>(
   graph: GPUCommandGraph<GraphParameters>,
   id: string,
@@ -19,7 +26,9 @@ export function addEnsembleCheckpoint<GraphParameters>(
   manifolds: Resource,
   bodiesPerInstance: number,
   maximumPairs: number,
-  allocate: (name: string, byteLength: number) => Buffer
+  allocate: (name: string, byteLength: number) => Buffer,
+  vehicles?: {state: Resource; vehiclesPerInstance: number},
+  pairsPerInstance?: number
 ) {
   const bodyCount = states[0].buffer.byteLength / 16;
   const instances = bodyCount / bodiesPerInstance;
@@ -32,8 +41,9 @@ export function addEnsembleCheckpoint<GraphParameters>(
     savedLinkOffset,
     savedHeadOffset,
     savedHeaderOffset,
-    savedManifoldOffset
-  } = getEnsembleContactLayout(bodyCount, instances, maximumPairs);
+    savedManifoldOffset,
+    failureOffset
+  } = getEnsembleContactLayout(bodyCount, instances, maximumPairs, Boolean(pairsPerInstance));
   const importAllocation = (name: string, byteLength: number): Resource => {
     const buffer = allocate(name, byteLength);
     return {
@@ -47,6 +57,12 @@ export function addEnsembleCheckpoint<GraphParameters>(
   const snapshots = states
     .slice(0, 5)
     .map((state, index) => importAllocation(`checkpoint-${index}`, state.buffer.byteLength));
+  const vehicleSnapshot =
+    vehicles &&
+    importAllocation(
+      'checkpoint-vehicles',
+      instances * vehicles.vehiclesPerInstance * VEHICLE_STRIDE
+    );
   const validity = importAllocation('state-validity', bodyCount * 4);
   type Input = Resource & {name: string; writable?: boolean; atomic?: boolean};
   const addCompute = (name: string, inputs: Input[], source: string, indirect = false) => {
@@ -64,12 +80,17 @@ export function addEnsembleCheckpoint<GraphParameters>(
       },
       bindings: Object.fromEntries(inputs.map(input => [input.name, input.buffer]))
     };
-    const executable = (computation: Computation) => ({
-      encode: ({computePass}: {computePass: Parameters<Computation['dispatch']>[0]}) => {
-        if (indirect) computation.dispatchIndirect(computePass, ensemble.buffer, 16);
-        else computation.dispatch(computePass, 1);
+    const executable = (computation: BoundKernel) => ({
+      encode: ({computePass}: {computePass: Parameters<BoundKernel['kernel']['dispatch']>[0]}) => {
+        if (indirect)
+          computation.kernel.dispatchIndirect(computePass, {
+            bindings: computation.bindings,
+            indirectBuffer: ensemble.buffer,
+            indirectOffset: 16
+          });
+        else computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1});
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     });
     graph.addComputePass({
       id: properties.id,
@@ -81,12 +102,47 @@ export function addEnsembleCheckpoint<GraphParameters>(
         })),
         ...(indirect ? [{buffer: ensemble.resource, usage: 'indirect' as const}] : [])
       ],
-      compile: () => executable(new Computation(graph.device, properties)),
-      compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+      compile: () => executable(createBoundKernel(graph.device, properties)),
+      compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
     });
   };
+  /** Shared failure is sticky; local overflow applies only to the attempted instance. */
+  const sharedFailure = 'statistics[1]!=0u||statistics[15]!=0u';
+  /** Fast exit before visiting journal entries when every instance accepted the step. */
+  const anyFailure = pairsPerInstance
+    ? `${sharedFailure}||targets[${failureOffset + instances}u]!=0u`
+    : sharedFailure;
+  /** Read the local failure word through the already allocated targets buffer. */
+  const localFailure = (instance: string) => `targets[${failureOffset}u+${instance}]!=0u`;
+  /** Bind local failure words only on recovery passes that need an additional binding. */
+  const localFailureInput = pairsPerInstance ? [{...targets, name: 'targets'}] : [];
   const bodyAddress = `let work=invocation.x;if(work>=ensemble[0]*${bodiesPerInstance}u){return;}
  let body=ensemble[${16 + instances * 8}u+work/${bodiesPerInstance}u]*${bodiesPerInstance}u+work%${bodiesPerInstance}u;`;
+  /** Journal or restore contiguous vehicle rows for the scheduled instances. */
+  const copyVehicleState = (restore: boolean) => {
+    if (!vehicles || !vehicleSnapshot) return;
+    const count = vehicles.vehiclesPerInstance;
+    addCompute(
+      restore ? 'rollback-vehicles' : 'checkpoint-vehicles',
+      [
+        {...vehicles.state, name: 'vehicle', writable: restore},
+        {...vehicleSnapshot, name: 'snapshot', writable: !restore},
+        {...ensemble, name: 'ensemble'},
+        ...(restore ? [{...statistics, name: 'statistics'}, ...localFailureInput] : [])
+      ],
+      `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
+ ${restore ? `if(!(${anyFailure})){return;}` : ''}
+ let work=invocation.x;if(work>=ensemble[0]*${count}u){return;}
+ let instance=ensemble[${16 + instances * 8}u+work/${count}u];
+ ${restore && pairsPerInstance ? `if(!(${sharedFailure})&&!(${localFailure('instance')})){return;}` : ''}
+ let row=(instance*${count}u+work%${count}u)*${VEHICLE_STRIDE / 4}u;
+ for(var word=0u;word<${VEHICLE_STRIDE / 4}u;word++){
+  ${restore ? 'vehicle[row+word]=snapshot[row+word];' : 'snapshot[row+word]=vehicle[row+word];'}
+ }
+}`,
+      true
+    );
+  };
   const save = () => {
     addCompute(
       'checkpoint-metadata',
@@ -106,6 +162,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
  }
 }`
     );
+    copyVehicleState(false);
     states.slice(0, 5).forEach((state, index) =>
       addCompute(
         `checkpoint-${index}`,
@@ -133,10 +190,11 @@ export function addEnsembleCheckpoint<GraphParameters>(
       ],
       `
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- if(statistics[1]==0u&&statistics[15]==0u){return;}
+ if(!(${anyFailure})){return;}
  let count=targets[${bodyCount * 8 + 5}u];
  for(var work=invocation.x;work<count*104u;work+=64u){
   let pair=targets[${journalOffset}u+work/104u];let word=work%104u;
+  ${pairsPerInstance ? `if(!(${sharedFailure})&&!(${localFailure(`pair/${pairsPerInstance}u`)})){continue;}` : ''}
   manifolds[pair*104u+word]=targets[${savedManifoldOffset}u+pair*104u+word];
  }
 }`
@@ -150,22 +208,24 @@ export function addEnsembleCheckpoint<GraphParameters>(
       ],
       `
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- if(statistics[1]==0u&&statistics[15]==0u){return;}
+ if(!(${anyFailure})){return;}
  let count=targets[${bodyCount * 8 + 5}u];
  for(var index=invocation.x;index<count;index+=64u){let pair=targets[${journalOffset}u+index];
+  ${pairsPerInstance ? `if(!(${sharedFailure})&&!(${localFailure(`pair/${pairsPerInstance}u`)})){continue;}` : ''}
   targets[${bodyCount * 8 + 8}u+pair*2u]=targets[${savedKeyOffset}u+pair*2u];
   targets[${bodyCount * 8 + 9}u+pair*2u]=targets[${savedKeyOffset + 1}u+pair*2u];
   targets[${linkOffset}u+pair]=targets[${savedLinkOffset}u+pair];
  }
  for(var work=invocation.x;work<ensemble[0];work+=64u){let instance=ensemble[${16 + instances * 8}u+work];
+  ${pairsPerInstance ? `if(!(${sharedFailure})&&!(${localFailure('instance')})){continue;}` : ''}
   targets[${headOffset}u+instance]=targets[${savedHeadOffset}u+instance];
   targets[${headOffset + instances}u+instance]=targets[${savedHeadOffset + instances}u+instance];
  }
- storageBarrier();
  // Preserve the attempted step's journal list and counters so the next prepare can clear its marks.
- if(invocation.x<5u){targets[${bodyCount * 8}u+invocation.x]=targets[${savedHeaderOffset}u+invocation.x];}
+ if((${sharedFailure})&&invocation.x<5u){targets[${bodyCount * 8}u+invocation.x]=targets[${savedHeaderOffset}u+invocation.x];}
 }`
     );
+    copyVehicleState(true);
     states.slice(0, 5).forEach((state, index) =>
       addCompute(
         `rollback-${index}`,
@@ -173,11 +233,13 @@ export function addEnsembleCheckpoint<GraphParameters>(
           {...state, name: 'state', writable: true},
           {...snapshots[index], name: 'snapshot'},
           {...statistics, name: 'statistics'},
-          {...ensemble, name: 'ensemble'}
+          {...ensemble, name: 'ensemble'},
+          ...localFailureInput
         ],
         `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- if(statistics[1]==0u&&statistics[15]==0u){return;}
+ if(!(${anyFailure})){return;}
  ${bodyAddress}
+ ${pairsPerInstance ? `if(!(${sharedFailure})&&!(${localFailure(`body/${bodiesPerInstance}u`)})){return;}` : ''}
  for(var word=0u;word<4u;word++){state[body*4u+word]=snapshot[body*4u+word];}
 }`,
         true

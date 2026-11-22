@@ -64,7 +64,7 @@ describe('responsive GPGPU website examples', () => {
     for (const modulePath of [
       '../../examples/showcase/billion-point-spatial-atlas/app',
       '../../examples/showcase/million-row-crossfilter/app',
-      '../../examples/deck/luspatial-taxi/app',
+      '../../examples/deck/gpu-spatial-taxi/app',
       '../../examples/experimental/fp64/app'
     ]) {
       expect(examplesSource, `${modulePath} must be loaded asynchronously`).toContain(
@@ -96,8 +96,8 @@ describe('responsive GPGPU website examples', () => {
 
     for (const precisionPage of [
       'docs/api-guide/shaders/gpu-floating-point-precision.md',
-      'docs/api-reference/shadertools/shader-modules/fp64.md',
-      'docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md'
+      'docs/api-reference/shaders/shader-modules/fp64.md',
+      'docs/api-reference/shaders/shader-modules/fp64-arithmetic.md'
     ]) {
       const precisionPageSource = readFileSync(path.join(process.cwd(), precisionPage), 'utf8');
       expect(precisionPageSource).toContain('<DeferredFP64Example embeddedHeight={900} />');

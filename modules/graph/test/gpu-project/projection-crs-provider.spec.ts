@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {planCRSProjection} from '@luma.gl/graph/gpu-project/crs';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {planCRSProjection} from '@luma.gl/graph/gpu-project-crs';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import type {ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import {geographicCRS, makeConicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 

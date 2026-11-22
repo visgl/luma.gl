@@ -7,7 +7,7 @@ import {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('summarizeGPUWorkgroupScanBenchmarkSamples reports nearest-rank distributions', () => {
   expect(summarizeGPUWorkgroupScanBenchmarkSamples([4, 1, 3, 2])).toEqual({

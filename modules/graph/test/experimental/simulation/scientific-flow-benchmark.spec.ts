@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {ScientificFlowGraph, ScientificFlowTracer} from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {ScientificFlowGraph, ScientificFlowTracer} from '@luma.gl/graph/experimental-simulation';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 
 // Opt-in comparison at matched trajectory accuracy, not a hardware-independent speed claim.
 it('scientific advection compares RK4 and RK45 at matched rotation accuracy', async context => {

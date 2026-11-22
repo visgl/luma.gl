@@ -4,8 +4,8 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '../execution/compute/kernel';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   GraphVectorView,
@@ -126,29 +126,26 @@ function validateGPUAnalyticsVectorLayout(vector: GPUVector, name: string): void
 export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   name: string,
-  id: string
+  id: string,
+  baseMask = context.selectionMask
 ): GraphVectorView<'uint32'> {
   const field = context.table.schema.fields.find(candidate => candidate.name === name);
   if (!field?.nullable) {
-    return context.selectionMask;
+    return baseMask;
   }
   const validity = context.validity[name as keyof Selection & string];
   if (!validity) {
-    if (context.selectionMask.length === 0) {
-      return context.selectionMask;
+    if (baseMask.length === 0) {
+      return baseMask;
     }
     throw new Error(`GPUDataFrame nullable analytics column "${name}" requires GPU validity`);
   }
   const validityView = context.graph.importGPUVector(`${id}-validity`, validity);
-  const output = createTransientVectorView(
-    context.graph,
-    `${id}-combined-mask`,
-    context.selectionMask
-  );
+  const output = createTransientVectorView(context.graph, `${id}-combined-mask`, baseMask);
   context.graph.add(
     new GPUMask({
       id: `${id}-combine-validity`,
-      inputs: [context.selectionMask, validityView],
+      inputs: [baseMask, validityView],
       output
     })
   );
@@ -236,7 +233,7 @@ export function createGPUAnalyticsResultTable<Source extends GPUTypeMap, Result 
   }
 }
 
-/** Adds one safely bound scalar computation without changing graph ownership or submission. */
+/** Adds one safely bound scalar kernel without changing graph ownership or submission. */
 export function addGPUAnalyticsComputePass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   props: {
@@ -252,7 +249,7 @@ export function addGPUAnalyticsComputePass(
     id: props.id,
     resources: [...props.resources],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -270,10 +267,15 @@ export function addGPUAnalyticsComputePass(
           for (const [name, view] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

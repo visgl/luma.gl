@@ -19,7 +19,7 @@ frame command buffer.
 ## Usage
 
 ```ts
-import {MLSMPMFluidSimulation} from '@luma.gl/graph/experimental/simulation';
+import {MLSMPMFluidSimulation} from '@luma.gl/graph/experimental-simulation';
 
 const simulation = new MLSMPMFluidSimulation(device, {
   gridSize: [96, 64],

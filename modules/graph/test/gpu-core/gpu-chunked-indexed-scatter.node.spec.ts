@@ -5,7 +5,7 @@
 import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {Buffer} from '@luma.gl/core';
 import {GPUChunkedIndexedScatter, GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('GPUChunkedIndexedScatter graph construction', () => {

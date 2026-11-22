@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Program} from '@luma.gl/webgl-legacy';
-import {createTestContext} from '@luma.gl/test-utils';
+import {createTestContext} from '@luma.gl/core/test-utils';
 const gl = createTestContext();
 
 const VS = `

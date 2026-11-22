@@ -18,7 +18,7 @@ import {
   type GPURasterLaplacianConnectivity,
   type GPURasterScalarFormat
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 type EdgeFixture = {
   width: number;

@@ -11,8 +11,8 @@ import {
   type ShadowRenderView,
   type ShadowShaderProps
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {Matrix4} from '@math.gl/core/matrix';
 import {CITY_ORIGIN, makeCityMesh, type CityFeature} from '../river-district-data';
 import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 

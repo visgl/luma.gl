@@ -5,10 +5,8 @@ import {DocsPageTabs, type DocumentationTabGroup} from './docs-page-tabs';
 export type DeveloperDocsTabId =
   | 'overview'
   | 'installing'
-  | 'documentation'
   | 'ai'
   | 'contributing'
-  | 'editing'
   | 'testing'
   | 'debugging'
   | 'profiling'
@@ -19,10 +17,8 @@ export const DEVELOPER_DOCS_TAB_GROUPS: DocumentationTabGroup<DeveloperDocsTabId
     label: 'Developer setup and contribution',
     tabs: [
       {id: 'overview', label: 'Overview', href: '/docs/developer-guide'},
-      {id: 'installing', label: 'Installing', href: '/docs/developer-guide/installing'},
-      {id: 'editing', label: 'Editing', href: '/docs/developer-guide/editing'},
-      {id: 'contributing', label: 'Contributing', href: '/docs/developer-guide/contributing'},
-      {id: 'documentation', label: 'Documentation', href: '/docs/developer-guide/documentation'}
+      {id: 'installing', label: 'Setup', href: '/docs/developer-guide/installing'},
+      {id: 'contributing', label: 'Contributing', href: '/docs/developer-guide/contributing'}
     ]
   },
   {

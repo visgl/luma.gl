@@ -8,8 +8,8 @@ import {
   MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
   MLSMPMFluidSimulation,
   MLS_MPM_FLUID_STAGE_ORDER
-} from '@luma.gl/graph/experimental/simulation';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/graph/experimental-simulation';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {MLS_MPM_FLUID_PARTICLE_FLOAT_COUNT} from '../../../src/experimental/simulation/mls-mpm-fluid-simulation-shaders';
 
 it('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async () => {

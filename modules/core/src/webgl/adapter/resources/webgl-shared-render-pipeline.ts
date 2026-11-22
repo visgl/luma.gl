@@ -45,16 +45,11 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     this._linkShaders();
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
+  protected override destroyHandle(): void {
     this.device.gl.useProgram(null);
     this.device.gl.deleteProgram(this.handle);
     // @ts-expect-error
     this.handle.destroyed = true;
-    this.destroyResource();
   }
 
   /** Returns the index of a uniform block in the linked program, looking it up once per name. */

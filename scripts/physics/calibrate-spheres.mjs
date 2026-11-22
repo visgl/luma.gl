@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFile} from 'node:fs/promises';
-import {fitSphereCalibration} from '../../modules/gpgpu/dist/gpu-physics/index.js';
+import {fitSphereCalibration} from '../../modules/graph/dist/gpu-physics/index.js';
 
 const filename = process.argv[2];
 if (!filename) throw new Error('Usage: node scripts/physics/calibrate-spheres.mjs dataset.json');

@@ -4,8 +4,8 @@
 
 import {COORDINATE_SYSTEM, Deck, MapView, type Viewport} from '@deck.gl/core';
 import {SceneBufferEffect, ShaderPassEffect} from '@deck.gl-community/gpu-layers';
-import {dofCompositeShaderPass} from '@luma.gl/effects';
-import {Matrix4} from '@math.gl/core';
+import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
+import {Matrix4} from '@math.gl/core/matrix';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
