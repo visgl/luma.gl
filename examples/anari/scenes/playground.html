@@ -618,7 +618,8 @@
       const device = await luma.createDevice({
         id: 'anari-json-playground',
         adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
-        ...(parameters.has('captureGpuTiming') ? {optionalFeatures: ['timestamp-query']} : {}),
+        ...(parameters.has('captureGpuTiming') || !parameters.has('captureFrames')
+          ? {optionalFeatures: ['timestamp-query']} : {}),
         createCanvasContext: fixedCaptureSize ? {...canvasProperties, autoResize: false} : canvasProperties
       });
       makeAnimationLoop(ANARIPlayground, {device}).start();

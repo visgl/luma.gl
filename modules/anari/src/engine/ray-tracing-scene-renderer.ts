@@ -535,6 +535,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   targetFrameTimeMilliseconds?: number;
   /** Previous execution time excluding intentional pacing delays. Null skips this observation. */
   previousFrameExecutionMilliseconds?: number | null;
+  /** Number of interleaved pixel batches per complete sweep. Preserves progressive history. */
+  rayBatchPhaseCount?: 1 | 2 | 4 | 8;
   /** Reprojects compatible history while the camera or instances move. */
   temporalReprojection?: boolean;
   /** Maximum non-ambient shadowed light samples traced per pixel in one frame. */
@@ -730,6 +732,10 @@ type RayTracingFrameResources = {
   refitsSinceMortonRebuild: number;
   frameIndex: number;
   accumulatedFrameCount: number;
+  /** Samples from completed full-coverage sweeps. */
+  completedSweepSamples: number;
+  /** Whether the preceding frame used a caller-supplied batch policy. */
+  usedRayBatchOverride: boolean;
   primitiveCount: number;
   primitiveCapacity: number;
   leafCapacity: number;
@@ -853,6 +859,14 @@ export class RayTracingSceneRenderer {
     const lightRevision = getLightRevision(options, lights);
     let resources = this.frames.get(options.id);
     const currentTimeMilliseconds = getTimestampMilliseconds();
+    /** Sparse batches carry metadata only when the view and scene pose are stable. */
+    const stationaryBatch =
+      resources?.transformRevision === transformRevision &&
+      resources.lightRevision === lightRevision &&
+      resources.previousCameraPosition.every(
+        (value, index) => value === options.camera.position[index]
+      ) &&
+      resources.previousViewProjection.every((value, index) => value === viewProjection[index]);
 
     if (!resources) {
       const topology = makeRayTracingTopology(
@@ -1113,7 +1127,19 @@ export class RayTracingSceneRenderer {
     if (resources.displayWidth !== displayWidth || resources.displayHeight !== displayHeight) {
       resources.historyNeedsReset = true;
     }
-    updateRayTracingAdaptiveBudget(resources, currentTimeMilliseconds);
+    if (!options.rayBatchPhaseCount) {
+      if (resources.usedRayBatchOverride) {
+        resources.phaseCount = 1;
+        resources.phaseIndex = 0;
+        resources.accumulatedFrameCount = Math.floor(
+          resources.completedSweepSamples / getSamplesPerPixel(options)
+        );
+        resources.overBudgetFrameCount = 0;
+        resources.underBudgetFrameCount = 0;
+      }
+      updateRayTracingAdaptiveBudget(resources, currentTimeMilliseconds);
+    }
+    resources.usedRayBatchOverride = Boolean(options.rayBatchPhaseCount);
 
     const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
     const materialTextures = getRayMaterialTextures(options.surfaces);
@@ -1183,8 +1209,17 @@ export class RayTracingSceneRenderer {
     const temporalReprojection = options.temporalReprojection ?? true;
     if (resources.historyNeedsReset) {
       resources.accumulatedFrameCount = 0;
+      resources.completedSweepSamples = 0;
       resources.phaseCount = 1;
       resources.phaseIndex = 0;
+    }
+    if (options.rayBatchPhaseCount && !resources.historyNeedsReset) {
+      if (!stationaryBatch || !progressive) {
+        resources.phaseCount = 1;
+        resources.phaseIndex = 0;
+      } else if (resources.phaseIndex === 0) {
+        resources.phaseCount = options.rayBatchPhaseCount;
+      }
     }
     const activePhaseCount = resources.historyNeedsReset ? 1 : resources.phaseCount;
     const activePhaseIndex = resources.historyNeedsReset
@@ -1264,6 +1299,12 @@ export class RayTracingSceneRenderer {
     resources.frameIndex++;
     resources.accumulatedFrameCount = progressive ? accumulatedFrameCount + 1 : 0;
     const samplesPerPixel = getSamplesPerPixel(options);
+    if (progressive && activePhaseIndex + 1 === activePhaseCount) {
+      resources.completedSweepSamples = Math.min(
+        resources.completedSweepSamples + samplesPerPixel,
+        getHistorySampleLimit(options)
+      );
+    }
 
     const statistics = {
       surfaceCount: options.surfaces.length,
@@ -1279,7 +1320,9 @@ export class RayTracingSceneRenderer {
           resources.averageFrameTimeMilliseconds ?? resources.targetFrameTimeMilliseconds,
         accumulatedSamples: progressive
           ? Math.min(
-              resources.accumulatedFrameCount * samplesPerPixel,
+              options.rayBatchPhaseCount
+                ? resources.completedSweepSamples
+                : resources.accumulatedFrameCount * samplesPerPixel,
               getHistorySampleLimit(options)
             )
           : samplesPerPixel,
@@ -1969,6 +2012,8 @@ export class RayTracingSceneRenderer {
       refitsSinceMortonRebuild: 0,
       frameIndex: 0,
       accumulatedFrameCount: 0,
+      completedSweepSamples: 0,
+      usedRayBatchOverride: false,
       primitiveCount: scene.primitiveCount,
       primitiveCapacity,
       leafCapacity,

@@ -66,6 +66,7 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       previousFrameExecutionMilliseconds: renderer.getParameter(
         'previousFrameExecutionMilliseconds'
       ),
+      rayBatchPhaseCount: renderer.getParameter('rayBatchPhaseCount'),
       temporalReprojection: renderer.getParameter('temporalReprojection'),
       shadowSamplesPerFrame: renderer.getParameter('shadowSamplesPerFrame')
     });
