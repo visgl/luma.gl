@@ -20,6 +20,18 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   colorAttachments: WEBGLTextureView[] = [];
   depthStencilAttachment: WEBGLTextureView | null = null;
+  /** Owned stencil-only storage, allocated for the stencil8 framebuffer format. */
+  private stencilRenderbuffer: WebGLRenderbuffer | null = null;
+
+  /** Indicates that the framebuffer owns a stencil-only renderbuffer. */
+  get hasStencilRenderbuffer(): boolean {
+    return this.stencilRenderbuffer !== null;
+  }
+
+  /** Selects native stencil-only storage for the framebuffer format string. */
+  protected override getNonTextureDepthStencilAttachment(): 'stencil8' | null {
+    return this.props.depthStencilAttachment === 'stencil8' ? 'stencil8' : null;
+  }
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
     super(device, props);
@@ -42,13 +54,19 @@ export class WEBGLFramebuffer extends Framebuffer {
         // Auto create textures for attachments if needed
         this.autoCreateAttachmentTextures();
 
-        this.updateAttachments();
+        try {
+          this.updateAttachments();
+        } catch (error) {
+          this.destroy();
+          throw error;
+        }
       }
     }
   }
 
   /** destroys any auto created resources etc. */
   protected override destroyHandle(): void {
+    if (this.stencilRenderbuffer) this.gl.deleteRenderbuffer(this.stencilRenderbuffer);
     if (this.handle !== null && this.ownsHandle) {
       this.gl.deleteFramebuffer(this.handle);
     }
@@ -62,31 +80,54 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.handle
     );
 
-    // Walk the attachments
-    for (let i = 0; i < this.colorAttachments.length; ++i) {
-      const attachment = this.colorAttachments[i];
-      if (attachment) {
-        const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
-        this._attachTextureView(attachmentPoint, attachment);
+    try {
+      // Walk the attachments
+      for (let i = 0; i < this.colorAttachments.length; ++i) {
+        const attachment = this.colorAttachments[i];
+        if (attachment) {
+          const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
+          this._attachTextureView(attachmentPoint, attachment);
+        }
       }
-    }
 
-    if (this.depthStencilAttachment) {
-      const attachmentPoint = getDepthStencilAttachmentWebGL(
-        this.depthStencilAttachment.props.format
+      if (this.depthStencilAttachment) {
+        const attachmentPoint = getDepthStencilAttachmentWebGL(
+          this.depthStencilAttachment.props.format
+        );
+        this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
+      }
+
+      if (this.getNonTextureDepthStencilAttachment()) this.attachStencilRenderbuffer();
+
+      if (this.hasStencilRenderbuffer || this.device.props.debug) {
+        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
+        if (status !== GL.FRAMEBUFFER_COMPLETE) {
+          throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+        }
+      }
+    } finally {
+      this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+    }
+  }
+
+  /** Allocates or resizes stencil-only storage and restores the renderbuffer binding. */
+  private attachStencilRenderbuffer(): void {
+    const {gl} = this;
+    this.stencilRenderbuffer ??= gl.createRenderbuffer();
+    if (!this.stencilRenderbuffer) throw new Error('Could not allocate stencil8 renderbuffer');
+    const previousRenderbuffer = gl.getParameter(GL.RENDERBUFFER_BINDING);
+    try {
+      gl.bindRenderbuffer(GL.RENDERBUFFER, this.stencilRenderbuffer);
+      gl.renderbufferStorage(GL.RENDERBUFFER, GL.STENCIL_INDEX8, this.width, this.height);
+      gl.framebufferRenderbuffer(
+        GL.FRAMEBUFFER,
+        GL.STENCIL_ATTACHMENT,
+        GL.RENDERBUFFER,
+        this.stencilRenderbuffer
       );
-      this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
+    } finally {
+      gl.bindRenderbuffer(GL.RENDERBUFFER, previousRenderbuffer);
     }
-
-    /** Check the status */
-    if (this.device.props.debug) {
-      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
-      if (status !== GL.FRAMEBUFFER_COMPLETE) {
-        throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
-      }
-    }
-
-    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
   }
 
   // PRIVATE

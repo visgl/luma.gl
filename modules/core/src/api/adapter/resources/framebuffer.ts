@@ -54,7 +54,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     );
 
     const depthStencilAttachment =
-      this.depthStencilAttachment && this.depthStencilAttachment.texture.clone(size);
+      this.depthStencilAttachment?.texture.clone(size) ??
+      this.getNonTextureDepthStencilAttachment();
 
     const framebuffer = this.device.createFramebuffer({
       ...this.props,
@@ -65,7 +66,7 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     for (const texture of colorAttachments) {
       framebuffer.attachResource(texture);
     }
-    if (depthStencilAttachment) {
+    if (depthStencilAttachment instanceof Texture) {
       framebuffer.attachResource(depthStencilAttachment);
     }
     return framebuffer;
@@ -112,7 +113,7 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     });
 
     const attachment = this.props.depthStencilAttachment;
-    if (attachment) {
+    if (attachment && !this.getNonTextureDepthStencilAttachment()) {
       if (typeof attachment === 'string') {
         const texture = this.createDepthStencilTexture(attachment);
         this.attachResource(texture);
@@ -123,6 +124,11 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
         this.depthStencilAttachment = attachment;
       }
     }
+  }
+
+  /** Returns the format of an attachment backed by backend-specific storage. */
+  protected getNonTextureDepthStencilAttachment(): TextureFormatDepthStencil | null {
+    return null;
   }
 
   /** Create a color texture */

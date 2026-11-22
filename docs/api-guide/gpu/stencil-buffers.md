@@ -192,3 +192,10 @@ loads. WebGPU provides stencil aspect views in core. WebGL2 requires
 [WEBGL_stencil_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/).
 On WebGL2 the selected aspect belongs to the texture object. Use separate draws when
 reading depth and stencil from the same packed texture.
+
+## Allocate stencil without depth
+
+Set `depthStencilAttachment: 'stencil8'` when a framebuffer only needs stencil. WebGPU
+allocates a texture. WebGL2 allocates a framebuffer-owned renderbuffer and keeps the
+`depthStencilAttachment` texture view null. The WebGL2 texture capability queries still
+report `stencil8` as unsupported because they describe texture storage.
