@@ -39,3 +39,20 @@ A separate −0.24 rad elbow command moved the payload in both simulations. Two 
 ```sh
 node scripts/physics/benchmark-robot-arm.mjs http://127.0.0.1:5312/ --compare-tree
 ```
+
+## Press and lift at 120 Hz
+
+Four one-meter links press a 3 kg welded sphere onto a finite, frictionless work stop for two seconds, then lift for two seconds. Both solvers receive the same elbow targets (+0.65 and −0.3 rad), gains, 25 N·m press cap and 300 N·m lift cap. The other three joints hold zero with a 300 N·m cap. The shoulder needs more than 150 N·m to support this arm horizontally.
+
+| Solver | Step p50 / p95 | Peak sampled penetration | Supported center height | Height after lift |
+| --- | --- | --- | --- | --- |
+| Ordered, 64 iterations | 10.9 / 15.2 ms | 25.38 mm | 1.2880 m | 2.0335 m |
+| Reduced-coordinate | 0.4 / 1.5 ms | 0.0041 mm | 1.2900 m | 2.0977 m |
+
+Both completed all 480 steps, seated within 2 cm of 1.29 m, stayed within the 3 cm sampled penetration limit and raised the center above 2 m. The tree reported 52.7 N while supported and zero after lifting. Each timing includes encoding, submission and the GPU completion fence. The 464 samples omit the first eight steps of each phase and exclude rendering and diagnostic reads. Height was sampled every eight steps. Only the reduced-coordinate solver met the 8.33 ms p95 latency budget on this adapter. [Raw measurements](./arm-contact-apple.json).
+
+Start the Rigid Body Lab and run the comparison against its local URL:
+
+```sh
+node scripts/physics/benchmark-arm-contact.mjs http://127.0.0.1:5317/
+```

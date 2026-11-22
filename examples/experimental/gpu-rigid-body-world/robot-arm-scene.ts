@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import type {Buffer, Device} from '@luma.gl/core';
 import {
   CubeGeometry,
   CylinderGeometry,
@@ -13,7 +13,7 @@ import {
   type ScenegraphTransformBinding
 } from '@luma.gl/engine';
 import {SceneRenderer, SceneMeshNode, type SceneMaterial} from '@luma.gl/anari';
-import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
+import type {GPURigidBody} from '@luma.gl/graph/gpu-physics';
 import {Matrix4} from '@math.gl/core/matrix';
 
 /** Render all mechanical parts from the same published transforms used by the shadow pass. */
@@ -21,7 +21,11 @@ export class RobotArmScene {
   private readonly root = new GroupNode({id: 'bench-arm'});
   private readonly renderer: SceneRenderer;
 
-  constructor(device: Device, world: GPURigidBodyWorld) {
+  constructor(
+    device: Device,
+    world: {poseMatrices: Buffer | null; count: number},
+    treeBodies?: GPURigidBody[]
+  ) {
     this.renderer = new SceneRenderer(device);
     const bindings = new Map<ScenegraphNode, ScenegraphTransformBinding>();
     this.root.transformSource = {
@@ -56,10 +60,14 @@ export class RobotArmScene {
       offset: [number, number, number],
       scale: [number, number, number]
     ) => {
-      const matrix = new Matrix4().translate(offset).scale(scale);
+      const isStatic = treeBodies && !treeBodies[body].mass;
+      const matrix = new Matrix4();
+      if (isStatic) matrix.translate(treeBodies[body].position);
+      matrix.translate(offset).scale(scale);
       const node = new SceneMeshNode({id, geometry, material: surface, matrix});
       this.root.add(node);
-      bindings.set(node, {matrixIndex: body, localMatrix: matrix});
+      if (!isStatic)
+        bindings.set(node, {matrixIndex: treeBodies ? body - 2 : body, localMatrix: matrix});
     };
     add('bench', 0, cube, bench, [0, 0, 0], [6, 3, 0.15]);
     add('column', 1, cube, graphite, [0, 0, 0], [0.22, 0.32, 1]);

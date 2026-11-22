@@ -563,7 +563,7 @@ the whole step. Qualification across adapters and broader fault attribution rema
 
 ### G9. Articulations and mechanism quality
 
-The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. Contact coupling, floating bases, limits and larger-tree scaling remain open.
+The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. A [3 kg work-stop trial](../benchmarks/robot-arm.md#press-and-lift-at-120-hz) qualifies unilateral sphere–static-box contact through press and release. Multiple simultaneous contacts, friction, moving counterparts, floating bases, limits and larger-tree scaling remain open.
 
 The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold was chosen as the reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
 

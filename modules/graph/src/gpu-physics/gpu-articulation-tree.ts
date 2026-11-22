@@ -39,7 +39,15 @@ export type GPUArticulationDrive = {
   maximumTorque: number;
 };
 
-/** Small fixed-base trees in free space. The graph owns the kernel and the tree owns the buffers. */
+/** Frictionless unilateral contact between a link-centered sphere and a static world-space box. */
+export type GPUArticulationContact = {
+  link: string;
+  radius: number;
+  center: Vector;
+  halfExtents: Vector;
+};
+
+/** Small fixed-base trees. The graph owns the kernel and the tree owns the buffers. */
 export class GPUArticulationTree {
   readonly timeStep: number;
   readonly id: string;
@@ -48,6 +56,12 @@ export class GPUArticulationTree {
   private readonly buffers: Buffer[] = [];
   private readonly base: Vector;
   private readonly gravity: Vector;
+  private readonly contact?: GPUArticulationContact;
+  private readonly publishMatrices: boolean;
+  /** Column-major world transforms in link order, available after registration with publishMatrices. */
+  get poseMatrices() {
+    return this.buffers[6] ?? null;
+  }
   private destroyed = false;
 
   constructor(props: {
@@ -56,9 +70,13 @@ export class GPUArticulationTree {
     base?: Vector;
     gravity?: Vector;
     timeStep?: number;
+    contact?: GPUArticulationContact;
+    publishMatrices?: boolean;
   }) {
     this.id = props.id ?? 'articulation-tree';
     this.timeStep = props.timeStep ?? 1 / 120;
+    this.contact = structuredClone(props.contact);
+    this.publishMatrices = Boolean(props.publishMatrices);
     this.links = structuredClone([...props.links]);
     this.base = [...(props.base ?? [0, 0, 0])];
     this.gravity = [...(props.gravity ?? [0, 0, -9.81])];
@@ -92,6 +110,16 @@ export class GPUArticulationTree {
         throw new Error('Invalid articulation link');
       this.indices.set(link.id, index);
     }
+    const contact = this.contact;
+    if (
+      contact &&
+      (!this.indices.has(contact.link) ||
+        !contact.center.every(finite) ||
+        ![contact.radius, ...contact.halfExtents].every(
+          value => finite(value) && Math.fround(value) > 0
+        ))
+    )
+      throw new Error('Invalid articulation contact');
   }
 
   /** Register one simulation step. The output pose buffer uses four vec4s per link: COM, quaternion, velocity, spin. */
@@ -117,8 +145,21 @@ export class GPUArticulationTree {
       new Float32Array(this.links.flatMap(link => [link.angle ?? 0, link.speed ?? 0, 0, 0])),
       new Float32Array(this.links.length * 16),
       new Uint32Array(4),
-      new Float32Array([...this.base, 0, ...this.gravity, this.timeStep])
+      new Float32Array([
+        ...this.base,
+        0,
+        ...this.gravity,
+        this.timeStep,
+        ...(this.contact?.center ?? [0, 0, 0]),
+        this.contact?.radius ?? 0,
+        ...(this.contact?.halfExtents ?? [0, 0, 0]),
+        this.contact ? this.indices.get(this.contact.link)! : 0
+      ])
     ];
+    if (this.publishMatrices) {
+      names.push('matrices');
+      data.push(new Float32Array(this.links.length * 16));
+    }
     try {
       const handles = data.map((values, index) => {
         const usage =
@@ -144,7 +185,14 @@ export class GPUArticulationTree {
               : {name, location, group: 0, type: location < 2 ? 'read-only-storage' : 'storage'}
         )
       };
-      const props = {source: getArticulationTreeShader(this.links.length), shaderLayout};
+      const props = {
+        source: getArticulationTreeShader(
+          this.links.length,
+          Boolean(this.contact),
+          this.publishMatrices
+        ),
+        shaderLayout
+      };
       const executable = (bound: BoundKernel): GPUCommandGraphComputeExecutable<P> => ({
         encode: ({computePass, getBuffer}) => {
           const bindings: Record<string, Binding> = {};
@@ -215,7 +263,13 @@ export class GPUArticulationTree {
   async readSimulationDiagnostics() {
     const bytes = await this.buffers[4].readAsync();
     const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 2);
-    return {steps: values[0], complete: values[1] === 0};
+    return {
+      steps: values[0],
+      complete: values[1] === 0,
+      ...(this.contact
+        ? {normalForce: new DataView(bytes.buffer, bytes.byteOffset).getFloat32(8, true)}
+        : {})
+    };
   }
   destroy() {
     this.destroyed = true;
