@@ -248,7 +248,9 @@ export function parseGLTFPhysics(
     const shapeRoot =
       source.extensions?.[SHAPES] === undefined ? {} : record(source.extensions[SHAPES]);
     checkFields(shapeRoot, ['shapes']);
-    shapes = array(shapeRoot['shapes']);
+    if (source.shapes && source.extensions?.[SHAPES])
+      throw new Error('Physics shape indices require exactly one shape namespace');
+    shapes = source.shapes ? [...source.shapes] : array(shapeRoot['shapes']);
   } catch (error) {
     report('invalid-extension', '/extensions', error);
   }
@@ -796,6 +798,7 @@ export function parseGLTFPhysics(
         typeof pointer === 'string' &&
         (pointer.includes(PHYSICS) ||
           pointer.includes(SHAPES) ||
+          pointer.startsWith('/shapes/') ||
           Boolean(nodeMatch && relevant.has(Number(nodeMatch[1]))));
       const targetNode = nodeMatch ? Number(nodeMatch[1]) : channel.target.node;
       const targetPath = nodeMatch ? nodeMatch[2] : channel.target.path;
@@ -878,7 +881,7 @@ export function parseGLTFPhysics(
             result.animatedColliderIndices.push(collider.colliderIndex);
         if (affected.length || affectedColliders.length) {
           for (const body of affected) {
-            body.body.mode = 'kinematic';
+            if (!options.preserveAnimatedBodyModes) body.body.mode = 'kinematic';
             if (!result.animatedBodyIndices.includes(body.bodyIndex))
               result.animatedBodyIndices.push(body.bodyIndex);
           }

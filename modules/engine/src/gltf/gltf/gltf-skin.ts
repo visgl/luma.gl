@@ -79,8 +79,8 @@ function makeSkinBindings(props: ParseGLTFSkinsProps): SkinBinding[] {
     const inverseBindMatrices = sourceSkin.inverseBindMatrices?.value;
     const jointMatrices = new Float32Array(joints.length * 16);
     const usesLargeSkinPalette =
-      joints.length > SKIN_MAX_JOINTS &&
-      models.some(modelNode => modelNode.userData['gltfLargeSkinPalette'] === true);
+      models.some(modelNode => modelNode.userData['gltfLargeSkinPalette'] === true) &&
+      (props.device.type === 'webgpu' || joints.length > SKIN_MAX_JOINTS);
     let skinJointMatrices: Buffer | Texture | undefined;
     if (usesLargeSkinPalette) {
       skinJointMatrices = createSkinJointPaletteResource(props.device, node.id, jointMatrices);

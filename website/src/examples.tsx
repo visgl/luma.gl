@@ -3008,6 +3008,15 @@ export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props =
     config={exampleConfig} devices={['webgpu']} {...props} />
 );
 
+/** A composed glTF 2.1 scene with independent GPU ragdoll puppets. */
+export const MarionetteTheaterExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="marionette-theater" title="Marionette Theater" directory="gltf"
+    sourcePath="examples/gltf/authored-scene-stress/ragdoll-app.ts"
+    infoBoxAppearance="cinematic"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/ragdoll-app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);
+
 export const VectorObservatoryExample: React.FC = () => {
   const source = useBaseUrl('/standalone-examples/vector-observatory/index.html');
   return <ExamplePage style={{background: '#050c14', minHeight: '820px'}}>

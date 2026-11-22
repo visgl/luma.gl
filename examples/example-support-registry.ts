@@ -20,7 +20,9 @@ import dominoJunctionSupport from './three/domino-junction/mobile-support';
 import galacticVortexSupport from './three/galactic-vortex/mobile-support';
 import threeDeckLayersSupport from './three/deck-layers/mobile-support';
 import gltfPhysicsSupport from './gltf/physics/mobile-support';
-import authoredSceneStressSupport from './gltf/authored-scene-stress/mobile-support';
+import authoredSceneStressSupport, {
+  marionetteTheaterSupport
+} from './gltf/authored-scene-stress/mobile-support';
 import poolSupport from './experimental/gpu-pool/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
 import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
@@ -216,6 +218,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'three/deck-layers': threeDeckLayersSupport,
   'gltf/physics': gltfPhysicsSupport,
   'gltf/authored-scene-stress': authoredSceneStressSupport,
+  'gltf/marionette-theater': marionetteTheaterSupport,
   'experimental/gpu-pool': poolSupport,
   'experimental/gpu-sphere-world': sphereWorldSupport,
   'experimental/gpu-sphere-scale': sphereScaleSupport,

@@ -58,23 +58,21 @@ export function validateRigidBodyJoints(
       joint.first === joint.second ||
       [joint.first, joint.second].some(
         index => !Number.isInteger(index) || index < 0 || index >= bodies.length
-      ) ||
-      ![joint.first, joint.second].some(
-        index =>
-          (bodies[index].mode ?? ((bodies[index].mass ?? 1) === 0 ? 'static' : 'dynamic')) ===
-          'dynamic'
       )
     )
       throw new Error('Invalid joint bodies');
+    /** Ordered constraints can remain present while their bodies follow animation. */
+    const modes = [joint.first, joint.second].map(index => {
+      /** Resolve default static bodies from their mass when mode is omitted. */
+      const body = bodies[index];
+      return body.mode ?? ((body.mass ?? 1) === 0 ? 'static' : 'dynamic');
+    });
+    if (modes.every(mode => mode === 'static')) throw new Error('Invalid joint bodies');
     if (solver === 'parallel') {
       // Parallel contacts can alternate with a small serial sweep of anchored distance rows.
       // Dynamic-dynamic joints still require shared island ownership and remain ordered-only.
-      const anchored = [joint.first, joint.second].some(
-        index =>
-          (bodies[index].mode ?? ((bodies[index].mass ?? 1) === 0 ? 'static' : 'dynamic')) ===
-          'static'
-      );
-      if (joint.type !== 'distance' || !anchored) throw new Error('Unsupported parallel joint');
+      if (joint.type !== 'distance' || !modes.includes('static') || !modes.includes('dynamic'))
+        throw new Error('Unsupported parallel joint');
     }
     if (joint.type === 'general') validateGeneralJoint(joint);
     for (const frame of [joint.firstFrame, joint.secondFrame]) {

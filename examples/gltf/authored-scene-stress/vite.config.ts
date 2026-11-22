@@ -30,5 +30,13 @@ const alias = {
 // https://vitejs.dev/config/
 export default defineConfig({
   resolve: {alias},
+  build: {
+    rollupOptions: {
+      input: {
+        stress: `${__dirname}/index.html`,
+        ragdolls: `${__dirname}/ragdolls.html`
+      }
+    }
+  },
   server: {open: true}
 });

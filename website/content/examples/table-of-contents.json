@@ -77,7 +77,8 @@
       "experimental/physics-stress",
       "experimental/physics-batch",
       "gltf/physics",
-      "gltf/authored-scene-stress"
+      "gltf/authored-scene-stress",
+      "gltf/marionette-theater"
     ]
   },
   {
