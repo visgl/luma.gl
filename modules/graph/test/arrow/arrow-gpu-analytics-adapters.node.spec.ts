@@ -523,6 +523,28 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     }
   });
 
+  test('rejects packed groups above maxStorageBufferBindingSize before allocating', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-binding-limit'});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const maxStorageBufferBindingSize = device.limits.maxStorageBufferBindingSize;
+    // Five packed 4-byte rows need 20 bytes; single-source batches are not checked.
+    device.limits.maxStorageBufferBindingSize = 16;
+    try {
+      expect(() =>
+        makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable(), {packBatches: true})
+      ).toThrow(
+        'GPU analytics column "fare" packs 5 rows into 20 bytes, above maxStorageBufferBindingSize (16)'
+      );
+      expect(createBuffer).not.toHaveBeenCalled();
+
+      const unpacked = makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable());
+      destroyAnalyticsResult(unpacked);
+    } finally {
+      device.limits.maxStorageBufferBindingSize = maxStorageBufferBindingSize;
+      createBuffer.mockRestore();
+    }
+  });
+
   test('packs zero-row source batches into bindable storage', async () => {
     const device = new NullDevice({id: 'arrow-analytics-packed-empty'});
     const source = createAnalyticsTable();

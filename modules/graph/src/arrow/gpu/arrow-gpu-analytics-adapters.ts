@@ -96,8 +96,8 @@ export type GPUAnalyticsTableFromArrowTableProps<T extends GPUTypeMap = GPUTypeM
    * chunk is written directly at its byte offset, so packing needs no JavaScript concatenation,
    * no GPU copy pass, and no transient second allocation. Validity sidecars follow the packed
    * batches. `minBatchSize` is a lower target, not a size cap: source batches are never split,
-   * groups can overshoot, and the final group can be smaller. Callers must ensure each resulting
-   * buffer fits the device's allocation and storage-binding limits.
+   * groups can overshoot, and the final group can be smaller. A packed group whose column bytes
+   * exceed `device.limits.maxStorageBufferBindingSize` throws before any GPU allocation.
    * Defaults to `false`, which preserves every source record batch.
    */
   packBatches?: boolean | GPUTablePackBatchesOptions;
@@ -177,6 +177,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
     }
 
     const batchGroups = getGPUAnalyticsBatchGroups(table, options.packBatches);
+    validateGPUAnalyticsPackedBatchSizes(device, table, columns, batchGroups);
     let sourceRowIndexOffset = 0;
     const batches = batchGroups.map(sourceBatchIndices => {
       const recordBatches = sourceBatchIndices.map(batchIndex => table.batches[batchIndex]);
@@ -328,6 +329,40 @@ function getGPUAnalyticsBatchGroups(
     batchGroups.push(batchGroup);
   }
   return batchGroups;
+}
+
+/**
+ * Rejects packed groups whose column bytes exceed one storage binding, before any allocation.
+ * Validity sidecars use 4 bytes per row, never more than their column, so they need no check.
+ * A zero limit means the device reports no storage binding limit (WebGL), so nothing is checked.
+ */
+function validateGPUAnalyticsPackedBatchSizes(
+  device: Device,
+  table: Table,
+  columns: PreparedGPUAnalyticsColumn[],
+  batchGroups: number[][]
+): void {
+  const maxBindingSize = device.limits.maxStorageBufferBindingSize;
+  if (!maxBindingSize) {
+    return;
+  }
+  for (const sourceBatchIndices of batchGroups) {
+    if (sourceBatchIndices.length === 1) {
+      continue;
+    }
+    const rowCount = sourceBatchIndices.reduce(
+      (total, batchIndex) => total + table.batches[batchIndex].numRows,
+      0
+    );
+    for (const column of columns) {
+      const byteLength = rowCount * getGPUVectorFormatInfo(column.format).byteLength;
+      if (byteLength > maxBindingSize) {
+        throw new Error(
+          `GPU analytics column "${column.field.name}" packs ${rowCount} rows into ${byteLength} bytes, above maxStorageBufferBindingSize (${maxBindingSize}); use a smaller packBatches.minBatchSize`
+        );
+      }
+    }
+  }
 }
 
 /** Validates every selected field, batch, bitmap, and dictionary before allocating GPU resources. */

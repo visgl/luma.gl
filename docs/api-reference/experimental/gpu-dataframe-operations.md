@@ -124,10 +124,10 @@ const grouped = makeGPUAnalyticsTableFromArrowTable(device, arrowTable, {
 
 `minBatchSize` is a lower target, not an upper limit. Groups can overshoot it, the final group can
 be smaller, and individual source batches are never split. For example, source batches of 7 and 7
-rows with `minBatchSize: 8` produce one 14-row batch. Ensure each output column and validity buffer
-(4 bytes per row) fits both `device.limits.maxBufferSize` and
-`device.limits.maxStorageBufferBindingSize`. If necessary, split oversized source batches before
-uploading and account for grouping overshoot; `minBatchSize` alone does not guarantee either limit.
+rows with `minBatchSize: 8` produce one 14-row batch. A packed group whose column bytes (rows times
+the row size of the column format, such as 12 bytes for `float32x3`) exceed
+`device.limits.maxStorageBufferBindingSize` throws before any GPU buffer is allocated. Use a smaller
+`minBatchSize` in that case; `minBatchSize` alone does not cap the group size.
 
 Packing at upload writes each Arrow chunk directly into its final buffer, with no JavaScript
 concatenation, GPU copy pass, or transient second allocation. Validity sidecars follow the packed
