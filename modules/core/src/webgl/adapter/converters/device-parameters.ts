@@ -247,9 +247,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.stencilWriteMask !== undefined) {
-    const mask = parameters.stencilWriteMask;
-    gl.stencilMaskSeparate(GL.FRONT, mask);
-    gl.stencilMaskSeparate(GL.BACK, mask);
+    gl.stencilMask(parameters.stencilWriteMask);
   }
 
   if (parameters.stencilReadMask) {

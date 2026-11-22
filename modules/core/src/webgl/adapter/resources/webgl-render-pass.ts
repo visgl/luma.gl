@@ -351,11 +351,11 @@ export class WEBGLRenderPass extends RenderPass {
       clearMask |= GL.DEPTH_BUFFER_BIT;
       glParameters.clearDepth = this.props.clearDepth;
     }
-    if (!this.props.stencilReadOnly && this.props.clearStencil !== false) {
+    if (this.props.clearStencil !== false) {
       clearMask |= GL.STENCIL_BUFFER_BIT;
       glParameters.clearStencil = this.props.clearStencil;
-      // Clear every stencil bit regardless of the incoming draw mask.
-      glParameters.stencilMask = 0xffffffff;
+      // Preserve the read-only mask. Writable attachment clears affect all stencil bits.
+      glParameters.stencilMask ??= 0xffffffff;
     }
 
     if (clearMask !== 0) {
