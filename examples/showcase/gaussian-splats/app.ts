@@ -293,9 +293,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     canvas.setAttribute('aria-label', 'Interactive 3D Gaussian splat observatory');
     canvas.addEventListener('dblclick', this.handleDoubleClick);
 
+    const glassSetting = new URLSearchParams(window.location.search).get('glass');
     if (
       this.supportsGlassPane &&
-      new URLSearchParams(window.location.search).get('glass') === '1'
+      (glassSetting === '1' ||
+        (glassSetting === null && this.localLoadersConfiguration?.sceneId === 'cat'))
     ) {
       this.glassPane = new GaussianSplatGlassPane(this.device);
     }
