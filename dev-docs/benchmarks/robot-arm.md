@@ -22,3 +22,20 @@ node scripts/physics/benchmark-robot-arm.mjs http://127.0.0.1:5312/
 ```
 
 The GPU regression suite also commands a target step at 60 and 120 Hz, measures settling and overshoot, checks torque saturation, and presses the four-link arm against a stop before lifting clear.
+
+## Reduced-coordinate tree comparison
+
+The two solvers ran on the same Apple Metal WebGPU adapter in Chromium, using the same 3 kg load, body inertias, gravity, spring gains, torque caps, 120 Hz timestep and six-second warmup. The tree models the stationary support as a fixed base and the payload as a welded link. This fixture measures a suspended arm in free space. The ordered pipeline also performs collision discovery; the tree workload has no collision pass.
+
+| Solver | 30-step p50 / p95 | Max tip error | Max link-anchor drift | Max shoulder torque error | Original gates |
+| --- | --- | --- | --- | --- | --- |
+| Ordered, 64 iterations | 8.4 / 10.8 ms | 5.08 mm | 9.55 mm | 2.01% | Pass |
+| Reduced-coordinate | 0.6 / 0.9 ms | 0.0072 mm | 0.00014 mm | 0.0011% | Pass |
+
+The first 30 samples reproduce the original accuracy window. Continuing to 240 samples, the reduced-coordinate step took **1.0 ms p95** versus an 8.33 ms budget. It stayed within all three accuracy limits. Ordered took 9.9 ms p95 and its worst anchor drift and torque error reached 11.0 mm and 21.5%. Timing includes CPU encoding, submission and waiting for GPU completion. This establishes 120 Hz physics headroom for this desktop workload. Rendering, collisions, mobile hardware and other tree sizes need independent measurements.
+
+A separate −0.24 rad elbow command moved the payload in both simulations. Two simulated seconds later ordered and reduced-coordinate elbow angles were −0.244 and −0.247 rad, with tool errors of 2.1 and 7.3 cm. These transient samples are outside the static-hold qualification. [Raw measurements](./articulated-tree-apple.json).
+
+```sh
+node scripts/physics/benchmark-robot-arm.mjs http://127.0.0.1:5312/ --compare-tree
+```
