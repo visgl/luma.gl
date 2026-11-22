@@ -303,3 +303,5 @@ Use `consumeArrowGPURecordBatches(device, source, schema, consume, {maxBatchPayl
 The budget checks estimated prepared payload bytes before conversion. Transient conversion allocations, metadata, and unrelated GPU memory are outside that estimate. The iterator API also accepts the budget option and transfers batch ownership to the caller.
 
 Set `maxBatchGPUBytes` to check estimated peak conversion memory as well. The estimate includes already prepared columns, the active column output, temporary GPU source uploads, and temporal configuration buffers. It excludes driver overhead and allocations made by the consumer. Set both limits to enforce both checks.
+
+Use `splitOversizedBatches: true` to retry oversized batches as smaller contiguous row slices before upload. Slices retain the original source batch index and carry their own global row offsets. A single row that cannot fit stops the stream with a budget error.
