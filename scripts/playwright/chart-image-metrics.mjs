@@ -71,6 +71,26 @@ export function compareRadianceCaptures(actual, reference) {
   };
 }
 
+/** Summarize the per-pixel retained sample confidence stored in HDR alpha. */
+export function summarizeHistoryConfidence({width, height, view}) {
+  const pixelCount = width * height;
+  let total = 0;
+  let minimum = Infinity;
+  let maximum = 0;
+  let pixelsWithoutHistory = 0;
+  for (let pixel = 0; pixel < pixelCount; pixel++) {
+    const confidence = decodeHalf(view.getUint16(8 + pixel * 8 + 6, true));
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 256) {
+      throw new Error('Linear HDR history confidence must be finite and between 0 and 256');
+    }
+    total += confidence;
+    minimum = Math.min(minimum, confidence);
+    maximum = Math.max(maximum, confidence);
+    pixelsWithoutHistory += Number(confidence === 0);
+  }
+  return {minimum, maximum, mean: total / pixelCount, pixelsWithoutHistory};
+}
+
 /** Decode an IEEE 754 binary16 channel to a JavaScript number. */
 function decodeHalf(value) {
   const exponent = (value >> 10) & 31;
@@ -83,25 +103,56 @@ function decodeHalf(value) {
 
 /** Compare linear RMSE at costs covered by both recorded GPU timing curves. */
 export function compareEmitterGpuCosts(uniform, power) {
-  const uniformCurve = makeGpuCostCurve(uniform);
-  const powerCurve = makeGpuCostCurve(power);
-  if (uniformCurve.length < 2 || powerCurve.length < 2) {
+  const comparison = compareGpuCostCurves({uniform, power});
+  if (comparison.status !== 'interpolated') return comparison;
+  return {
+    status: comparison.status,
+    budgets: comparison.budgets.map(({gpuTimeMilliseconds, rootMeanSquaredError}) => ({
+      gpuTimeMilliseconds,
+      uniformRootMeanSquaredError: rootMeanSquaredError.uniform,
+      powerRootMeanSquaredError: rootMeanSquaredError.power
+    }))
+  };
+}
+
+/** Compare display RMSE across reconstruction modes at shared measured GPU costs. */
+export function compareReconstructionGpuCosts(unfiltered, spatial, variance) {
+  return compareGpuCostCurves({unfiltered, spatial, variance});
+}
+
+/** Summarize complete per-frame GPU timings using nearest-rank percentiles. */
+export function summarizeFrameGpuTimes(frameTimes, expectedFrames) {
+  if (!expectedFrames || frameTimes?.length !== expectedFrames ||
+    !frameTimes.every(time => Number.isFinite(time) && time > 0)) return null;
+  const sortedTimes = [...frameTimes].sort((first, second) => first - second);
+  return {
+    totalMilliseconds: frameTimes.reduce((total, time) => total + time, 0),
+    medianMilliseconds: sortedTimes[Math.ceil(sortedTimes.length * 0.5) - 1],
+    p95Milliseconds: sortedTimes[Math.ceil(sortedTimes.length * 0.95) - 1]
+  };
+}
+
+/** Compare measured curves without extrapolating any mode outside its observed costs. */
+function compareGpuCostCurves(measurementsByMode) {
+  const curves = Object.entries(measurementsByMode).map(([mode, measurements]) =>
+    [mode, makeGpuCostCurve(measurements)]);
+  if (curves.some(([, curve]) => curve.length < 2)) {
     return {status: 'unavailable', reason: 'Each mode needs two distinct GPU timing checkpoints'};
   }
-  const minimum = Math.max(uniformCurve[0].gpuTimeMilliseconds, powerCurve[0].gpuTimeMilliseconds);
-  const maximum = Math.min(uniformCurve.at(-1).gpuTimeMilliseconds, powerCurve.at(-1).gpuTimeMilliseconds);
+  const minimum = Math.max(...curves.map(([, curve]) => curve[0].gpuTimeMilliseconds));
+  const maximum = Math.min(...curves.map(([, curve]) => curve.at(-1).gpuTimeMilliseconds));
   if (minimum > maximum) {
     return {status: 'unavailable', reason: 'The measured GPU cost ranges do not overlap'};
   }
-  const budgets = [...new Set([...uniformCurve, ...powerCurve]
+  const budgets = [...new Set(curves.flatMap(([, curve]) => curve
     .map(point => point.gpuTimeMilliseconds)
-    .filter(cost => cost >= minimum && cost <= maximum))].sort((first, second) => first - second);
+    .filter(cost => cost >= minimum && cost <= maximum)))].sort((first, second) => first - second);
   return {
     status: 'interpolated',
     budgets: budgets.map(gpuTimeMilliseconds => ({
       gpuTimeMilliseconds,
-      uniformRootMeanSquaredError: interpolateGpuError(uniformCurve, gpuTimeMilliseconds),
-      powerRootMeanSquaredError: interpolateGpuError(powerCurve, gpuTimeMilliseconds)
+      rootMeanSquaredError: Object.fromEntries(curves.map(([mode, curve]) =>
+        [mode, interpolateGpuError(curve, gpuTimeMilliseconds)]))
     }))
   };
 }

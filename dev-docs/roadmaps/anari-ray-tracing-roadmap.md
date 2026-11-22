@@ -138,3 +138,9 @@ lights. With cutout filtering enabled, continuation and explicit light samples
 share a camera footprint propagated along the path. This includes triangle
 emitter endpoints and analytic-light shadow blockers. Refractive shadow transport
 remains open.
+
+
+The reconstruction benchmark compares unfiltered, spatial, and variance-guided
+presentation at fixed seeds and shared measured GPU costs. Motion captures can
+toggle reprojection at the same animation time. Independent pose-matched
+references and broader ghosting acceptance scenes remain open.

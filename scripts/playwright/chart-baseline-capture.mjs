@@ -6,7 +6,7 @@ import {resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
-import {compareEmitterGpuCosts, compareChartImages, compareRadianceCaptures, decodeRadianceCapture} from './chart-image-metrics.mjs';
+import {compareEmitterGpuCosts, compareChartImages, compareRadianceCaptures, decodeRadianceCapture, compareReconstructionGpuCosts, summarizeFrameGpuTimes, summarizeHistoryConfidence} from './chart-image-metrics.mjs';
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 const {values} = parseArgs({options: {
@@ -17,6 +17,8 @@ const {values} = parseArgs({options: {
   'linear-hdr': {type: 'boolean'},
   'gpu-timing': {type: 'boolean'},
   'compare-emitters': {type: 'boolean'},
+  'compare-reconstruction': {type: 'boolean'},
+  temporal: {type: 'string'},
   'maximum-rmse': {type: 'string'},
   view: {type: 'string', default: 'color'},
   'variance-guidance': {type: 'boolean'},
@@ -72,11 +74,19 @@ if (values['linear-hdr'] && (values.renderer !== 'raytrace' || values.view !== '
   throw new Error('Linear HDR capture requires the raytrace color view');
 }
 const compareEmitters = values['compare-emitters'];
-const gpuTiming = compareEmitters || values['gpu-timing'];
+const compareReconstruction = values['compare-reconstruction'];
+const gpuTiming = compareEmitters || compareReconstruction || values['gpu-timing'];
 if (gpuTiming && values.renderer !== 'raytrace') throw new Error('GPU timing requires raytrace');
 if (compareEmitters && (!values['linear-hdr'] || !values['frame-sweep'] ||
   values['emitter-selection'] !== undefined || values.emitters === 'off' || values.motion)) {
   throw new Error('Emitter comparison requires a static linear HDR frame sweep with both selection modes');
+}
+if (compareReconstruction && (compareEmitters || values['linear-hdr'] || !values['frame-sweep'] ||
+  frameCounts.length < 2 || values.view !== 'color' || values.motion || !denoise || values['variance-guidance'])) {
+  throw new Error('Reconstruction comparison requires a static display-RGB reference, two or more checkpoints, and a nonzero denoise radius');
+}
+if (values.temporal !== undefined && (values.renderer !== 'raytrace' || !['on', 'off'].includes(values.temporal))) {
+  throw new Error('Temporal override requires raytrace and must be on or off');
 }
 const url = new URL(values.url);
 if (gpuTiming) url.searchParams.set('captureGpuTiming', '1');
@@ -92,6 +102,7 @@ url.searchParams.set('seed', String(seed));
 url.searchParams.set('denoise', String(denoise));
 url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
+if (values.temporal !== undefined) url.searchParams.set('temporal', values.temporal);
 if (values['variance-guidance']) url.searchParams.set('varianceGuidance', '1');
 if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
 if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitters);
@@ -116,6 +127,26 @@ try {
     }
     const comparison = compareEmitterGpuCosts(measurementsBySelection.uniform, measurementsBySelection.power);
     await writeFile(resolve(root, 'emitter-comparison.json'), JSON.stringify(comparison, null, 2));
+  } else if (compareReconstruction) {
+    const measurements = {};
+    for (const [mode, radius, varianceGuidance] of [
+      ['unfiltered', 0, false], ['spatial', denoise, false], ['variance', denoise, true]
+    ]) {
+      url.searchParams.set('denoise', String(radius));
+      url.searchParams.set('varianceGuidance', varianceGuidance ? '1' : '0');
+      measurements[mode] = await captureSweep(resolve(root, mode));
+    }
+    const {unfiltered, spatial, variance} = measurements;
+    await writeFile(resolve(root, 'reconstruction-comparison.json'), JSON.stringify({
+      comparisonSpace: 'display-rgb',
+      reference: resolve(values.reference),
+      seed,
+      viewport: [width, height],
+      hardware: values.hardware,
+      browser: browser.version(),
+      measurements,
+      matchedGpuCost: compareReconstructionGpuCosts(unfiltered, spatial, variance)
+    }, null, 2));
   } else {
     await captureSweep(root);
   }
@@ -137,6 +168,7 @@ async function captureSweep(directory) {
   return measurements;
 }
 
+/** Capture one exact checkpoint and collect image error and optional GPU timings. */
 async function captureFrameCount(browser, output, frames) {
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
   try {
@@ -156,7 +188,8 @@ async function captureFrameCount(browser, output, frames) {
         rayResolution: document.querySelector('#scene-ray-tracing-resolution').textContent,
         rayFrame: document.querySelector('#scene-ray-tracing-frame').textContent,
         ownedMemory: document.querySelector('#scene-ray-memory').textContent,
-        sceneError: document.querySelector('#scene-error').textContent};
+        sceneError: document.querySelector('#scene-error').textContent,
+        animationTimeSeconds: canvas.dataset.animationTimeSeconds};
     });
     await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
     await mkdir(output, {recursive: true});
@@ -165,12 +198,12 @@ async function captureFrameCount(browser, output, frames) {
     if (!clip) throw new Error('The capture canvas is hidden');
     const capture = await page.screenshot({clip, path: `${output}/chart.png`, timeout: 60000});
     const frameGpuTimes = gpuTiming ? await canvas.evaluate(element => element.readCaptureGpuTimes()) : undefined;
-    const gpuTimeMilliseconds = frameGpuTimes?.length === frames &&
-      frameGpuTimes.every(time => Number.isFinite(time) && time > 0)
-      ? frameGpuTimes.reduce((total, time) => total + time, 0)
-      : null;
+    const frameGpuTiming = summarizeFrameGpuTimes(frameGpuTimes, frames);
+    const gpuTimeMilliseconds = frameGpuTiming?.totalMilliseconds ?? null;
+    const motionTimeSeconds = values.motion ? Number(metadata.animationTimeSeconds) : undefined;
     let comparison;
     let radianceSize;
+    let historyConfidence;
     if (values['linear-hdr']) {
       const radiance = await canvas.evaluate(element => element.readCaptureRadiance());
       if (!radiance) throw new Error('No ray-tracing history was available for linear HDR capture');
@@ -180,6 +213,7 @@ async function captureFrameCount(browser, output, frames) {
       const bytes = Buffer.concat([header, Buffer.from(radiance.base64, 'base64')]);
       const linearImage = decodeRadianceCapture(bytes);
       radianceSize = [linearImage.width, linearImage.height];
+      historyConfidence = summarizeHistoryConfidence(linearImage);
       await writeFile(`${output}/radiance.rgba16f`, bytes);
       if (referenceImage) comparison = {reference: resolve(values.reference), ...compareRadianceCaptures(linearImage, referenceImage)};
     } else if (referenceImage) {
@@ -187,14 +221,16 @@ async function captureFrameCount(browser, output, frames) {
     }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
     await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
-      gpuTimeMilliseconds, frameGpuTimes,
-      comparisonSpace: values['linear-hdr'] ? 'linear-hdr' : 'display-rgb', radianceSize,
+      gpuTimeMilliseconds, frameGpuTimes, frameGpuTiming, motionTimeSeconds,
+      comparisonSpace: values['linear-hdr'] ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
       note: 'Elapsed time includes startup and output readback; GPU pass timestamps exclude browser startup, screenshots and readback. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
     console.log(output);
     if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
     return {frames, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
-      hardware: values.hardware, timeToCaptureMilliseconds, gpuTimeMilliseconds, radianceSize, comparison};
+      hardware: values.hardware, timeToCaptureMilliseconds, gpuTimeMilliseconds, frameGpuTiming,
+      motionTimeSeconds, drawingBuffer: metadata.drawingBuffer, ownedMemory: metadata.ownedMemory,
+      radianceSize, historyConfidence, comparison};
   } finally {
     await page.close();
   }
