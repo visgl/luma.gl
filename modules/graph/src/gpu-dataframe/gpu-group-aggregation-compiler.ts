@@ -154,7 +154,8 @@ export function compileGPUDataFrameGroupedAggregation<
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   projection?: GPUGroupedOutputProjection,
   ordering?: readonly GPUGlobalSortKey<keyof Result & string>[],
-  having?: GPUExpression<boolean, string>
+  having?: GPUExpression<boolean, string>,
+  maxMeanScratchBytes?: number
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, [key], definitions);
@@ -173,7 +174,8 @@ export function compileGPUDataFrameGroupedAggregation<
         projection?.columns,
         false,
         ordering,
-        having
+        having,
+        maxMeanScratchBytes
       )
   });
 }
@@ -232,7 +234,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   columns?: readonly string[],
   observed = false,
   orderBy?: readonly GPUGlobalSortKey<keyof Result & string>[],
-  having?: GPUExpression<boolean, string>
+  having?: GPUExpression<boolean, string>,
+  maxMeanScratchBytes?: number
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -369,7 +372,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           values: state.values,
           mask: state.mask,
           output: graph.importGPUVector(`${metricId}-output`, output).data[0],
-          operation: definition.operation
+          operation: definition.operation,
+          maxMeanScratchBytes
         })
       );
     }

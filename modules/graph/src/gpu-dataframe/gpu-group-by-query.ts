@@ -37,7 +37,12 @@ export type GPUDataFrameColumnNamesOfFormat<
 }[SelectedColumns];
 
 /** Optional dense key-domain size when source categorical labels cannot establish it. */
-export type GPUDataFrameGroupByOptions = Readonly<{groupCount?: number}>;
+export type GPUDataFrameGroupByOptions = Readonly<{
+  /** Dense category count when no dictionary supplies it. */
+  groupCount?: number;
+  /** Maximum temporary bytes for a partition of AVG accumulators. */
+  maxMeanScratchBytes?: number;
+}>;
 
 /** One named count or a float32 statistic referencing a selected numerical column. */
 export type GPUDataFrameAggregationValue<
@@ -85,6 +90,8 @@ export class GPUDataFrameGroupByQuery<
   readonly key: Key;
   /** Number of output groups inferred from labels or supplied explicitly by the caller. */
   readonly groupCount: number;
+  /** Optional temporary AVG count budget. */
+  readonly maxMeanScratchBytes?: number;
 
   /** Validates grouping metadata entirely on the CPU. @internal */
   constructor(
@@ -116,6 +123,13 @@ export class GPUDataFrameGroupByQuery<
       throw new Error('GPUDataFrame grouping requires a positive uint32 group count');
     }
 
+    if (
+      options.maxMeanScratchBytes !== undefined &&
+      (!Number.isSafeInteger(options.maxMeanScratchBytes) || options.maxMeanScratchBytes < 4)
+    ) {
+      throw new Error('GPUDataFrame mean scratch budget requires at least four bytes');
+    }
+    this.maxMeanScratchBytes = options.maxMeanScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -132,7 +146,7 @@ export class GPUDataFrameGroupByQuery<
       Key,
       Definitions,
       Source
-    >(this.query, this.key, this.groupCount, definitions);
+    >(this.query, this.key, this.groupCount, definitions, this.maxMeanScratchBytes);
   }
 }
 
@@ -150,6 +164,8 @@ export class GPUDataFrameGroupedAggregationQuery<
   readonly key: Key;
   /** Complete category domain and grouped output row count. */
   readonly groupCount: number;
+  /** Optional temporary AVG count budget. */
+  readonly maxMeanScratchBytes?: number;
   /** Named operations normalized in the caller's original object insertion order. */
   readonly definitions: readonly GPUDataFrameAggregationDefinition[];
 
@@ -158,8 +174,10 @@ export class GPUDataFrameGroupedAggregationQuery<
     query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
     key: Key,
     groupCount: number,
-    definitions: Definitions
+    definitions: Definitions,
+    maxMeanScratchBytes?: number
   ) {
+    this.maxMeanScratchBytes = maxMeanScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -185,7 +203,11 @@ export class GPUDataFrameGroupedAggregationQuery<
       this.key,
       this.groupCount,
       this.definitions,
-      graph
+      graph,
+      undefined,
+      undefined,
+      undefined,
+      this.maxMeanScratchBytes
     );
   }
 }
