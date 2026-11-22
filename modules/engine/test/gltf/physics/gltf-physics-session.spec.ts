@@ -243,34 +243,49 @@ it('exports a settled animated collider frame and shared analytic scale without 
   /** Move the first collider to an independently animated child; both bodies share one shape. */
   const original = document();
   const nodes = [...original.nodes!];
-  nodes[1].children = [3];
+  nodes[1].children = [3, 4, 5];
   const extension = nodes[1].extensions!['KHR_physics_rigid_bodies'] as Record<string, unknown>;
   delete extension['collider'];
   nodes.push({
     translation: [1, 0, 0],
     extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}, physicsMaterial: 0}}}
   });
-  /** The exported child must remain a valid target of an authored TRS channel. */
+  // Render-only siblings may have singular scales both before and after animation.
+  nodes.push({scale: [0, 1, 1]}, {scale: [1, 0, 1]});
   const source: GLTFPhysicsDocument = {
     ...original,
     nodes,
-    animations: [{channels: [{target: {node: 3, path: 'scale'}}]}]
+    animations: [
+      {
+        channels: [
+          {target: {node: 3, path: 'scale'}},
+          {target: {node: 4, path: 'scale'}},
+          {
+            target: {
+              path: 'pointer',
+              extensions: {KHR_animation_pointer: {pointer: '/nodes/5/scale/0'}}
+            }
+          }
+        ]
+      }
+    ]
   };
   /** Reuse the real importer and the engine's animation/physics session. */
   const options = {animationOwnership: 'scenegraph', propertyBindings: true} as const;
   const description = parseGLTFPhysics(source, options);
   expect(description.issues).toEqual([]);
-  /** The child is the only edited transform and the shared shape stays shared. */
   const child = description.sceneNodes.get(3)!;
+  const renderOnlyChild = description.sceneNodes.get(4)!;
   const session = await ScenegraphPhysicsSession.create(
     device,
     makeGLTFPhysicsScene(description, undefined, {gravity: [0, 0, 0]})
   );
   try {
-    await session.step(new Set([child]), () => {
+    await session.step(new Set([child, renderOnlyChild]), () => {
       child.setPosition([2, 0, 0]);
       child.setScale([1.5, 2, 1]);
       child.updateMatrix();
+      renderOnlyChild.setScale([0, -2, 3]).updateMatrix();
     });
     /** Source-only export cannot reconstruct a child changed by live animation. */
     await expect(exportGLTFPhysicsState(source, description, session.world)).rejects.toThrow(
@@ -283,6 +298,10 @@ it('exports a settled animated collider frame and shared analytic scale without 
     expect(saved.nodes![3].matrix).toBeUndefined();
     expect(saved.nodes![3].translation).toEqual([2, 0, 0]);
     expect(saved.nodes![3].scale).toEqual([1.5, 2, 1]);
+    expect(saved.nodes![4].matrix).toBeUndefined();
+    expect(saved.nodes![4].scale).toEqual([0, -2, 3]);
+    expect(saved.nodes![5].matrix).toBeUndefined();
+    expect(saved.nodes![5].scale).toEqual([1, 0, 1]);
     expect(source.nodes![3].translation).toEqual([1, 0, 0]);
     /** Reimport must recook the same live dimensions exactly once. */
     const roundTrip = parseGLTFPhysics(saved, options);

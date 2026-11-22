@@ -239,7 +239,9 @@ function writeLiveTransforms(
         typeof extension.pointer === 'string'
       ) {
         /** Snapshot node indices remain identical to source indices. */
-        const match = /^\/nodes\/(\d+)\/(translation|rotation|scale)$/.exec(extension.pointer);
+        const match = /^\/nodes\/(\d+)\/(translation|rotation|scale)(?:\/\d+)?$/.exec(
+          extension.pointer
+        );
         if (match) animated.add(Number(match[1]));
       }
     }
@@ -250,7 +252,7 @@ function writeLiveTransforms(
     if (!node) throw new Error('Unknown export scene node');
     if (animated.has(index)) {
       /** Retain valid glTF authoring channels for non-body animated descendants as well. */
-      const transform = decomposePhysicsTransform(new Matrix4(current.matrix));
+      const transform = getLiveNodeComponents(current, node);
       delete node.matrix;
       node.translation = transform.position;
       node.rotation = transform.rotation;
@@ -262,6 +264,40 @@ function writeLiveTransforms(
       delete node.scale;
     }
   }
+}
+
+/** Preserve signed and zero scales when the local matrix comes from known TRS. */
+function getLiveNodeComponents(
+  current: ScenegraphNode,
+  source: NonNullable<GLTFPhysicsDocument['nodes']>[number]
+): {position: number[]; rotation: number[]; scale: number[]} {
+  const position = Array.from(current.position);
+  const scale = Array.from(current.scale);
+  const rotationMatrix = new Matrix4();
+  if (current.rotation.length === 4) rotationMatrix.fromQuaternion(current.rotation);
+  else rotationMatrix.rotateXYZ(current.rotation);
+  const liveMatrix = new Matrix4().translate(position).multiplyRight(rotationMatrix).scale(scale);
+  if (liveMatrix.every((value, index) => value === current.matrix[index])) {
+    const rotation =
+      current.rotation.length === 4
+        ? Array.from(current.rotation)
+        : decomposePhysicsTransform(rotationMatrix).rotation;
+    return {position, rotation, scale};
+  }
+
+  // Some imported nodes initialize only the matrix. Retain the source TRS when it still matches.
+  if (!source.matrix) {
+    const authoredPosition = source.translation ?? [0, 0, 0];
+    const authoredRotation = source.rotation ?? [0, 0, 0, 1];
+    const authoredScale = source.scale ?? [1, 1, 1];
+    const authoredMatrix = new Matrix4()
+      .translate(authoredPosition)
+      .multiplyRight(new Matrix4().fromQuaternion(authoredRotation))
+      .scale(authoredScale);
+    if (authoredMatrix.every((value, index) => value === current.matrix[index]))
+      return {position: authoredPosition, rotation: authoredRotation, scale: authoredScale};
+  }
+  return decomposePhysicsTransform(new Matrix4(current.matrix));
 }
 
 /** Check that the native scene reproduces the live collider geometry and placement. */
