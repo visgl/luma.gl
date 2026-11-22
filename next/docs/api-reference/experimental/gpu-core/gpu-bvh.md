@@ -112,3 +112,59 @@ graph.add(bvh);
 ```
 
 All views must be packed and belong to the target command graph. `nodeMinima`, `nodeMaxima`, and `nodeChildren` each contain `2 * leafCapacity - 1` rows; `leafIds` contains `leafCapacity` rows. The primitive does not allocate caller-visible storage, submit, read back, or spatially sort the hierarchy. Use [`GPUBVHQuery`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-bvh-query.md) for exact point containment and bounds-intersection traversal.
+
+## Share box inputs with math.gl[​](#share-box-inputs-with-mathgl "Direct link to Share box inputs with math.gl")
+
+math.gl's [BoxIndex](https://github.com/visgl/math.gl/tree/master/docs/modules/geometry/spatial-index) and luma.gl can start from the same packed box records. Each record contains the minimum coordinates followed by the maximum coordinates. Use `packGPUBVHBounds` to split the input into the two float32 source views expected by `GPUBVH`.
+
+```
+import {BoxIndex} from '@math.gl/geometry/spatial-index';
+
+import {Buffer} from '@luma.gl/core';
+
+import {packGPUBVHBounds} from '@luma.gl/graph/gpu-core';
+
+
+
+const boxes = {
+
+  dimension: 3 as const,
+
+  bounds: new Float64Array([1000000000, 0, 0, 1000000002, 1, 3])
+
+};
+
+const cpuIndex = new BoxIndex(boxes);
+
+const packed = packGPUBVHBounds({...boxes, origin: [1000000000, 0, 0]});
+
+
+
+const minimumBuffer = device.createBuffer({data: packed.minima, usage: Buffer.STORAGE});
+
+const maximumBuffer = device.createBuffer({data: packed.maxima, usage: Buffer.STORAGE});
+
+const minimumSource = graph.importBuffer(
+
+  {id: 'box-minima', byteLength: minimumBuffer.byteLength, usage: minimumBuffer.usage},
+
+  minimumBuffer
+
+);
+
+const maximumSource = graph.importBuffer(
+
+  {id: 'box-maxima', byteLength: maximumBuffer.byteLength, usage: maximumBuffer.usage},
+
+  maximumBuffer
+
+);
+
+const minima = graph.createDataView(minimumSource, {format: packed.format, length: packed.length});
+
+const maxima = graph.createDataView(maximumSource, {format: packed.format, length: packed.length});
+```
+
+Use these views as the `minima` and `maxima` inputs in the previous example. The caller owns the upload buffers. Use a nonzero buffer allocation for empty inputs. Generated GPU leaf IDs match input rows, so results can use the same application IDs as the CPU index. When an origin is supplied, use that local frame for GPU queries as well.
+
+The adapter rounds lower and upper bounds outward when narrowing to float32, so GPU box candidates can include extra rows near a boundary. math.gl builds its static CPU tree and luma.gl builds its own GPU tree, which can refit from new bounds. For triangle meshes, the same packed vertex and triangle arrays can initialize math.gl's `TriangleBVH` or luma.gl's `makeTriangleMeshGeometry`.

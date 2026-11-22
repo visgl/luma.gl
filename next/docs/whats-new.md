@@ -14,6 +14,8 @@
 
 * GPU physics can batch rays and sphere sweeps with ordered nearest-hit results in one GPU dispatch and compact readback. [Batched collision casts](https://luma.gl/next/docs/api-reference/graph/gpu-physics.md#batched-collision-casts)
 
+* Opt-in GPU BVH refits for batched ray and sphere casts against sphere and box colliders, with indexed and direct scan comparisons in Physics Batch Lab.
+
 See the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
