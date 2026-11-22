@@ -240,6 +240,8 @@ function buildGPUSQLPlan(
       const occupied = new Set(Object.keys(definitions));
       const selectedKeys = new Map<string, {source: string; output: string}>();
       const keyByItem = new Map<GPUSQLSelectItem, {source: string; output: string}>();
+      /** Reuses a source field or creates an internal column for a computed group key. */
+
       const materializeKey = (expression: GPUExpressionNode): string => {
         if (expression.kind === 'column') return expression.name;
         let source: string;
