@@ -17,7 +17,7 @@ export type BackendModule = Record<string, unknown>;
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
  * with dynamic imports when a requested handler has not been registered for those device types.
  */
-export class BackendRegistry {
+class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
     cpu: cpuBackend
   };
@@ -32,31 +32,20 @@ export class BackendRegistry {
     deviceType: string,
     moduleOrPromise: BackendModule | Promise<BackendModule>
   ): Promise<BackendModule> {
-    return this._addModule(deviceType, moduleOrPromise, true);
-  }
-
-  private _addModule(
-    deviceType: string,
-    moduleOrPromise: BackendModule | Promise<BackendModule>,
-    overwrite: boolean
-  ): Promise<BackendModule> {
     const existingModuleOrPromise = this._modules[deviceType];
-    const mergeModules = (existingModule: BackendModule, incomingModule: BackendModule) =>
-      overwrite ? {...existingModule, ...incomingModule} : {...incomingModule, ...existingModule};
-    if (
-      typeof (moduleOrPromise as Promise<BackendModule>).then === 'function' ||
-      typeof (existingModuleOrPromise as Promise<BackendModule> | undefined)?.then === 'function'
-    ) {
-      const loader = Promise.all([existingModuleOrPromise || {}, moduleOrPromise]).then(
-        ([existingModule, incomingModule]) => mergeModules(existingModule, incomingModule)
-      );
+
+    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
+      const loader = Promise.all([
+        Promise.resolve(existingModuleOrPromise || {}),
+        moduleOrPromise as Promise<BackendModule>
+      ]).then(([existingModule, incomingModule]) => ({
+        ...existingModule,
+        ...incomingModule
+      }));
       this._modules[deviceType] = loader;
       loader
         .then(module => {
-          // A later registration or clear() owns the registry entry now.
-          if (this._modules[deviceType] === loader) {
-            this._modules[deviceType] = module;
-          }
+          this._modules[deviceType] = module;
         })
         .catch(ex => {
           log.error(`Failed to register ${deviceType} backend: ${ex}`)();
@@ -64,10 +53,31 @@ export class BackendRegistry {
       return loader;
     }
 
-    const mergedModule = mergeModules(
-      (existingModuleOrPromise || {}) as BackendModule,
-      moduleOrPromise as BackendModule
-    );
+    if (
+      existingModuleOrPromise &&
+      typeof (existingModuleOrPromise as Promise<BackendModule>).then === 'function'
+    ) {
+      const loader = Promise.resolve(existingModuleOrPromise)
+        .then(existingModule => ({
+          ...existingModule,
+          ...moduleOrPromise
+        }))
+        .then(module => {
+          this._modules[deviceType] = module;
+          return module;
+        })
+        .catch(ex => {
+          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+          throw ex;
+        });
+      this._modules[deviceType] = loader;
+      return loader;
+    }
+
+    const mergedModule = {
+      ...(existingModuleOrPromise || {}),
+      ...moduleOrPromise
+    };
     this._modules[deviceType] = mergedModule;
     return Promise.resolve(mergedModule);
   }
@@ -78,21 +88,28 @@ export class BackendRegistry {
    * Pending async backend registrations are awaited before lookup.
    */
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
-    let resolvedModule = await this._modules[deviceType];
-    if (typeof resolvedModule?.[operationName] !== 'function') {
+    let module = this._modules[deviceType];
+    if (!module) {
       if (deviceType === 'webgl') {
-        resolvedModule = await this._addModule('webgl', import('../operations/webgl/index'), false);
+        module = this.add('webgl', import('../operations/webgl/index'));
       } else if (deviceType === 'webgpu') {
-        resolvedModule = await this._addModule(
-          'webgpu',
-          import('../operations/webgpu/index'),
-          false
-        );
-      } else if (!resolvedModule) {
+        module = this.add('webgpu', import('../operations/webgpu/index'));
+      } else {
         throw new Error(`${deviceType} backend not registered`);
       }
     }
-    const operationHandler = resolvedModule[operationName];
+    const resolvedModule = await module;
+    let operationHandler = resolvedModule[operationName];
+    // A partial registration must not hide the other built-in operations.
+    if (typeof operationHandler !== 'function') {
+      if (deviceType === 'webgl') {
+        const defaultModule: BackendModule = await import('../operations/webgl/index');
+        operationHandler = defaultModule[operationName];
+      } else if (deviceType === 'webgpu') {
+        const defaultModule: BackendModule = await import('../operations/webgpu/index');
+        operationHandler = defaultModule[operationName];
+      }
+    }
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
