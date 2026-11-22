@@ -4,7 +4,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {ANARIDevice} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it, vi} from 'vitest';
 
 it('mesh-backed chart shapes render in raster and ray modes and preserve transformed picks', async () => {

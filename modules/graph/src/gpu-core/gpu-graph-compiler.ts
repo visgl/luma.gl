@@ -5,6 +5,9 @@
 import {lowerGPUUpload, lowerGPUCopy, lowerGPUTextureCopy} from './gpu-transfer-lowering';
 import {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
 import {GPUCompactionOperation} from './gpu-compaction-operation';
+import {GPUGraphGroupAggregation, GPUGraphReduction} from './gpu-semantic-aggregation-operation';
+import {GPUGroupAggregation} from './gpu-group-aggregation';
+import {GPUReduction} from './gpu-reduction';
 import {GPUCompaction} from './gpu-compaction';
 
 import type {TextureFormat} from '@luma.gl/core';
@@ -108,6 +111,7 @@ export class GPUGraphCompiler<Parameters = void> {
   readonly capabilities: GPUGraphBackendCapabilities;
   readonly lowerings: readonly GPUOperationLowering<Parameters>[];
   private compactionIndex = 0;
+  private aggregationIndex = 0;
   constructor(device: Device, lowerings: readonly GPUOperationLowering<Parameters>[] = []) {
     this.device = device;
     this.capabilities = Object.freeze({
@@ -131,6 +135,7 @@ export class GPUGraphCompiler<Parameters = void> {
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
     this.compactionIndex = 0;
+    this.aggregationIndex = 0;
     // Bound external partitions must be available when resolving shape-inheriting results.
     program = program.clone();
     for (const vector of program.vectors) {
@@ -336,6 +341,54 @@ export class GPUGraphCompiler<Parameters = void> {
     return [
       {type: 'vector-upload', lower: lowerGPUUpload},
       {type: 'vector-copy', lower: lowerGPUCopy},
+      {
+        type: 'group-aggregation',
+        lower: (operation: GPUGraphGroupAggregation, context) => {
+          const {props} = operation;
+          const id = `${operation.id}-${this.aggregationIndex++}`;
+          const keys = context.resolveVector<'uint32'>(props.keys);
+          const mask = props.mask ? context.resolveVector<'uint32'>(props.mask) : undefined;
+          if (props.operation === 'count') {
+            context.graph.add(
+              new GPUGroupAggregation({
+                id,
+                keys,
+                mask,
+                operation: 'count',
+                output: getAggregationOutput(context.resolveVector<'uint32'>(props.output))
+              })
+            );
+          } else {
+            context.graph.add(
+              new GPUGroupAggregation({
+                id,
+                keys,
+                mask,
+                operation: props.operation,
+                values: context.resolveVector<'float32'>(props.values),
+                output: getAggregationOutput(context.resolveVector<'float32'>(props.output))
+              })
+            );
+          }
+        }
+      },
+      {
+        type: 'reduction',
+        lower: (operation: GPUGraphReduction, context) => {
+          const {props} = operation;
+          context.graph.add(
+            new GPUReduction({
+              id: `${operation.id}-${this.aggregationIndex++}`,
+              input: context.resolveVector<'uint32' | 'sint32' | 'float32'>(props.input),
+              mask: props.mask ? context.resolveVector<'uint32'>(props.mask) : undefined,
+              operation: props.operation,
+              output: getAggregationOutput(
+                context.resolveVector<'uint32' | 'sint32' | 'float32'>(props.output)
+              )
+            })
+          );
+        }
+      },
       {
         type: 'compaction',
         lower: (operation: GPUCompactionOperation, context) => {
@@ -759,4 +812,12 @@ function getTransientChunkLengths(
     lengths.push(Math.min(maximumLength, length - offset));
   }
   return lengths;
+}
+
+// These reduction kernels write one packed destination, never just the first of several chunks.
+function getAggregationOutput<Format extends 'uint32' | 'sint32' | 'float32'>(
+  output: GraphVectorView<Format>
+) {
+  assert(output.data.length === 1);
+  return output.data[0];
 }

@@ -46,6 +46,8 @@ export type {
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphCompileOptions,
+  GPUCommandGraphKernelMetadata,
   GPUCommandGraphResourceSummary,
   GPUCommandGraphNodePublication,
   GPUCommandGraphNodeWorkloadEstimate,
@@ -140,6 +142,8 @@ export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
 export {GPUGather} from './gpu-gather';
 export type {GPUGatherFormat, GPUGatherProps} from './gpu-gather';
+export {GPUScatter} from './gpu-scatter';
+export type {GPUScatterFormat, GPUScatterProps} from './gpu-scatter';
 export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
@@ -177,6 +181,15 @@ export type {
   GPUWorkgroupReductionBenchmarkReport,
   GPUWorkgroupReductionBenchmarkStrategy
 } from './gpu-workgroup-reduction-benchmark';
+export {GPUSegmentedScan} from './gpu-segmented-scan';
+export type {GPUSegmentedScanMode, GPUSegmentedScanProps} from './gpu-segmented-scan';
+
+export {GPUSegmentedReduction} from './gpu-segmented-reduction';
+export type {
+  GPUSegmentedReductionOperation,
+  GPUSegmentedReductionProps
+} from './gpu-segmented-reduction';
+
 export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
@@ -392,6 +405,8 @@ export type {
   GPUHistogramProps
 } from './gpu-histogram';
 
+export {GPU_GRID_COORDINATE_WGSL} from './gpu-grid-coordinate';
+
 export {GPUGridBinning} from './gpu-grid-binning';
 export type {
   GPUGridBinningBounds,
@@ -424,6 +439,8 @@ export type {
 
 export {GPUBVH} from './gpu-bvh';
 export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats, GPUBVHStrategy} from './gpu-bvh';
+export {packGPUBVHBounds} from './gpu-bvh-bounds';
+export type {GPUBVHBoundsInput, GPUBVHPackedBounds} from './gpu-bvh-bounds';
 export {GPUSegmentedBVH} from './gpu-segmented-bvh';
 export type {GPUBVHSegment, GPUSegmentedBVHProps} from './gpu-segmented-bvh';
 
@@ -637,6 +654,12 @@ export {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-oper
 export {GPUGraphCSRMatrix, GPUGraphSpMV} from './gpu-semantic-spmv';
 export {createGPUConjugateGradientGraph} from './gpu-conjugate-gradient-program';
 
+export {GPUAdaptiveSpMV} from './gpu-adaptive-spmv';
+export type {GPUAdaptiveSpMVProps} from './gpu-adaptive-spmv';
+export type {GPUSpMVRowStatistics, GPUSpMVStrategyId} from './gpu-spmv-strategy';
+export {GPUJacobiPCG} from './gpu-pcg';
+export type {GPUJacobiPCGProps, GPUJacobiPCGResult} from './gpu-pcg';
+
 export {GPUCOOToCSR} from './gpu-coo-to-csr';
 export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';
 export {GPURunLengthEncode, GPUUnique} from './gpu-run-length-encode';
@@ -702,3 +725,12 @@ export type {
   GPUCPUVector,
   GPUCPUResult
 } from './gpu-cpu-operation';
+
+export {GPUGraphGroupAggregation, GPUGraphReduction} from './gpu-semantic-aggregation-operation';
+export type {
+  GPUGraphGroupAggregationProps,
+  GPUGraphReductionProps
+} from './gpu-semantic-aggregation-operation';
+
+export {GPUCommandGraphSubmissionPacer} from './gpu-command-graph-submission-pacer';
+export type {GPUCommandGraphSubmissionPacerProps} from './gpu-command-graph-submission-pacer';

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Parameters, log} from '../../../index';
+import {type DeviceFeatures, Parameters, log} from '../../../index';
+import {hasStencilFaceState, resolveStencilFace} from '../../../api/adapter/types/stencil-state';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -17,23 +18,11 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
   return descriptor.depthStencil;
 }
 
-function addDepthStencilFront(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
-  const depthStencil = addDepthStencil(descriptor);
-  // @ts-ignore
-  return depthStencil.stencilFront;
-}
-
-function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
-  const depthStencil = addDepthStencil(descriptor);
-  // @ts-ignore
-  return depthStencil.stencilBack;
-}
-
 /**
  * Supports for luma.gl's flat parameter space
  * Populates the corresponding sub-objects in a GPURenderPipelineDescriptor
  */
-export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
+export const PARAMETER_TABLE: Partial<Record<keyof Parameters, Function>> = {
   // RASTERIZATION PARAMETERS
 
   cullMode: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
@@ -96,46 +85,6 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
   stencilWriteMask: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilWriteMask = value;
-  },
-
-  stencilCompare: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.compare = value;
-    stencilBack.compare = value;
-  },
-
-  stencilPassOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.passOp = value;
-    stencilBack.passOp = value;
-  },
-
-  stencilFailOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.failOp = value;
-    stencilBack.failOp = value;
-  },
-
-  stencilDepthFailOperation: (
-    _: keyof Parameters,
-    value: any,
-    descriptor: GPURenderPipelineDescriptor
-  ) => {
-    const stencilFront = addDepthStencilFront(descriptor);
-    const stencilBack = addDepthStencilBack(descriptor);
-    stencilFront.depthFailOp = value;
-    stencilBack.depthFailOp = value;
   },
 
   // MULTISAMPLE
@@ -231,7 +180,17 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     blend.alpha.dstFactor = value;
   },
 
-  unclippedDepth: notSupported,
+  unclippedDepth: (
+    _: keyof Parameters,
+    value: boolean,
+    descriptor: GPURenderPipelineDescriptor,
+    features?: Pick<DeviceFeatures, 'has'>
+  ) => {
+    descriptor.primitive = {
+      ...descriptor.primitive,
+      unclippedDepth: value && Boolean(features?.has('depth-clip-control'))
+    };
+  },
   provokingVertex: notSupported,
   polygonMode: notSupported,
   polygonOffsetLine: notSupported,
@@ -285,11 +244,17 @@ const DEFAULT_PIPELINE_DESCRIPTOR: GPURenderPipelineDescriptor = {
 
 export function applyParametersToRenderPipelineDescriptor(
   pipelineDescriptor: GPURenderPipelineDescriptor,
-  parameters: Parameters = {}
+  parameters: Parameters = {},
+  features?: Pick<DeviceFeatures, 'has'>
 ): void {
   // Apply defaults
   Object.assign(pipelineDescriptor, {...DEFAULT_PIPELINE_DESCRIPTOR, ...pipelineDescriptor});
-  setParameters(pipelineDescriptor, parameters);
+  setParameters(pipelineDescriptor, parameters, features);
+  if (hasStencilFaceState(parameters)) {
+    const depthStencil = addDepthStencil(pipelineDescriptor);
+    depthStencil.stencilFront = resolveStencilFace(parameters, parameters.stencilFront);
+    depthStencil.stencilBack = resolveStencilFace(parameters, parameters.stencilBack);
+  }
   // Factor setters create blend state; explicit disabling must win regardless of key order.
   if (parameters.blend === false) {
     for (const target of pipelineDescriptor.fragment?.targets || []) {
@@ -301,15 +266,19 @@ export function applyParametersToRenderPipelineDescriptor(
 // Apply any supplied parameters
 function setParameters(
   pipelineDescriptor: GPURenderPipelineDescriptor,
-  parameters: Parameters
+  parameters: Parameters,
+  features?: Pick<DeviceFeatures, 'has'>
 ): void {
   for (const [key, value] of Object.entries(parameters)) {
     if (value === undefined) {
       continue;
     }
+    if (key.startsWith('stencil') && key !== 'stencilReadMask' && key !== 'stencilWriteMask') {
+      continue;
+    }
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];
     if (setterFunction) {
-      setterFunction(key, value, pipelineDescriptor);
+      setterFunction(key, value, pipelineDescriptor, features);
     } else {
       log.error(`Illegal parameter ${key} in WebGPU`)();
     }

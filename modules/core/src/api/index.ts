@@ -30,7 +30,8 @@ export type {PresentationContextProps} from './adapter/presentation-context';
 
 export {PresentationContext} from './adapter/presentation-context';
 
-export {Resource, type ResourceProps} from './adapter/resources/resource';
+export {Resource} from './adapter/resources/resource';
+export {DeviceResource, type DeviceResourceProps} from './adapter/resources/device-resource';
 
 export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
 
@@ -72,6 +73,7 @@ export {ShaderFactory} from './factories/shader-factory';
 export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
 
 export type {
+  ClipDepthMode,
   RenderPassProps,
   RenderPassDrawOptions,
   RenderPassBindingOptions
@@ -143,6 +145,7 @@ export type {
   RasterizationParameters,
   CompareFunction,
   StencilOperation,
+  StencilFaceState,
   DepthStencilParameters,
   BlendFactor,
   BlendOperation,

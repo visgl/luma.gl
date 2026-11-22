@@ -6,7 +6,7 @@ import {describe, expect, it, vi} from 'vitest';
 import type {ReadonlyCRSDefinition} from '@math.gl/geospatial/crs';
 import {projectionEngine, ProjectionTransform} from '@math.gl/geospatial/projection';
 import {evaluateProjectionProgram, invertProjectionProgram} from '@luma.gl/graph/gpu-project';
-import {planCRSProjection, type ProjectionPlanningResult} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection, type ProjectionPlanningResult} from '@luma.gl/graph/gpu-project-crs';
 import {
   geographicCRS,
   makeTransverseMercatorCRS,

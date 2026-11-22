@@ -195,3 +195,53 @@ Try [glTF Physics](/examples/gltf/physics),
 [Authored Scene Stress](/examples/gltf/authored-scene-stress),
 [Newton's Cradle](/examples/experimental/newtons-cradle), and
 [Wrecking Ball](/examples/experimental/wrecking-ball) to explore these paths.
+
+## Composed glTF scenes and ragdolls
+
+With a loader that supports the glTF 2.1 draft, enable
+`gltf: {loadExternalAssets: true}` when decoding. Pass the decoded document to
+`createComposedScenegraphsFromGLTF(device, source, {storageSkinPalettes: true})`.
+Each referencing node receives its own scenegraph objects, scene controllers, and
+materials. Traverse `composition.root.scene` to render the result. Each entry in
+`composition.instances` also exposes its source JSON and document-local node map.
+Use the instance's mount path or its resolved node objects to distinguish repeated
+authoring names. Destroy the composition after disposing any physics sessions that borrow it.
+
+To make a ragdoll, author dynamic limb bodies and physical joints around a normal
+skinned mesh. Each bone needs a body or a body ancestor. The physical joint attachments
+can be separate scenegraph nodes so their frames are independent of the skin bind pose.
+
+1. For imported rigs, use `parseGLTFPhysics` with `animationOwnership: 'scenegraph'`
+   and `preserveAnimatedBodyModes: true`. Use `makeGLTFPhysicsScene` with the
+   instance's nodes and root, then create a `ScenegraphPhysicsSession`. For a
+   programmatic rig, supply the same body and joint definitions through the engine session.
+2. While the animation plays, sample the clip before each fixed step and pass its active
+   nodes to `session.encode`. The session temporarily makes their bodies kinematic.
+3. At release, leave those nodes out of the active set. The bodies resume their
+   authored dynamic mode from the last accepted pose and velocity. After encoding that
+   step, call `ragdoll.encode(encoder, session.publication, meshWorldMatrix)` with a
+   `ScenegraphRagdoll` connected to the existing skin binding. The mesh matrix uses the
+   same origin-relative space as the simulation. Submit before drawing.
+4. To resume animation, reset the ragdoll's palette ownership and then sample the
+   clip. Dispose the ragdoll before disposing the skin controller or its composition.
+
+The palette transfer reads the GPU-published body matrices and writes the same storage buffer
+the skin shader already uses. Ordinary CPU-authored animation can continue on another
+instance of the same asset. The current path uses ordered rigid-body joints and WebGPU
+storage palettes. It supports passive and motor-driven ragdolls with authored rigid colliders and fixed
+body-to-bone offsets.
+
+[Try Marionette Theater](/examples/gltf/marionette-theater).
+
+### Recovering an animated joint pose
+
+Marionette Theater gives each puppet three angular drive rows per articulation.
+Release a puppet to disable its motors. **Recover pose** enables its motors with the last sampled dance pose as their target. The puppet stays where it fell while its limbs move toward
+that held pose. **Reset** returns it to the strings.
+
+For a programmatic scene, bind both bodies to scene nodes and author single-axis angular drives with a stiffness,
+damping, and maximum torque. After sampling animation, pass their compiled row
+indices to `session.encode(encoder, {angularDriveRows})`. The engine measures each
+target in its two joint attachment frames. Sample once for a held pose, or sample each fixed step to follow a clip. Contacts and the torque cap determine how
+closely the dynamic bodies can follow. The GPU skin palette continues to use the
+solved body transforms.

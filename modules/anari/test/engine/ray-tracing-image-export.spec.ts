@@ -9,14 +9,18 @@ import {
   type RayTracingSceneRenderOptions
 } from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it, vi} from 'vitest';
 
 it('tiled seeded transport matches full-frame output across odd edges, denoise seams and camera projections', async () => {
   if (!webgpuAdapter.isSupported()) return;
+  // A 3-by-3 grid keeps a full interior tile and partial edges on both axes.
+  const width = 19;
+  const height = 15;
+  const tileSize = 7;
   const device = await webgpuAdapter.create({
     featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(37, 23)}
+    createCanvasContext: {canvas: new OffscreenCanvas(width, height)}
   });
   const errors = vi.spyOn(device, 'reportError');
   const renderer = new RayTracingSceneRenderer(device);
@@ -36,14 +40,14 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
   });
   const scene: RayTracingSceneRenderOptions = {
     id: 'export-reference',
-    width: 37,
-    height: 23,
+    width,
+    height,
     camera: {
       position: [0, 1, 4],
       viewMatrix: new Matrix4().lookAt({eye: [0, 1, 4], center: [0, 0, 0], up: [0, 1, 0]}),
       projectionMatrix: new Matrix4().perspective({
         fovy: Math.PI / 3,
-        aspect: 37 / 23,
+        aspect: width / height,
         near: 0.1,
         far: 20
       })
@@ -98,14 +102,14 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
     progressive: true
   };
   const color = device.createTexture({
-    width: 37,
-    height: 23,
+    width,
+    height,
     format: 'rgba8unorm',
     usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
   });
   const framebuffer = device.createFramebuffer({
-    width: 37,
-    height: 23,
+    width,
+    height,
     colorAttachments: [color],
     depthStencilAttachment: 'depth24plus'
   });
@@ -119,12 +123,17 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
       scene.cameraProjection = projection;
       scene.camera.projectionMatrix =
         projection === 'perspective'
-          ? new Matrix4().perspective({fovy: Math.PI / 3, aspect: 37 / 23, near: 0.1, far: 20})
+          ? new Matrix4().perspective({
+              fovy: Math.PI / 3,
+              aspect: width / height,
+              near: 0.1,
+              far: 20
+            })
           : new Matrix4().ortho({
               left: -2,
               right: 2,
-              bottom: (-2 * 23) / 37,
-              top: (2 * 23) / 37,
+              bottom: (-2 * height) / width,
+              top: (2 * height) / width,
               near: 0.1,
               far: 20
             });
@@ -138,11 +147,13 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
         }
         color.readBuffer({}, buffer);
         const reference = await buffer.readAsync();
-        const stitched = new Uint8Array(37 * 23 * 4);
+        const stitched = new Uint8Array(width * height * 4);
+        // Denoising needs an interior tile. The unfiltered case only needs partial edges.
+        const exportTileSize = radius ? tileSize : 10;
         const tiles = exportRayTracingImage(device, scene, {
-          width: 37,
-          height: 23,
-          tileSize: 9,
+          width,
+          height,
+          tileSize: exportTileSize,
           frames: 2
         });
         let tileCount = 0;
@@ -151,17 +162,17 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
           for (let row = 0; row < tile.height; row++)
             stitched.set(
               tile.data.subarray(row * tile.width * 4, (row + 1) * tile.width * 4),
-              ((tile.y + row) * 37 + tile.x) * 4
+              ((tile.y + row) * width + tile.x) * 4
             );
           tileCount++;
         }
-        expect(tileCount).toBe(15);
+        expect(tileCount).toBe(radius ? 9 : 4);
         let maximumError = 0;
-        for (let y = 0; y < 23; y++) {
-          for (let x = 0; x < 37 * 4; x++)
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width * 4; x++)
             maximumError = Math.max(
               maximumError,
-              Math.abs(stitched[y * 37 * 4 + x] - reference[y * layout.bytesPerRow + x])
+              Math.abs(stitched[y * width * 4 + x] - reference[y * layout.bytesPerRow + x])
             );
         }
         expect(maximumError, `${projection}, denoise ${radius}`).toBeLessThanOrEqual(1);
@@ -177,24 +188,24 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
     abort.abort();
     await expect(
       exportRayTracingImage(device, scene, {
-        width: 37,
-        height: 23,
-        tileSize: 9,
+        width,
+        height,
+        tileSize,
         signal: abort.signal
       }).next()
     ).rejects.toThrow();
-    const returned = exportRayTracingImage(device, scene, {width: 37, height: 23, tileSize: 9});
+    const returned = exportRayTracingImage(device, scene, {width, height, tileSize});
     const first = await returned.next();
-    expect(first.value?.data.length).toBe(9 * 9 * 4);
+    expect(first.value?.data.length).toBe(tileSize * tileSize * 4);
     const retainedData = first.value!.data.slice();
     await returned.return(undefined);
     expect(first.value!.data).toEqual(retainedData);
     expect(getOwnedAllocationCounts()).toEqual(baselineAllocations);
     const interrupted = new AbortController();
     const cancelled = exportRayTracingImage(device, scene, {
-      width: 37,
-      height: 23,
-      tileSize: 9,
+      width,
+      height,
+      tileSize,
       signal: interrupted.signal
     });
     await cancelled.next();

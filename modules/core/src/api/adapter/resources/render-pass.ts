@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4, TypedArray} from '@math.gl/core';
+import type {NumberArray4, TypedArray} from '@math.gl/core/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {Bindings, BindingsByGroup} from '../types/shader-layout';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {Framebuffer} from './framebuffer';
 import {Buffer} from './buffer';
 import {QuerySet} from './query-set';
@@ -51,10 +51,13 @@ export type RenderPassBindingOptions = {
   _bindGroupCacheKeys?: Partial<Record<number, object>>;
 };
 
+/** Range of clip-space z that maps to the depth range: `-w..w` or `0..w`. */
+export type ClipDepthMode = 'negative-one-to-one' | 'zero-to-one';
+
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
  */
-export type RenderPassProps = ResourceProps & {
+export type RenderPassProps = DeviceResourceProps & {
   /** Framebuffer specifies which textures to render into. Default gets framebuffer from canvas context. */
   framebuffer?: Framebuffer | null;
   /** Optional single-sample targets receiving resolved multisampled color attachments. WebGPU only. */
@@ -73,10 +76,19 @@ export type RenderPassProps = ResourceProps & {
   /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect */
   clearStencil?: number | false;
 
+  /**
+   * Clip-space depth range of the projection used in this pass. Default: the backend's own range.
+   * WebGPU always uses `'zero-to-one'`. WebGL uses `'negative-one-to-one'`, and `'zero-to-one'`
+   * requires the `'clip-control-webgl'` feature. Use `'zero-to-one'` for reverse-Z depth.
+   */
+  clipDepthMode?: ClipDepthMode;
+
   /** Indicates that the depth component is read only. */
   depthReadOnly?: boolean;
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
+  /** Whether writable stencil contents are preserved after this pass. */
+  stencilStoreOp?: 'store' | 'discard';
 
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
@@ -99,7 +111,7 @@ export type RenderPassProps = ResourceProps & {
  * - clear colors, read/write, discard information for the framebuffer attachments
  * - a couple of mutable parameters ()
  */
-export abstract class RenderPass extends Resource<RenderPassProps> {
+export abstract class RenderPass extends DeviceResource<RenderPassProps> {
   /** TODO - should be [0, 0, 0, 0], update once deck.gl tests run clean */
   static defaultClearColor: [number, number, number, number] = [0, 0, 0, 1];
   /** Depth 1.0 represents the far plance */
@@ -178,7 +190,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** Default properties for RenderPass */
   static override defaultProps: Required<RenderPassProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     framebuffer: null,
     resolveTargets: undefined!,
     parameters: undefined!,
@@ -186,8 +198,10 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     clearColors: undefined!,
     clearDepth: RenderPass.defaultClearDepth,
     clearStencil: RenderPass.defaultClearStencil,
+    clipDepthMode: undefined!,
     depthReadOnly: false,
     stencilReadOnly: false,
+    stencilStoreOp: 'store',
     discard: false,
 
     occlusionQuerySet: undefined!,

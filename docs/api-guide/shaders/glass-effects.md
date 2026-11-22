@@ -58,7 +58,7 @@ color from adjacent metallic server surfaces.
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 const shaderInputs = new ShaderInputs({glassMaterial});
 
@@ -157,7 +157,7 @@ RGB channels contain the encoded world normal and whose alpha channel contains f
 The opaque scene depth must remain available as a sampleable depth texture.
 
 ```ts
-import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental-materials';
 
 const shaderInputs = new ShaderInputs({glassMaterial, glassTransmission});
 
@@ -208,7 +208,7 @@ the receiving material, update nearby lens colors from actual scene lights, and 
 RGB contribution to the receiver's fragment color.
 
 ```ts
-import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental/materials';
+import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental-materials';
 
 const shaderInputs = new ShaderInputs({reflectiveMaterial, opticalCaustics});
 

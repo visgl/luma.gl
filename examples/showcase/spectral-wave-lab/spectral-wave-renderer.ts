@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {Buffer, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 const UNIFORM_BYTES = 80;
 /** Illuminated physical-space view sampling the inverse-FFT buffer directly. */
 export class SpectralWaveRenderer {

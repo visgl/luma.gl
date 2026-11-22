@@ -12,7 +12,7 @@ import {
   type PolygonShaderInputs,
   type PolygonStorageModelProps
 } from '@luma.gl/engine/models';
-import {type PolygonBatchProps} from '@luma.gl/graph/experimental/models';
+import {type PolygonBatchProps} from '@luma.gl/graph/experimental-models';
 import {DataType, RecordBatch, Table, Uint8, Vector} from 'apache-arrow';
 import {canConvertColors} from '@luma.gl/graph/arrow';
 import {convertArrowToGPUVector} from '@luma.gl/graph/arrow';

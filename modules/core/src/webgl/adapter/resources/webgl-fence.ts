@@ -47,13 +47,9 @@ export class WEBGLFence extends Fence {
     return this._signaled;
   }
 
-  destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     if (this.handle && this.ownsHandle) {
       this.gl.deleteSync(this.handle);
     }
-    this.destroyResource();
   }
 }

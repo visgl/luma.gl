@@ -11,6 +11,8 @@
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
       "showcase/instancing",
+      "showcase/the-river-remembers",
+      "showcase/canyon-echo",
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -76,9 +78,9 @@
       "experimental/wrecking-ball",
       "experimental/physics-stress",
       "experimental/physics-batch",
-      "experimental/space-salvage",
       "gltf/physics",
-      "gltf/authored-scene-stress"
+      "gltf/authored-scene-stress",
+      "gltf/marionette-theater"
     ]
   },
   {
@@ -210,6 +212,7 @@
       "api/prefiltered-environment",
       "api/pbr-shadows",
       "api/lightmap-baking",
+      "api/baked-cornell-box",
       "api/texture-3d",
       {
         "type": "doc",
@@ -230,6 +233,7 @@
     "label": "Three.js",
     "items": [
       "three/galactic-vortex",
+      "experimental/offroad-buggy",
       "three/deck-layers",
       "experimental/three"
     ]

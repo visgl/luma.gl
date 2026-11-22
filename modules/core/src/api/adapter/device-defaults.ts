@@ -8,7 +8,7 @@ import type {DeviceProps} from './device';
 /** Shared defaults for device creation without importing the Device class. */
 export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   id: null!,
-  powerPreference: 'high-performance',
+  powerPreference: 'default',
   failIfMajorPerformanceCaveat: false,
   featureLevel: undefined!,
   optionalFeatures: [],
@@ -44,6 +44,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   debugSpectorJSUrl: undefined!,
 
   // Experimental
+  ownsHandle: undefined!, // Resolved by Device from the creation or attachment path.
   _reuseDevices: false,
   _cacheShaders: true,
   _destroyShaders: false,

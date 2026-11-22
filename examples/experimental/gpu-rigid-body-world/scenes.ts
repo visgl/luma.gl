@@ -9,10 +9,20 @@ import {
 } from '@luma.gl/graph/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  robotArm: {
+    title: 'Mechanisms · robot arm',
+    description:
+      'Four driven joints carry a calibrated payload. Lower the elbow to press the tool against the work stop, or reduce the elbow torque to see the load pull it down.'
+  },
   wreckingBall: {
     title: 'Wrecking ball',
     description:
-      'Release an 400-unit steel wrecking ball into a stepped pyramid of 204 one-unit blocks. A ten-unit distance joint suspends the ball from the gantry; gravity and real contacts drive the demolition. Pause to inspect the impact, or Reset to rebuild the pyramid and raise the ball. Drag to orbit and scroll to zoom. Parallel block contacts alternate with a distance-joint solve on the GPU; the real-time percentage shows when simulation cannot keep pace.'
+      'Release a 650-unit steel wrecking ball into a stepped pyramid of 204 one-unit blocks. A ten-unit distance joint suspends the ball from the gantry; gravity and real contacts drive the demolition. Pause to inspect the impact, or Reset to rebuild the pyramid and raise the ball. Drag to orbit and scroll to zoom. Parallel block contacts alternate with a distance-joint solve on the GPU; the real-time percentage shows when simulation cannot keep pace.'
+  },
+  dominoJunction: {
+    title: 'Domino junction',
+    description:
+      'One falling row starts two branches. Both paths converge on a shared receiver that tips the final row. Reset to replay the same physical contacts.'
   },
   dominoSpiral: {
     title: 'Spiral dominoes',
@@ -103,6 +113,7 @@ export const RIGID_BODY_SCENES = {
 export type RigidBodyScene = keyof typeof RIGID_BODY_SCENES;
 
 export function makeRigidBodyScene(scene: RigidBodyScene): GPURigidBody[] {
+  if (scene === 'dominoJunction') return makeDominoJunction();
   if (scene === 'dominoSpiral') return makeDominoSpiral();
   if (scene === 'continuous')
     return [
@@ -313,6 +324,66 @@ export const DOMINO_PHYSICS = {
   maximumRecoverySpeed: 0.1
 } as const;
 
+/** Both domino layouts use the same solver settings, rendering and audio. */
+export function isDominoScene(scene: RigidBodyScene): boolean {
+  return scene === 'dominoSpiral' || scene === 'dominoJunction';
+}
+
+/** Split the starter row around a central opening and converge again at the receiver. */
+export function makeDominoJunction(): GPURigidBody[] {
+  const bodies: GPURigidBody[] = [
+    {
+      position: [0, 0, -0.25],
+      mass: 0,
+      shape: {type: 'box', halfExtents: [13, 6, 0.25]},
+      friction: 0.65
+    }
+  ];
+  const addTile = (x: number, y: number, heading = 0) => {
+    bodies.push(makeDominoTile(x, y, heading, bodies.length === 1));
+  };
+  for (let index = 0; index < 8; index++) addTile(-11.2 + index * 0.62, 0);
+  for (const side of [-1, 1]) {
+    for (let tile = 0; tile <= 19; tile++) {
+      const progress = tile / 19;
+      const x = -6.24 + 11.78 * progress;
+      const y = side * (0.34 + 2.65 * Math.sin(Math.PI * progress) ** 2);
+      const slope = (side * 2.65 * Math.PI * Math.sin(2 * Math.PI * progress)) / 11.78;
+      addTile(x, y, Math.atan(slope));
+    }
+  }
+  for (let index = 0; index <= 8; index++) addTile(6.16 + index * 0.62, 0);
+  return bodies;
+}
+
+/** Raise the lead domino onto its front edge so it begins toppling on release. */
+function makeDominoTile(x: number, y: number, heading: number, leading: boolean): GPURigidBody {
+  const tilt = leading ? 0.22 : 0;
+  const forward = 0.1 * (1 - Math.cos(tilt)) + 0.75 * Math.sin(tilt);
+  const height = 0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt);
+  return {
+    position: [x + forward * Math.cos(heading), y + forward * Math.sin(heading), height],
+    orientation: [
+      -Math.sin(heading / 2) * Math.sin(tilt / 2),
+      Math.cos(heading / 2) * Math.sin(tilt / 2),
+      Math.sin(heading / 2) * Math.cos(tilt / 2),
+      Math.cos(heading / 2) * Math.cos(tilt / 2)
+    ],
+    velocity: leading
+      ? [
+          1.5 * height * Math.cos(heading),
+          1.5 * height * Math.sin(heading),
+          -1.5 * (-0.1 * Math.cos(tilt) + 0.75 * Math.sin(tilt))
+        ]
+      : [0, 0, 0],
+    angularVelocity: leading ? [-Math.sin(heading) * 1.5, Math.cos(heading) * 1.5, 0] : [0, 0, 0],
+    shape: {type: 'box', halfExtents: [0.1, 0.32, 0.75]},
+    mass: 1,
+    friction: 0.65,
+    restitution: 0
+  };
+}
+
 /** Equal arc-length spacing keeps contact propagation consistent as the spiral widens. */
 export function makeDominoSpiral(): GPURigidBody[] {
   const bodies: GPURigidBody[] = [
@@ -331,37 +402,14 @@ export function makeDominoSpiral(): GPURigidBody[] {
     const tangentX = radialGrowth * Math.cos(angle) - radius * Math.sin(angle);
     const tangentY = radialGrowth * Math.sin(angle) + radius * Math.cos(angle);
     const heading = Math.atan2(tangentY, tangentX);
-    // Release the first tile already leaning beyond its base, with its bottom edge on the table.
-    // A pure COM angular impulse can be absorbed by the initial floor contact instead of tipping it.
-    const tilt = bodies.length === 1 ? 0.22 : 0;
-    const forward = 0.1 * (1 - Math.cos(tilt)) + 0.75 * Math.sin(tilt);
-    bodies.push({
-      position: [
-        radius * Math.cos(angle) + forward * Math.cos(heading),
-        radius * Math.sin(angle) + forward * Math.sin(heading),
-        0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)
-      ],
-      orientation: [
-        -Math.sin(heading / 2) * Math.sin(tilt / 2),
-        Math.cos(heading / 2) * Math.sin(tilt / 2),
-        Math.sin(heading / 2) * Math.cos(tilt / 2),
-        Math.cos(heading / 2) * Math.cos(tilt / 2)
-      ],
-      velocity:
+    bodies.push(
+      makeDominoTile(
+        radius * Math.cos(angle),
+        radius * Math.sin(angle),
+        heading,
         bodies.length === 1
-          ? [
-              1.5 * (0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)) * Math.cos(heading),
-              1.5 * (0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)) * Math.sin(heading),
-              -1.5 * (-0.1 * Math.cos(tilt) + 0.75 * Math.sin(tilt))
-            ]
-          : [0, 0, 0],
-      angularVelocity:
-        bodies.length === 1 ? [-Math.sin(heading) * 1.5, Math.cos(heading) * 1.5, 0] : [0, 0, 0],
-      shape: {type: 'box', halfExtents: [0.1, 0.32, 0.75]},
-      mass: 1,
-      friction: 0.65,
-      restitution: 0
-    });
+      )
+    );
     angle += 0.52 / Math.hypot(radius, radialGrowth);
   }
   return bodies;

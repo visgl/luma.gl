@@ -44,9 +44,25 @@ Ray-traced scene renderers also accept `denoiseRadius: 0 | 1 | 2` (default `0`)
 for an opt-in spatial filter in internal pixels. It smooths accumulated linear
 radiance before tone mapping, guided by primitive identity, world normals and
 relative depth. Background and ambiguous overflow identities remain unfiltered.
-This is a local noise reduction filter, not a reconstruction or temporal denoiser;
-it can soften detail within a surface and costs additional texture reads.
-Changing the filter preserves unfiltered progressive history and picking channels.
+The spatial filter gives less weight to neighbors with fewer retained samples.
+It tapers from full strength at eight samples to zero at 64 samples to preserve
+detail as the unfiltered estimate converges. When the history limit is below 64,
+some filtering remains after the history reaches its limit.
+Changing the radius preserves unfiltered progressive history and picking channels.
+
+Enable `varianceGuidance` with a nonzero radius to adapt the spatial filter to
+the retained variance of log luminance. The renderer accumulates the first and
+second moments of individual samples in two rotating RG32F textures. Low-variance
+pixels retain more detail. The estimate uses total luminance and shares the
+renderer’s existing reprojection acceptance tests. It adds 16 bytes per internal
+pixel across both textures and leaves 13 material texture bindings within the
+portable sampled-texture limit. Enabling or disabling moment tracking resets
+accumulation.
+
+With temporal reprojection, each bilinear tap and the history clipping neighborhood
+must match the reprojected surface identity, normal, and camera distance. Valid taps
+are normalized for color, while rejected taps reduce retained confidence so newly
+exposed areas respond more quickly to current samples.
 
 `historySampleLimit` accepts integers from 1 to 256 (default `64`). It caps retained
 per-pixel confidence; once saturated, subsequent samples still update the image.
@@ -82,12 +98,15 @@ the attachment's own sRGB conversion, if any, still applies.
 - `identity`: deterministic colors for primitive identifiers in retained internal guidance.
   Background is black; identifiers beyond the exact half-float range are magenta.
   Use full-resolution integer channel snapshots for exact IDs and picking.
+- `variance`: grayscale log-luminance standard deviation, compressed as `σ / (1 + σ)`.
+  Selecting this view enables moment tracking.
 - `history`: grayscale `log2(1 + samples) / log2(257)`, exposing retained confidence
   up to the maximum 256-sample budget, including background pixels.
 
 Guidance views use nearest internal pixels, so reduced-resolution diagnostics do
 not imply full-output-resolution channels. The playground's Ray view selector and
-capture harness `--view` option expose these modes.
+capture harness `--view` option expose these modes. Use `--variance-guidance --denoise 1`
+to capture the guided color output.
 
 ## Implementation capabilities
 
@@ -99,9 +118,9 @@ Check `supported` before interpreting the implementation features for a device.
 
 Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
 bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
-Scalar `MASK` visibility and opt-in explicit emitter sampling are supported.
-Material textures, alpha blending, transmissive secondary transport, hardware
-ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
+Scalar and textured `MASK` visibility, base-color/emissive/metallic-roughness/transmission maps, triangle mesh normal maps,
+smooth dielectric transport and opt-in explicit emitter sampling are supported.
+Rough transmission, hardware ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
 
 ## Reference-image error measurements
 
@@ -147,10 +166,11 @@ for the material terms.
 
 Secondary rays gather emission and explicit directional/point/spot lighting at
 hits. A miss contributes zero: the background remains a primary display color,
-not an environment light. There is no texture sampling, alpha blending/transmission,
-IOR/attenuation or environment-map transport. Explicit emitter sampling is an opt-in control described below. Small
-emitters and rough reflections may require more samples; this is bounded opaque
-transport, not a complete path tracer or a glass renderer.
+not an environment light. PBR dielectric continuation can escape to the display background.
+Material maps and smooth dielectric transmission with IOR and alpha blending are supported;
+rough transmission and environment-map illumination remain unsupported.
+Explicit emitter sampling is an opt-in control described below. Small emitters and rough
+reflections may require more samples.
 
 Choose **Chart Materials** in the playground for matte bars, emissive points,
 a metallic floor and a six-column roughness sweep using the same data/camera and
@@ -177,11 +197,13 @@ This is off by default and works with both `diffuse` and `pbr` transport.
 Connections are shadow rays, so direct emissive lighting also works with
 `maxBounces: 0`. Analytic point/directional/spot lighting is unchanged. Emitter contributions
 follow the same per-hit distance-fog attenuation, with the fog background mixed
-once by the shared direct-light path. Explicit
-connections replace secondary emission gathering to avoid counting the same
-light twice; primary camera-visible emission is retained. The model has no
-delta mirrors (roughness has a `0.04` lower bound). MIS is not implemented; nearly mirror-like materials can still converge
-slowly. More primary samples/frames improve sampling of small emitters.
+once by the shared direct-light path. With diffuse and PBR transport, multiple importance sampling
+combines explicit emitter connections and material-sampled bounce hits using the power
+heuristic. The last vertex uses the full explicit estimate because it has no continuation.
+PBR uses the combined GGX and diffuse direction density, including the probability of selecting
+a continuous event. Smooth dielectric delta paths retain their full emission contribution.
+PBR uses the explicit estimate for continuous events inside absorbing media or when shadows are disabled.
+Primary camera-visible emission is retained in both modes.
 
 `emitterSelection: 'uniform'` is the default. Opt-in `'power'` weights each emitter
 placement by world-space area times emitted luminance. Mesh area is summed from transformed
@@ -205,12 +227,12 @@ transform and emitter geometry changes reset radiance history, including at
 zero material bounces. PBR camera changes reset explicit-light accumulation.
 The sampling seed and global tiled-export coordinates remain authoritative.
 
-Ray materials with `alphaMode: 'MASK'` use scalar base-color alpha and
+Ray materials with `alphaMode: 'MASK'` multiply scalar base-color alpha by the base-color map alpha and compare with
 `alphaCutoff` (default `0.5`). Below-cutoff geometry is invisible to primary,
-secondary and shadow rays, picking and channel snapshots, and is excluded from
-explicit emitter sampling. Equality to the cutoff is visible. `OPAQUE` remains
-visible regardless of scalar alpha. Texture alpha and `BLEND` compositing are
-unsupported by the ray renderer.
+secondary and shadow rays, picking and channel snapshots. Below-cutoff emitter samples
+contribute no light. Equality to the cutoff is visible. `OPAQUE` remains
+visible regardless of scalar or texture alpha. UV0/UV1 selection and transforms also apply
+to alpha sampling. `BLEND` compositing remains unsupported by the ray renderer.
 
 Choose **Chart Lighting**, or open
 `playground.html?preset=chart-lighting&renderer=raytrace`. The **Emissive lighting**
@@ -238,3 +260,79 @@ Validated URL overrides accept `renderer=deferred`, `resolution=0.25` and
 `emitterSelection=power`. The capture harness accepts `--emitter-selection uniform|power`
 and `--resolution 0.25|0.5|0.75|1`; an explicit resolution overrides the still preset.
 Preserve seed, sample count, transport and exposure when comparing distributions.
+
+### Constant environment lighting
+
+Set `environmentRadiance` to a constant linear RGB radiance, for example `[0.5, 0.6, 0.8]`.
+The renderer samples directions at infinity and tests those rays against scene geometry.
+With bounces enabled, it pairs these samples with BSDF paths that escape the scene using
+multiple importance sampling. This works with both `diffuse` and `pbr` transport and defaults
+to zero. `background` continues to control the camera backdrop. To add directional lighting, set `environmentMap` to `{width, height, data}`. Supply three
+linear RGB values per texel in row-major latitude–longitude order. Row zero starts at the
++Y pole. Column zero starts at +X and longitude increases toward +Z. Dimensions are limited
+to 2,048 per axis and 1,048,576 texels total. Replace the map object to update lighting and
+reset progressive accumulation.
+
+The renderer samples each texel with probability proportional to its luminance and solid
+angle, with a 5% uniform-sphere component. Explicit directions and BSDF misses use the same
+solid-angle density for MIS. A map adds to `environmentRadiance` and works independently of
+`background`. The map represents piecewise-constant texel radiance.
+
+### Filtered cutouts and thin-material shadows
+
+Enable `filteredCutouts` to use a camera-ray footprint when sampling mipmapped
+triangle alpha masks. Primary color, picking, and primary-hit channels use the
+internal ray-tracing pixel spacing. Coverage comes from the authored mip chain and
+the existing alpha cutoff. Secondary paths and shadow rays carry the same footprint
+from each receiver, including explicit emitter and environment samples. Emitter
+endpoints use that footprint for alpha testing and mip zero for paired emission
+evaluation. Analytic sphere masks use mip zero.
+
+With PBR transport, `transmissiveShadows` lets analytic lights pass attenuated RGB
+through thin diffuse-transmission materials and unmasked analytic spheres with
+IOR exactly 1. The renderer follows the straight connection and processes up to
+eight surface crossings. An index-matched sphere applies the transmission factor
+and base-color tint at each crossing, then Beer–Lambert attenuation over the
+distance traveled inside. Point and spot light connections end at the light,
+including when the receiver or light is inside the sphere. Opaque blockers, nested media, and
+dielectrics that bend the ray still block the connection. Emitter and environment
+visibility are unchanged. Both settings are off by default.
+
+## Reconstruction benchmarks
+
+Generate a high-sample display RGB reference with an independent seed, then run all
+three presentation modes at identical frame checkpoints and sample seeds. Use the
+same viewport and scene settings for the reference and the sweep.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 64 --seed 73 --output /tmp/reconstruction-reference
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --compare-reconstruction --denoise 1 --seed 17 --frame-sweep 1,4,8,16 --reference /tmp/reconstruction-reference/chart.png --output /tmp/reconstruction-comparison
+```
+
+The report includes display RGB error, samples, logical allocation estimates, and,
+when timestamp queries are available, total GPU pass time and per-frame median and
+p95. It interpolates comparison points only across the GPU costs observed for all
+three modes. Linear HDR capture reads unfiltered history, so it cannot measure a
+presentation filter’s image error.
+
+For motion checks, run `--motion --temporal off` and
+`--motion --temporal on` with the same `--frames`, seed and viewport. The captures
+record the animation time at the final frame. Add `--linear-hdr` to summarize the
+minimum, maximum, and mean per-pixel retained sample confidence and the number of
+pixels with zero confidence. Reference images must show the same pose. A reference from the other temporal mode measures the modes’ difference and
+does not establish the correct radiance at that pose.
+
+
+### Adaptive batch size without resetting history
+
+The live Playground and Observatory sample WebGPU timestamps when available.
+The GPU Graph execution budget controller targets 16 ms of GPU pass time and
+requests full, half, quarter, or eighth-frame ray batches. Each smaller batch
+updates one interleaved pixel phase and retains the other pixels. A phase-count
+change takes effect at a complete sweep boundary. Camera or scene motion uses
+full coverage so carried pixels do not retain metadata from an older pose.
+
+Batch size changes preserve the render resolution, history textures, and
+sample sequence. Reported progress in this mode counts completed sweeps.
+Devices without usable GPU timestamps keep the existing renderer policy.
+Offline captures keep their configured batch size.

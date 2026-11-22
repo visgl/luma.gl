@@ -93,6 +93,8 @@ export type GLTFWithBuffers = {
   images?: (GLTFImageData | null)[];
   binary?: ArrayBuffer;
   baseUri?: string;
+  /** Decoded glTF 2.1 dependencies, indexed by the source externalAssets array. */
+  externalAssets?: Array<GLTFWithBuffers | null>;
   /** Gaussian primitive descriptors supplied by the loader. */
   gaussianSplatPrimitives?: GLTFGaussianSplatDescriptor[];
 };

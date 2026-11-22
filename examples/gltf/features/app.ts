@@ -12,7 +12,7 @@ import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {createAreaLightLTCTextures} from '@luma.gl/engine';
 import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
-import {Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
 import {
   INFO_HTML,
   LIGHTMAP_INFO_HTML,

@@ -16,7 +16,7 @@ import {
   getPBREnvironmentBindings,
   getPBREnvironmentUniforms
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 async function getDevices() {
   const webglDevice = await getWebGLTestDevice();

@@ -38,6 +38,7 @@ export type GPUDataFrameNormalizedSortOptions = Readonly<{
   nans: 'first' | 'last';
   algorithm: 'auto' | 'bitonic' | 'radix';
   limit?: number;
+  offset?: number;
 }>;
 
 /**
@@ -66,7 +67,8 @@ export class GPUDataFrameSortQuery<
     column: Column,
     options: GPUDataFrameSortOptions = {},
     limit?: number,
-    defaultDirection: 'ascending' | 'descending' = 'ascending'
+    defaultDirection: 'ascending' | 'descending' = 'ascending',
+    offset?: number
   ) {
     if (!query.selectedColumns.includes(column)) {
       throw new Error(`GPUDataFrame sort column "${column}" is not selected`);
@@ -80,7 +82,7 @@ export class GPUDataFrameSortQuery<
 
     this.query = query;
     this.column = column;
-    this.options = normalizeGPUDataFrameSortOptions(options, limit, defaultDirection);
+    this.options = normalizeGPUDataFrameSortOptions(options, limit, defaultDirection, offset);
     Object.freeze(this);
   }
 
@@ -121,7 +123,22 @@ export class GPUDataFrameGlobalSortQuery<
   override topK(
     limit: number
   ): GPUDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
-    return new GPUDataFrameGlobalSortQuery(this.query, this.column, this.options, limit);
+    return this.page(this.options.offset ?? 0, limit);
+  }
+
+  /** Selects a page from the globally sorted rows after filtering. */
+  page(
+    offset: number,
+    limit?: number
+  ): GPUDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new GPUDataFrameGlobalSortQuery(
+      this.query,
+      this.column,
+      this.options,
+      limit,
+      'ascending',
+      offset
+    );
   }
 
   /** Adds one cross-batch GPU permutation and global selected count to a reusable command graph. */
@@ -144,7 +161,8 @@ export class GPUDataFrameGlobalSortQuery<
 function normalizeGPUDataFrameSortOptions(
   options: GPUDataFrameSortOptions,
   limit: number | undefined,
-  defaultDirection: 'ascending' | 'descending'
+  defaultDirection: 'ascending' | 'descending',
+  offset?: number
 ): GPUDataFrameNormalizedSortOptions {
   if (!options || typeof options !== 'object') {
     throw new Error('GPUDataFrame sorting options must be an object');
@@ -173,11 +191,19 @@ function normalizeGPUDataFrameSortOptions(
     throw new Error('GPUDataFrame top-K limits require a nonnegative uint32 count');
   }
 
+  if (
+    offset !== undefined &&
+    (!Number.isSafeInteger(offset) || offset < 0 || offset > MAXIMUM_UINT32)
+  ) {
+    throw new Error('GPUDataFrame page offsets require a nonnegative uint32 count');
+  }
+
   return Object.freeze({
     direction,
     nulls,
     nans,
     algorithm,
-    ...(limit === undefined ? {} : {limit})
+    ...(limit === undefined ? {} : {limit}),
+    ...(offset ? {offset} : {})
   });
 }

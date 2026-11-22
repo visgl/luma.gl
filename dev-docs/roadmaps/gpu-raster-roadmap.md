@@ -1768,13 +1768,11 @@ yarn build
 yarn test-gpu-raster-package
 yarn test
 yarn website:build
-(cd website && yarn build)
 ```
 
-Run `yarn build` and `yarn test` after the final code and formatting changes. `yarn test-node` is
-a focused diagnostic, not a substitute for either required gate. Shared changes to
-`GPUReduction`, graph dispatch, or table-facing imports require all three: `yarn test-node`,
-`yarn build`, and `yarn test`. When docs/examples are part of the selected milestone, run both
-website build paths. Run package-subpath, visual smoke, and benchmark commands added by the
+Run `yarn build` and both test phases after final code and formatting changes, including for changes
+to `GPUReduction`, graph dispatch, or table-facing imports. Follow `AGENTS.md` to reuse a full node
+phase already run by the commit hook. When docs or examples are part of the selected milestone,
+run `yarn website:build` once. Run package-subpath, visual smoke, and benchmark commands added by the
 accepted tranche, and identify checks that cannot run on the available WebGPU adapter. At least
 one supported browser/headless CI job must execute the GPU assertions rather than skip them.

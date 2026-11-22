@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumberArray4, NumberArray6} from '@math.gl/core';
+import {NumberArray4, NumberArray6} from '@math.gl/core/types';
 import {TextureFormatDepthStencil} from '../../../shadertypes/texture-types/texture-formats';
 export type {CompareFunction} from '@luma.gl/shaders/types';
 import type {CompareFunction} from '@luma.gl/shaders/types';
@@ -87,6 +87,18 @@ export type StencilOperation =
   | 'increment-wrap'
   | 'decrement-wrap';
 
+/** Comparison and operations for one stencil face. Omitted fields inherit the flat parameters. */
+export type StencilFaceState = {
+  /** Comparison of the masked reference against the masked stored value. */
+  compare?: CompareFunction;
+  /** Operation on stencil failure. */
+  failOp?: StencilOperation;
+  /** Operation on stencil success followed by depth failure. */
+  depthFailOp?: StencilOperation;
+  /** Operation when both tests pass. */
+  passOp?: StencilOperation;
+};
+
 export type DepthStencilParameters = {
   /** Whether this GPURenderPipeline can modify depthStencilAttachment depth values. */
   depthWriteEnabled?: boolean;
@@ -104,12 +116,16 @@ export type DepthStencilParameters = {
 
   /** The CompareFunction used when testing fragments against depthStencilAttachment stencil values. */
   stencilCompare?: CompareFunction;
-  /** The StencilOperation performed if the fragment stencil comparison test described by compare fails. */
+  /** The StencilOperation performed if the fragment stencil comparison test described by stencilCompare and the depth comparison described by depthCompare both pass. */
   stencilPassOperation?: StencilOperation;
-  /** The GPUStencilOperation performed if the fragment depth comparison described by depthCompare fails. */
+  /** The StencilOperation performed if the fragment stencil comparison test described by stencilCompare fails. */
   stencilFailOperation?: StencilOperation;
-  /** The GPUStencilOperation performed if the fragment stencil comparison test described by compare passes. */
+  /** The StencilOperation performed if the fragment stencil comparison test passes but the depth comparison described by depthCompare fails. */
   stencilDepthFailOperation?: StencilOperation;
+  /** Overrides individual stencil settings for front-facing primitives. */
+  stencilFront?: StencilFaceState;
+  /** Overrides individual stencil settings for back-facing primitives. */
+  stencilBack?: StencilFaceState;
 };
 
 // Color Parameters
@@ -223,6 +239,8 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   stencilPassOperation: 'keep',
   stencilFailOperation: 'keep',
   stencilDepthFailOperation: 'keep',
+  stencilFront: {},
+  stencilBack: {},
 
   // Multisample parameters
   sampleCount: 0,

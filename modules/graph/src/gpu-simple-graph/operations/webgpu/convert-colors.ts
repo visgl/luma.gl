@@ -13,11 +13,19 @@ const COMPUTATION_RUNS = 'Computation Runs';
 export const convertColors: OperationHandler<ConvertColorsInputs> = async ({
   inputs,
   output,
-  target
+  target,
+  scope
 }) => {
   const {source, inputFormat} = inputs;
+  if (output.length === 0) return {success: true};
   const kernel = new Kernel(target.device, {
-    source: getConvertColorsWGSL(inputFormat, source.offset, source.stride, output.length),
+    source: getConvertColorsWGSL(
+      inputFormat,
+      source.offset,
+      source.stride,
+      output.length,
+      inputs.outputFormat
+    ),
     shaderLayout: {
       bindings: [
         {name: 'source', type: 'storage' as const, group: 0, location: 0},
@@ -31,23 +39,38 @@ export const convertColors: OperationHandler<ConvertColorsInputs> = async ({
     result: target
   };
 
-  const computePass = target.device.beginComputePass({});
-  target.device.statsManager.getStats(GPGPU_OPERATION_STATS).get(COMPUTATION_RUNS).incrementCount();
-  kernel.dispatch(computePass, {
-    bindings: kernelBindings,
-    x: Math.ceil(output.length / WORKGROUP_SIZE)
-  });
-  computePass.end();
-  target.device.submit();
-  kernel.destroy();
+  if (scope) scope.retain(() => kernel.destroy());
+  try {
+    const computePass = scope
+      ? scope.commandEncoder.beginComputePass({})
+      : target.device.beginComputePass({});
+    try {
+      target.device.statsManager
+        .getStats(GPGPU_OPERATION_STATS)
+        .get(COMPUTATION_RUNS)
+        .incrementCount();
+      kernel.dispatch(computePass, {
+        bindings: kernelBindings,
+        x: Math.ceil(output.length / WORKGROUP_SIZE)
+      });
+    } finally {
+      computePass.end();
+    }
+    if (!scope) target.device.submit();
+  } finally {
+    if (!scope) kernel.destroy();
+  }
+
   return {success: true};
 };
+convertColors.supportsEvaluationScope = true;
 
 function getConvertColorsWGSL(
   inputFormat: ConvertColorsInputs['inputFormat'],
   byteOffset: number,
   byteStride: number,
-  length: number
+  length: number,
+  outputFormat: ConvertColorsInputs['outputFormat']
 ): string {
   return /* wgsl */ `\
 @group(0) @binding(0) var<storage, read> source: array<u32>;
@@ -90,7 +113,18 @@ ${getReadColorWGSL(inputFormat)}
     return;
   }
 
-  result[rowIndex] = pack4x8unorm(readColor(rowIndex));
+  let color = readColor(rowIndex);
+${
+  outputFormat === 'unorm8x4'
+    ? '  result[rowIndex] = pack4x8unorm(color);'
+    : outputFormat === 'float16x4'
+      ? `  result[rowIndex * 2u] = pack2x16float(color.xy);
+  result[rowIndex * 2u + 1u] = pack2x16float(color.zw);`
+      : `  result[rowIndex * 4u] = bitcast<u32>(color.x);
+  result[rowIndex * 4u + 1u] = bitcast<u32>(color.y);
+  result[rowIndex * 4u + 2u] = bitcast<u32>(color.z);
+  result[rowIndex * 4u + 3u] = bitcast<u32>(color.w);`
+}
 }
 `;
 }

@@ -28,7 +28,7 @@ import {
   type ShadowShaderProps
 } from '@luma.gl/engine/lighting';
 import type {Light} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,

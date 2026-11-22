@@ -8,7 +8,7 @@ import {compileProjectionProgram, selectProjectionExecution} from '@luma.gl/grap
 import type {
   ProjectionProgramBenchmarkPathReport,
   ProjectionProgramBenchmarkReport
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   getProjectionProgramSignature,
   getProjectionDeviceSignature

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 export const CAMERA_DISTANCE = Math.hypot(38, 12);
 export const CAMERA_PITCH = Math.atan2(12, 38);

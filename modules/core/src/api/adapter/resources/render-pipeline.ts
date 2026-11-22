@@ -15,14 +15,16 @@ import type {
   TextureFormatColor,
   TextureFormatDepthStencil
 } from '../../../shadertypes/texture-types/texture-formats';
+import {textureFormatDecoder} from '../../../shadertypes/texture-types/texture-format-decoder';
+import {hasStencilWriteOperation, resolveStencilFace} from '../types/stencil-state';
 import type {Shader} from './shader';
 import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {VertexArray} from './vertex-array';
 import {TransformFeedback} from './transform-feedback';
 
-export type RenderPipelineProps = ResourceProps & {
+export type RenderPipelineProps = DeviceResourceProps & {
   // Shaders and shader layout
 
   /** Compiled vertex shader */
@@ -76,10 +78,43 @@ export type RenderPipelineProps = ResourceProps & {
   bindGroups?: BindingsByGroup;
 };
 
+/** Resolves the explicit or inferred format used by the native render pipeline and its cache key. */
+export function getPipelineDepthStencilFormat(
+  device: Device,
+  props: RenderPipelineProps
+): TextureFormatDepthStencil | undefined {
+  const parameters = props.parameters ?? {};
+  const front = resolveStencilFace(parameters, parameters.stencilFront);
+  const back = resolveStencilFace(parameters, parameters.stencilBack);
+  const usesStencil =
+    (front.compare !== undefined && front.compare !== 'always') ||
+    (back.compare !== undefined && back.compare !== 'always') ||
+    hasStencilWriteOperation(front) ||
+    hasStencilWriteOperation(back);
+  const format = usesStencil
+    ? (props.depthStencilAttachmentFormat ?? parameters.depthFormat ?? 'depth24plus-stencil8')
+    : (parameters.depthFormat ?? props.depthStencilAttachmentFormat);
+  if (format && usesStencil) {
+    const aspect = textureFormatDecoder.getInfo(format).attachment;
+    if (aspect !== 'stencil' && aspect !== 'depth-stencil') {
+      throw new Error('Active stencil state requires a stencil attachment format.');
+    }
+  }
+  const preferredFormat = device.preferredDepthFormat;
+  return (
+    format ??
+    (parameters.depthWriteEnabled
+      ? preferredFormat === 'depth16'
+        ? 'depth16unorm'
+        : preferredFormat
+      : undefined)
+  );
+}
+
 /**
  * A compiled and linked shader program
  */
-export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
+export abstract class RenderPipeline extends DeviceResource<RenderPipelineProps> {
   override get [Symbol.toStringTag](): string {
     return 'RenderPipeline';
   }
@@ -164,7 +199,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   }): boolean;
 
   static override defaultProps: Required<RenderPipelineProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
 
     vs: null,
     vertexEntryPoint: 'vertexMain',

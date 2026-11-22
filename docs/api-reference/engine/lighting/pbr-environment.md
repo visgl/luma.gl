@@ -22,6 +22,10 @@ generated.destroy();
 // The source texture remains application-owned.
 ```
 
+The glTF adapter does these steps itself: pass the descriptor as
+`imageBasedLightingEnvironment` to `createScenegraphsFromGLTF()` or `parsePBRMaterial()`. See
+[glTF image-based lighting](/docs/api-reference/gltf/gltf-materials#image-based-lighting).
+
 ## Resource contract
 
 The required resources are `diffuseTexture`, `specularTexture`, and `brdfLUTTexture`.

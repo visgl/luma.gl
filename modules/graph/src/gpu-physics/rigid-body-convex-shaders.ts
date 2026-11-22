@@ -97,7 +97,7 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   let faceNormal=normalize(cross(firstEdge,secondEdge));
   let delta=center-closest;let magnitude=length(delta);let radius=bodies.colliders[sphere].shape.x;
   var hit:ConvexHit;if(magnitude>radius+settings.solver.x){return hit;}
-  let internalEdges=u32(readGeometry(u32(bodies.colliders[mesh].padding.z)+triangle).w)%8u;
+  let internalEdges=meshTriangleData(mesh,triangle)%8u;
   // Opposite barycentric coordinate identifies an edge. Internal coplanar edges are
   // not collision ridges: their adjacent triangle owns the face witness instead.
   for(var edge=0u;edge<3u;edge++){
@@ -185,9 +185,10 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  for(var traversal=0u;traversal<2u;traversal++){
  var node=0u;var work=0u;var exhausted=false;
  loop{if(node>=count){break;}if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;let minimum=readGeometry(offset+node*3u);let maximum=readGeometry(offset+node*3u+1u);
-  if(any(maximum.xyz<lower)||any(minimum.xyz>upper)){node=u32(minimum.w);continue;}
+  if(any(minimum.xyz>maximum.xyz)||any(maximum.xyz<lower)||any(minimum.xyz>upper)){node=u32(minimum.w);continue;}
   if(maximum.w>0.0){let start=u32(readGeometry(offset+node*3u+2u).x);for(var index=0u;index<u32(maximum.w);index++){
    if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
+   if(!meshTriangleActive(mesh,start+index)){continue;}
    let firstPoint=triangleVertex(mesh,start+index,0u);let secondPoint=triangleVertex(mesh,start+index,1u);let thirdPoint=triangleVertex(mesh,start+index,2u);
    if(any(max(firstPoint,max(secondPoint,thirdPoint))<lower)||any(min(firstPoint,min(secondPoint,thirdPoint))>upper)){continue;}
    if(traversal==0u){candidates++;}

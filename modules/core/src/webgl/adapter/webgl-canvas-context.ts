@@ -32,6 +32,12 @@ export class WebGLCanvasContext extends CanvasContext {
 
   // IMPLEMENTATION OF ABSTRACT METHODS
 
+  override destroy(): void {
+    this._framebuffer?.destroy();
+    this._framebuffer = null;
+    super.destroy();
+  }
+
   _configureDevice(): void {
     const shouldResize =
       this.drawingBufferWidth !== this._framebuffer?.width ||

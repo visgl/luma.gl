@@ -204,6 +204,41 @@ it('GPUSphereWorld reports bounded-contact overflow and invalid radii', async ()
   }
 });
 
+it('GPUSphereWorld aggregates contact diagnostics across a partial workgroup', async () => {
+  /** Native WebGPU backend for checking shader reductions and readback. */
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  /** Coincident centers ensure all tested neighbors overlap. */
+  const positions: number[] = [];
+  /** Stationary spheres with unit inverse mass produce eligible candidate pairs. */
+  const velocities: number[] = [];
+  for (let index = 0; index < 65; index++) {
+    positions.push(0, 0, 2, 0.5);
+    velocities.push(0, 0, 0, 1);
+  }
+  /** Explicit candidate and contact limits give each diagnostic an exact expected value. */
+  const fixture = await makeWorld(device, positions, velocities, {
+    broadPhase: 'all-pairs',
+    iterations: 1,
+    maximumContacts: 4,
+    maximumCandidateTests: 10
+  });
+  try {
+    fixture.step();
+    /** Combined counters from the full and partial workgroups. */
+    const {diagnostics} = await fixture.read();
+    // The first 10 bodies inspect themselves and nine neighbors. The other 55
+    // bodies inspect ten neighbors. Every body emits four contacts.
+    expect(diagnostics.candidateTests).toBe(650);
+    expect(diagnostics.exhaustedCandidateBodies).toBe(65);
+    expect(diagnostics.maximumContacts).toBe(10);
+    expect(diagnostics.droppedContacts).toBe(380);
+    expect(diagnostics.contacts).toBe(260);
+  } finally {
+    fixture.destroy();
+  }
+});
+
 it('GPUSphereWorld finite floor catches bodies and lets edge bodies fall', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

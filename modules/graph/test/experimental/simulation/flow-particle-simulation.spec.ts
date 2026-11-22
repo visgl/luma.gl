@@ -7,7 +7,7 @@ import {Buffer, type Device, type Texture} from '@luma.gl/core';
 import {
   FlowParticleSimulation,
   isFlowParticleSimulationSupported
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 for (const backend of ['webgl', 'webgpu'] as const) {

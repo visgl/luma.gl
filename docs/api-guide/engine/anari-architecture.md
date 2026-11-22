@@ -177,10 +177,9 @@ visibility, and Fresnel terms while retaining immediate ambient and emissive con
 renderer paths interpret the retained scene's directional-light vector as incoming light; the
 forward raster boundary adapts that vector to its shader module's outgoing convention without
 mutating shared scene lights. Multiple retained ambient lights are also combined consistently
-across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material
-gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or
-specular/transmissive bounces to the ray tracer. Opt-in diffuse transport samples cosine-weighted
-secondary rays and reuses this direct-light evaluator at each hit.
+across forward, deferred, and ray-traced rendering. The [ray material path](/docs/api-reference/anari/ray-tracing-renderer#material-support)
+also evaluates retained textures and alpha cutouts. Diffuse transport samples cosine-weighted
+secondary rays. PBR transport adds GGX reflection and smooth dielectric continuation.
 
 #### Graph-stage diagnostics
 
@@ -239,10 +238,10 @@ current renderer.
 | Area | Implemented now | Planned or absent |
 | --- | --- | --- |
 | Acceleration | Morton-sorted TLAS/BLAS, retained transform refits, tight BLAS-root bounds, batched segmented sort/BVH construction | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
-| Execution | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings |
-| Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
-| Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
-| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, specular/transmissive bounces |
+| Execution | Megakernel with bounded bounces and hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, GPU-stage timings |
+| Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples, explicit emissive geometry sampling | Multiple importance sampling, environment lighting, variance-driven adaptive sampling and reservoir-based many-light reuse |
+| Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, guided spatial denoising and HDR upscaling | SVGF-class temporal denoising, stronger edge-aware upscaling, reactive masks |
+| Shading and presentation | Analytic spheres, mesh triangles, textured PBR and alpha cutouts, opaque GGX, smooth dielectric refraction, HDR/SDR presentation and tiled offscreen export | Full PBR parity, alpha blending, rough refraction, nested media and deformation |
 
 ### Cache invalidation
 

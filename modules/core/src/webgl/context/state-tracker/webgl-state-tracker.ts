@@ -10,6 +10,8 @@ import {GL} from '../../../webgl-constants/index';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
+  GL_SCALAR_SETTERS,
+  type ScalarSetter,
   NON_CACHE_PARAMETERS
 } from '../parameters/webgl-parameter-tables';
 
@@ -60,6 +62,19 @@ export class WebGLStateTracker {
     this.stateStack.pop();
   }
 
+  /** Mirror deletion in tracked bindings without querying or changing native GL state. */
+  invalidateDeletedBinding(key: number, handle: unknown): void {
+    if (this.cache[key] === handle) {
+      this.cache[key] = null;
+    }
+    // Deletion is permanent: no saved frame may restore this handle.
+    for (const savedState of this.stateStack) {
+      if (savedState[key] === handle) {
+        savedState[key] = null;
+      }
+    }
+  }
+
   /**
    * Initialize WebGL state caching on a context
    * can be called multiple times to enable/disable
@@ -69,26 +84,41 @@ export class WebGLStateTracker {
    * temporarily modifying, and then restoring state.
    */
   trackState(gl: WebGL2RenderingContext, options?: {copyState?: boolean}): void {
-    this.cache = options?.copyState
-      ? getGLParameters(gl)
-      : Object.assign({}, GL_PARAMETER_DEFAULTS);
+    if (this.initialized || options?.copyState) {
+      // Reattachment uses the original hooks. Bypass cached getters for the snapshot.
+      const enabled = this.enable;
+      this.enable = false;
+      try {
+        this.cache = getGLParameters(gl);
+        this.program = this.cache[GL.CURRENT_PROGRAM];
+        this.stateStack.length = 0;
+      } finally {
+        this.enable = enabled;
+      }
+      if (this.initialized) {
+        return;
+      }
+    } else {
+      this.cache = {...GL_PARAMETER_DEFAULTS};
 
-    if (!options?.copyState) {
       // These defaults depend on the initial canvas size. Read them before getters are hooked
       // so a matching placeholder cannot suppress the first viewport or scissor update.
       this.cache[GL.VIEWPORT] = gl.getParameter(GL.VIEWPORT);
       this.cache[GL.SCISSOR_BOX] = gl.getParameter(GL.SCISSOR_BOX);
     }
 
-    if (this.initialized) {
-      throw new Error('WebGLStateTracker');
-    }
     this.initialized = true;
 
     // @ts-expect-error
     this.gl.lumaState = this;
 
     installProgramSpy(gl);
+    installDeletionSpy(gl, 'deleteFramebuffer', [
+      GL.DRAW_FRAMEBUFFER_BINDING,
+      GL.READ_FRAMEBUFFER_BINDING
+    ]);
+    installDeletionSpy(gl, 'deleteRenderbuffer', [GL.RENDERBUFFER_BINDING]);
+    installDeletionSpy(gl, 'deleteVertexArray', [GL.VERTEX_ARRAY_BINDING]);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
@@ -96,9 +126,27 @@ export class WebGLStateTracker {
       installSetterSpy(gl, key, setter);
     }
 
+    for (const key in GL_SCALAR_SETTERS) {
+      installScalarSetterSpy(gl, key, GL_SCALAR_SETTERS[key]);
+    }
+
     // intercept all getter functions in the table
     installGetterOverride(gl, 'getParameter');
     installGetterOverride(gl, 'isEnabled');
+  }
+
+  /** Update one scalar parameter without temporary parameter or result objects. */
+  _updateScalar(parameter: number, value: number | boolean): boolean {
+    const cached = this.cache[parameter];
+    if (value === cached) {
+      return false;
+    }
+    const oldValues = this.stateStack[this.stateStack.length - 1];
+    if (oldValues && !(parameter in oldValues)) {
+      oldValues[parameter] = cached;
+    }
+    this.cache[parameter] = value;
+    return true;
   }
 
   /**
@@ -226,6 +274,33 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   });
 }
 
+/** Fixed arguments avoid per-call arrays, parameter maps, and result objects. */
+function installScalarSetterSpy(
+  gl: WebGL2RenderingContext,
+  functionName: string,
+  setter: ScalarSetter
+): void {
+  if (!gl[functionName]) {
+    return;
+  }
+  const originalSetter = gl[functionName].bind(gl);
+  gl[functionName] = function setScalar(first: number | boolean, second?: number | boolean) {
+    const parameter = setter.parameter ?? first;
+    const value = setter.value ?? (setter.parameter === undefined ? second : first);
+    const state = WebGLStateTracker.get(gl);
+    const oldValue = state.cache[parameter];
+    if (state._updateScalar(parameter, value)) {
+      originalSetter(first, second);
+      return oldValue;
+    }
+    return undefined;
+  };
+  Object.defineProperty(gl[functionName], 'name', {
+    value: `${functionName}-to-cache`,
+    configurable: false
+  });
+}
+
 function installProgramSpy(gl: WebGL2RenderingContext): void {
   const originalUseProgram = gl.useProgram.bind(gl);
 
@@ -234,6 +309,24 @@ function installProgramSpy(gl: WebGL2RenderingContext): void {
     if (glState.program !== handle) {
       originalUseProgram(handle);
       glState.program = handle;
+    }
+  };
+}
+
+/** Mirror implicit unbinding only for bindings already maintained by this tracker. */
+function installDeletionSpy(
+  gl: WebGL2RenderingContext,
+  functionName: 'deleteFramebuffer' | 'deleteRenderbuffer' | 'deleteVertexArray',
+  bindings: readonly number[]
+): void {
+  const originalDelete = gl[functionName].bind(gl);
+  gl[functionName] = function deleteResourceLuma(handle) {
+    originalDelete(handle);
+    if (handle !== null) {
+      const tracker = WebGLStateTracker.get(gl);
+      for (const binding of bindings) {
+        tracker.invalidateDeletedBinding(binding, handle);
+      }
     }
   };
 }
