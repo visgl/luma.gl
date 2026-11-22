@@ -68,6 +68,8 @@ export type ArrowRecordBatchConversionSource =
 export type ArrowRecordBatchConversionOptions = {
   /** Stops pending reads and further conversion. Already yielded batches remain caller-owned. */
   signal?: AbortSignal;
+  /** Maximum estimated GPU payload bytes per batch. Checked before conversion. */
+  maxBatchPayloadBytes?: number;
 };
 
 /** One independently owned GPU record batch produced from an Arrow stream. */
@@ -229,8 +231,14 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   device: Device,
   source: ArrowRecordBatchConversionSource,
   schema: ArrowGPUTableConversionSchema,
-  {signal}: ArrowRecordBatchConversionOptions = {}
+  {signal, maxBatchPayloadBytes}: ArrowRecordBatchConversionOptions = {}
 ): AsyncGenerator<PreparedArrowGPURecordBatch> {
+  if (
+    maxBatchPayloadBytes !== undefined &&
+    (!Number.isSafeInteger(maxBatchPayloadBytes) || maxBatchPayloadBytes < 0)
+  ) {
+    throw new Error('Arrow GPU stream payload budget must be a nonnegative safe integer');
+  }
   const temporalOrigins = new Map<string, number | bigint>();
   const formats = new Map<string, string | undefined>();
   let sourceBatchIndex = 0;
@@ -245,6 +253,14 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
           : {...column, temporal: {...column.temporal, origin}};
       })
     };
+    if (maxBatchPayloadBytes !== undefined) {
+      const {cost} = planArrowTableGPUConversion(device, new Table([recordBatch]), batchSchema);
+      if (cost.targetByteLength > maxBatchPayloadBytes) {
+        throw new Error(
+          `Arrow GPU stream batch ${sourceBatchIndex} needs ${cost.targetByteLength} payload bytes, exceeding the ${maxBatchPayloadBytes} byte budget`
+        );
+      }
+    }
     const prepared = await convertArrowRecordBatchToGPURecordBatch(
       device,
       recordBatch,
@@ -270,6 +286,35 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
     yield prepared;
     sourceRowIndexOffset += recordBatch.numRows;
     sourceBatchIndex++;
+  }
+}
+
+/**
+ * Consumes prepared GPU batches one at a time and releases them before reading the next batch.
+ * The callback borrows the batch until its returned promise settles. Await any GPU work that
+ * still uses the batch before returning. Cancellation is observed between callbacks and is
+ * available to an in-flight callback through the supplied signal.
+ */
+export async function consumeArrowGPURecordBatches(
+  device: Device,
+  source: ArrowRecordBatchConversionSource,
+  schema: ArrowGPUTableConversionSchema,
+  consume: (batch: PreparedArrowGPURecordBatch, signal?: AbortSignal) => void | Promise<void>,
+  options: ArrowRecordBatchConversionOptions = {}
+): Promise<void> {
+  for await (const prepared of convertArrowRecordBatchesToGPURecordBatches(
+    device,
+    source,
+    schema,
+    options
+  )) {
+    try {
+      options.signal?.throwIfAborted();
+      await consume(prepared, options.signal);
+      options.signal?.throwIfAborted();
+    } finally {
+      prepared.destroy();
+    }
   }
 }
 
