@@ -187,8 +187,8 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
         colorMask: 0,
         stencilReadMask: 0xff,
         stencilWriteMask: 0xff,
-        stencilCompare: 'always',
-        stencilPassOperation: 'replace'
+        stencilFront: {passOp: 'replace'},
+        stencilBack: {passOp: 'replace'}
       }
     });
     const stencilTestPipeline = device.createRenderPipeline({
@@ -225,7 +225,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
 
     // WebGL scissors clears and WebGPU doesn't, so clear in a separate pass
     device.beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1], clearStencil: 0}).end();
-    // Write stencil value 1 into the right pixel only
+    // Write the high stencil bit into the right pixel only
     const writePass = device.beginRenderPass({
       framebuffer,
       clearColor: false,
@@ -234,7 +234,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       parameters: {scissorRect: [1, 0, 1, 1]}
     });
     writePass.setPipeline(stencilWritePipeline);
-    writePass.setParameters({stencilReference: 1});
+    writePass.setParameters({stencilReference: 0x80});
     writePass.draw({vertexCount: 3});
     writePass.end();
     device.submit();
@@ -251,7 +251,7 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       clearStencil: false
     });
     testPass.setPipeline(stencilTestPipeline);
-    testPass.setParameters({stencilReference: 1});
+    testPass.setParameters({stencilReference: 0x80});
     testPass.draw({vertexCount: 3});
     testPass.end();
     device.submit();
@@ -260,6 +260,84 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
       await readTexturePixels(device, colorTexture, 2),
       `${device.type} stencil test masks the left pixel`
     ).toEqual([0, 0, 255, 255, 255, 0, 0, 255]);
+
+    // The draw scissor covers only the right pixel, but the stencil clear covers the whole target.
+    device
+      .beginRenderPass({
+        framebuffer,
+        clearColor: false,
+        clearDepth: false,
+        clearStencil: 0x82,
+        parameters: {scissorRect: [1, 0, 1, 1]}
+      })
+      .end();
+    const clearTestPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: false,
+      clearDepth: false,
+      clearStencil: false
+    });
+    clearTestPass.setPipeline(stencilTestPipeline);
+    clearTestPass.setParameters({stencilReference: 0x82});
+    clearTestPass.draw({vertexCount: 3});
+    clearTestPass.end();
+    device.submit();
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} stencil clear ignores the draw scissor`
+    ).toEqual([255, 0, 0, 255, 255, 0, 0, 255]);
+
+    // Count an outer triangle and an oppositely wound contour over the right pixel.
+    const windingSource =
+      device.type === 'webgpu' ? WGSL_INDEXED_RENDER_SOURCE : GLSL_INDEXED_VERTEX_SOURCE;
+    const vector = device.type === 'webgpu' ? 'vec2<f32>' : 'vec2';
+    const windingShader = device.createShader({
+      ...(device.type === 'webgl' ? {stage: 'vertex' as const} : {}),
+      source: windingSource.replace(
+        /vec2(?:<f32>)?\(2\.0, 2\.0\)(?:,\s*vec2(?:<f32>)?\(2\.0, 2\.0\)){2}/,
+        `${vector}(0.0, -2.0), ${vector}(0.0, 2.0), ${vector}(2.0, -2.0)`
+      )
+    });
+    await windingShader.asyncCompilationStatus;
+    const windingPipeline = device.createRenderPipeline({
+      vs: windingShader,
+      fs: device.type === 'webgpu' ? windingShader : fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus-stencil8',
+      parameters: {
+        colorMask: 0,
+        stencilFront: {passOp: 'increment-wrap'},
+        stencilBack: {passOp: 'decrement-wrap'}
+      }
+    });
+    const coverPipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus-stencil8',
+      parameters: {stencilCompare: 'not-equal', stencilWriteMask: 0}
+    });
+    const windingPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 1, 1],
+      clearStencil: 0
+    });
+    windingPass.setPipeline(windingPipeline);
+    windingPass.draw({vertexCount: 6});
+    windingPass.setPipeline(coverPipeline);
+    windingPass.setParameters({stencilReference: 0});
+    windingPass.draw({vertexCount: 3});
+    windingPass.end();
+    device.submit();
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} opposite stencil winding cancels on the right`
+    ).toEqual([255, 0, 0, 255, 0, 0, 255, 255]);
+    windingPipeline.destroy();
+    coverPipeline.destroy();
+    windingShader.destroy();
 
     framebuffer.destroy();
     depthStencilTexture.destroy();

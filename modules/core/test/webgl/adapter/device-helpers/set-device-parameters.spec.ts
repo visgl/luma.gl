@@ -238,6 +238,21 @@ it('setDeviceParameters#stencilWriteMask accepts zero', async () => {
   }
 });
 
+it('setDeviceParameters defaults the opposite face when writing one face', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device) return;
+  const gl = device.gl;
+  device.pushState();
+  try {
+    gl.stencilOp(GL.REPLACE, GL.REPLACE, GL.REPLACE);
+    setDeviceParameters(device, {stencilFront: {passOp: 'increment-wrap'}});
+    expect(gl.getParameter(GL.STENCIL_PASS_DEPTH_PASS)).toBe(GL.INCR_WRAP);
+    expect(gl.getParameter(GL.STENCIL_BACK_PASS_DEPTH_PASS)).toBe(GL.KEEP);
+  } finally {
+    device.popState();
+  }
+});
+
 it('setDeviceParameters#stencilCompare always keeps stencil operations enabled', async () => {
   const device = await getOrSkipWebGLTestDevice();
   if (!device) {
