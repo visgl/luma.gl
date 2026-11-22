@@ -167,5 +167,6 @@ export type {GPURigidBodyVehicle} from './rigid-body-vehicle';
 export {
   GPUArticulationTree,
   type GPUArticulationLink,
+  type GPUArticulationContact,
   type GPUArticulationDrive
 } from './gpu-articulation-tree';

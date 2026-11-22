@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
+import {makeArmContactTrial} from '../../../../examples/experimental/gpu-rigid-body-world/robot-arm-contact';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld} from '../../src/gpu-physics';
@@ -94,5 +95,36 @@ it('loads the work stop and lifts away on a new elbow command', async context =>
   } finally {
     graph.destroy();
     world.destroy();
+  }
+});
+
+it('transmits a compressive reaction through the tree and releases it on lift', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const trial = makeArmContactTrial(true);
+  const definition = new GPUCommandGraph(device);
+  trial.world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (const press of [true, false]) {
+      trial.command(press);
+      const encoder = device.createCommandEncoder();
+      for (let step = 0; step < 240; step++) graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const status = await trial.world.readSimulationDiagnostics();
+      expect(status.complete).toBe(true);
+      expect(status.steps).toBe(press ? 240 : 480);
+      const force = 'normalForce' in status ? status.normalForce : undefined;
+      if (press) {
+        expect(await trial.payloadHeight()).toBeCloseTo(trial.seatHeight, 2);
+        expect(force).toBeGreaterThan(1);
+      } else {
+        expect(await trial.payloadHeight()).toBeGreaterThan(2);
+        expect(force).toBe(0);
+      }
+    }
+  } finally {
+    graph.destroy();
+    trial.world.destroy();
   }
 });

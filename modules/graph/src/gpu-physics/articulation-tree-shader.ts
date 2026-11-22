@@ -3,14 +3,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Fixed-base joint-space forward dynamics. One invocation owns a whole small tree. */
-export function getArticulationTreeShader(count: number): string {
+export function getArticulationTreeShader(
+  count: number,
+  contact = false,
+  publishMatrices = false
+): string {
   return /* wgsl */ `
 const N = ${count}u;
 struct Link {
   parentAnchor:vec4f, childAnchor:vec4f, axisMass:vec4f, inertia:vec4f, rest:vec4f
 }
 struct Pose { position:vec4f, rotation:vec4f, velocity:vec4f, spin:vec4f }
-struct Settings { base:vec4f, gravityStep:vec4f }
+struct Settings { base:vec4f, gravityStep:vec4f, boxCenterRadius:vec4f, boxExtentsLink:vec4f }
 @group(0) @binding(0) var<storage,read> links:array<Link>;
 @group(0) @binding(1) var<storage,read> drives:array<vec4f>;
 @group(0) @binding(2) var<storage,read_write> coordinates:array<vec4f>;
@@ -18,6 +22,7 @@ struct Settings { base:vec4f, gravityStep:vec4f }
 @group(0) @binding(4) var<storage,read_write> counters:array<u32>;
 @group(0) @binding(5) var<uniform> settings:Settings;
 
+${publishMatrices ? '@group(0) @binding(6) var<storage,read_write> matrices:array<mat4x4f>;' : ''}
 var<private> angle:array<f32,N>;
 var<private> speed:array<f32,N>;
 var<private> solved:array<Pose,N>;
@@ -88,6 +93,37 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
   }}
  }
  for(var i=0u;i<N;i++){for(var j=0u;j<N;j++){speed[i]+=dt*inverse[i][j]*force[j];}}
+ ${
+   contact
+     ? `// Closest point on a finite AABB. Inside, use the nearest exit face.
+ let body=u32(settings.boxExtentsLink.w);
+ let center=solved[body].position.xyz;
+ let local=center-settings.boxCenterRadius.xyz;
+ let extent=settings.boxExtentsLink.xyz;
+ let outside=local-clamp(local,-extent,extent);
+ let distance=length(outside);
+ var normal=vec3f(0);
+ var gap=distance-settings.boxCenterRadius.w;
+ if(distance>0.0){normal=outside/distance;}else{
+  let depth=extent-abs(local);var face=0u;
+  if(depth.y<depth.x){face=1u;}if(depth.z<depth[face]){face=2u;}
+  normal[face]=select(-1.0,1.0,local[face]>=0.0);
+  gap= -depth[face]-settings.boxCenterRadius.w;
+ }
+ var jacobian:array<f32,N>;var response:array<f32,N>;
+ for(var joint=i32(body);joint>=0;joint=i32(links[joint].parentAnchor.w)){
+  jacobian[joint]=dot(normal,cross(axis[joint],center-pivot[joint]));
+ }
+ var inverseContactMass=0.0;
+ for(var row=0u;row<N;row++){
+  for(var column=0u;column<N;column++){response[row]+=inverse[row][column]*jacobian[column];}
+  inverseContactMass+=jacobian[row]*response[row];
+ }
+ // Speculate across the remaining gap; correct existing overlap gradually.
+ let separationSpeed=select(-gap/dt,min(2.0,0.2*max(0.0,-gap-0.0001)/dt),gap<0.0);
+ var normalImpulse=0.0;`
+     : ''
+ }
  // Implicit spring/damper impulses in coupled joint space. Project each update
  // onto its torque budget and propagate the resulting velocity change to all axes.
  for(var sweep=0u;sweep<64u;sweep++){
@@ -99,6 +135,17 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
    let delta=next-impulse[i];impulse[i]=next;change=max(change,abs(delta));
    for(var j=0u;j<N;j++){speed[j]+=inverse[j][i]*delta;}
   }
+  ${
+    contact
+      ? `if(inverseContactMass>1e-9){
+   var normalSpeed=0.0;
+   for(var j=0u;j<N;j++){normalSpeed+=jacobian[j]*speed[j];}
+   let next=max(0.0,normalImpulse+(separationSpeed-normalSpeed)/inverseContactMass);
+   let delta=next-normalImpulse;normalImpulse=next;change=max(change,abs(delta));
+   for(var j=0u;j<N;j++){speed[j]+=response[j]*delta;}
+  }`
+      : ''
+  }
   if(change<1e-7){break;}
  }
  for(var i=0u;i<N;i++){angle[i]+=dt*speed[i];}
@@ -107,6 +154,15 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
   if(!finite(vec4f(angle[i],speed[i],impulse[i]/dt,0))||!finite(pose.position)||!finite(pose.rotation)||!finite(pose.velocity)||!finite(pose.spin)){counters[1]=1u;return;}
  }
  for(var i=0u;i<N;i++){coordinates[i]=vec4f(angle[i],speed[i],impulse[i]/dt,0);poses[i]=solved[i];}
+ ${contact ? 'counters[2]=bitcast<u32>(normalImpulse/dt);' : ''}
+ ${
+   publishMatrices
+     ? `for(var i=0u;i<N;i++){
+  let pose=solved[i];let q=pose.rotation;
+  matrices[i]=mat4x4f(vec4f(rotate(q,vec3f(1,0,0)),0),vec4f(rotate(q,vec3f(0,1,0)),0),vec4f(rotate(q,vec3f(0,0,1)),0),pose.position);
+ }`
+     : ''
+ }
  counters[0]++;
 }
 `;
