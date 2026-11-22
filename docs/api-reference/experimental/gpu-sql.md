@@ -99,13 +99,15 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   A one-based position refers to the SELECT output, including computed aliases and expanded `*`.
 
 - For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
-- `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
+- `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with optional `GROUP BY`.
   `COUNT(column)` counts valid values after filtering, while `COUNT(*)` counts all selected rows.
   Numeric aggregate expressions such as `SUM(fare * 2) AS total` require an explicit output alias.
 
 
   Refer to the selected key by source name, a one-based SELECT position, or an unqualified alias that does not shadow a source column.
-  Grouped results preserve SELECT column order and retain the key dictionary under the output name.
+  Grouped results preserve SELECT column order and retain key dictionaries under their output names.
+  Single-key grouping returns the full category domain. Two-key grouping requires two non-null uint32 dictionary columns and returns only pairs observed after WHERE.
+  For two-key results, pass the compiled query’s `rowIndices` and `selectedCounts` to Arrow readback to read the observed rows from the capacity-backed result.
 
   Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
@@ -119,7 +121,7 @@ and `"order"`. A quoted identifier such as `"fare.total"` names a single field. 
 `trips."fare.total"`, `trips` qualifies the field. The period inside the quotes remains part of its name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
-expressions, multiple group keys, and pagination without ordering fail during CPU-only planning.
+expressions, more than two group keys, and pagination without ordering fail during CPU-only planning.
 Applications still own command submission, synchronization, result readback, and cleanup.
 
 The loaders.gl adapter currently supports predicate pushdown and output projection. It accepts

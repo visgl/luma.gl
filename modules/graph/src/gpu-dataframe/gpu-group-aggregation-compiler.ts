@@ -6,10 +6,26 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
-import {GraphVectorView, type GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
-import {GPUGroupAggregation} from '@luma.gl/graph/gpu-core';
+import {
+  GraphVectorView,
+  type GPUCommandGraph,
+  type GraphDataView,
+  type GraphBufferUse
+} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGroupAggregation,
+  GPUGather,
+  GPUReduction,
+  GPUScan,
+  GPUSort,
+  createTransientView
+} from '@luma.gl/graph/gpu-core';
 import {GPUMask} from '@luma.gl/graph/gpu-core';
-import {createTransientVectorView, getViewElementOffset} from '@luma.gl/graph/gpu-core';
+import {
+  createTransientVectorView,
+  getViewElementOffset,
+  validatePackedUint32View
+} from '@luma.gl/graph/gpu-core';
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,
@@ -43,7 +59,7 @@ type GPUGroupedMetricState = {
 export class CompiledGPUDataFrameGroupedAggregation<
   T extends GPUTypeMap = GPUTypeMap
 > extends CompiledGPUDataFrameQuery<T> {
-  /** Number of dense categorical group rows represented by the grouped result table. */
+  /** Result table capacity. Observed grouping publishes the actual count in selectedCounts. */
   readonly groupCount: number;
 
   /** @internal */
@@ -60,6 +76,37 @@ export type GPUGroupedOutputProjection = Readonly<{
   /** Output names in SELECT order. */
   columns: readonly string[];
 }>;
+
+/** Ordered source keys and their corresponding output fields. */
+type GPUGroupingKeys = readonly Readonly<{source: string; output: string}>[];
+
+/** Adds observed two-key grouping bounded by the source row count. @internal */
+export function compileGPUDataFramePairAggregation(
+  source: GPUDataFrame,
+  predicates: readonly GPUExpression<boolean, string>[],
+  selectedColumns: readonly string[],
+  derivedColumns: readonly GPUDataFrameDerivedColumn[],
+  keys: GPUGroupingKeys,
+  definitions: readonly GPUDataFrameAggregationDefinition[],
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  columns: readonly string[]
+): CompiledGPUDataFrameGroupedAggregation {
+  if (source.numRows > 0) validateGPUGroupingCapacity(source, source.numRows, graph);
+  validateGPUGroupingSourceColumns(
+    source,
+    keys.map(key => key.source),
+    definitions
+  );
+  return compileGPUDataFrameQuery<
+    GPUTypeMap,
+    GPUTypeMap,
+    GPUTypeMap,
+    CompiledGPUDataFrameGroupedAggregation
+  >(source, predicates, selectedColumns, graph, derivedColumns, {
+    prepare: context =>
+      addGPUGroupedAggregationToGraph(context, keys, source.numRows, definitions, columns, true)
+  });
+}
 
 /** Adds dense categorical aggregation to source-row work before the shared graph is frozen. */
 export function compileGPUDataFrameGroupedAggregation<
@@ -78,7 +125,7 @@ export function compileGPUDataFrameGroupedAggregation<
   projection?: GPUGroupedOutputProjection
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
-  validateGPUGroupingSourceColumns(source, key, definitions);
+  validateGPUGroupingSourceColumns(source, [key], definitions);
   return compileGPUDataFrameQuery<
     Source,
     Selection,
@@ -88,10 +135,10 @@ export function compileGPUDataFrameGroupedAggregation<
     prepare: context =>
       addGPUGroupedAggregationToGraph<Selection, Result>(
         context,
-        key,
+        [{source: key, output: projection?.key ?? key}],
         groupCount,
         definitions,
-        projection
+        projection?.columns
       )
   });
 }
@@ -99,11 +146,11 @@ export function compileGPUDataFrameGroupedAggregation<
 /** Rejects unsupported constants and explicitly unknown source nullability before GPU allocation. */
 function validateGPUGroupingSourceColumns<Source extends GPUTypeMap>(
   source: GPUDataFrame<Source>,
-  key: string,
+  keys: readonly string[],
   definitions: readonly GPUDataFrameAggregationDefinition[]
 ): void {
   const columnNames = new Set([
-    key,
+    ...keys,
     ...definitions.flatMap(definition =>
       definition.operation !== 'count' && definition.column ? [definition.column] : []
     )
@@ -144,10 +191,11 @@ function validateGPUGroupingCapacity<Source extends GPUTypeMap>(
 /** Creates grouped buffers, null-aware masks, and one cross-batch primitive per requested metric. */
 function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
-  key: keyof Selection & string,
+  groupingKeys: GPUGroupingKeys,
   groupCount: number,
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  projection?: GPUGroupedOutputProjection
+  columns?: readonly string[],
+  observed = false
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -155,31 +203,58 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   let resultTable: GPUTable<Result> | undefined;
 
   try {
-    const sourceKeys = getGPUGroupingVector(context, key, 'uint32');
-    const keys = graph.importGPUVector(`${prefix}-keys`, sourceKeys);
-    const keyValidity = getGPUGroupingValidity(context, key, keys);
+    const inputs = groupingKeys.map(({source}, index) =>
+      graph.importGPUVector(
+        `${prefix}-key-${index}`,
+        getGPUGroupingVector(context, source, 'uint32')
+      )
+    );
+    const outputVectors = new Map<string, GPUVector<'uint32'> | GPUVector<'float32'>>();
+    const outputs = groupingKeys.map(({output}, index) => {
+      const vector = createGPUGroupedOutputVector(
+        graph.device,
+        `${prefix}-output-key-${index}`,
+        groupCount,
+        'uint32'
+      );
+      ownedVectors.push(vector);
+      outputVectors.set(output, vector);
+      return graph.importGPUVector(`${prefix}-output-key-view-${index}`, vector).data[0];
+    });
+    const keyValidity = observed
+      ? undefined
+      : getGPUGroupingValidity(context, groupingKeys[0].source, inputs[0]);
     const baseMask = keyValidity
       ? combineGPUGroupingMasks(graph, `${prefix}-key-validity`, context.selectionMask, keyValidity)
       : context.selectionMask;
-
-    const outputVectors = new Map<string, GPUVector<'uint32'> | GPUVector<'float32'>>();
-    const groupKeys = createGPUGroupedOutputVector(
-      graph.device,
-      `${prefix}-output-keys`,
-      groupCount,
-      'uint32'
-    );
-    ownedVectors.push(groupKeys);
-    const outputKey = projection?.key ?? key;
-    outputVectors.set(outputKey, groupKeys);
-    const groupKeyView = graph.importGPUVector(`${prefix}-output-key-vector`, groupKeys).data[0];
-    addGPUGroupIdentityPass(graph, `${prefix}-output-key-identity`, groupKeyView);
+    const rowSelection = observed
+      ? addGPUObservedPairGroups(context, prefix, inputs, outputs, ownedVectors)
+      : undefined;
+    const keys = rowSelection?.keys ?? inputs[0];
+    if (!observed) addGPUGroupIdentityPass(graph, `${prefix}-output-key-identity`, outputs[0]);
 
     const metricStates = new Map<string, GPUGroupedMetricState>();
     const validity: Record<string, GPUVector<'uint32'>> = {};
 
     for (const [definitionIndex, definition] of definitions.entries()) {
       const metricId = `${prefix}-metric-${definitionIndex}`;
+      if (groupCount === 0) {
+        const format = definition.operation === 'count' ? 'uint32' : 'float32';
+        const output = createGPUGroupedOutputVector(graph.device, metricId, 0, format);
+        ownedVectors.push(output);
+        outputVectors.set(definition.name, output as GPUVector<'uint32'> | GPUVector<'float32'>);
+        if (definition.operation !== 'count') {
+          const mask = createGPUGroupedOutputVector(
+            graph.device,
+            `${metricId}-validity`,
+            0,
+            'uint32'
+          );
+          ownedVectors.push(mask);
+          validity[definition.name] = mask;
+        }
+        continue;
+      }
       if (definition.operation === 'count') {
         const output = createGPUGroupedOutputVector(graph.device, metricId, groupCount, 'uint32');
         ownedVectors.push(output);
@@ -234,15 +309,19 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
 
     resultTable = createGPUGroupedResultTable<Selection, Result>(
       context.table,
-      key,
+      groupingKeys,
       definitions,
       outputVectors,
-      projection
+      columns
     );
-    const dictionary = context.dictionaries[key];
-    const dictionaries = Object.freeze(dictionary ? {[outputKey]: dictionary} : {}) as Readonly<
-      GPUDataFrameDictionaries<Result>
-    >;
+    const dictionaries = Object.freeze(
+      Object.fromEntries(
+        groupingKeys.flatMap(({source, output}) => {
+          const dictionary = context.dictionaries[source as keyof Selection & string];
+          return dictionary ? [[output, dictionary]] : [];
+        })
+      )
+    ) as Readonly<GPUDataFrameDictionaries<Result>>;
 
     return {
       table: resultTable,
@@ -250,7 +329,29 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       dictionaries,
       ownedTables: [resultTable],
       ownedVectors,
-      createCompiled: props => new CompiledGPUDataFrameGroupedAggregation(props, groupCount)
+      createCompiled: props =>
+        new CompiledGPUDataFrameGroupedAggregation(
+          rowSelection
+            ? {
+                ...props,
+                rowIndices: rowSelection.rows,
+                selectedCounts: rowSelection.count,
+                selectionMask: rowSelection.mask,
+                ownedVectors: [
+                  ...(props.ownedVectors ?? []).filter(
+                    vector =>
+                      vector !== rowSelection.rows &&
+                      vector !== rowSelection.mask &&
+                      vector !== rowSelection.count
+                  ),
+                  props.rowIndices,
+                  props.selectedCounts,
+                  props.selectionMask
+                ]
+              }
+            : props,
+          groupCount
+        )
     };
   } catch (error) {
     resultTable?.destroy();
@@ -259,6 +360,199 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
     }
     throw error;
   }
+}
+
+/** Finds observed pairs with two stable key sorts and assigns dense group IDs on the GPU. */
+function addGPUObservedPairGroups(
+  context: Pick<GPUDataFrameQueryExtensionContext<GPUTypeMap>, 'graph' | 'selectionMask'>,
+  prefix: string,
+  inputs: readonly GraphVectorView<'uint32'>[],
+  outputs: readonly GraphDataView<'uint32'>[],
+  ownedVectors: GPUVector[]
+): {
+  keys: GraphVectorView<'uint32'>;
+  rows: GPUVector<'uint32'>;
+  count: GPUVector<'uint32'>;
+  mask: GPUVector<'uint32'>;
+} {
+  const {graph, selectionMask} = context;
+  for (const input of inputs) {
+    for (const chunk of input.data) validatePackedUint32View(chunk, prefix + '-key');
+  }
+  const length = selectionMask.length;
+  const allocate = (name: string, size: number) => {
+    const vector = createGPUGroupedOutputVector(graph.device, prefix + name, size, 'uint32');
+    ownedVectors.push(vector);
+    return vector;
+  };
+  const rows = allocate('-result-rows', length);
+  const mask = allocate('-result-mask', length);
+  const count = allocate('-result-count', 1);
+  const countView = graph.importGPUVector(prefix + '-count-view', count).data[0];
+  if (length === 0) {
+    addGPUPairPass(graph, prefix + '-empty', 1, {}, {count: countView}, 'count[0] = 0u;');
+    return {keys: inputs[0], rows, count, mask};
+  }
+
+  const scratch = (name: string) => createTransientView(graph, prefix + name, 'uint32', length);
+  const first = scratch('-first');
+  const second = scratch('-second');
+  const ordinals = scratch('-ordinals');
+  const sortedValues = scratch('-sorted-values');
+  const secondaryOrder = scratch('-secondary-order');
+  const reorderedFirst = scratch('-reordered-first');
+  const pairOrder = scratch('-pair-order');
+  const heads = scratch('-heads');
+  const ranks = scratch('-ranks');
+  const groupIds = scratch('-group-ids');
+  const excluded = '0xffffffffu';
+  let offset = 0;
+  for (const [batchIndex, selection] of selectionMask.data.entries()) {
+    if (selection.length > 0) {
+      addGPUPairPass(
+        graph,
+        prefix + '-stage-' + batchIndex,
+        selection.length,
+        {left: inputs[0].data[batchIndex], right: inputs[1].data[batchIndex], selection},
+        {first, second, ordinals},
+        `
+          let row = ${offset}u + index;
+          first[row] = select(${excluded}, left[index], selection[index] != 0u);
+          second[row] = right[index];
+          ordinals[row] = row;
+        `
+      );
+    }
+    offset += selection.length;
+  }
+  graph.add(
+    new GPUSort({
+      id: prefix + '-sort-second',
+      keys: second,
+      values: ordinals,
+      outputKeys: sortedValues,
+      outputValues: secondaryOrder
+    })
+  );
+  graph.add(
+    new GPUGather({
+      id: prefix + '-gather-first',
+      source: first,
+      indices: secondaryOrder,
+      output: reorderedFirst
+    })
+  );
+  graph.add(
+    new GPUSort({
+      id: prefix + '-sort-first',
+      keys: reorderedFirst,
+      values: secondaryOrder,
+      outputKeys: sortedValues,
+      outputValues: pairOrder
+    })
+  );
+  addGPUPairPass(
+    graph,
+    prefix + '-heads-pass',
+    length,
+    {first, second, pairOrder},
+    {heads},
+    `
+    let row = pairOrder[index];
+    let previous = pairOrder[max(index, 1u) - 1u];
+    heads[index] = u32(first[row] != ${excluded} &&
+      (index == 0u || first[row] != first[previous] || second[row] != second[previous]));
+  `
+  );
+  graph.add(
+    new GPUScan({id: prefix + '-scan-heads', input: heads, output: ranks, mode: 'inclusive'})
+  );
+  graph.add(
+    new GPUReduction({
+      id: prefix + '-count-heads',
+      input: heads,
+      output: countView,
+      operation: 'sum'
+    })
+  );
+  addGPUPairPass(
+    graph,
+    prefix + '-scatter',
+    length,
+    {first, second, pairOrder, heads, ranks},
+    {groupIds, firstOutput: outputs[0], secondOutput: outputs[1]},
+    `
+      let row = pairOrder[index];
+      groupIds[row] = 0u;
+      if (first[row] != ${excluded}) {
+        let group = ranks[index] - 1u;
+        groupIds[row] = group;
+        if (heads[index] != 0u) {
+          firstOutput[group] = first[row];
+          secondOutput[group] = second[row];
+        }
+      }
+    `
+  );
+  addGPUPairPass(
+    graph,
+    prefix + '-result-selection',
+    length,
+    {count: countView},
+    {
+      rows: graph.importGPUVector(prefix + '-rows-view', rows).data[0],
+      mask: graph.importGPUVector(prefix + '-mask-view', mask).data[0]
+    },
+    'rows[index] = index; mask[index] = u32(index < count[0]);'
+  );
+
+  let byteOffset = 0;
+  const data = selectionMask.data.map(chunk => {
+    const view = graph.createDataView(groupIds.buffer, {
+      format: 'uint32',
+      length: chunk.length,
+      byteOffset
+    });
+    byteOffset += chunk.length * UINT32_BYTE_LENGTH;
+    return view;
+  });
+  const keys = new GraphVectorView({...selectionMask, id: prefix + '-ids', data});
+  return {keys, rows, count, mask};
+}
+
+/** Binds packed uint32 views and accounts for source chunk offsets in pair-grouping shaders. */
+function addGPUPairPass(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  id: string,
+  length: number,
+  reads: Record<string, GraphDataView<'uint32'>>,
+  writes: Record<string, GraphDataView<'uint32'>>,
+  body: string
+): void {
+  const bindings = {...reads, ...writes};
+  const resources: GraphBufferUse[] = [];
+  const declarations = Object.entries(bindings).map(([name, view], binding) => {
+    const write = Object.hasOwn(writes, name);
+    resources.push({buffer: view, usage: write ? 'storage-write' : 'storage-read'});
+    body = body.replaceAll(name + '[', name + '[' + getViewElementOffset(view) + 'u + ');
+    return `@group(0) @binding(${binding}) var<storage, ${write ? 'read_write' : 'read'}> ${name}: array<u32>;`;
+  });
+  addGPUAnalyticsComputePass(graph, {
+    id,
+    bindings,
+    resources,
+    length,
+    source: /* wgsl */ `
+    ${declarations.join('\n')}
+    @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+    fn main(@builtin(local_invocation_index) localInvocationIndex: u32,
+      @builtin(workgroup_id) workgroupId: vec3<u32>) {
+      ${getGPUAnalyticsInvocationIndexSource(graph, length)}
+      if (index >= ${length}u) { return; }
+      ${body}
+    }
+  `
+  });
 }
 
 /** Resolves one batch-aligned grouped input, including schema-only sources without GPU chunks. */
@@ -386,22 +680,22 @@ function createGPUGroupedOutputVector<Format extends 'uint32' | 'float32'>(
 /** Produces one explicit dense categorical batch with independently borrowed output wrappers. */
 function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends GPUTypeMap>(
   source: GPUTable<Source>,
-  key: string,
+  keys: GPUGroupingKeys,
   definitions: readonly GPUDataFrameAggregationDefinition[],
   vectors: ReadonlyMap<string, GPUVector<'uint32'> | GPUVector<'float32'>>,
-  projection?: GPUGroupedOutputProjection
+  columns?: readonly string[]
 ): GPUTable<Result> {
-  const sourceKey = source.schema.fields.find(field => field.name === key);
-  if (!sourceKey) {
-    throw new Error('GPUDataFrame grouped result requires an existing key field');
-  }
   const outputFields: GPUField[] = [
-    {
-      name: projection?.key ?? key,
-      format: 'uint32',
-      nullable: false,
-      ...(sourceKey.metadata ? {metadata: new Map(sourceKey.metadata)} : {metadata: new Map()})
-    },
+    ...keys.map(({source: name, output}) => {
+      const field = source.schema.fields.find(candidate => candidate.name === name);
+      if (!field) throw new Error('GPUDataFrame grouped result requires an existing key field');
+      return {
+        name: output,
+        format: 'uint32' as const,
+        nullable: false,
+        metadata: new Map(field.metadata)
+      };
+    }),
     ...definitions.map(definition => ({
       name: definition.name,
       format: definition.operation === 'count' ? ('uint32' as const) : ('float32' as const),
@@ -409,8 +703,8 @@ function createGPUGroupedResultTable<Source extends GPUTypeMap, Result extends G
       metadata: new Map<string, string>()
     }))
   ];
-  const fields = projection
-    ? projection.columns.map(name => outputFields.find(field => field.name === name)!)
+  const fields = columns
+    ? columns.map(name => outputFields.find(field => field.name === name)!)
     : outputFields;
   const gpuData: Record<string, GPUData> = {};
   for (const field of fields) {

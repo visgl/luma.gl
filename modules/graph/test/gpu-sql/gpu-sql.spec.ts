@@ -566,13 +566,136 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   void 0;
 });
 
-function createGPUSQLArrowTable(): arrow.Table {
+it('GPUSQL aggregates only observed dictionary pairs across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const arrowTable = createGPUSQLArrowTable(true);
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, arrowTable),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  const result = context
+    .query(
+      'SELECT COUNT(*) AS trips, service AS kind, category, COUNT(fare) AS known, SUM(fare) AS total FROM trips WHERE fare >= :minimum OR (fare IS NULL AND :includeMissing) GROUP BY category, 2',
+      {parameters: {minimum: 8, includeMissing: true}}
+    )
+    .compile(new GPUCommandGraph(device));
+
+  try {
+    for (const {minimum, includeMissing} of [
+      {minimum: 8, includeMissing: true},
+      {minimum: 12, includeMissing: true},
+      {minimum: 12, includeMissing: false}
+    ]) {
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder, {minimum, includeMissing});
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        dictionaries: result.dictionaries,
+        rowIndices: result.rowIndices,
+        selectedCounts: result.selectedCounts
+      });
+      const expected = new Map<
+        string,
+        {trips: number; kind: string; category: string; known: number; total: number | null}
+      >();
+      for (const row of arrowTable) {
+        const {category, service, fare} = row;
+        if (fare === null ? !includeMissing : fare < minimum) continue;
+        const key = category + '/' + service;
+        const group = expected.get(key) ?? {
+          trips: 0,
+          kind: service,
+          category,
+          known: 0,
+          total: null
+        };
+        group.trips++;
+        if (fare !== null) {
+          group.known++;
+          group.total = (group.total ?? 0) + fare;
+        }
+        expected.set(key, group);
+      }
+      expect(output.schema.fields.map(field => field.name)).toEqual([
+        'trips',
+        'kind',
+        'category',
+        'known',
+        'total'
+      ]);
+      expect(output.getChild('kind')?.type).toBeInstanceOf(arrow.Dictionary);
+      expect(output.getChild('category')?.type).toBeInstanceOf(arrow.Dictionary);
+      expect(output.toArray().map(row => row.toJSON())).toEqual(
+        [...expected.entries()]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([, row]) => row)
+      );
+    }
+  } finally {
+    result.destroy();
+    frame.destroy();
+  }
+});
+
+it('GPUSQL returns an empty observed group table for an empty Arrow source', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable(true, true)),
+    ownership: 'owned'
+  });
+  try {
+    const result = new GPUSQLContext({trips: frame})
+      .query(
+        'SELECT category, service, COUNT(*) AS trips, SUM(fare) AS total FROM trips GROUP BY category, service'
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder);
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        dictionaries: result.dictionaries,
+        rowIndices: result.rowIndices,
+        selectedCounts: result.selectedCounts
+      });
+      expect(output.numRows).toBe(0);
+      expect(output.schema.fields.map(field => field.name)).toEqual([
+        'category',
+        'service',
+        'trips',
+        'total'
+      ]);
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+function createGPUSQLArrowTable(includeService = false, empty = false): arrow.Table {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 17, true);
   const dictionary = arrow.vectorFromArray(['economy', 'premium'], new arrow.Utf8());
   const fields = [
     new arrow.Field('identifier', new arrow.Uint32(), false),
     new arrow.Field('fare', new arrow.Float32(), true),
-    new arrow.Field('category', dictionaryType, false)
+    new arrow.Field('category', dictionaryType, false),
+    ...(includeService
+      ? [
+          new arrow.Field(
+            'service',
+            new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 18, true),
+            false
+          )
+        ]
+      : [])
   ];
   const schema = new arrow.Schema(fields, new Map([['dataset', 'sql-taxi']]));
   const identifiers = arrow.vectorFromArray(Uint32Array.of(10, 20, 30, 40, 50), new arrow.Uint32());
@@ -585,11 +708,22 @@ function createGPUSQLArrowTable(): arrow.Table {
       dictionary
     })
   ]);
-  const batches = [
-    [0, 2],
-    [2, 2],
-    [2, 5]
-  ].map(
+  const service = new arrow.Vector([
+    arrow.makeData({
+      type: new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 18, true),
+      length: 5,
+      data: Uint32Array.of(0, 0, 1, 0, 1),
+      dictionary: arrow.vectorFromArray(['basic', 'plus', 'unused'], new arrow.Utf8())
+    })
+  ]);
+  const ranges = empty
+    ? [[0, 0]]
+    : [
+        [0, 2],
+        [2, 2],
+        [2, 5]
+      ];
+  const batches = ranges.map(
     ([start, end]) =>
       new arrow.RecordBatch(
         schema,
@@ -599,7 +733,8 @@ function createGPUSQLArrowTable(): arrow.Table {
           children: [
             identifiers.slice(start, end).data[0],
             fares.slice(start, end).data[0],
-            categories.slice(start, end).data[0]
+            categories.slice(start, end).data[0],
+            ...(includeService ? [service.slice(start, end).data[0]] : [])
           ]
         })
       )

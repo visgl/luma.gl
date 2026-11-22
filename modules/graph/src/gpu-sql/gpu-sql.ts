@@ -13,7 +13,10 @@ import {
   GPUDataFrameQuery,
   type GPUDataFrameDerivedColumn
 } from '../gpu-dataframe/gpu-data-frame-query';
-import {compileGPUDataFrameGroupedAggregation} from '../gpu-dataframe/gpu-group-aggregation-compiler';
+import {
+  compileGPUDataFrameGroupedAggregation,
+  compileGPUDataFramePairAggregation
+} from '../gpu-dataframe/gpu-group-aggregation-compiler';
 import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
 import {
   compileGPUDataFrameGlobalSort,
@@ -69,7 +72,7 @@ type GPUSQLStatement = Readonly<{
     right: GPUSQLColumnReference;
   }>;
   predicate?: Expression;
-  groupBy?: GPUSQLProjectionReference;
+  groupBy?: readonly GPUSQLProjectionReference[];
   orderBy?: readonly Readonly<{
     expression: Expression;
     direction: 'ascending' | 'descending';
@@ -234,40 +237,76 @@ function buildGPUSQLPlan(
               | {mean: string});
     }
     if (statement.groupBy !== undefined) {
-      const nonAggregates = statement.items.filter(item => !item.aggregate);
-      if (nonAggregates.length !== 1) {
-        throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
+      const keyItems = statement.items.filter(item => !item.aggregate);
+      const selectedKeys = keyItems.map(item => ({
+        item,
+        source: resolveGPUSQLProjectionName(item, resolve)
+      }));
+      const boundKeys = statement.groupBy.map(reference => {
+        if (typeof reference === 'number') {
+          return resolveGPUSQLProjectionName(
+            getGPUSQLProjectionItem(statement.items, reference, 'GROUP BY'),
+            resolve
+          );
+        }
+        const alias =
+          reference.qualifier === undefined && !frame.columnNames.includes(reference.name)
+            ? selectedKeys.find(key => key.item.alias === reference.name)
+            : undefined;
+        return alias ? alias.source : resolve(reference);
+      });
+      if (
+        selectedKeys.length !== boundKeys.length ||
+        new Set(boundKeys).size !== boundKeys.length ||
+        new Set(selectedKeys.map(key => key.source)).size !== boundKeys.length ||
+        selectedKeys.some(key => !boundKeys.includes(key.source))
+      ) {
+        throw new Error('GPUSQL grouped queries must select each GROUP BY key exactly once');
       }
-      const keyItem = nonAggregates[0];
-      const selectedKey = resolveGPUSQLProjectionName(keyItem, resolve);
-      const groupReference = statement.groupBy;
-      const key =
-        typeof groupReference === 'number'
-          ? resolveGPUSQLProjectionName(
-              getGPUSQLProjectionItem(statement.items, groupReference, 'GROUP BY'),
-              resolve
-            )
-          : groupReference.qualifier === undefined &&
-              groupReference.name === keyItem.alias &&
-              !frame.columnNames.includes(groupReference.name)
-            ? selectedKey
-            : resolve(groupReference);
-      if (selectedKey !== key) {
-        throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
-      }
-      const outputKey = keyItem.alias ?? key;
-      if (Object.hasOwn(definitions, outputKey)) {
-        throw new Error('GPUSQL output column "' + outputKey + '" is duplicated');
-      }
-      outputNames.set(keyItem, outputKey);
-      const {groupCount} = query.groupBy(key);
+
+      const occupied = new Set(Object.keys(definitions));
+      const keys = boundKeys.map(source => {
+        const {item} = selectedKeys.find(key => key.source === source)!;
+        const output = item.alias ?? source;
+        if (occupied.has(output)) {
+          throw new Error('GPUSQL output column "' + output + '" is duplicated');
+        }
+        occupied.add(output);
+        outputNames.set(item, output);
+        return {source, output};
+      });
+      const {predicates, selectedColumns, derivedColumns} = query;
+      const columns = statement.items.map(item => outputNames.get(item)!);
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
-        outputKey,
+        keys[0].output,
         definitions
       );
-      const columns = statement.items.map(item => outputNames.get(item)!);
-      const {predicates, selectedColumns, derivedColumns} = query;
+
+      if (keys.length === 2) {
+        for (const {source} of keys) {
+          const field = frame.schema.fields.find(field => field.name === source);
+          if (field?.nullable || !frame.dictionaries[source] || field?.format !== 'uint32') {
+            throw new Error('GPUSQL two-key GROUP BY requires non-null uint32 dictionary columns');
+          }
+        }
+        return {
+          compile: graph =>
+            compileGPUDataFramePairAggregation(
+              frame,
+              predicates,
+              selectedColumns,
+              derivedColumns,
+              keys,
+              normalized,
+              graph,
+              columns
+            )
+        };
+      }
+
+      const [key] = keys;
+      const {groupCount} = query.groupBy(key.source);
       return {
         compile: graph =>
           compileGPUDataFrameGroupedAggregation(
@@ -275,11 +314,11 @@ function buildGPUSQLPlan(
             predicates,
             selectedColumns,
             derivedColumns,
-            key,
+            key.source,
             groupCount,
             normalized,
             graph,
-            {key: outputKey, columns}
+            {key: key.output, columns}
           )
       };
     }
@@ -493,8 +532,8 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     throw new Error('GPUSQL OFFSET must fit an unsigned 32-bit row count');
   }
   if (statement.joins.length > 1) throw new Error('GPUSQL currently supports one JOIN');
-  if ((statement.groupBy?.length ?? 0) > 1) {
-    throw new Error('GPUSQL currently supports one GROUP BY column');
+  if ((statement.groupBy?.length ?? 0) > 2) {
+    throw new Error('GPUSQL currently supports at most two GROUP BY columns');
   }
   if (statement.limit !== undefined && statement.limit > 0xffffffff) {
     throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
@@ -552,7 +591,9 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     alias: statement.from.alias,
     join: loweredJoin,
     predicate: statement.where as Expression | undefined,
-    groupBy: statement.groupBy?.[0] && readGPUSQLProjectionReference(statement.groupBy[0]),
+    groupBy: statement.groupBy?.length
+      ? statement.groupBy.map(readGPUSQLProjectionReference)
+      : undefined,
     orderBy: statement.orderBy?.length
       ? statement.orderBy.map(sort => ({
           expression: sort.expression as Expression,
