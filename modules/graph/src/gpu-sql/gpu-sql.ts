@@ -300,10 +300,10 @@ function buildGPUSQLPlan(
   } as const;
 
   const aggregates = statement.items.filter(item => item.aggregate);
-  if (statement.having && (!statement.groupBy || !aggregates.length)) {
-    throw new Error('GPUSQL HAVING requires GROUP BY and an aggregate SELECT item');
+  if (statement.having && !statement.groupBy) {
+    throw new Error('GPUSQL HAVING requires GROUP BY');
   }
-  if (aggregates.length > 0) {
+  if (aggregates.length > 0 || statement.having) {
     if (
       !statement.groupBy &&
       (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined)
@@ -319,39 +319,48 @@ function buildGPUSQLPlan(
       const join = query[joinMethods[type]](right, {leftOn: leftKey, rightOn: rightKey});
       aggregateJoin = {right, type, options: join.options};
     }
-    const definitions: GPUSQLAggregationDefinitions = {};
+    const definitions: GPUSQLAggregationDefinitions = Object.create(null);
     const reservedNames = new Set(frame.columnNames);
     const outputNames = new Map<GPUSQLSelectItem, string>();
     const aggregateOutputs = new Map<string, string>();
     let inputIndex = 0;
-    for (const item of aggregates) {
-      const input =
-        item.aggregateInput && lowerSQLExpression(item.aggregateInput, parameters, resolve);
+    /** Registers an aggregate and materializes its computed input when needed. */
+    const registerAggregate = (
+      operation: NonNullable<GPUSQLSelectItem['aggregate']>,
+      input?: GPUExpressionNode,
+      alias?: string
+    ): string => {
       let inputColumn = input?.kind === 'column' ? input.name : undefined;
       if (input && input.kind !== 'column') {
-        if (!item.alias) {
+        if (!alias)
           throw new Error('GPUSQL computed aggregate inputs require an explicit AS alias');
-        }
         do {
           inputColumn = '__sqlAggregateInput' + inputIndex++;
         } while (reservedNames.has(inputColumn));
         reservedNames.add(inputColumn);
         query = query.withColumn(inputColumn, new GPUExpression<number | null, string>(input));
       }
-      const name = item.alias ?? `${item.aggregate}_${inputColumn ?? 'all'}`;
-      outputNames.set(item, name);
-      aggregateOutputs.set(JSON.stringify([item.aggregate, input ?? null]), name);
-      if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
+      const name = alias ?? `${operation}_${inputColumn ?? 'all'}`;
+      if (Object.hasOwn(definitions, name)) {
+        throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
+      }
+      aggregateOutputs.set(JSON.stringify([operation, input ?? null]), name);
       definitions[name] =
-        item.aggregate === 'count'
+        operation === 'count'
           ? inputColumn === undefined
             ? 'count'
             : {count: inputColumn}
-          : ({[item.aggregate!]: inputColumn!} as
+          : ({[operation]: inputColumn!} as
               | {sum: string}
               | {min: string}
               | {max: string}
               | {mean: string});
+      return name;
+    };
+    for (const item of aggregates) {
+      const input =
+        item.aggregateInput && lowerSQLExpression(item.aggregateInput, parameters, resolve);
+      outputNames.set(item, registerAggregate(item.aggregate!, input, item.alias));
     }
     if (statement.groupBy !== undefined) {
       if (
@@ -431,7 +440,6 @@ function buildGPUSQLPlan(
         );
       }
 
-      const {predicates, selectedColumns, derivedColumns} = query;
       const columns = statement.items.map(item => outputNames.get(item)!);
       if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
         throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
@@ -448,15 +456,32 @@ function buildGPUSQLPlan(
                     ? String(call.callee['name']).toLowerCase()
                     : '';
                 const operation = name === 'avg' ? 'mean' : name;
-                if (!['count', 'sum', 'min', 'max', 'mean'].includes(operation)) return undefined;
+                if (
+                  operation !== 'count' &&
+                  operation !== 'sum' &&
+                  operation !== 'min' &&
+                  operation !== 'max' &&
+                  operation !== 'mean'
+                )
+                  return undefined;
                 if (call.arguments.length !== 1)
                   throw new Error('GPUSQL aggregates require one argument');
                 const argument = call.arguments[0] as Expression;
                 const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
-                const input = wildcard ? null : lowerSQLExpression(argument, parameters, resolve);
-                const output = aggregateOutputs.get(JSON.stringify([operation, input]));
-                if (!output) throw new Error('GPUSQL HAVING aggregates must appear in SELECT');
-                return column(output).node;
+                if (wildcard && operation !== 'count') {
+                  throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
+                }
+                const input = wildcard
+                  ? undefined
+                  : lowerSQLExpression(argument, parameters, resolve);
+                const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
+                if (output !== undefined) return column(output).node;
+                let hiddenName: string;
+                do {
+                  hiddenName = '__sqlHavingAggregate' + inputIndex++;
+                } while (occupied.has(hiddenName));
+                occupied.add(hiddenName);
+                return column(registerAggregate(operation, input, hiddenName)).node;
               }
             )
           )
@@ -484,6 +509,7 @@ function buildGPUSQLPlan(
           };
         }
       );
+      const {predicates, selectedColumns, derivedColumns} = query;
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,

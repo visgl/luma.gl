@@ -49,7 +49,10 @@ const LU_QUERY_WORKGROUP_SIZE = 256;
 
 /** Borrows projected columns while the query owns its working table. @internal */
 export function projectGPUDataFrameQueryResult<Selection extends GPUTypeMap>(
-  context: GPUDataFrameQueryExtensionContext<Selection>,
+  context: Pick<
+    GPUDataFrameQueryExtensionContext<Selection>,
+    'table' | 'validity' | 'dictionaries'
+  >,
   columns: readonly (keyof Selection & string)[]
 ): GPUDataFrame<Selection> {
   const working = new GPUDataFrame<Selection>({

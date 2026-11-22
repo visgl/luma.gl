@@ -39,7 +39,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       );
       expect(() =>
         context.query('SELECT category, COUNT(*) FROM trips GROUP BY category HAVING SUM(fare) > 0')
-      ).toThrow(/aggregates must appear in SELECT/);
+      ).not.toThrow();
       expect(() =>
         context.query(
           'SELECT category, COUNT(*) FROM trips GROUP BY category ORDER BY 2 HAVING COUNT(*) > 0'

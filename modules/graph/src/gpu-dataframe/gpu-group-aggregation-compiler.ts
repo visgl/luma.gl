@@ -45,6 +45,7 @@ import type {GPUDataFrameAggregationDefinition} from './gpu-group-by-query';
 import {
   addGPUDataFrameResultPredicate,
   CompiledGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   compileGPUDataFrameQuery,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
@@ -253,6 +254,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   const prefix = `${context.queryId}-group`;
   const ownedVectors: GPUVector[] = [];
   let resultTable: GPUTable<Result> | undefined;
+  let projection: GPUDataFrame<Result> | undefined;
 
   try {
     const inputs = groupingKeys.map(({source}, index) =>
@@ -395,7 +397,12 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       groupingKeys,
       definitions,
       outputVectors,
-      columns,
+      columns && [
+        ...columns,
+        ...definitions
+          .filter(definition => !columns.includes(definition.name))
+          .map(definition => definition.name)
+      ],
       observed
     );
     const dictionaries = Object.freeze(
@@ -507,11 +514,18 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           )
         : undefined;
 
+    const resultValidity = Object.freeze(validity) as Readonly<GPUDataFrameValidity<Result>>;
+    if (columns && resultTable.schema.fields.length !== columns.length) {
+      projection = projectGPUDataFrameQueryResult(
+        {table: resultTable, validity: resultValidity, dictionaries},
+        columns as readonly (keyof Result & string)[]
+      );
+    }
     return {
-      table: resultTable,
-      validity: Object.freeze(validity) as Readonly<GPUDataFrameValidity<Result>>,
-      dictionaries,
-      ownedTables: [resultTable],
+      table: projection?.table ?? resultTable,
+      validity: projection?.validity ?? resultValidity,
+      dictionaries: projection?.dictionaries ?? dictionaries,
+      ownedTables: projection ? [projection, resultTable] : [resultTable],
       ownedVectors,
       createCompiled: props =>
         new CompiledGPUDataFrameGroupedAggregation(
@@ -539,6 +553,7 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         )
     };
   } catch (error) {
+    projection?.destroy();
     resultTable?.destroy();
     for (const vector of ownedVectors) {
       vector.destroy();
