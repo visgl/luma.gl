@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, ComputePass, ComputePipeline, type ComputePipelineProps} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import * as graphRootModule from '@luma.gl/graph';
 import {
@@ -15,8 +15,12 @@ import {
 } from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
+import {afterEach, assert, describe, expect, test, vi} from 'vitest';
+import {
+  getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout,
+  SHORTEST_PATH_CONTROL_BYTE_LENGTH,
+  SHORTEST_PATH_CONTROL_DISPATCH_X
+} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -142,6 +146,69 @@ describe('GPUGraphAlgorithmsSingleSourceShortestPath public GPU-resident API', (
 
     await expect(search.run({iterationsPerSubmit})).rejects.toThrow(/iterationsPerSubmit/);
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  test.each([1, 2])('rejects an overlapping run with a batch size of %i', async batchSize => {
+    const fixture = createShortestPathFixture();
+    const {device} = fixture;
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath(createShortestPathProps(fixture));
+    Object.defineProperty(device, 'type', {value: 'webgpu'});
+    device.limits.maxComputeWorkgroupsPerDimension = 65_535;
+    vi.spyOn(device, 'createComputePipeline').mockImplementation(
+      props => new MockComputePipeline(device, props!)
+    );
+    const createCommandEncoder = device.createCommandEncoder.bind(device);
+    vi.spyOn(device, 'createCommandEncoder').mockImplementation(props => {
+      const encoder = createCommandEncoder(props);
+      vi.spyOn(encoder, 'beginComputePass').mockReturnValue({
+        props: ComputePass.defaultProps,
+        end: vi.fn(),
+        setPipeline: vi.fn(),
+        setBindings: vi.fn(),
+        dispatch: vi.fn(),
+        dispatchIndirect: vi.fn(),
+        pushDebugGroup: vi.fn(),
+        popDebugGroup: vi.fn()
+      } as Partial<ComputePass> as ComputePass);
+      return encoder;
+    });
+    let resolveReadback!: (status: Uint8Array) => void;
+    const readback = new Promise<Uint8Array>(resolve => {
+      resolveReadback = resolve;
+    });
+    const createBuffer = device.createBuffer.bind(device);
+    const createBufferSpy = vi.spyOn(device, 'createBuffer').mockImplementationOnce(props => {
+      const buffer = createBuffer(props);
+      vi.spyOn(buffer, 'readAsync').mockReturnValueOnce(readback);
+      return buffer;
+    });
+    const submit = vi.spyOn(device, 'submit');
+    const activeRun = search.run({iterationsPerSubmit: 1});
+    try {
+      const controlAllocation = createBufferSpy.mock.results[0];
+      assert(controlAllocation?.type === 'return', 'Expected a status buffer allocation');
+      const control = controlAllocation.value;
+      expect(control.readAsync).toHaveBeenCalledTimes(1);
+
+      await expect(search.run({iterationsPerSubmit: batchSize})).rejects.toThrow(/already running/);
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(control.destroyed).toBe(false);
+
+      const activeStatus = new Uint32Array(SHORTEST_PATH_CONTROL_BYTE_LENGTH / 4);
+      activeStatus[SHORTEST_PATH_CONTROL_DISPATCH_X] = 1;
+      resolveReadback(new Uint8Array(activeStatus.buffer));
+      await expect(activeRun).resolves.toMatchObject({submissions: 2});
+
+      vi.mocked(control.readAsync).mockRejectedValueOnce(new Error('status readback failed'));
+      await expect(search.run({iterationsPerSubmit: 1})).rejects.toThrow('status readback failed');
+      await expect(search.run({iterationsPerSubmit: batchSize})).resolves.toMatchObject({
+        submissions: 1
+      });
+    } finally {
+      resolveReadback(new Uint8Array(SHORTEST_PATH_CONTROL_BYTE_LENGTH));
+      await Promise.allSettled([activeRun]);
+      search.destroy();
+    }
   });
 
   test('accepts source zero and empty vertex-aligned destinations for an empty graph', () => {
@@ -353,6 +420,23 @@ describe('GPUGraphAlgorithmsSingleSourceShortestPath output validation and physi
     );
   });
 });
+
+/** Compute pipeline for exercising the command graph without a GPU. */
+class MockComputePipeline extends ComputePipeline {
+  /** No native compute pipeline is allocated. */
+  readonly handle = null;
+
+  /** Creates a pipeline for the mock device. */
+  constructor(
+    readonly device: NullDevice,
+    props: ComputePipelineProps
+  ) {
+    super(device, props);
+  }
+
+  /** Accepts bindings from the command graph. */
+  override setBindings(): void {}
+}
 
 function createShortestPathFixture(): ShortestPathFixture {
   const fixture = {device: new NullDevice({}), buffers: [], dynamicBuffers: [], vectors: []};

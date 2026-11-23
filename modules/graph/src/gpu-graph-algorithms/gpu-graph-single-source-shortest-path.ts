@@ -56,8 +56,8 @@ export type GPUGraphAlgorithmsSingleSourceShortestPathProps = {
   sourceVertex?: number;
   /**
    * Caller-owned source vertex identifiers in one packed chunk, read when the GPU work runs.
-   * Write new identifiers and run again to route from a new source without compiling. Every seed
-   * starts at distance zero. Identifiers outside the graph are ignored.
+   * Await {@link GPUGraphAlgorithmsSingleSourceShortestPath.run} before writing new identifiers.
+   * Every seed starts at distance zero. Identifiers outside the graph are ignored.
    */
   seeds?: GPUVector<'uint32'>;
 };
@@ -93,7 +93,7 @@ export class GPUGraphAlgorithmsSingleSourceShortestPath {
   readonly topology: GPUGraphAlgorithmsTopology;
   /** Stable source vertex identifier, when the source is not read from `seeds`. */
   readonly sourceVertex?: number;
-  /** Caller-owned source vertex identifiers, read when the GPU work runs. */
+  /** Caller-owned source vertex identifiers. Await {@link run} before writing to the buffer. */
   readonly seeds?: GPUVector<'uint32'>;
   /** Caller-owned, vertex-aligned weighted distance column. */
   readonly distances: GPUVector<'float32'>;
@@ -109,6 +109,8 @@ export class GPUGraphAlgorithmsSingleSourceShortestPath {
   readonly invalidWeightCount?: GPUVector<'uint32'>;
 
   private _runner?: ShortestPathRunner;
+  /** Whether a run owns the runner and its outputs. */
+  private _running = false;
 
   /** Validates caller-owned metadata without allocating, submitting, or reading GPU work. */
   constructor(props: GPUGraphAlgorithmsSingleSourceShortestPathProps) {
@@ -198,13 +200,17 @@ export class GPUGraphAlgorithmsSingleSourceShortestPath {
   /**
    * Runs the search to convergence or to `maxIterations`, in batches of GPU-gated rounds.
    *
-   * Each submission encodes `iterationsPerSubmit` rounds and reads back one 32-byte status. The
-   * compiled command graphs are kept, so a later run (for example with new `seeds`) compiles
-   * nothing. The caller must have built the topology first. Call {@link destroy} to release them.
+   * Each submission encodes `iterationsPerSubmit` rounds and reads back one 32-byte status.
+   * Runs with the same batch size reuse the compiled command graphs. Build the topology first.
+   * An overlapping call rejects. Await the current run before writing to {@link seeds} or calling
+   * {@link destroy}.
    */
   async run(
     options: GPUGraphAlgorithmsSingleSourceShortestPathRunOptions = {}
   ): Promise<GPUGraphAlgorithmsSingleSourceShortestPathRunResult> {
+    if (this._running) {
+      throw new Error(`${this.id} is already running. Await run() before starting another run.`);
+    }
     const iterationsPerSubmit = options.iterationsPerSubmit ?? DEFAULT_ITERATIONS_PER_SUBMIT;
     if (
       !Number.isSafeInteger(iterationsPerSubmit) ||
@@ -213,36 +219,41 @@ export class GPUGraphAlgorithmsSingleSourceShortestPath {
     ) {
       throw new Error(`${this.id} iterationsPerSubmit must be an integer between 1 and 1024`);
     }
-    if (this._runner?.iterationsPerSubmit !== iterationsPerSubmit) {
-      this._runner?.destroy();
-      this._runner = undefined;
-      this._runner = createShortestPathRunner(this, iterationsPerSubmit);
-    }
-    const runner = this._runner;
-    const {device} = runner;
-
-    let submissions = 0;
-    let status: Uint32Array;
-    let encoder = device.createCommandEncoder({id: `${this.id}-run`});
-    runner.initialization.encode(encoder, {parameters: undefined});
-    for (;;) {
-      runner.rounds.encode(encoder, {parameters: undefined});
-      device.submit(encoder.finish());
-      submissions++;
-      status = await readControl(runner.control);
-      if (status[SHORTEST_PATH_CONTROL_DISPATCH_X] === 0) {
-        break;
+    this._running = true;
+    try {
+      if (this._runner?.iterationsPerSubmit !== iterationsPerSubmit) {
+        this._runner?.destroy();
+        this._runner = undefined;
+        this._runner = createShortestPathRunner(this, iterationsPerSubmit);
       }
-      encoder = device.createCommandEncoder({id: `${this.id}-run`});
+      const runner = this._runner;
+      const {device} = runner;
+
+      let submissions = 0;
+      let status: Uint32Array;
+      let encoder = device.createCommandEncoder({id: `${this.id}-run`});
+      runner.initialization.encode(encoder, {parameters: undefined});
+      for (;;) {
+        runner.rounds.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+        submissions++;
+        status = await readControl(runner.control);
+        if (status[SHORTEST_PATH_CONTROL_DISPATCH_X] === 0) {
+          break;
+        }
+        encoder = device.createCommandEncoder({id: `${this.id}-run`});
+      }
+      return {
+        converged: status[SHORTEST_PATH_CONTROL_CONVERGED] === 1,
+        iterations: status[SHORTEST_PATH_CONTROL_ITERATIONS],
+        submissions
+      };
+    } finally {
+      this._running = false;
     }
-    return {
-      converged: status[SHORTEST_PATH_CONTROL_CONVERGED] === 1,
-      iterations: status[SHORTEST_PATH_CONTROL_ITERATIONS],
-      submissions
-    };
   }
 
-  /** Releases the command graphs and status buffers that {@link run} created. */
+  /** Releases the command graphs and status buffers. Await {@link run} before calling this method. */
   destroy(): void {
     this._runner?.destroy();
     this._runner = undefined;

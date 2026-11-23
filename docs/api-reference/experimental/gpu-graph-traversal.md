@@ -138,8 +138,10 @@ shortestPaths.destroy();
 
 `run()` submits batches of `iterationsPerSubmit` rounds (default 128) and reads one 32-byte status
 record after each batch, until the search converges or spends `maxIterations`. It continues from
-the current distances, so the round budget is not limited to one command graph. It keeps its two
-compiled command graphs until `destroy()`. The caller builds the topology first.
+the current distances, so the round budget is not limited to one command graph. It reuses its two
+compiled command graphs for runs with the same batch size. The caller builds the topology first.
+An overlapping `run()` call rejects. Await the current run before writing new seed identifiers or
+calling `destroy()`.
 
 `seeds` replaces `sourceVertex` (give exactly one). The identifiers are read when the GPU work
 runs, so a new source needs only a buffer write. Several seeds start at distance zero together;
