@@ -13,10 +13,14 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
   <DocumentationBadge tone="webgpu">WebGPU required</DocumentationBadge>
 </DocumentationBadges>
 
+For application code using named inputs and operation-defined results, start with the
+[graph tutorial](/docs/api-reference/graph/getting-started). This section goes deeper into
+command graphs, algorithms, and execution infrastructure beneath that interface.
+
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
-`@luma.gl/gpgpu/gpu-core`.
+`@luma.gl/graph/gpu-core`.
 Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies,
 conditions, and work estimates. A compiled graph allocates compatible transient resources, orders
 read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
@@ -24,6 +28,10 @@ read/write hazards (resource conflicts), and records work into a caller-owned co
 GPU Core does not own command submission or the application frame loop. This makes it suitable for
 GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback
 without synchronizing the source dataset through JavaScript.
+
+Read [WebGPU foundations](/docs/api-reference/experimental/gpu-core/webgpu-foundations) for the compute and memory primitives,
+[execution techniques](/docs/api-reference/experimental/gpu-core/execution-techniques) for allocation and scheduling, and
+[debugging](/docs/api-reference/experimental/gpu-core/debugging) for the GPU Graph and GPU Trace panels.
 
 ### The small WebGPU leap behind GPU Core
 
@@ -151,7 +159,7 @@ together.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph, GPUScan} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUScan} from '@luma.gl/graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'prefix-sum'});
 const input = graph.importBuffer(
@@ -196,7 +204,7 @@ application outcomes to the operations that compose them.
 | Capability | What it enables | Public surface |
 | --- | --- | --- |
 | **Declarative graph** | One schedule for GPU preparation, analysis, indirect drawing, and picking | `GPUCommandGraph` and graph contributors |
-| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/experimental` |
+| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/graph/gpu-core` |
 | **GPU-driven output** | Bounded counts, compacted IDs, and indirect commands without source-data readback | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer` |
 | **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset | `GraphVectorView` and chunk-aware contributors |
 | **Conditional execution** | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch | CPU predicates and GPU indirect conditions |
@@ -231,14 +239,14 @@ application outcomes to the operations that compose them.
 | Data movement | `GPUUint32Gather` selects or reorders packed uint32 rows; `GPUByteRangeGather` concatenates variable byte ranges; `GPULZByteDecompressor` resolves literal and backreference spans for one format-specific LZ stream; `GPULZByteBatchDecompressor` expands many independently described LZ streams in one dispatch. These contribute bounded graph-native compute operations. |
 | Selection and compaction | [`GPUScan`](/docs/api-reference/experimental/gpu-core/gpu-scan), `GPUScanUint64` for exceptional split-word inclusive 64-bit prefixes, [`GPUGallopingSearch`](/docs/api-reference/experimental/gpu-core/gpu-galloping-search), [`GPUCompaction`](/docs/api-reference/experimental/gpu-core/gpu-compaction), [`GPUFlagOffsets`](/docs/api-reference/experimental/gpu-core/gpu-flag-offsets), [`GPUSegmentOffsets`](/docs/api-reference/experimental/gpu-core/gpu-segment-offsets), [`GPUSegmentedLayout`](/docs/api-reference/experimental/gpu-core/gpu-segmented-layout), `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, [`GPUMask`](/docs/api-reference/experimental/gpu-core/gpu-mask), [`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow), [`GPUVirtualGeometrySelection`](/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection) |
 | Hierarchies and traversal | [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout), [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-core/gpu-graph-traversal), [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection) |
-| Sorting and aggregation | [`GPUSort`](/docs/api-reference/experimental/gpu-core/gpu-sort), `GPUBatchSort`, [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-core/gpu-segmented-sort), [`GPUFFT2D`](/docs/api-reference/experimental/gpu-core/gpu-fft2d), [`GPUReduction`](/docs/api-reference/experimental/gpu-core/gpu-reduction), [`GPUHistogram`](/docs/api-reference/experimental/gpu-core/gpu-histogram), [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) |
+| Sorting and aggregation | [`GPUSort`](/docs/api-reference/experimental/gpu-core/gpu-sort), `GPUBatchSort`, [`GPUSegmentedReduction`](/docs/api-reference/experimental/gpu-core/gpu-segmented-reduction), [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-core/gpu-segmented-sort), [`GPUFFT2D`](/docs/api-reference/experimental/gpu-core/gpu-fft2d), [`GPUReduction`](/docs/api-reference/experimental/gpu-core/gpu-reduction), [`GPUHistogram`](/docs/api-reference/experimental/gpu-core/gpu-histogram), [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) |
 | Sampled fields | [GPUFiniteDifference2D and GPUFiniteDifference3D](./gpu-finite-differences.md) for gradient, divergence, curl, and Laplacian evaluation with explicit spacing, boundary policy, and independent input/output partitions |
 | Spatial indexing | [`GPUGridBinning`](/docs/api-reference/experimental/gpu-core/gpu-grid-binning), [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation), [`GPUGridIndex`](/docs/api-reference/experimental/gpu-core/gpu-grid-index), [`GPUGridIndexQuery`](/docs/api-reference/experimental/gpu-core/gpu-grid-index-query), [`GPUPointSpatialFilter`](/docs/api-reference/experimental/gpu-core/gpu-point-spatial-filter), [`GPUBVH`](/docs/api-reference/experimental/gpu-core/gpu-bvh), [`GPUSegmentedBVH`](/docs/api-reference/experimental/gpu-core/gpu-segmented-bvh), [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-core/gpu-bvh-query) |
 | GPU scenes | [`GPUScene`](/docs/api-reference/experimental/gpu-core/gpu-scene), [scene adapters](/docs/api-reference/experimental/gpu-core/gpu-scene-adapters), [draw generation](/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation), [resource groups](/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups), [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-core/gpu-index-picking-target) |
 | Hash indexes and joins | [`GPUHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-hash-index), [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index), [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join), [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) |
 
 Trace-domain algorithms are indexed from the
-[`@luma.gl/experimental/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
+[`@luma.gl/graph/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
 
 ## Limits and compatibility
 
@@ -250,8 +258,23 @@ Trace-domain algorithms are indexed from the
 
 ## Related modules
 
-- [`@luma.gl/experimental/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
-- [GPU Graph](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
+- [`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
+- [GPU Graph Algorithms](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
-- [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines Arrow-independent GPU data containers.
+- [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) defines Arrow-independent GPU data containers.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Reusable expression programs
+
+`GPUExpressionOperation` represents named float32 expressions parsed with math.gl.
+`GPUGraph.compile(device)` returns a `CompiledGPUGraph` whose `run(bindings)` accepts new
+GPUVectors and scalar values, including new vector lengths, on each execution.
+See the [expression operation reference](/docs/api-reference/graph/gpu-expression-operation)
+for declarations, supported operators, output ownership, and SimpleGraph compatibility.
+
+`GPUCPUOperation` describes shared CPU callbacks with dynamic vector results. Both GPUGraph and [GPUSimpleGraph](/docs/api-reference/graph/gpu-simple-graph#cpu-callbacks-and-dynamically-sized-results) execute these callbacks through asynchronous `run()`.

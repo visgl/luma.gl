@@ -37,9 +37,9 @@ describe('GPU data-analysis loaders.gl SQL demo', () => {
   });
 
   test('reuses Arrow-uploaded GPU columns and validates parameterized loaders.gl filtering', () => {
-    expect(EXAMPLE_SOURCE).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(EXAMPLE_SOURCE).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(EXAMPLE_SOURCE).toContain("from '@loaders.gl/sql'");
-    expect(EXAMPLE_SOURCE).toContain("from '@luma.gl/experimental/gpu-sql'");
+    expect(EXAMPLE_SOURCE).toContain("from './loaders-sql-query'");
     expect(EXAMPLE_SOURCE).toContain('resources.values.data.map(');
     expect(EXAMPLE_SOURCE).toContain(
       'gpuData: {value: valueData, category: resources.groupKeys.data[batchIndex]}'

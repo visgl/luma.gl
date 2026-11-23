@@ -10,7 +10,7 @@ type NativeGltfDocsTabId = GltfDocsTabId | 'native-extensions' | 'animated-crowd
 
 const GLTF_DOCS_TABS: GltfDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gltf'},
-  {id: 'materials', label: 'Materials', href: '/docs/api-reference/gltf/gltf-materials'},
+  {id: 'materials', label: 'Material Conversion', href: '/docs/api-reference/gltf/gltf-materials'},
   {
     id: 'native-extensions',
     label: 'Native Extensions',

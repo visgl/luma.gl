@@ -24,9 +24,9 @@ export const HDR_EXAMPLE_CAPTURE_DELAY_MILLISECONDS = 3000;
 export const HDR_EXAMPLE_CATALOG = Object.freeze(
   [
     {
-      id: 'showcase-gltf',
-      route: 'showcase/gltf',
-      outputPath: 'website/static/images/examples/showcase/gltf.jpg',
+      id: 'gltf-asset-studio',
+      route: 'gltf/asset-studio',
+      outputPath: 'website/static/images/examples/gltf/asset-studio.jpg',
       captureDelayMilliseconds: 10_000
     },
     {

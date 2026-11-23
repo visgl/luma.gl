@@ -24,7 +24,7 @@ const RAPIDS_MODULE_ATTRIBUTIONS: RapidsModuleAttribution[] = [
     directory: 'gpu-project',
     documentation: [
       'docs/api-reference/experimental/gpu-project.md',
-      'modules/experimental/src/gpu-project/README.md'
+      'modules/graph/src/gpu-project/README.md'
     ],
     project: 'cuProj',
     repository: 'https://github.com/rapidsai/cuspatial/tree/branch-25.04/cpp/cuproj'
@@ -33,15 +33,15 @@ const RAPIDS_MODULE_ATTRIBUTIONS: RapidsModuleAttribution[] = [
     directory: 'gpu-crossfilter',
     documentation: [
       'docs/api-reference/experimental/gpu-crossfilter.md',
-      'modules/experimental/src/gpu-crossfilter/README.md'
+      'modules/graph/src/gpu-crossfilter/README.md'
     ],
     project: 'cuXfilter',
     repository: 'https://github.com/rapidsai/cuxfilter'
   },
   {
-    directory: 'gpu-graph',
-    sourceDirectory: 'modules/gpgpu/src/gpu-graph',
-    documentation: ['modules/gpgpu/src/gpu-graph/README.md'],
+    directory: 'graph',
+    sourceDirectory: 'modules/graph/src/gpu-graph-algorithms',
+    documentation: ['modules/graph/src/gpu-graph-algorithms/README.md'],
     project: 'cuGraph',
     repository: 'https://github.com/rapidsai/cugraph'
   }
@@ -54,7 +54,7 @@ describe('RAPIDS-inspired module provenance', () => {
     describe(attribution.directory, () => {
       test('records independent MIT ownership and accurate upstream inspiration in every source file', () => {
         const sourceDirectory = new URL(
-          `${attribution.sourceDirectory ?? `modules/experimental/src/${attribution.directory}`}/`,
+          `${attribution.sourceDirectory ?? `modules/graph/src/${attribution.directory}`}/`,
           REPOSITORY_ROOT
         );
         const sourceFiles = readdirSync(sourceDirectory).filter(fileName =>

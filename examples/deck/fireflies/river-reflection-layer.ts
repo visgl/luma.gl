@@ -8,8 +8,8 @@ import {
   type GlowPointLayerProps
 } from '@deck.gl-community/gpu-layers';
 import type {RenderPass} from '@luma.gl/core';
-import {waterMaterial, riverWaterMaterial, type ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4} from '@math.gl/core';
+import {waterMaterial, riverWaterMaterial, type ShaderModule} from '@luma.gl/shaders';
+import {Matrix4} from '@math.gl/core/matrix';
 
 type ReflectionProps = GlowPointLayerProps & {
   surfaceHeight: number;

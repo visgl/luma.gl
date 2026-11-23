@@ -11,7 +11,7 @@ import {
   type TeachingShaderModule
 } from './foundation-teaching-models';
 
-export type FoundationModuleId = 'core' | 'engine' | 'shadertools';
+export type FoundationModuleId = 'core' | 'engine' | 'shaders';
 
 const MODULE_DETAILS = {
   core: {
@@ -46,10 +46,10 @@ const MODULE_DETAILS = {
       {name: 'Animation, compute, and passes', outcome: 'Add time-varying state, GPU transforms, and postprocessing with focused helpers.'}
     ]
   },
-  shadertools: {
-    label: 'Shadertools',
+  shaders: {
+    label: 'Shaders',
     purpose: 'Composable shader modules, dependencies, hooks, injections, plugins, passes, and portable assembly.',
-    apiHref: '/docs/api-reference/generated/shadertools',
+    apiHref: '/docs/api-reference/generated/shaders',
     guideHref: '/docs/api-guide/shaders',
     cookbookHref: '/docs/api-guide/shaders/cookbook',
     concepts: ['Modules and dependencies', 'Props and bindings', 'Hooks and injections', 'Assembly', 'Plugins and passes', 'Portability and catalogs'],
@@ -67,7 +67,7 @@ const MODULE_DETAILS = {
 const TERMS: Record<FoundationModuleId, readonly GPUTermName[]> = {
   core: ['resource', 'ownership', 'binding', 'layout', 'pipeline', 'pass', 'encoder', 'submission'],
   engine: ['resource', 'binding', 'pipeline', 'pass', 'redraw', 'ownership'],
-  shadertools: ['shader module', 'binding', 'hook', 'injection', 'plugin', 'pipeline']
+  shaders: ['shader module', 'binding', 'hook', 'injection', 'plugin', 'pipeline']
 };
 
 export function FoundationTerminology({module}: {module: FoundationModuleId}): ReactNode {

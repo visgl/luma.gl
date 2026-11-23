@@ -31,12 +31,14 @@ Each device has a `device.features` field that holds a `DeviceFeatures` object w
 | `html-in-canvas` | <F d="webgpu-max" f="html-in-canvas"/> | <F d="webgpu-core" f="html-in-canvas"/> | <F d="webgpu-compatibility" f="html-in-canvas"/> | <F d="webgl" f="html-in-canvas"/> | DOM subtree rasterization into textures | `texElementImage2D` |
 | **WebGPU Extensions** | — | — | — | — | — | — |
 | `core-features-and-limits` | <F d="webgpu-max" f="core-features-and-limits"/> | <F d="webgpu-core" f="core-features-and-limits"/> | <F d="webgpu-compatibility" f="core-features-and-limits"/> | <F d="webgl" f="core-features-and-limits"/> | Core WebGPU feature and limit profile | N/A |
-| `depth-clip-control` | <F d="webgpu-max" f="depth-clip-control"/> | <F d="webgpu-core" f="depth-clip-control"/> | <F d="webgpu-compatibility" f="depth-clip-control"/> | <F d="webgl" f="depth-clip-control"/> | Disable depth clipping via `unclippedDepth` | `WEBGL_depth_texture` |
+| `depth-clip-control` | <F d="webgpu-max" f="depth-clip-control"/> | <F d="webgpu-core" f="depth-clip-control"/> | <F d="webgpu-compatibility" f="depth-clip-control"/> | <F d="webgl" f="depth-clip-control"/> | Clamp near/far depth via pipeline `unclippedDepth`. See [backend mappings](/docs/api-guide/gpu/depth-buffers#backend-mappings). | [EXT_depth_clamp][EXT_depth_clamp] |
 | `indirect-first-instance` | <F d="webgpu-max" f="indirect-first-instance"/> | <F d="webgpu-core" f="indirect-first-instance"/> | <F d="webgpu-compatibility" f="indirect-first-instance"/> | <F d="webgl" f="indirect-first-instance"/> | Specify instance index via GPU buffer | N/A |
 | `timestamp-query` | <F d="webgpu-max" f="timestamp-query"/> | <F d="webgpu-core" f="timestamp-query"/> | <F d="webgpu-compatibility" f="timestamp-query"/> | <F d="webgl" f="timestamp-query"/> | GPU timer query support | `EXT_disjoint_timer_query_webgl2` |
 | **WebGL Extensions** | — | — | — | — | — | — |
 | `compilation-status-async-webgl` | <F d="webgpu-max" f="compilation-status-async-webgl"/> | <F d="webgpu-core" f="compilation-status-async-webgl"/> | <F d="webgpu-compatibility" f="compilation-status-async-webgl"/> | <F d="webgl" f="compilation-status-async-webgl"/> | Non-blocking compile/link status | `KHR_parallel_shader_compile` |
+| `clip-control-webgl` | <F d="webgpu-max" f="clip-control-webgl"/> | <F d="webgpu-core" f="clip-control-webgl"/> | <F d="webgpu-compatibility" f="clip-control-webgl"/> | <F d="webgl" f="clip-control-webgl"/> | Supports `clipDepthMode: 'zero-to-one'`. Always true on WebGPU, whose clip depth range is fixed. | [EXT_clip_control][EXT_clip_control] |
 | `polygon-mode-webgl` | <F d="webgpu-max" f="polygon-mode-webgl"/> | <F d="webgpu-core" f="polygon-mode-webgl"/> | <F d="webgpu-compatibility" f="polygon-mode-webgl"/> | <F d="webgl" f="polygon-mode-webgl"/> | Wireframe rendering parameters (debug only) | `WEBGL_polygon_mode` |
+| `polygon-offset-clamp-webgl` | <F d="webgpu-max" f="polygon-offset-clamp-webgl"/> | <F d="webgpu-core" f="polygon-offset-clamp-webgl"/> | <F d="webgpu-compatibility" f="polygon-offset-clamp-webgl"/> | <F d="webgl" f="polygon-offset-clamp-webgl"/> | Supports nonzero `depthBiasClamp`. Always true on WebGPU. | `EXT_polygon_offset_clamp` |
 | `provoking-vertex-webgl` | <F d="webgpu-max" f="provoking-vertex-webgl"/> | <F d="webgpu-core" f="provoking-vertex-webgl"/> | <F d="webgpu-compatibility" f="provoking-vertex-webgl"/> | <F d="webgl" f="provoking-vertex-webgl"/> | Primitive vertex used for flat shading | `WEBGL_provoking_vertex` |
 | **Shader Extensions** | — | — | — | — | — | — |
 | `shader-f16` | <F d="webgpu-max" f="shader-f16"/> | <F d="webgpu-core" f="shader-f16"/> | <F d="webgpu-compatibility" f="shader-f16"/> | <F d="webgl" f="shader-f16"/> | WGSL supports `f16` | N/A |
@@ -101,8 +103,8 @@ if (webglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
 - [WebGPU Report](https://webgpureport.org/)
 
 [EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
-[EXT_render_snorm]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
-[EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+[EXT_render_snorm]: https://registry.khronos.org/webgl/extensions/EXT_render_snorm/
+[EXT_clip_control]: https://registry.khronos.org/webgl/extensions/EXT_clip_control/
 [WEBGL_render_shared_exponent]: https://www.khronos.org/registry/webgl/extensions/WEBGL_render_shared_exponent/
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/
 [texture_compression_bptc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_bptc

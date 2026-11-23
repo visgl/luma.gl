@@ -1,4 +1,4 @@
-    {
+{
   "scripts": {
     "rollup": "rollup --config rollup.config.js",
     "webpack": "mkdir -p dist && webpack --env.local",

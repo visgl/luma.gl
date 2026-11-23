@@ -9,19 +9,19 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-topology" />
 
-## Describe existing relationships with GPUGraph
+## Describe existing relationships with GPUGraphAlgorithmsData
 
 **Question: Which existing GPU columns describe the people, accounts, services, or documents in
 this network?**
 
-`GPUGraph` is the ownership-preserving entry point. Construct it when an application already has
+`GPUGraphAlgorithmsData` is the ownership-preserving entry point. Construct it when an application already has
 aligned `GPUVector<'uint32'>` source and target identifiers and knows how many vertices exist,
 including isolated vertices that never appear in an edge.
 
 ```ts
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsData} from '@luma.gl/graph/gpu-graph-algorithms';
 
-const graph = new GPUGraph({
+const graph = new GPUGraphAlgorithmsData({
   vertexCount,
   sourceVertices,
   targetVertices,
@@ -41,12 +41,12 @@ Use this lightweight representation when existing GPU tables or render inputs al
 network. It is a description, not an upload helper: first create or adapt your GPU vectors through
 the application or the appropriate data adapter.
 
-## Build reusable adjacency with GPUGraphTopology
+## Build reusable adjacency with GPUGraphAlgorithmsTopology
 
 **Question: Given a particular vertex, which other vertices does it connect to?**
 
 An edge list answers “what are all relationships?” but repeatedly scanning every edge to discover
-one vertex's neighbors is expensive. `GPUGraphTopology` builds compressed sparse row (CSR) adjacency
+one vertex's neighbors is expensive. `GPUGraphAlgorithmsTopology` builds compressed sparse row (CSR) adjacency
 once so later operations can find each vertex's neighbor interval from adjacent offsets.
 
 For example, a transaction list might contain millions of transfers while an investigator wants
@@ -54,9 +54,9 @@ only the accounts directly connected to account 42. Its CSR offset interval iden
 account's neighbors without asking each later analysis to rescan the entire edge list.
 
 ```ts
-import {GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsTopology} from '@luma.gl/graph/gpu-graph-algorithms';
 
-const topology = new GPUGraphTopology({
+const topology = new GPUGraphAlgorithmsTopology({
   graph,
   forward: {
     offsets: outgoingOffsets,
@@ -93,18 +93,18 @@ Invalid endpoints are excluded and counted. `count` reports the complete number 
 adjacency entries even if neighbor capacity is insufficient; `overflow` makes truncation explicit.
 Neighbor order within each vertex is intentionally unspecified.
 
-## Count relationships with GPUGraphDegree
+## Count relationships with GPUGraphAlgorithmsDegree
 
 **Question: How many direct relationships does each vertex have?**
 
-`GPUGraphDegree` answers the simplest structural question: how many outgoing or incoming
+`GPUGraphAlgorithmsDegree` answers the simplest structural question: how many outgoing or incoming
 relationships does each vertex have? Use it to identify network hubs, size junction markers,
 detect isolated accounts, or find unusually connected infrastructure and dependency nodes.
 
 ```ts
-import {GPUGraphDegree} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsDegree} from '@luma.gl/graph/gpu-graph-algorithms';
 
-const degree = new GPUGraphDegree({
+const degree = new GPUGraphAlgorithmsDegree({
   topology,
   output: outgoingDegrees,
   direction: 'outgoing'

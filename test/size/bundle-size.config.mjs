@@ -4,12 +4,76 @@
  */
 export const BUNDLE_SIZE_FIXTURES = [
   {
+    name: 'wgsl-inspect',
+    label: 'WGSL declaration inspector',
+    entry: 'test/size/wgsl-inspect.ts',
+    external: [],
+    maximum: {minified: 10_000, gzip: 4_200, brotli: 3_800},
+    targetGzip: 3_500
+  },
+  {
+    name: 'glsl-inspect',
+    label: 'GLSL declaration inspector',
+    entry: 'test/size/glsl-inspect.ts',
+    external: [],
+    maximum: {minified: 7_000, gzip: 3_300, brotli: 3_000},
+    targetGzip: 2_900
+  },
+  {
+    name: 'shader-inspect',
+    label: 'Both declaration inspectors',
+    entry: 'test/size/shader-inspect.ts',
+    external: [],
+    maximum: {minified: 16_200, gzip: 6_300, brotli: 5_800},
+    targetGzip: 5_500
+  },
+  {
+    name: 'core-wgsl-scan',
+    label: 'Core WGSL pipeline scanner',
+    entry: 'test/size/core-wgsl-scan.ts',
+    external: [],
+    maximum: {minified: 8_600, gzip: 3_200, brotli: 2_900},
+    targetGzip: 2_800
+  },
+  {
+    name: 'slang-syntax',
+    label: 'Existing Slang syntax parser',
+    entry: 'test/size/slang-syntax.ts',
+    external: [],
+    maximum: {minified: 10_800, gzip: 3_700, brotli: 3_400},
+    targetGzip: 3_700
+  },
+  {
+    name: 'wgsl-syntax',
+    label: 'Full WGSL syntax parser',
+    entry: 'test/size/wgsl-syntax.ts',
+    external: [],
+    maximum: {minified: 11_200, gzip: 4_500, brotli: 4_200},
+    targetGzip: 4_500
+  },
+  {
+    name: 'wgsl-declaration-syntax',
+    label: 'Small WGSL declaration parser',
+    entry: 'test/size/wgsl-declaration-syntax.ts',
+    external: [],
+    maximum: {minified: 8_200, gzip: 3_600, brotli: 3_300},
+    targetGzip: 3_600
+  },
+  {
     name: 'slang',
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    // Named imports and native contracts add 2.1 KB gzip; retain a tight regression ceiling.
-    maximum: {minified: 108_000, gzip: 31_000, brotli: 27_500},
+    // WGSL ordering and typed operation emission add ~0.5 KB gzip; frontends stay separate.
+    maximum: {minified: 113_500, gzip: 32_400, brotli: 28_700},
+    targetGzip: 25_000
+  },
+  {
+    name: 'wgsl',
+    label: '`@luma.gl/slang/wgsl` compiler (optional)',
+    entry: 'modules/slang/src/wgsl.ts',
+    external: [],
+    maximum: {minified: 130_500, gzip: 37_600, brotli: 33_300},
     targetGzip: 25_000
   },
   {
@@ -25,21 +89,28 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core`',
     entry: 'modules/core/src/index.ts',
     external: [],
-    maximum: {minified: 101_000, gzip: 28_500, brotli: 25_000},
+    // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
+    // Resource ownership adds 1,592 B minified / 445 B gzip / 347 B Brotli versus the PR base.
+    maximum: {minified: 105_175, gzip: 29_650, brotli: 26_050},
     targetGzip: 24_000
   },
   {
     name: 'webgl',
-    label: '`@luma.gl/webgl` backend',
-    entry: 'modules/webgl/src/index.ts',
+    label: '`@luma.gl/core/webgl` backend',
+    entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 140_000, gzip: 39_500, brotli: 34_000},
+    // Unpack fast path trades ~0.6 KB minified for fewer upload allocations.
+    // Scalar setters and deletion tracking together measure 141,425 B / 39,931 B gzip.
+    // Resnapshotting native state on reattachment adds about 0.15 KB minified.
+    // Clip control, depth clamp and polygon offset clamp together measure 142,944 B / 40,366 B gzip.
+    // Per-face stencil operations and scoped stencil clears.
+    maximum: {minified: 144_025, gzip: 40_825, brotli: 34_960},
     targetGzip: 30_000
   },
   {
     name: 'webgpu',
-    label: '`@luma.gl/webgpu` backend',
-    entry: 'modules/webgpu/src/index.ts',
+    label: '`@luma.gl/core/webgpu` backend',
+    entry: 'modules/core/src/webgpu/index.ts',
     external: ['@luma.gl/core'],
     maximum: {minified: 280_000, gzip: 58_000, brotli: 49_000},
     targetGzip: 22_000
@@ -48,7 +119,9 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 241_000, gzip: 68_000, brotli: 59_000},
+    // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
+    // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
+    maximum: {minified: 249_175, gzip: 70_475, brotli: 61_010},
     targetGzip: 54_000
   },
   {

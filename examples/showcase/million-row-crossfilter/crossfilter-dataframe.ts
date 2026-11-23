@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraph, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGroupAggregation} from '@luma.gl/gpgpu/gpu-core';
-import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {GPUTable} from '@luma.gl/experimental/gpu-tables';
-import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
+import type {GPUCommandGraph, GraphDataView} from '@luma.gl/graph/gpu-core';
+import {GPUGroupAggregation} from '@luma.gl/graph/gpu-core';
+import {GPUVector, type GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {CROSS_FILTER_CATEGORY_NAMES} from './crossfilter-data';
 
 export type CrossfilterDataFrameSchema = {
@@ -59,7 +59,7 @@ export function createCrossfilterDataFrame(
  * The current general dataframe query compiler owns graph finalization, so this shared-graph helper
  * deliberately consumes its semantic source (`GPUDataFrame`) plus an externally produced selection
  * mask. It replaces specialized Crossfilter category aggregation without duplicating source storage
- * or selection work, and establishes the seam that can later lower through GPUProgram.
+ * or selection work, and establishes the seam that can later lower through GPUGraph.
  */
 export function addCrossfilterDataFrameCategoryCount<Parameters>(
   graph: GPUCommandGraph<Parameters>,

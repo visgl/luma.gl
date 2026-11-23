@@ -134,7 +134,7 @@ that calls `gl.uniformBlockBinding()` on `renderPipeline.handle` must then call
 every uniform block again:
 
 ```ts
-import type {WebGLDevice, WEBGLRenderPipeline} from '@luma.gl/webgl';
+import type {WebGLDevice, WEBGLRenderPipeline} from '@luma.gl/core/webgl';
 
 const webglPipeline = renderPipeline as WEBGLRenderPipeline;
 const gl = (device as WebGLDevice).gl;

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- luma-example-support -->
+<meta name="luma-example-id" content="deck/wind" />
+<meta name="luma-example-backends" content="webgpu" />
+<meta name="luma-example-mobile" content="full" />
+<meta name="luma-example-mobile-profile" content="standard" />
+<script type="module" data-luma-example-support-bootstrap>
+  import {installStandaloneExampleSupport} from '../../example-support.ts';
+  const exampleSupport = await installStandaloneExampleSupport();
+  if (!exampleSupport.supported) {
+    document.querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])').forEach(script => script.remove());
+  }
+</script>
+<!-- /luma-example-support -->
+<title>Wind Atlas · luma.gl</title><link rel="icon" href="data:," /><link rel="stylesheet" href="./style.css" /></head>
+<body><div id="scene" aria-label="Interactive wind atlas"></div><div id="panels"></div><footer id="status">Loading wind atlas…</footer><script type="module" src="./main.ts"></script></body></html>

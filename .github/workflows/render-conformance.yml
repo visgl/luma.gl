@@ -1,0 +1,97 @@
+name: Render conformance
+
+on:
+  schedule:
+    # Full material transport matrices, outside the ordinary PR critical path.
+    - cron: '37 7 * * *'
+  workflow_dispatch:
+  # Validate the full matrix when its definition or scheduling changes.
+  pull_request:
+    paths:
+      - '.github/workflows/render-conformance.yml'
+      - '.nvmrc'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'vitest.config.ts'
+      - 'test/utils/**'
+      - 'modules/anari/src/**'
+      - 'modules/anari/test/anari-reflection.spec.ts'
+      - 'modules/anari/test/engine/ray-tracing-image-export.spec.ts'
+      - 'modules/three/**'
+      - 'examples/experimental/three/**'
+      - 'modules/anari/test/anari-emitter-sampling*'
+      - 'modules/anari/test/engine/ray-material*'
+      - 'modules/anari/test/engine/ray-alpha-pixels.spec.ts'
+      - 'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts'
+      - 'modules/anari/test/engine/ray-environment-lighting.spec.ts'
+      - 'modules/anari/test/engine/ray-secondary-texture-filtering.spec.ts'
+      - 'modules/shaders/src/**'
+      - 'modules/core/src/**'
+      - 'modules/engine/src/**'
+      - 'modules/engine/test/gltf/gltf/gltf-area-lights-render.spec.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-conformance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  conformance:
+    name: Full material transport matrix
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+      - name: Cache Yarn artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Cache Playwright Chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
+      - name: Install Playwright Chromium
+        run: yarn exec playwright install --with-deps chromium
+      - name: Require WebGPU and WebGL presentation
+        timeout-minutes: 2
+        run: xvfb-run -a yarn test-presentation
+      - name: Run full material matrix
+        shell: bash
+        run: |
+          LUMA_TEST_BROWSER_GROUP=render-conformance yarn test-headless --no-coverage --reporter=default --reporter=junit --outputFile.junit=test-results/render-conformance.xml 2>&1 | tee render-conformance.log
+      - name: Verify the entire matrix executed
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const report = readFileSync('test-results/render-conformance.xml', 'utf8');
+          assert.match(report, /<testsuites\b[^>]*\btests="37"/);
+          assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
+          NODE
+      - name: Upload material results
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: render-conformance-results
+          path: |
+            test-results/render-conformance.xml
+            render-conformance.log
+          retention-days: 14
+          if-no-files-found: warn

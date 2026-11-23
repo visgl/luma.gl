@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CompilerMessage} from '@luma.gl/core';
-import {formatCompilerLog} from '@luma.gl/core/adapter-utils/format-compiler-log';
+import {formatCompilerLog} from '../../src/api/adapter-utils/format-compiler-log';
 import {expect, it} from 'vitest';
 
 const ERROR_LOG: CompilerMessage[] = [

@@ -14,7 +14,7 @@ const benchmarkComponent = readFileSync(
   'utf8'
 );
 const packageManifest = readFileSync(
-  new URL('../../modules/gpgpu/package.json', import.meta.url),
+  new URL('../../modules/graph/package.json', import.meta.url),
   'utf8'
 );
 
@@ -33,8 +33,8 @@ describe('GPU DGGS documentation', () => {
 
   test('keeps the reusable primitive and optional benchmark in isolated package entry points', () => {
     expect(packageManifest).toContain('"./gpu-dggs"');
-    expect(packageManifest).toContain('"./gpu-dggs/benchmarks"');
+    expect(packageManifest).toContain('"./gpu-dggs-benchmarks"');
     expect(documentationPages[0]).toContain('GPUDGGSCellProjection');
-    expect(documentationPages[0]).toContain("'@luma.gl/gpgpu/gpu-dggs/benchmarks'");
+    expect(documentationPages[0]).toContain("'@luma.gl/graph/gpu-dggs-benchmarks'");
   });
 });

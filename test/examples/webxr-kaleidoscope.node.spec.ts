@@ -368,8 +368,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     };
 
     expect(standaloneSource).toContain("import {luma} from '@luma.gl/core'");
-    expect(standaloneSource).toContain("import {webgpuAdapter} from '@luma.gl/webgpu'");
-    expect(standaloneSource).toContain("import {webgl2Adapter} from '@luma.gl/webgl'");
+    expect(standaloneSource).toContain("import {webgpuAdapter} from '@luma.gl/core/webgpu'");
+    expect(standaloneSource).toContain("import {webgl2Adapter} from '@luma.gl/core/webgl'");
     expect(standaloneSource).toContain("luma.createDevice(makeDeviceProps('webgpu', true))");
     expect(standaloneSource).toContain(
       'makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice})'
@@ -384,7 +384,6 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       getExampleSupportDefinition('experimental/webxr-kaleidoscope')?.requirements?.backends
     ).toEqual(['webgpu', 'webgl2']);
     expect(metadataSource).toContain('Immersive Prism Portal');
-    expect(packageSource.dependencies).toHaveProperty('@luma.gl/webgpu');
-    expect(packageSource.dependencies).toHaveProperty('@luma.gl/webgl');
+    expect(packageSource.dependencies).toHaveProperty('@luma.gl/core');
   });
 });

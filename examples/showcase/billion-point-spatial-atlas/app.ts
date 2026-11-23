@@ -4,7 +4,7 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -13,19 +13,20 @@ import {
   decodeGPUIndexPickInfo,
   GPUCommandGraph,
   type GPUCommandGraphEncoding,
+  type GPUCommandGraphTimingReport,
   GPUCommandGraphInspector,
   GPUIndexPickingTarget,
   GPUReadbackRing,
   type GPUReadbackTicket,
   INDEX_PICKING_READBACK_BYTE_LENGTH
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   GPUPointSpatialQuery,
   type GPUPointSpatialQueryKind
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/graph/geospatial';
 import {CompactDropdown} from '../../compact-dropdown';
 import {
   ExamplePanelManager,
@@ -33,6 +34,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {GPUTracePanelRenderer} from '../../gpu-trace-panel';
 import type {NYCEPTTileSource} from './ept-source';
 import {GPULidarTileCache} from './lidar-tile-cache';
 import {
@@ -197,7 +199,12 @@ type AtlasResources = {
 
 export default class BillionPointSpatialAtlasAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
-  static props = {createFramebuffer: true, debug: true, debugGPUTime: true};
+  static props = {
+    createFramebuffer: true,
+    debug: true,
+    debugGPUTime: true,
+    optionalFeatures: ['timestamp-query'] as const
+  };
 
   readonly device: Device;
   readonly sceneColorFormat: SceneColorFormat;
@@ -296,6 +303,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private tierElement: HTMLElement | null = null;
   private statsElement: HTMLElement | null = null;
   private graphInspectorElement: HTMLElement | null = null;
+  private tracePanel: GPUTracePanelRenderer | null = null;
+  private latestTraceEncoding: GPUCommandGraphEncoding | null = null;
+  private latestTrace: {graphId: string; timingReport: GPUCommandGraphTimingReport} | undefined;
   private graphInspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private readonly compactDropdowns = new Map<HTMLSelectElement, CompactDropdown>();
   private navigationDropdownCleanup: (() => void) | null = null;
@@ -959,6 +969,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     try {
       this.postprocessingRenderer.resize([newResources.width, newResources.height]);
       this.graphInspector.clear();
+      this.latestTrace = undefined;
+      this.latestTraceEncoding = null;
+      this.tracePanel?.update(undefined);
       this.registerAtlasResources(newResources);
       this.graphInspector.recordEncoding(newResources.buildGraph.id, encoding);
     } catch (error) {
@@ -966,6 +979,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         this.postprocessingRenderer.resize([previousResources.width, previousResources.height]);
       }
       this.graphInspector.clear();
+      this.latestTrace = undefined;
+      this.latestTraceEncoding = null;
+      this.tracePanel?.update(undefined);
       if (previousResources) this.registerAtlasResources(previousResources);
       throw error;
     }
@@ -1027,6 +1043,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     resources.pickingReadbackIdentifier = picking.readbackIdentifier;
 
     this.graphInspector.clear();
+    this.latestTrace = undefined;
+    this.latestTraceEncoding = null;
+    this.tracePanel?.update(undefined);
     this.registerAtlasResources(resources);
     this.lastQuerySignature = null;
   }
@@ -1697,6 +1716,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private scheduleGPUTimingReadback(graphId: string, encoding: GPUCommandGraphEncoding): void {
+    this.latestTraceEncoding = encoding;
     const timer = setTimeout(() => {
       this.gpuTimingReadbackTimers.delete(timer);
       if (this.finalized || this.requestedMode !== null) return;
@@ -1724,7 +1744,16 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     graphId: string,
     encoding: GPUCommandGraphEncoding
   ): Promise<void> {
-    await this.graphInspector.recordGPUTimings(graphId, encoding);
+    const timingReport = await this.graphInspector.recordGPUTimings(graphId, encoding);
+    if (
+      !this.finalized &&
+      this.requestedMode === null &&
+      this.latestTraceEncoding === encoding &&
+      timingReport
+    ) {
+      this.latestTrace = {graphId, timingReport};
+      this.tracePanel?.update(timingReport, ATLAS_GRAPH_LABELS[graphId] ?? graphId);
+    }
     this.updateInspector();
   }
 
@@ -2364,6 +2393,10 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
           <summary>Pipeline inspector</summary>
           <div class="spatial-atlas-section"><div data-atlas-stats></div><div data-atlas-graph-inspector style="margin-top:10px"></div></div>
         </details>
+        <details>
+          <summary>GPU Trace</summary>
+          <div class="spatial-atlas-section" data-atlas-trace></div>
+        </details>
         <div data-atlas-status role="status" aria-live="polite"></div>
         <div class="spatial-atlas-footer">QUERY → REFINE → INDIRECT DRAW · WEBGPU</div>
       </div>`,
@@ -2376,15 +2409,22 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         this.graphInspectorElement = graphInspectorElement;
         this.graphInspectorPanel = graphInspectorElement
           ? new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+              inspector: this.graphInspector,
               graphLabels: ATLAS_GRAPH_LABELS,
               counterLabels: ATLAS_COUNTER_LABELS
             })
           : null;
+        this.tracePanel = new GPUTracePanelRenderer(
+          root.querySelector<HTMLElement>('[data-atlas-trace]')!
+        );
+        this.tracePanel.update(this.latestTrace?.timingReport, this.latestTrace?.graphId);
         this.statusElement = root.querySelector('[data-atlas-status]');
         const cleanupControls = this.bindPanelControls(root);
         this.updateInspector();
         return () => {
           cleanupControls();
+          this.tracePanel?.destroy();
+          this.tracePanel = null;
           this.graphInspectorPanel?.destroy();
           this.graphInspectorPanel = null;
           this.graphInspectorElement = null;

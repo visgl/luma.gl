@@ -4,9 +4,9 @@
 
 import type {BufferLayout, VertexFormat} from '@luma.gl/core';
 import {vertexFormatDecoder} from '@luma.gl/core';
-import type {TypedArray} from '@math.gl/core';
-import type {Geometry as MathGeometry} from '@math.gl/geometry';
-export {unpackIndexedGeometry} from '@math.gl/geometry';
+import type {TypedArray} from '@math.gl/core/types';
+import type {Geometry as MathGeometry} from '@math.gl/geometry/primitives';
+export {unpackIndexedGeometry} from '@math.gl/geometry/processing';
 import {Geometry, getGeometryShaderAttributeName, type GeometryAttribute} from './geometry';
 
 type TypedArrayConstructor = {

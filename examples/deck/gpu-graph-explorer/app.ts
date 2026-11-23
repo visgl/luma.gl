@@ -10,7 +10,8 @@ import {
   type GPUGraphDeckEffectStats,
   type PickingInfo
 } from '@deck.gl-community/arrow-layers';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {
@@ -61,6 +62,8 @@ export function createGPUGraphExplorerDeck(
   const container = parent ?? createStandaloneContainer();
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
 
+  const diagnostics = new GPUGraphDiagnostics();
+  const exampleProps = getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'});
   let effect: GPUGraphDeckEffect | null = null;
   let activeDevice: Device | null = null;
   let latestStats: GPUGraphDeckEffectStats | null = null;
@@ -75,6 +78,7 @@ export function createGPUGraphExplorerDeck(
   let draggedVertex: number | null = null;
   let deck: ArrowDeck<OrthographicView>;
   const controls = createExplorerControls(container, {
+    diagnostics,
     getEffect: () => effect,
     getStats: () => latestStats,
     getPendingVertexCount: () => pendingGraphVertexCount,
@@ -106,7 +110,13 @@ export function createGPUGraphExplorerDeck(
 
   deck = new ArrowDeck<OrthographicView>({
     parent: container,
-    ...getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'}),
+    ...exampleProps,
+    deviceProps: deviceOptions.device
+      ? exampleProps.deviceProps
+      : {
+          ...exampleProps.deviceProps,
+          optionalFeatures: ['timestamp-query']
+        },
     views: new OrthographicView({id: 'gpu-graph-orthographic'}),
     initialViewState: {target: [0, 0, 0], zoom: 6.8, minZoom: 4, maxZoom: 12},
     controller: {
@@ -154,6 +164,7 @@ export function createGPUGraphExplorerDeck(
       rebuildGraph(initialDataset, loadedDeck);
     },
     onFinalize: () => {
+      diagnostics.clear();
       activeDevice = null;
       rebuildGeneration++;
       if (rebuildFrame !== null) cancelAnimationFrame(rebuildFrame);
@@ -219,6 +230,7 @@ export function createGPUGraphExplorerDeck(
     if (!activeDevice) return;
     const previousDepth = effect?.currentNeighborhoodDepth ?? DEFAULT_NEIGHBORHOOD_DEPTH;
     const previousSelection = effect?.currentSelection ?? 0;
+    diagnostics.clear();
     latestStats = null;
     draggedVertex = null;
     if (nextDataset.vertexCount >= GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT) {
@@ -229,6 +241,8 @@ export function createGPUGraphExplorerDeck(
       pointMode,
       maxVisibleEdges,
       addSampledLayoutToGraph: addGraphExplorerSampledLayoutToGraph,
+      encodeGraph: (graph, commandEncoder) =>
+        diagnostics.encode(graph, commandEncoder, {parameters: undefined}),
       onStats: stats => {
         latestStats = stats;
         controls.update();

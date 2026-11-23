@@ -113,6 +113,7 @@ export class GPUGraphEdgeLayer extends Layer<GPUGraphEdgeLayerProps> {
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
     const model = new Model(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32], source: GPU_GRAPH_DECK_EDGE_SHADER}),
       id: `${this.id}-model`,
       topology: 'line-list',

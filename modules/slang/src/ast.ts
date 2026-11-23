@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export type SourceLocation = {offset: number; line: number; column: number; sourceName?: string};
+import type {SourceLocation} from './ir';
+export type {SourceLocation} from './ir';
 export type Token = SourceLocation & {
   text: string;
   kind: 'identifier' | 'number' | 'string' | 'symbol' | 'end';
 };
-export type SlangType = {name: string; element?: SlangType; length?: number};
+export type SlangType = {
+  structure?: true;
+  name: string;
+  element?: SlangType;
+  length?: number;
+  lengthName?: string;
+};
 export type Attribute = {name: string; arguments: string[]; location: SourceLocation};
 export type Variable = {
   kind: 'variable';
@@ -14,6 +21,7 @@ export type Variable = {
   type: SlangType;
   modifiers: string[];
   attributes: Attribute[];
+  interface?: import('./ir').ShaderInterface;
   semantic?: string;
   binding?: {group: number; binding: number};
   initializer?: Expression;
@@ -31,6 +39,7 @@ export type ShaderFunction = {
   type: SlangType;
   parameters: Variable[];
   attributes: Attribute[];
+  interface?: import('./ir').ShaderInterface;
   semantic?: string;
   body: Statement;
   /** A typed native function declaration, supplied through the registry. */
@@ -39,6 +48,9 @@ export type ShaderFunction = {
 };
 export type Program = {
   declarations: (Structure | ShaderFunction | Variable)[];
+  /** Source clip-space convention, independent of target syntax. */
+  clipSpace?: 'webgpu';
+  evaluationOrder?: 'left-to-right';
   publicNames?: ReadonlyMap<string, string>;
   nativeModules?: {
     name: string;
@@ -48,8 +60,16 @@ export type Program = {
     imports: string[];
   }[];
 };
-export type Expression = SourceLocation &
-  (
+export type Expression = SourceLocation & {
+  operation?: import('./ir').ShaderOperation;
+  /** A materialized abstract constant, computed before target emission. */
+  constantValue?: string;
+  valueType?: SlangType;
+  resolvedType?: import('./ir').ShaderType;
+  resolvedCall?:
+    | {kind: 'function'; declaration: ShaderFunction}
+    | {kind: 'constructor'; type: SlangType};
+} & (
     | {kind: 'identifier' | 'number' | 'boolean'; value: string}
     | {kind: 'unary'; operator: string; operand: Expression; postfix: boolean}
     | {kind: 'binary'; operator: string; left: Expression; right: Expression}
@@ -59,6 +79,10 @@ export type Expression = SourceLocation &
     | {kind: 'conditional'; condition: Expression; consequent: Expression; alternate: Expression}
     | {kind: 'initializer'; elements: Expression[]}
     | {kind: 'cast'; type: SlangType; operand: Expression}
+    | {kind: 'bitcast'; type: SlangType; operand: Expression}
+    | {kind: 'construct'; type: SlangType; elements: Expression[]}
+    | {kind: 'select'; arguments: Expression[]}
+    | {kind: 'texture-dimensions'; texture: Expression; level: Expression}
   );
 export type SwitchClause = SourceLocation & {
   labels: (Expression | null)[];

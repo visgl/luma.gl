@@ -1,0 +1,65 @@
+{
+  "provenance": {
+    "source": "Uniform solid sphere Coulomb equations, generated SI reference fixture",
+    "kind": "analytic",
+    "notes": "Synthetic observations. No experimental accuracy is claimed."
+  },
+  "radius": 0.028575,
+  "gravity": 9.81,
+  "cloth": [
+    {
+      "initialSpeed": 1,
+      "initialRollingAngularSpeed": -34.99562554680665,
+      "slidingTime": 0.29124799767001597,
+      "rollingSpeed": 0.4285714285714286,
+      "rollingDistance": 0.9361542782250516,
+      "initialSidespin": 10,
+      "sidespinStopTime": 1.4564220183486238
+    },
+    {
+      "initialSpeed": 2,
+      "initialRollingAngularSpeed": 0.0,
+      "slidingTime": 0.29124799767001597,
+      "rollingSpeed": 1.4285714285714286,
+      "rollingDistance": 10.401714202500571,
+      "initialSidespin": 15,
+      "sidespinStopTime": 2.1846330275229353
+    },
+    {
+      "initialSpeed": 3,
+      "initialRollingAngularSpeed": 52.493438320209975,
+      "slidingTime": 0.21843599825251198,
+      "rollingSpeed": 2.5714285714285716,
+      "rollingDistance": 33.70155401610186,
+      "initialSidespin": 20,
+      "sidespinStopTime": 2.9128440366972477
+    },
+    {
+      "initialSpeed": 4,
+      "initialRollingAngularSpeed": 139.9825021872266,
+      "slidingTime": 0.0,
+      "rollingSpeed": 4.0,
+      "rollingDistance": 81.54943934760448,
+      "initialSidespin": 25,
+      "sidespinStopTime": 3.641055045871559
+    }
+  ],
+  "cushions": [
+    {
+      "normalSpeed": 0.2,
+      "reboundSpeed": 0.17477656405163858
+    },
+    {
+      "normalSpeed": 1,
+      "reboundSpeed": 0.8502415458937199
+    },
+    {
+      "normalSpeed": 3,
+      "reboundSpeed": 2.3891402714932126
+    },
+    {
+      "normalSpeed": 8,
+      "reboundSpeed": 5.5
+    }
+  ]
+}

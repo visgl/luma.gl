@@ -1,2 +1,2 @@
 export {luma} from '@luma.gl/core';
-export {webgpuAdapter} from '@luma.gl/webgpu';
+export {webgpuAdapter} from '@luma.gl/core/webgpu';

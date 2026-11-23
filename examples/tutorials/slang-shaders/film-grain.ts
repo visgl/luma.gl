@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {SlangNativeModule} from '@luma.gl/slang';
-import {valueNoise} from '@luma.gl/shadertools';
+import {valueNoise} from '@luma.gl/shaders';
 
 /** Adapt an existing native ShaderModule using an application-owned Slang contract. */
 export const filmGrain = {

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {isUniformValue} from '../../src/api/adapter-utils/is-uniform-value';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 it('isUniformValue', async () => {

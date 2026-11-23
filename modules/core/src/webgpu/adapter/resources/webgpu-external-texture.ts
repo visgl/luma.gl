@@ -1,0 +1,51 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {ExternalTexture, ExternalTextureProps} from '../../../index';
+import type {WebGPUDevice} from '../webgpu-device';
+import type {WebGPUSampler} from './webgpu-sampler';
+
+/** WebGPU concrete wrapper for one acquired `GPUExternalTexture` binding snapshot. */
+export class WebGPUExternalTexture extends ExternalTexture {
+  /** Device that imported or borrowed this external texture binding. */
+  readonly device: WebGPUDevice;
+  /** Acquired or borrowed WebGPU external texture handle. */
+  handle: GPUExternalTexture;
+  /** Default sampler used for paired `${name}Sampler` shader bindings. */
+  sampler!: WebGPUSampler;
+
+  /**
+   * Creates one acquired or handle-backed WebGPU external texture binding.
+   * @param device Device that owns the import operation.
+   * @param props Source, handle, dimensions, and default sampler for this binding snapshot.
+   */
+  constructor(device: WebGPUDevice, props: ExternalTextureProps) {
+    super(device, props);
+    this.device = device;
+    if (!this.props.handle && !this.props.source) {
+      throw new Error(`${this} requires source or handle`);
+    }
+    if (this.props.handle && !this.props.source && (this.width <= 0 || this.height <= 0)) {
+      throw new Error(`${this} handle-backed external textures require width and height`);
+    }
+    const suppliedHandle = this.props.handle as GPUExternalTexture | undefined;
+    this.handle =
+      suppliedHandle ||
+      this.device.handle.importExternalTexture({
+        source: this.props.source,
+        colorSpace: this.props.colorSpace
+      });
+    this.setSampler(this.props.sampler);
+  }
+
+  /** Invalidates this wrapper without manually destroying browser-owned external data. */
+  protected override destroyHandle(): void {
+    // External textures are destroyed automatically,
+    // as a microtask, instead of manually or upon garbage collection like other resources.
+    // this.handle.destroy();
+
+    // @ts-expect-error invalidated wrapper handle
+    this.handle = null;
+  }
+}

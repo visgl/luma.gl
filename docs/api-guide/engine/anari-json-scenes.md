@@ -11,7 +11,7 @@ import {AnariGuideDocsTabs} from '@site/src/components/docs/anari-guide-docs-tab
 
 ## Explore the JSON scene playground
 
-The private ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes
+The ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes
 without writing rendering code. Start the showcase from the repository root:
 
 ```bash
@@ -25,6 +25,13 @@ WebGPU/WebGL selection, a renderer selector for frame presentation, automatic HD
 available, orbit controls, validation feedback, and live instance, draw-call, and triangle
 statistics.
 
+On WebGPU, choose **Ray tracing** in the renderer selector. **Chart Materials** shows a
+metal roughness sweep, glossy reflections, and matte surfaces. **Chart Lighting** and
+**Indirect Light Study** show emissive lighting, shadows, and color bleeding. **Antique
+Camera · Ray Study** adds an imported glTF asset. In the stationary lighting studies, the
+**Refinement** indicator shows accumulated samples toward the configured target. Image
+noise can remain at 100%, particularly around small emitters.
+
 Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. Export bakes procedural
 geometry, starfield distributions, and retained instances into a static snapshot; transfers mesh
 positions, normals, UVs, vertex colors, materials, texture images, camera, and supported lights;
@@ -34,21 +41,21 @@ ANARI-specific and are not exported.
 
 :::caution[Experimental playground format]
 The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
-specification and can change with the private `@luma.gl/scene` workspace.
+specification and can change with the experimental `@luma.gl/anari` package.
 :::
 
 ### Validate scenes with Zod and JSON Schema
 
-The optional `@luma.gl/scene/schemas` entry point exports separate Zod schemas for geometry,
+The optional `@luma.gl/anari/schemas` entry point exports separate Zod schemas for geometry,
 materials, lights, cameras, renderers, surfaces, groups, instances, animations, and complete
-scenes. Importing ordinary rendering objects from `@luma.gl/scene` does not load Zod:
+scenes. Importing ordinary rendering objects from `@luma.gl/anari` does not load Zod:
 
 ```ts
 import {
   ANARIGeometrySchema,
   ANARISceneSchema,
   ANARI_SCENE_JSON_SCHEMA
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 
 const geometry = ANARIGeometrySchema.safeParse({
   '@@type': 'sphere',
@@ -173,7 +180,7 @@ vectors, or supply a complete 16-element `matrix`. Rotations use radians and are
 Z order. Instances referencing a `surface` directly share an automatically generated group; use an
 explicit named `group` when multiple surfaces or group-attached lights are required.
 
-Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
+Object subtypes match the ANARI package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
 geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
 lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`,
 `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept
@@ -324,11 +331,11 @@ deformation additionally requires an application-provided retained `surface.skin
 palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the
 retained scene automatically.
 
-The optional `@luma.gl/scene/gltf` entry point translates parsed glTF clips and binds their node,
+The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node,
 material, sampler, and morph channels to existing retained objects:
 
 ```ts
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 const animation = makeANARIAnimationScene(description, retainedObjects);
 
@@ -339,7 +346,7 @@ animation.seek(1.5);
 
 `update()` receives an absolute monotonic time in seconds. The handle shares the engine animation
 mixer and commits each changed retained object at most once per frame. See
-[ANARI glTF and keyframe animation](/docs/api-reference/scene/anari-animation) and
+[ANARI glTF and keyframe animation](/docs/api-reference/anari/anari-animation) and
 [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) for complete bindings,
 interpolation modes, ownership, and playback examples. Local file selection supports standalone
 `.gltf` and `.glb` assets as well as supported OpenUSD files.
@@ -376,5 +383,5 @@ URL.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

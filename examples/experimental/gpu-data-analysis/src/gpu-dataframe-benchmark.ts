@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBatchHashIndex,
   GPUCommandGraph,
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
   and,
@@ -20,8 +20,8 @@ import {
   type CompiledGPUDataFrameQuery,
   type CompiledGPUDataFrameSort,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/experimental/gpu-dataframe';
-import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-dataframe';
+import {GPUVector, type GPUData} from '@luma.gl/graph/gpu-data';
 import * as arrow from 'apache-arrow';
 
 const DEFAULT_ROW_COUNT = 65_536;

@@ -22,7 +22,7 @@ buffers, asynchronous compilation, and destruction while another graph retains t
 Run the opt-in comparison with:
 
 ```sh
-yarn test-browser-benchmarks modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts
+yarn test-browser-benchmarks modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts
 ```
 
 For the software-backed CI configuration, prefix the command with `CI=true`. The benchmark emits a `GPU_KERNEL_BASELINE` JSON annotation containing device information and

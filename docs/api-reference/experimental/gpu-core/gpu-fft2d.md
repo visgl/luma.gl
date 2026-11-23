@@ -53,7 +53,7 @@ Each complex value occupies two consecutive `float32` components: real followed 
 Values are row-major, so the complete field contains `width * height * 2` floats.
 
 ```ts
-import {GPUCommandGraph, GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUFFT2D} from '@luma.gl/graph/gpu-core';
 
 const graph = new GPUCommandGraph(device);
 // These are GPUVector<'float32x2'> values; each can have independent chunk boundaries.

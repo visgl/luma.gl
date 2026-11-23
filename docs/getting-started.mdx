@@ -16,7 +16,7 @@ You need basic TypeScript knowledge and a browser supporting at least one backen
 ```bash
 npm create vite@latest luma-demo -- --template vanilla-ts
 cd luma-demo
-npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu
+npm install @luma.gl/core @luma.gl/engine
 ```
 
 Use matching versions of the luma.gl packages. See [Installing](/docs/developer-guide/installing)
@@ -29,8 +29,8 @@ Replace `src/main.ts` with:
 ```ts
 import {luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop, Model} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 const VS_GLSL = /* glsl */ `#version 300 es
 
   const vec2 pos[3] = vec2[3](vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
@@ -119,7 +119,7 @@ Keep Vite's `index.html` with its `<div id="app"></div>` and
 npm run dev
 ```
 
-<HelloTriangleExample showHeader={false} showStats={false} />
+<HelloTriangleExample embedded showHeader={false} showStats={false} />
 
 ## Follow the frame
 
@@ -143,8 +143,10 @@ the error explicitly; supplying both adapters does not retry a failed WebGPU cre
 
 ## Next steps
 
+Browse the [packages](/docs/packages) to choose additional tools and integrations.
+
 - [Hello Cube](/docs/tutorials/hello-cube) adds geometry, uniforms, and depth testing.
-- [Choosing an API layer](/docs/api-guide) explains Engine, Core, and Shadertools.
+- [Choosing an API layer](/docs/api-guide) explains Engine, Core, and Shaders.
 - [API reference](/docs/api-reference) provides exact class and resource contracts.
 - [Examples](/examples) show larger rendering and compute workflows.
 

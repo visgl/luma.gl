@@ -23,4 +23,4 @@ A future implementation may instead compose run-length encoding and scan. That i
 
 ## Chunked storage
 
-All six columns accept atomic views or independently partitioned vectors. Sorted COO row IDs describe one logical matrix; a row may cross any number of chunks. Column/value copies intersect source and destination boundaries, while each row offset sums lower bounds over the sorted row-ID chunks. Empty rows and duplicate coordinates are preserved. No source array is concatenated, and the resulting CSR vectors can feed `GPUProgramSpMV` directly.
+All six columns accept atomic views or independently partitioned vectors. Sorted COO row IDs describe one logical matrix; a row may cross any number of chunks. Column/value copies intersect source and destination boundaries, while each row offset sums lower bounds over the sorted row-ID chunks. Empty rows and duplicate coordinates are preserved. No source array is concatenated, and the resulting CSR vectors can feed `GPUGraphSpMV` directly.

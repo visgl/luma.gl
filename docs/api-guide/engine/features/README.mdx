@@ -1,0 +1,64 @@
+---
+title: Engine features
+sidebar_label: Overview
+description: Explore surface appearance and rendering capabilities through public APIs and live glTF samples.
+---
+
+# Engine features
+
+Choose a material aspect or rendering capability, learn its public API, and explore it in a
+live glTF sample. These features belong to the engine and shared shader modules; glTF is one
+way to author and exchange them. Each page describes glTF core or extension support separately.
+
+## Surface appearance
+
+- [Metallic and rough surfaces](/docs/api-guide/engine/features/metallic-roughness) — Base color, metallic response, and roughness describe surfaces ranging from matte dielectrics to polished metals.
+- [Unlit surfaces](/docs/api-guide/engine/features/unlit) — Unlit surfaces preserve their surface color without evaluating scene lighting, useful for signs, diagrams, and baked artwork.
+- [Emissive surfaces](/docs/api-guide/engine/features/emission) — Emission makes a surface contribute its own visible radiance, including values above the display white level.
+- [Specular reflection](/docs/api-guide/engine/features/specular) — Specular reflection controls the strength and tint of dielectric highlights independently of the base diffuse color.
+- [Index of refraction](/docs/api-guide/engine/features/index-of-refraction) — Index of refraction controls the optical contrast at a dielectric boundary and influences reflection and transmitted light.
+- [Transmission, volume, and dispersion](/docs/api-guide/engine/features/transmission) — Transparent materials transmit light through a surface; thickness, absorption, and wavelength separation describe glass and colored volumes.
+- [Clearcoat](/docs/api-guide/engine/features/clearcoat) — Clearcoat adds a secondary glossy layer over a base surface, useful for varnish, lacquer, and automotive paint.
+- [Sheen](/docs/api-guide/engine/features/sheen) — Sheen adds a soft grazing-angle response for fabric, velvet, and other surfaces with fine fibers.
+- [Iridescence](/docs/api-guide/engine/features/iridescence) — Thin-film interference produces view-dependent colors, useful for coated glass, soap films, and decorative finishes.
+- [Anisotropic reflection](/docs/api-guide/engine/features/anisotropy) — Anisotropic reflection stretches highlights along a surface direction, useful for brushed metal and directional surface finishes.
+- [Normal and bump mapping](/docs/api-guide/engine/features/surface-detail) — Normal and height textures add apparent fine surface detail without increasing mesh tessellation.
+- [Diffuse transmission and scattering](/docs/api-guide/engine/features/diffuse-transmission) — Diffuse transmission lets light emerge from the opposite side of a thin or scattering surface, useful for leaves, paper, and translucent ceramics.
+- [Texture coordinates and transforms](/docs/api-guide/engine/features/texture-coordinates) — Independent texture coordinate sets and transforms let each surface map use its own placement, rotation, and scale.
+
+- [Base color](/docs/api-guide/engine/features/base-color)
+- [Opacity and cutouts](/docs/api-guide/engine/features/opacity)
+- [Double-sided surfaces](/docs/api-guide/engine/features/double-sided)
+- [Ambient occlusion](/docs/api-guide/engine/features/occlusion)
+- [Normal mapping](/docs/api-guide/engine/features/normal-mapping)
+- [Emissive strength](/docs/api-guide/engine/features/emissive-strength)
+- [Volume absorption](/docs/api-guide/engine/features/volume)
+- [Dispersion](/docs/api-guide/engine/features/dispersion)
+
+## Scenegraph capabilities
+
+The [Scenegraphs guide](../scenegraph.md) is the canonical index for animation, skins,
+morph targets, interactivity, physics, physical joints, billboards, scene lights, and spatial
+audio. These engine runtimes work with imported and programmatically constructed scenes.
+
+### Related scene and asset guides
+
+- [Material variants](/docs/api-guide/engine/features/material-variants) — Material variants switch authored surface appearances while preserving the scene hierarchy and model identities.
+- [Animation and deformation](/docs/api-guide/engine/features/animation) — Animation combines clip playback, skeletal deformation, and morph targets to bring characters and scene objects to life.
+- [Mesh instancing](/docs/api-guide/engine/features/instancing) — Instancing draws many placements of shared geometry with one draw per compatible primitive instead of duplicating models.
+- [Punctual lighting](/docs/api-guide/engine/features/lighting) — Directional, point, and spot lights provide explicit scene illumination with controllable direction, intensity, and color.
+- [Compressed geometry and textures](/docs/api-guide/engine/features/asset-compression) — Compressed geometry and textures reduce asset transfer size and can reduce GPU texture storage when the device supports the resulting format.
+
+- [Scene visibility](/docs/api-guide/engine/features/visibility) — Hide a scene subtree while preserving its hierarchy and resources for later reuse.
+- [Animated crowds and levels of detail](/docs/api-guide/engine/features/animated-crowds) — Render independently animated characters with shared GPU geometry and select mesh detail by projected screen size.
+
+## glTF integration reference
+
+The format-focused documentation remains the source for import contracts and support details:
+
+- [glTF overview](/docs/api-reference/gltf)
+- [Materials, textures, and lighting](/docs/api-reference/gltf/gltf-materials)
+- [Animation and deformation](/docs/api-reference/gltf/gltf-animation)
+- [Native extensions](/docs/api-reference/gltf/gltf-native-extensions)
+- [Extension support matrix](/docs/api-reference/gltf/gltf-extensions)
+- [Animated crowds and levels of detail](/docs/api-reference/gltf/gltf-animated-crowd)

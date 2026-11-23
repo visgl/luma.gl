@@ -1,0 +1,370 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
+import {getLightmapAtlasDebugData, validateLightmapAtlas} from '@luma.gl/engine/lighting';
+import {BAKING_SCENES, type BakingScene} from './scenes';
+import {
+  CORNELL_BAKE_PROFILES,
+  decodeCornellBake,
+  encodeCornellBake,
+  type CornellBakeRecipe
+} from './cornell-bake-file';
+import {loadCornellScene, prepareCornellAtlas} from './cornell-scene';
+import {encodeSceneBake, decodeSceneBake} from './bake-file';
+import {ColumnPanel} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {exportPortableLightmap} from './portable-bake';
+import {LightmapPreview} from '../pbr-shadows/lightmap-preview';
+
+export default class LightmapExample extends AnimationLoopTemplate {
+  static info = makeExamplePanelHostHtml();
+  private preview: LightmapPreview | null;
+  private readonly settings: ExampleSettingsPanelManager;
+  private readonly panels: ExamplePanelManager;
+  private controls: OrbitControls | null = null;
+  private mode: 'live' | 'baking' | 'baked' = 'baking';
+  private disposed = false;
+  private scene: BakingScene | 'cornell' | 'cornell-preview' = 'courtyard';
+  private readonly device;
+  private cornellRecipe: CornellBakeRecipe | null = null;
+  private sceneRequest = 0;
+  private statusMessage = '';
+  private activePanelId: string | undefined = 'baking-info';
+  constructor(props: AnimationProps) {
+    super(props);
+    this.device = props.device;
+    this.preview = LightmapPreview.isSupported(props.device)
+      ? new LightmapPreview(props.device, 'full', 'generated', 'courtyard')
+      : null;
+    this.settings = new ExampleSettingsPanelManager({
+      id: 'lightmap-baking-settings',
+      schema: {
+        title: 'Baking',
+        sections: [
+          {
+            id: 'lighting',
+            name: 'Lighting',
+            settings: [
+              {
+                name: 'scene',
+                label: 'Scene',
+                type: 'select',
+                persist: 'none',
+                options: [
+                  ...BAKING_SCENES.map(scene => ({...scene})),
+                  {value: 'cornell-preview', label: 'Cornell Box (glTF) · Preview'},
+                  {value: 'cornell', label: 'Cornell Box (glTF) · High quality'}
+                ]
+              },
+              {
+                name: 'mode',
+                label: 'Lighting',
+                type: 'select',
+                persist: 'none',
+                options: [
+                  {label: 'Live', value: 'live'},
+                  {label: 'Baking', value: 'baking'},
+                  {label: 'Baked / loaded', value: 'baked'}
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      settings: {mode: 'baking', scene: this.scene},
+      onSettingsChange: values => {
+        const selected =
+          BAKING_SCENES.find(scene => scene.value === values.scene)?.value ??
+          (values.scene === 'cornell' || values.scene === 'cornell-preview'
+            ? values.scene
+            : undefined);
+        if (selected && selected !== this.scene) {
+          void this.selectScene(selected);
+          return;
+        }
+        this.sceneRequest++;
+        if (values.mode === 'live' || values.mode === 'baking' || values.mode === 'baked')
+          this.mode = values.mode;
+      }
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
+  }
+  private async selectScene(scene: LightmapExample['scene']): Promise<void> {
+    const request = ++this.sceneRequest;
+    const current = () => !this.disposed && request === this.sceneRequest;
+    const profile = scene === 'cornell' ? 'high' : scene === 'cornell-preview' ? 'preview' : null;
+    try {
+      let next: LightmapPreview;
+      let recipe: CornellBakeRecipe | null = null;
+      if (profile) {
+        const settings = CORNELL_BAKE_PROFILES[profile];
+        if (
+          this.device.type !== 'webgpu' ||
+          this.device.limits.maxTextureDimension2D < settings.width
+        ) {
+          throw new Error(`Cornell Box baking needs WebGPU and ${settings.width}px textures.`);
+        }
+        const bytes = LightmapPreview.estimateTextureBytes(
+          settings.width,
+          settings.height,
+          'full',
+          true,
+          true
+        );
+        this.statusMessage = `Preparing Cornell Box atlas · estimated bake textures: ${Math.ceil(bytes / 2 ** 20)} MiB`;
+        this.panels.setPanel(this.makePanel());
+        const source = await loadCornellScene();
+        if (!current()) return;
+        const atlas = prepareCornellAtlas(source, profile);
+        next = new LightmapPreview(
+          this.device,
+          'full',
+          'generated',
+          'rooms',
+          atlas,
+          settings.samples
+        );
+        recipe = atlas.recipe;
+      } else {
+        next = new LightmapPreview(this.device, 'full', 'generated', scene as BakingScene);
+      }
+      if (!current()) {
+        next.destroy();
+        return;
+      }
+      this.preview?.destroy();
+      this.preview = next;
+      this.cornellRecipe = recipe;
+      this.scene = scene;
+      this.statusMessage = '';
+      this.setMode('baking');
+    } catch (error) {
+      if (!current()) return;
+      this.statusMessage = String(error);
+      this.setMode(this.mode);
+    }
+  }
+  private setMode(mode: 'live' | 'baking' | 'baked'): void {
+    this.mode = mode;
+    this.settings.setSettings({mode, scene: this.scene});
+    this.panels.setPanel(this.makePanel());
+  }
+  private makePanel() {
+    const preview = this.preview;
+    if (!preview)
+      return makeHtmlCustomPanel({
+        id: 'baking-unsupported',
+        title: 'Unsupported device',
+        html: '<p>Lightmap baking requires renderable float32 textures and renderable, filterable float16 textures. Try WebGPU or a WebGL2 device with floating-point color-buffer support.</p>'
+      });
+    return makeExampleTabbedPanel({
+      id: 'baking-panels',
+      title: 'Lightmap Baking',
+      activePanelId: this.activePanelId,
+      onActivePanelIdChange: activePanelId => {
+        this.activePanelId = activePanelId;
+        this.panels.setPanel(this.makePanel());
+      },
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'baking-info',
+          title: 'Info',
+          html: '<p>Explore static architectural scenes. Courtyard & Arcade contrasts terracotta walls, pale stone and blue sculpture; Two Rooms remains available for comparison.</p><p>Baking averages fixed-light and environment samples. Baked mode uses only stored diffuse lighting. Live uses direct shadowed lights with unoccluded ambient as a reference. WebGPU also traces two diffuse bounces for indirect color bleeding.</p><p>Change the warm light to mark the bake stale, then reset to rebake. Export preserves linear HDR irradiance and UV-set metadata; loading requires this same scene and generated UV layout. View UV charts to inspect density, allocation and validation.</p><p>Drag to orbit · Scroll to zoom.</p>'
+        }),
+        new ColumnPanel({
+          id: 'baking-controls',
+          title: 'Controls',
+          panels: [
+            this.settings.makePanel(),
+            makeHtmlCustomPanel({
+              id: 'baking-actions',
+              title: 'Bake',
+              html: `<p>Estimated bake textures: ${Math.ceil(preview.estimatedTextureBytes / 2 ** 20)} MiB</p><p data-bake-samples></p><button data-cancel>Cancel bake</button> <button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export HDR bake</button> ${this.cornellRecipe ? '<button data-export-glb>Export GLB</button>' : ''} <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>`,
+              onRender: root => {
+                const reset = () => {
+                  this.statusMessage = '';
+                  if (preview.cancelled) {
+                    void this.selectScene(this.scene);
+                    return;
+                  }
+                  preview.reset();
+                  this.setMode('baking');
+                };
+                const change = () => preview.changeLight();
+                const status = (message: string) => {
+                  this.statusMessage = message;
+                  const label = root.querySelector('[data-status]');
+                  if (label) label.textContent = message;
+                };
+                status(this.statusMessage);
+                const download = async (portable = false) => {
+                  try {
+                    if (this.cornellRecipe && !preview.complete)
+                      throw new Error('Finish the Cornell Box bake before exporting.');
+                    const data = await preview.exportData();
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    const glb =
+                      portable && preview.atlas
+                        ? await exportPortableLightmap(preview.atlas, data)
+                        : null;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    const url = URL.createObjectURL(
+                      new Blob(
+                        [
+                          glb ??
+                            (this.cornellRecipe
+                              ? encodeCornellBake(data, this.cornellRecipe)
+                              : encodeSceneBake(data, this.scene as BakingScene))
+                        ],
+                        {
+                          type: 'application/octet-stream'
+                        }
+                      )
+                    );
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${this.scene}.${glb ? 'glb' : 'lmb'}`;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    status('Bake exported.');
+                  } catch (error) {
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    status(String(error));
+                  }
+                };
+                const showAtlas = async () => {
+                  try {
+                    const data = await preview.exportData();
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    const canvas = root.querySelector<HTMLCanvasElement>('[data-atlas-view]');
+                    const context = canvas?.getContext('2d');
+                    if (!canvas || !context) return;
+                    canvas.width = data.width;
+                    canvas.height = data.height;
+                    const image = context.createImageData(data.width, data.height);
+                    for (let pixel = 0; pixel < data.width * data.height; pixel++) {
+                      for (let channel = 0; channel < 3; channel++) {
+                        const value = Math.max(0, data.data[pixel * 4 + channel]);
+                        image.data[pixel * 4 + channel] = Math.round(
+                          255 * (value / (1 + value)) ** (1 / 2.2)
+                        );
+                      }
+                      image.data[pixel * 4 + 3] = 255;
+                    }
+                    context.putImageData(image, 0, 0);
+                    canvas.style.display = 'block';
+                    status('Atlas preview — tone mapped for display.');
+                  } catch (error) {
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    status(String(error));
+                  }
+                };
+                const showCharts = () => {
+                  const atlas = preview.atlas;
+                  const canvas = root.querySelector<HTMLCanvasElement>('[data-atlas-view]');
+                  const context = canvas?.getContext('2d');
+                  if (!atlas || !canvas || !context) return;
+                  canvas.width = atlas.width;
+                  canvas.height = atlas.height;
+                  const image = context.createImageData(atlas.width, atlas.height);
+                  image.data.set(getLightmapAtlasDebugData(atlas));
+                  context.putImageData(image, 0, 0);
+                  canvas.style.display = 'block';
+                  const errors = validateLightmapAtlas(atlas);
+                  status(
+                    `${atlas.charts.length} charts · ${atlas.texelsPerUnit} texels/unit · ${Math.round(atlas.occupancy * 100)}% allocated · ${errors.length ? errors.join('; ') : 'UV validation passed'}`
+                  );
+                };
+                const upload = async () => {
+                  const input = root.querySelector<HTMLInputElement>('[data-import]');
+                  const file = input?.files?.[0];
+                  if (!file) return;
+                  try {
+                    const buffer = await file.arrayBuffer();
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    const data = this.cornellRecipe
+                      ? decodeCornellBake(buffer, this.cornellRecipe)
+                      : decodeSceneBake(buffer, this.scene as BakingScene);
+                    if (
+                      data.width !== preview.width ||
+                      data.height !== preview.height ||
+                      data.uvSet !== 1
+                    )
+                      throw new Error('The bake dimensions or UV set do not match this scene.');
+                    preview.loadData(data);
+                    status('Loaded — displaying baked lighting.');
+                    this.setMode('baked');
+                  } catch (error) {
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    status(String(error));
+                  }
+                };
+                const bindings: [string, string, EventListener][] = [
+                  ['[data-reset]', 'click', reset],
+                  [
+                    '[data-cancel]',
+                    'click',
+                    () => {
+                      this.sceneRequest++;
+                      this.device.submit();
+                      preview.cancel();
+                      status('Bake cancelled. Reset to start again.');
+                    }
+                  ],
+                  ['[data-light]', 'click', change],
+                  ['[data-export]', 'click', () => void download()],
+                  ['[data-export-glb]', 'click', () => void download(true)],
+                  ['[data-atlas]', 'click', showAtlas],
+                  ['[data-charts]', 'click', showCharts],
+                  ['[data-import]', 'change', upload]
+                ];
+                for (const [selector, event, handler] of bindings)
+                  root.querySelector(selector)?.addEventListener(event, handler);
+                return () => {
+                  for (const [selector, event, handler] of bindings)
+                    root.querySelector(selector)?.removeEventListener(event, handler);
+                };
+              }
+            })
+          ]
+        })
+      ]
+    });
+  }
+  onRender({canvasContext, time}: AnimationProps) {
+    if (!this.preview) return;
+    if (!(canvasContext.canvas instanceof HTMLCanvasElement)) return;
+    this.controls ??= new OrbitControls(canvasContext.canvas, {
+      target: [0, 1, 0],
+      distance: 10,
+      yaw: 0.55,
+      pitch: 0.35,
+      minDistance: 4,
+      maxDistance: 18,
+      enableRotate: true,
+      enablePan: false
+    });
+    this.controls.update(time);
+    this.preview.render(
+      canvasContext.getCurrentFramebuffer(),
+      this.mode,
+      time,
+      this.controls.getEyePosition()
+    );
+  }
+  onFinalize() {
+    this.disposed = true;
+    this.controls?.destroy();
+    this.panels.finalize();
+    this.settings.finalize();
+    this.preview?.destroy();
+  }
+}

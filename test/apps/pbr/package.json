@@ -1,8 +1,7 @@
 {
   "description": "luma.gl port of the Khronos Physically-Based Rendering reference application",
   "license": "MIT",
-  "contributors": [
-  ],
+  "contributors": [],
   "scripts": {
     "start": "yarn build-lib && open index.html",
     "build-dev": "webpack",

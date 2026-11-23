@@ -55,7 +55,7 @@ describe('foundation documentation contract', () => {
   });
 
   test('uses one canonical progression on the three module overviews', () => {
-    for (const moduleName of ['core', 'engine', 'shadertools']) {
+    for (const moduleName of ['core', 'engine', 'shaders']) {
       const filename = path.join(DOCUMENTATION_DIRECTORY, 'api-reference', moduleName, 'README.md');
       const source = readFileSync(filename, 'utf8');
       let previousOffset = -1;
@@ -76,7 +76,7 @@ describe('foundation documentation contract', () => {
       path.join(process.cwd(), 'website/docusaurus.config.js'),
       'utf8'
     );
-    for (const moduleName of ['core', 'engine', 'shadertools']) {
+    for (const moduleName of ['core', 'engine', 'shaders']) {
       const source = readFileSync(
         path.join(process.cwd(), `modules/${moduleName}/src/index.ts`),
         'utf8'
@@ -108,7 +108,7 @@ describe('foundation documentation contract', () => {
       'needsRedraw()'
     ]);
     expect(getFoundationJourney().map(layer => layer.id)).toEqual([
-      'shadertools',
+      'shaders',
       'engine',
       'core',
       'gpu-core'

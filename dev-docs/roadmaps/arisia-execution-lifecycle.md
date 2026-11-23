@@ -36,7 +36,7 @@ device-owned:
   vector-capable `GPUDotProductScalar` path, retaining hierarchical reduction performance and
   checking per-level gated dispatch geometry. Its optional second-input ownership check also
   needs a regression test for unary reductions.
-- `createGPUConjugateGradientProgram` is the semantic solver path. Add coverage for an already
+- `createGPUConjugateGradientGraph` is the semantic solver path. Add coverage for an already
   converged initial guess before executing any division, and for repeated chunked bindings.
 - The unexported `GPUConjugateGradientExecutable` is an unfinished duplicate with no-op
   initialization helpers. Remove it when consolidating solver execution and replace its import-only

@@ -7,7 +7,7 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/graph/arrow';
 import {
   type Buffer,
   type CommandEncoder,
@@ -15,7 +15,8 @@ import {
   type RenderPass,
   type RenderPipelineParameters
 } from '@luma.gl/core';
-import {Model, ShaderInputs, type DynamicBuffer} from '@luma.gl/engine';
+import {Model, ShaderInputs} from '@luma.gl/engine';
+import {type DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   aBuffer,
   aBufferPlugin,
@@ -23,19 +24,14 @@ import {
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import {
   getGPUVectorBuffer,
   getGPUVectorData,
   getRequiredGPUVector,
   type GPUVector
-} from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURenderable,
-  GPURecordBatch,
-  GPUTable,
-  type GPUTypeMap
-} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/graph/gpu-data';
+import {GPURenderable, GPURecordBatch, GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
