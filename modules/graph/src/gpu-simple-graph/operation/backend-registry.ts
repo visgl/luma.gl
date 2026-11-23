@@ -14,7 +14,11 @@ export type BackendModule = Record<string, unknown>;
 /** Lazily imports the built-in backend module for one device type. */
 export type BackendModuleLoader = () => Promise<BackendModule>;
 
-/** Options for a backend registry. */
+/**
+ * Options for a backend registry.
+ *
+ * @internal Exported for tests. Applications use the global {@link backendRegistry}.
+ */
 export type BackendRegistryProps = {
   /**
    * Built-in backend loaders keyed by device type. Asynchronous lookup uses them for handlers that
@@ -34,6 +38,9 @@ const DEFAULT_MODULE_LOADERS: Readonly<Record<string, BackendModuleLoader>> = {
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
  * with dynamic imports when a requested handler has not been registered for those device types.
  * Registered handlers take precedence over the built-in handlers.
+ *
+ * @internal Exported so tests can construct a registry with injected `defaultModuleLoaders`.
+ * Applications use the global {@link backendRegistry}.
  */
 export class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
@@ -95,8 +102,14 @@ export class BackendRegistry {
       // The registry entry is not replaced while the import is pending, so getSync() keeps
       // serving registered handlers, and a failed import rejects only this lookup.
       const defaultModule = await loadDefaultModule();
-      // Registrations made while the import was pending take precedence.
-      const currentModule = await this._modules[deviceType];
+      // Registrations made while the import was pending take precedence. Await only a pending
+      // registration: awaiting a plain module would yield, and an add() or clear() in that
+      // microtask would be overwritten by a merge of the stale entry.
+      let currentModule = this._modules[deviceType];
+      while (isPromise(currentModule)) {
+        await currentModule;
+        currentModule = this._modules[deviceType];
+      }
       operationHandler = this._addDefaultModule(deviceType, defaultModule, currentModule)[
         operationName
       ];

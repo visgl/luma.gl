@@ -154,9 +154,48 @@ describe('BackendRegistry', () => {
     expect(await registry.get('webgpu', 'interleave')).toBe(interleave);
   });
 
+  test('keeps an add() made right after the built-in import resolves', async () => {
+    const {registry, defaultModule, resolveDefaultModule} = createDeferredDefaultRegistry();
+    registry.add('webgpu', {interleave: vi.fn()});
+    const loading = registry.get('webgpu', 'convertColors');
+    // Let get() reach the pending import.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const custom = vi.fn();
+    // Runs one microtask after get() resumes from the import.
+    defaultModule.then(() => registry.add('webgpu', {custom}));
+    resolveDefaultModule({convertColors: vi.fn()});
+    await loading;
+
+    expect(registry.getSync('webgpu', 'custom')).toBe(custom);
+  });
+
+  test('keeps a clear() made right after the built-in import resolves', async () => {
+    const {registry, defaultModule, resolveDefaultModule} = createDeferredDefaultRegistry();
+    registry.add('webgpu', {interleave: vi.fn()});
+    const loading = registry.get('webgpu', 'convertColors');
+    // Let get() reach the pending import.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    // Runs one microtask after get() resumes from the import.
+    defaultModule.then(() => registry.clear());
+    resolveDefaultModule({convertColors: vi.fn()});
+    await loading;
+
+    expect(() => registry.getSync('webgpu', 'interleave')).toThrow();
+  });
+
   test('reports missing custom backends and unimplemented operations', async () => {
     const registry = new BackendRegistry();
     await expect(registry.get('custom', 'missing')).rejects.toThrow('not registered');
     await expect(registry.get('webgpu', 'missing')).rejects.toThrow('does not implement');
   });
 });
+
+/** Creates a registry whose WebGPU built-in import resolves when the test calls the resolver. */
+function createDeferredDefaultRegistry() {
+  let resolveDefaultModule!: (module: BackendModule) => void;
+  const defaultModule = new Promise<BackendModule>(resolve => {
+    resolveDefaultModule = resolve;
+  });
+  const registry = new BackendRegistry({defaultModuleLoaders: {webgpu: () => defaultModule}});
+  return {registry, defaultModule, resolveDefaultModule};
+}
