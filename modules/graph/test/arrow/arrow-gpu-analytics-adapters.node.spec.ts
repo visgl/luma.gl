@@ -480,6 +480,12 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     for (const packBatches of [false, true, {minBatchSize: 3}] as const) {
       const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches});
       try {
+        if (packBatches === true) {
+          // Sliced rows 1 to 8 put the nulls at packed rows 0, 3 and 6.
+          expect(result.table.batches[0].gpuData['value'].nullBitmap).toEqual(
+            new Uint8Array([0b10110110])
+          );
+        }
         const readback = await makeArrowTableFromGPUAnalyticsTable(result);
         expect(Array.from(readback.getChild('value') ?? []), JSON.stringify(packBatches)).toEqual(
           Array.from(source.getChild('value') ?? [])

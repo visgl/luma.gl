@@ -29,7 +29,11 @@ export type GPUEmbeddingRecordBatch = {
   schema: {fields: readonly GPUEmbeddingTableField[]};
   numRows: number;
   gpuData: Record<string, GPUData>;
-  sourceInfo?: {sourceRowIndexOffset: number};
+  /**
+   * Optional source-row identity retained for picking and row-level diagnostics. `null` marks a
+   * batch that packs rows from more than one source batch, so it has no single source identity.
+   */
+  sourceInfo?: {sourceRowIndexOffset: number} | null;
 };
 
 /** Structural table input accepted from `@luma.gl/graph/gpu-tables` or application code. */
