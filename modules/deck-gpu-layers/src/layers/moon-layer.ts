@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {DefaultProps} from '@deck.gl/core';
-import type {NumberArray3} from '@math.gl/core';
-import {getMoonPosition, getMoonIllumination, getSkyDirection} from '@math.gl/sun';
+import type {NumberArray3} from '@math.gl/core/types';
+import {getMoonPosition, getMoonIllumination, getSkyDirection} from '@math.gl/earth/sun';
 import {SkyBodyLayer, type SkyBodyLayerProps} from './sky-body-layer';
 
 export type MoonLayerProps = SkyBodyLayerProps & {

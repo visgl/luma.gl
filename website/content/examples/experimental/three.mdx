@@ -1,0 +1,70 @@
+---
+title: Three.js through luma.gl
+description: Compare the private Three.js backend, object adapter and shared compute buffers against upstream Three.js in synchronized split-screen views.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: advanced
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [rendering, materials, animation, integration, three.js]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const ThreeComparison = () => (
+  <iframe
+    title="Experimental Three.js and luma.gl split-screen comparison"
+    src={useBaseUrl('/standalone-examples/three/index.html')}
+    style={{width: '100%', height: '85vh', minHeight: 720, border: 0, borderRadius: 12}}
+    allow="fullscreen"
+  />
+);
+
+**Status: Exploration**
+
+<ThreeComparison />
+
+`@luma.gl/three` is a private, version-pinned prototype. Select WebGPU or WebGL2
+to compare the luma backend with upstream Three.js on separate canvases/devices.
+Orbit, pan and zoom in either pane synchronize both views.
+
+The selector covers textured glTF PBR, directional PCF shadows, morph animation,
+skinning, instancing, physical materials, transmission and animated TSL graphics.
+WebGPU also validates compute readback. WebGL2 compute is explicitly unsupported;
+transform-feedback translation is deferred. The mixed Three/luma object adapter
+scene currently requires WebGPU.
+
+This experiment does not promise general Three.js compatibility. See the
+[adapter documentation](/docs/api-reference/three) for support and ownership boundaries.
+
+**Shared buffer / luma compute** explores a complementary thin bridge: luma compute
+generates 4,225 mesh vertices on a device shared with upstream `WebGPURenderer`.
+Three renders that same GPU buffer directly, with no vertex readback or re-upload.
+The other pane uses upstream TSL displacement as a synchronized reference.
+This scene requires WebGPU and uses private, version-pinned attribute hooks.
+
+**Three meshes inside deck.gl** puts a Three cube and a native deck
+`ScatterplotLayer` disk in the same WebGPU render pass, sharing the device and depth
+attachment. Both panes use a synchronized camera; the right pane is an upstream
+Three reference. Reverse the deck layer order to check depth occlusion, or pause
+the animation to inspect it. This first integration supports Cartesian views and
+untextured basic materials; geospatial projection and picking are deferred.
+
+**Lantern courtyard inside deck.gl / PBR** retains the glTF model’s original
+standard material, textures, directional PCF shadows and environment lighting.
+Native deck polygon tiles, survey rings, animated columns and markers surround it
+in the same shared-depth pass. The right pane renders matching objects with
+upstream Three.js. This scene requires WebGPU and uses a prepared scene adapter.
+
+**Geographic Lanterns + picking** places three textured glTF instances in a local
+meter frame around a San Francisco coordinate, with altitude, scale and heading.
+Native deck buildings and ground share depth. Drag or zoom the left map to update
+both views; click either pane for a stable selection ID and matching highlight.
+Toggle the model layer, reverse draw order, resize, or dispose/recreate the scene.
+Picking uses CPU triangle raycasting with explicit building occluders; general
+deck GPU picking of Three meshes and large geographic extents remain deferred.
+
+Buildings act as occluders for CPU selection; only Lantern instances receive
+selection IDs and highlights. Their bases are normalized from geometry bounds
+before applying instance scale, so placement altitude describes the model base.

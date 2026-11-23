@@ -45,6 +45,8 @@ Global reductions support packed `float32`, `sint32`, and `uint32` metric column
 
 ```ts
 const totals = dataframe.aggregate({
+  knownFares: {count: 'fare'},
+
   rows: 'count',
   totalFare: {sum: 'fare'},
   minimumFare: {min: 'fare'},
@@ -78,3 +80,7 @@ filters, null masks, derived columns, and repeated query parameters apply before
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Dataframe operations index](/docs/api-reference/experimental/gpu-dataframe-operations)
 - [GPU tables](/docs/api-reference/experimental/gpu-tables)
+
+### Partitioned mean accumulation
+
+Pass `{maxMeanScratchBytes: budget}` to `groupBy` to cap the temporary count buffer used by mean aggregation. The GPU scans the source for each contiguous key range, reuses one count buffer per mean operation, and writes each partition into the final result. Choose a budget of at least four bytes. Source data, output vectors, and row masks have their own memory costs.

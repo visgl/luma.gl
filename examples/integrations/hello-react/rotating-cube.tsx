@@ -5,7 +5,7 @@
 import {useEffect, useRef} from 'react';
 import {Device, luma, log} from '@luma.gl/core';
 import {AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {CubeAnimationLoopTemplate} from './cube-animation';
 
 /**

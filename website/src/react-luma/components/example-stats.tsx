@@ -1,7 +1,7 @@
 import React, {type CSSProperties, type FC, useEffect, useRef} from 'react';
 import {Device, luma} from '@luma.gl/core';
-import {Stats, type Stat} from '@probe.gl/stats';
-import {StatsWidget} from '@probe.gl/stats-widget';
+import {Stats, type Stat} from 'probe.gl/stats';
+import {StatsWidget} from 'probe.gl/stats-widget';
 import {applyExampleTheme, type ExampleThemeAppearance} from '../../../../examples/example-theme';
 import {
   measureBrowserMemory,

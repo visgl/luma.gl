@@ -11,19 +11,19 @@ import type {
   ShaderLayout
 } from '@luma.gl/core';
 import {Buffer, ExternalTexture, Texture, TextureView, UniformStore} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {
   DynamicBuffer,
   type DynamicBufferRange,
   getDynamicBufferFromBinding,
   isBufferRangeBinding,
   resolveBufferRangeBinding
-} from '../dynamic-buffer/dynamic-buffer';
+} from '@luma.gl/core/dynamic';
 import {
   getTextureBindingLayout,
   isTextureBindingSource,
   type TextureBindingSource
-} from '../dynamic-texture/texture-binding-source';
+} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../shader-inputs';
 import {shaderModuleHasUniforms} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
@@ -87,6 +87,8 @@ export class Material<
 > {
   /** Application-provided identifier. */
   readonly id: string;
+  /** Structured metadata associated with this material. */
+  metadata: Record<string, unknown> = {};
   /** Device that owns the material resources. */
   readonly device: Device;
   /** Factory that defines the material schema. */
@@ -156,6 +158,7 @@ export class Material<
     if (props.moduleProps) {
       material.setProps(props.moduleProps);
     }
+    material.metadata = {...this.metadata};
     material.updateShaderInputs();
     return material;
   }

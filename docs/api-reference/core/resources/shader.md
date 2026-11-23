@@ -20,7 +20,7 @@ The `Shader` class holds a compiled shader.
 ]} />
 
 :::warning Common mistake
-Shadertools assembles source, but the active Core adapter still compiles it. Supplying only WGSL does
+Shaders assembles source, but the active Core adapter still compiles it. Supplying only WGSL does
 not create a WebGL fallback, and supplying only GLSL does not create a WebGPU path.
 :::
 

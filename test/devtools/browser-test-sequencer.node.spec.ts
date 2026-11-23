@@ -5,9 +5,13 @@
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import type {TestSpecification} from 'vitest/node';
-import {BrowserTestSequencer, SLOW_BROWSER_TEST_WEIGHTS} from '../utils/browser-test-sequencer';
+import {
+  BrowserTestSequencer,
+  SLOW_BROWSER_TEST_WEIGHTS,
+  NATIVE_PHYSICS_TEST_WEIGHTS
+} from '../utils/browser-test-sequencer';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const weightedPaths = Object.entries(SLOW_BROWSER_TEST_WEIGHTS).map(([path, weight]) => ({
@@ -23,7 +27,7 @@ test('browser shard weights reference existing specs', () => {
   }
 });
 
-test('browser sharding preserves every spec and balances measured expensive suites', async () => {
+test.each([3, 6])('browser sharding preserves every spec and balances %i shards', async count => {
   const paths = [
     ...weightedPaths,
     ...Array.from({length: 90}, (_, index) => ({path: `test/default-${index}.spec.ts`, weight: 3}))
@@ -32,8 +36,8 @@ test('browser sharding preserves every spec and balances measured expensive suit
     ({path}) => ({moduleId: resolve(root, path)}) as TestSpecification
   );
   const shards = await Promise.all(
-    [1, 2, 3].map(async index => {
-      const context = {config: {root, shard: {count: 3, index}}} as ConstructorParameters<
+    Array.from({length: count}, (_, index) => index + 1).map(async index => {
+      const context = {config: {root, shard: {count, index}}} as ConstructorParameters<
         typeof BrowserTestSequencer
       >[0];
       const sequencer = new BrowserTestSequencer(context);
@@ -49,4 +53,32 @@ test('browser sharding preserves every spec and balances measured expensive suit
     shard.reduce((total, specification) => total + weights.get(specification.moduleId)!, 0)
   );
   expect(Math.max(...totals) - Math.min(...totals)).toBeLessThanOrEqual(3);
+});
+
+test('native physics weights preserve all suites and balance two workers', async () => {
+  vi.stubEnv('LUMA_TEST_BROWSER_GROUP', 'physics');
+  try {
+    const entries = Object.entries(NATIVE_PHYSICS_TEST_WEIGHTS);
+    const specifications = entries.map(([path]) => {
+      expect(existsSync(resolve(root, path)), path).toBe(true);
+      return {moduleId: resolve(root, path)} as TestSpecification;
+    });
+    const shards = await Promise.all(
+      [1, 2].map(async index => {
+        const context = {config: {root, shard: {count: 2, index}}} as ConstructorParameters<
+          typeof BrowserTestSequencer
+        >[0];
+        return new BrowserTestSequencer(context).shard(specifications);
+      })
+    );
+    expect(shards.flat()).toHaveLength(specifications.length);
+    expect(new Set(shards.flat()).size).toBe(specifications.length);
+    const weights = new Map(entries.map(([path, weight]) => [resolve(root, path), weight]));
+    const totals = shards.map(shard =>
+      shard.reduce((total, specification) => total + weights.get(specification.moduleId)!, 0)
+    );
+    expect(Math.abs(totals[0] - totals[1])).toBeLessThanOrEqual(3);
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });

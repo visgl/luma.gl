@@ -1,7 +1,7 @@
 # Vector Field Lab
 
 A WebGPU showcase for navigating a sampled three-dimensional field and its differential operators.
-Four synchronized `StructuredVolumeRenderer` instances imported from `@luma.gl/scene/raymarch`
+Four synchronized `StructuredVolumeRenderer` instances imported from `@luma.gl/anari/raymarch`
 consume the same GPU-resident buffers and orbit camera.
 Vector-valued views add small solid 3D arrow glyphs on a sparse 6³ lattice. Their shafts and tapered
 heads are evaluated volumetrically, preserving orientation, occlusion, and perspective while orbiting.

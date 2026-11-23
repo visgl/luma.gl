@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: Copyright (c) vis.gl contributors */
+.gltf-scatter-panel {
+  font: 12px/1.5 system-ui, sans-serif;
+  --menu-background: var(--luma-example-surface, #101827);
+  --menu-text: var(--luma-example-text, #e2e8f0);
+  --button-text: var(--luma-example-text, #e2e8f0);
+}
+.gltf-scatter-panel [aria-hidden='true'] {display:none !important}
+.gltf-scatter-panel .scatter-model-controls label {display:grid;gap:6px;color:var(--luma-example-text-muted,#a0aec0)}
+.gltf-scatter-panel select {width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #475569;border-radius:6px;background:#182438;color:#edf2fa;font:inherit}
+.gltf-scatter-panel .gltf-example-details {max-height:300px}
+.gltf-scatter-panel p {margin:0 0 10px}

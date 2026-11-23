@@ -4,6 +4,8 @@
 
 Status: Ongoing
 
+See the [GPU Physics Roadmap](gpu-physics-roadmap.md) for sphere dynamics and pool.
+
 
 ## Overview
 

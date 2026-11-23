@@ -77,7 +77,10 @@ describe('Gaussian splat documentation showcase', () => {
     expect(roadmap).toContain('https://github.com/visgl/loaders.gl/pull/3431');
     expect(roadmap).toContain('https://github.com/visgl/loaders.gl/issues/1245');
     expect(roadmap).toContain('`Tileset3D` and `Tiles3DSource` traversal');
-    expect(roadmap).toContain('loaders.gl has SPZ v4 decoding, but not SPZ v2');
+    expect(roadmap).toContain('beta.4 upstream source includes legacy SPZ v2/v3 and v4 decoding');
+    expect(roadmap).toContain(
+      'published-package qualification and end-to-end transformed Gaussian tile integration remain'
+    );
     expect(roadmap).toContain('existing `SplatLayer`');
     expect(roadmap).toContain('loader-computed transforms per tile/page in the renderer');
     expect(roadmap).toContain('per-tile/page renderer transforms');
@@ -124,7 +127,9 @@ describe('Gaussian splat documentation showcase', () => {
     expect(capabilities).toContain('| Globally sorted WebGL splat runs | Experimental | WebGL2 |');
     expect(capabilities).toContain('| Unclamped WebGL harmonic radiance | Experimental | WebGL2 |');
     expect(capabilities).toMatch(/Background RAD page decoding[^\n]*automatically fall back/);
-    expect(capabilities).toContain('[`@luma.gl/splats` reference](/docs/api-reference/splats)');
+    expect(capabilities).toContain(
+      '[`@luma.gl/engine/splats` reference](/docs/api-reference/splats)'
+    );
     for (const capability of [
       'Hierarchical splat refinement',
       'Dedicated splat picking',

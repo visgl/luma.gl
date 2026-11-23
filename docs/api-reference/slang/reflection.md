@@ -7,6 +7,8 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 # Slang reflection helpers
 
+**Status: Exploration**
+
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
   <DocumentationBadge tone="version">Since v10</DocumentationBadge>

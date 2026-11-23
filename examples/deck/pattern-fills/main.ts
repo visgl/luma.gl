@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {createPatternScene} from './app';
-import type {PatternFillProps} from '@luma.gl/shadertools';
+import type {PatternFillProps} from '@luma.gl/shaders';
 
 declare global {
   interface Window {

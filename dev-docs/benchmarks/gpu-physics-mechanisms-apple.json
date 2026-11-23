@@ -1,0 +1,268 @@
+{
+  "formatVersion": 1,
+  "stage": "full-rigid-body-step",
+  "fixture": "hinge",
+  "objectCount": 4,
+  "settings": {
+    "solver": "ordered",
+    "jointCount": 1,
+    "failurePolicy": "report",
+    "iterations": 32,
+    "timeStep": 0.008333333333333333,
+    "warmStartFactor": 1,
+    "maximumPairs": 64
+  },
+  "sampleCount": 20,
+  "warmupCount": 60,
+  "adapter": {
+    "type": "webgpu",
+    "vendor": "apple",
+    "renderer": "",
+    "version": "",
+    "gpu": "apple",
+    "gpuType": "unknown",
+    "gpuBackend": "unknown",
+    "gpuArchitecture": "metal-3",
+    "fallback": false,
+    "featureLevel": "core",
+    "subgroupMinSize": 32,
+    "subgroupMaxSize": 32,
+    "shadingLanguage": "wgsl",
+    "shadingLanguageVersion": 100
+  },
+  "timestampQueries": true,
+  "compileMilliseconds": 564,
+  "graphNodes": 11,
+  "capacity": {
+    "bodyCount": 4,
+    "colliderCount": 4,
+    "maximumPairs": 64,
+    "pairWorkgroups": 1,
+    "buffers": [
+      {
+        "name": "positions",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "orientations",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "velocities",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "angular-velocities",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "sleep",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "targets",
+        "byteLength": 672,
+        "uniform": false
+      },
+      {
+        "name": "manifolds",
+        "byteLength": 18432,
+        "uniform": false
+      },
+      {
+        "name": "bodies",
+        "byteLength": 1312,
+        "uniform": false
+      },
+      {
+        "name": "settings",
+        "byteLength": 64,
+        "uniform": true
+      },
+      {
+        "name": "control-settings",
+        "byteLength": 64,
+        "uniform": true
+      },
+      {
+        "name": "simulation-statistics",
+        "byteLength": 64,
+        "uniform": false
+      },
+      {
+        "name": "minima",
+        "byteLength": 48,
+        "uniform": false
+      },
+      {
+        "name": "maxima",
+        "byteLength": 48,
+        "uniform": false
+      },
+      {
+        "name": "object-attributes",
+        "byteLength": 16,
+        "uniform": false
+      }
+    ],
+    "ownedBufferBytes": 21040
+  },
+  "graphBufferBytes": 21072,
+  "maximumPendingSteps": 1,
+  "perStepMilliseconds": {
+    "cpuEncode": {
+      "median": 0.2999999523162842,
+      "p95": 0.5999999046325684,
+      "maximum": 0.5999999046325684
+    },
+    "completionWithDiagnostics": {
+      "median": 6.6000001430511475,
+      "p95": 10.200000047683716,
+      "maximum": 10.200000047683716
+    },
+    "gpuWork": {
+      "median": 4.826351000000001,
+      "p95": 5.441333,
+      "maximum": 5.441333
+    },
+    "gpuSpan": {
+      "median": 5.006805896759033,
+      "p95": 5.8551130294799805,
+      "maximum": 5.8551130294799805
+    }
+  },
+  "diagnostics": {
+    "steps": 80,
+    "incompleteSteps": 0,
+    "droppedPairs": 0,
+    "droppedManifolds": 0,
+    "incompleteQueries": 0,
+    "invalidBounds": 0,
+    "droppedTriangleQueries": 0,
+    "unresolvedQueries": 0,
+    "incompleteIslandUnions": 0,
+    "incompleteMeshQueries": 0,
+    "incompleteContinuousBodies": 0,
+    "incompleteTriggerQueries": 0,
+    "invalidBodyStates": 0,
+    "maximumCandidatePairs": 2,
+    "maximumCandidateTests": 10,
+    "saturated": false,
+    "complete": true
+  },
+  "finiteState": true,
+  "executionComplete": true,
+  "finalState": [
+    {
+      "position": [
+        0,
+        0,
+        -0.5
+      ],
+      "orientation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        0
+      ],
+      "sleeping": false
+    },
+    {
+      "position": [
+        0,
+        0,
+        4
+      ],
+      "orientation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        0
+      ],
+      "sleeping": false
+    },
+    {
+      "position": [
+        0.5498307347297668,
+        2.7044677608500933e-8,
+        2.6042706966400146
+      ],
+      "orientation": [
+        6.46926201497422e-9,
+        -0.18653692305088043,
+        1.4010843152334473e-8,
+        0.9824479818344116
+      ],
+      "velocity": [
+        0.8382561206817627,
+        -2.7634305865831266e-7,
+        0.3278065323829651
+      ],
+      "angularVelocity": [
+        -2.8647582439589314e-7,
+        -0.6000000834465027,
+        1.6287557969008049e-7
+      ],
+      "sleeping": false
+    },
+    {
+      "position": [
+        1.7999999523162842,
+        -8.149073082996949e-11,
+        0.5
+      ],
+      "orientation": [
+        -5.8128786506461694e-11,
+        3.004338444689836e-10,
+        -4.9149229824907437e-11,
+        1
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        0
+      ],
+      "sleeping": true
+    }
+  ],
+  "notes": [
+    "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+    "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+    "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+    "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+    "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+  ],
+  "browserVersion": "151.0.7922.34",
+  "nodeVersion": "22.22.1",
+  "softwareGpuRequested": false
+}

@@ -63,7 +63,7 @@
   },
   "overrides": [
     {
-      "includes": ["modules/webgpu/**/*.ts", "modules/webgpu/**/*.js"],
+      "includes": ["modules/core/src/webgpu/**/*.ts", "modules/core/src/webgpu/**/*.js"],
       "javascript": {
         "globals": [
           "GPU",

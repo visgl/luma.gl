@@ -9,7 +9,7 @@ chunks, leading/interior/trailing empty chunks, and differing operand boundaries
 reference families, repeated encoding, empty aggregation, heterogeneous formats, nonzero byte
 offsets, and strided histogram/group inputs. Scan cases exercise carry across boundaries and
 segment heads inside and at chunk boundaries. Node tests verify zero-copy alignment and reject
-unsupported lengths/layouts/topologies. `gpu-program-vectors.*.spec.ts` covers GPU conditional
+unsupported lengths/layouts/topologies. `gpu-graph-vectors.*.spec.ts` covers GPU conditional
 execution, exact MADD aliases, and rejection of overlapping writable views.
 
 `gpu-offset-batching.*.spec.ts` checks independent offset partitions, mixed atomic/vector views,
@@ -87,7 +87,7 @@ repeated encodings. Both borrow caller buffers without scratch allocation. MatVe
 workgroup reduction and MatMul its shared-memory tiles; chunk pairs accumulate into each output
 chunk. Zero inner dimensions write zero each time. Different partitions can change floating-point
 summation order. Node tests cover bounded dispatch, binding limits, ownership, aliases, and
-overlapping outputs. Both classes and their props are exported from `@luma.gl/gpgpu/gpu-core`.
+overlapping outputs. Both classes and their props are exported from `@luma.gl/graph/gpu-core`.
 Chunk-pair selection and fragmented tile work remain performance debt.
 
 `gpu-hash-batching.*.spec.ts` covers index construction, lookup, and stable joins with independent
@@ -119,7 +119,7 @@ master, with shared lowering, conformance tests, and documented exceptions in ea
 | Review group | Operations to cover together | Current gap or audit question |
 | --- | --- | --- |
 | Two-dimensional transforms | `GPUFFT2D` | FFT1D and convolution now accept independent graph chunks. FFT2D still has a device-owned raw-buffer encode API; migrate its composition and resource contract together. Spectral convolution also retains bounded contiguous algorithm scratch. |
-| Sparse algebra | `GPUProgramSpMV`, `GPUAdaptiveSpMV` | Dense MatVec/MatMul now accept independent chunks and have public exports. CSR lowering still requires one chunk; route row-offset pairs, nonzeros, and global vector indices together while preserving adaptive strategies. |
+| Sparse algebra | `GPUGraphSpMV`, `GPUAdaptiveSpMV` | Dense MatVec/MatMul now accept independent chunks and have public exports. CSR lowering still requires one chunk; route row-offset pairs, nonzeros, and global vector indices together while preserving adaptive strategies. |
 | Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
 | Hash follow-ups | `GPUBatchHashIndex`, `GPUBatchHashJoin` and hash routing | Core build/query/global joins support independent chunks. Specialized batch variants still require matching per-batch topology. Tables remain single bindings; fragmented finalization/scatter routing and one-to-many joins remain separate work. |
 | Indexed movement and hierarchy | `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection` | Some APIs already represent partitions/chunks. Audit global indices, cross-chunk ranges, output topology, and shared hierarchy callers as one family. |

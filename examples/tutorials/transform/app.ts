@@ -3,19 +3,20 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
-import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
-import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {TableTransform} from '@luma.gl/experimental/gpu-tables';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/graph/gpu-data';
+import {TableTransform} from '@luma.gl/engine/tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,
-  DynamicBuffer,
   Model,
   ShaderInputs,
   Swap,
   makeRandomGenerator
 } from '@luma.gl/engine';
-import {picking, type ShaderModule} from '@luma.gl/shadertools';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
+import {picking, type ShaderModule} from '@luma.gl/shaders';
 import * as arrow from 'apache-arrow';
 import {TRANSFORM_INFO_HTML} from './app-ui';
 

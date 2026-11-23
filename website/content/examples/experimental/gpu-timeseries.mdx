@@ -1,0 +1,34 @@
+---
+title: Signal Room
+sidebar_label: GPU time series
+description: Explore three million telemetry samples with exact spike envelopes and linked time windows.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, visualization, command-graphs]
+---
+
+import {GPUTimeSeriesExample} from '@site/src/examples';
+
+<GPUTimeSeriesExample />
+
+Three synthetic telemetry channels contain **1,048,576 samples each**, sampled at 10 Hz over
+29 hours. Request latency, queue depth and error rate share a brief incident and a telemetry gap.
+
+- Choose **1. Inspect incident** to reveal a correlated burst across all three charts.
+- Choose **2. Hide peaks**: isolated spikes disappear when a bin's first observation misses
+  them. The exact envelope preserves every finite minimum and maximum.
+- Choose **3. Inspect missing data**: empty bins stay empty, while amber bins contain both observations and
+  missing samples. An envelope summarizes a bin; it does not reconstruct continuity within it.
+- Drag a time interval or scroll to zoom. Use the Zoom slider, then Pan to move through history; reset with **Full history**.
+- Click a chart to inspect its GPU-computed range and the original sample ID of its peak.
+
+Each channel retains three source chunks. A reusable command graph reads a shared GPU range and
+reduces each channel into 1,024 bins. Rendering consumes those same output buffers. Changing the
+viewport does not upload the source again or download chart coordinates. Only an explicit click
+reads back one 40-byte summary. The chart uses fixed bin capacity, not a claim of one bin per device
+pixel; each viewport change scans its visible samples. No GPU timing or speedup is implied.
+
+The [GPU time-series API](/docs/api-reference/experimental/gpu-timeseries) documents the uniform
+sample model, exact integer partitions, identity, missingness, ownership and cost.

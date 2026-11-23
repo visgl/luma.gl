@@ -27,7 +27,7 @@ For the descriptor syntax and the TypeScript inference rules behind
 module boundary. For example, a module can expose a struct or array-of-structs
 API while still packing those values into a flat uniform buffer internally.
 
-This is what allows modules like [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)
+This is what allows modules like [`lighting`](/docs/api-reference/shaders/shader-modules/lighting)
 to accept `lights: Light[]` even though the underlying uniform buffer uses a
 fixed-size trailing array of light structs.
 

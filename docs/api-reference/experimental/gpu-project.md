@@ -8,12 +8,12 @@ import {ProjectionBenchmark} from '@site/src/components/docs/projection-benchmar
 
 ## Overview
 
-`@luma.gl/experimental/gpu-project` reprojects GPU-resident coordinates through WebGPU command graphs
+`@luma.gl/graph/gpu-project` reprojects GPU-resident coordinates through WebGPU command graphs
 without requiring native GPU `f64` arithmetic. A JavaScript projection provider defines the
 coordinate-reference-system semantics; adaptive local polynomial patches provide the GPU execution
 strategy.
 
-That separation supports the wide range of coordinate systems handled by `@math.gl/projection` without
+That separation supports the wide range of coordinate systems handled by `@math.gl/geospatial/projection` without
 reimplementing every projection, datum, or coordinate-reference-system definition in WGSL.
 
 ## When to use it
@@ -66,9 +66,9 @@ published results or cross-machine performance guarantees.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {projectionEngine} from '@math.gl/projection';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUProjection, compileProjectionPlan} from '@luma.gl/graph/gpu-project';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 
 const projection = projectionEngine.createProjection({
   from: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs',
@@ -100,11 +100,11 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
+`@math.gl/geospatial/projection` is provided by the graph package dependency and loaded only when the projection adapter is requested. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
-With math.gl 5, `projectionEngine.createProjection()` also accepts compatible CRS definitions from `@math.gl/crs`,
+With math.gl 5, `projectionEngine.createProjection()` also accepts compatible CRS definitions from `@math.gl/geospatial/crs`,
 including PROJJSON objects, and executes them with the TypeScript projection engine. Use
 `planCRSProjection()` when a broader CRS metadata object may include unsupported vertical or
 compound components; it reports structured reasons for unsupported definitions. CRS metadata
@@ -114,7 +114,7 @@ by itself does not transform coordinates.
 import {
   compileProjectionPlan,
   createWebMercatorProjection
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/graph/gpu-project';
 
 const plan = compileProjectionPlan({
   projection: createWebMercatorProjection(),
@@ -182,7 +182,7 @@ import {
   GPUProjectionProgram,
   invertProjectionProgram,
   type ProjectionProgram
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/graph/gpu-project';
 
 const program: ProjectionProgram = {
   precision: 'double-single',
@@ -232,6 +232,16 @@ entry point or intermediate output buffer. `parameterOffset` is in Uint32 words 
 bound buffer range; namespaces allow multiple programs in one shader. Match `@binding(auto)`
 declaration order in the consumer's shader layout.
 
+The returned `modules` and `defines` select integer-controlled double-single arithmetic, which needs
+no uniforms and is correct on every backend. `GPUProjectionProgram` and `GPUProjection` instead
+choose classic double-single on a reported D3D11, D3D12 or Vulkan backend, and on a host known not
+to be Apple when the backend is not reported, because integer-controlled shaders are slow to compile
+on D3D12. A consumer can opt into the same with `getShader({fp64Arithmetic: 'classic'})`, which
+returns the full `fp64arithmetic` module and its workaround defines. The consumer must then bind
+the module's uniform block and upload its `ONE` and `SPLIT` values (for example with
+`computation.updateShaderInputs()`) before dispatching; with zero values the low limbs are lost.
+Keep integer-controlled arithmetic on Metal, which may reassociate the classic transforms.
+
 Zero input validity, non-finite intermediates, and rejected domains produce zero output and validity.
 The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
 buffer. Input, output, and validity columns remain caller-owned.
@@ -265,18 +275,18 @@ still rounds at the final origin-relative output boundary.
 
 ## Batch-preserving CPU/GPU table projection
 
-`ProjectionTableTransform` from `@luma.gl/experimental/gpu-project/crs` uses a ready
+`ProjectionTableTransform` from `@luma.gl/graph/gpu-project-crs` uses a ready
 `prepareCRSProjection()` result for explicit CPU or GPU execution. This first table adapter is
 strictly 2D and requires the default raw-binary64 input format (`uint32x4` on GPU).
 It retains the prepared CPU transform, original spatial references and sampled GPU error metadata.
 Keep the prepared transform and its program unchanged while using the consumer.
 
 ```typescript
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   prepareCRSProjection,
   ProjectionTableTransform
-} from '@luma.gl/experimental/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = prepareCRSProjection({
   from: 'EPSG:4326',
@@ -346,8 +356,8 @@ backend selection and CPU/GPU precision conversion are always application decisi
 The adapter rejects indexed tables, missing/constant selected columns, nonpacked layouts, native
 null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
 validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
-`@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
-`@luma.gl/experimental/gpu-project` entry point for already compiled binary64-input programs.
+`@luma.gl/graph/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
+`@luma.gl/graph/gpu-project` entry point for already compiled binary64-input programs.
 
 ## Explicit longitude normalization
 
@@ -397,8 +407,8 @@ coordinates or a latitude-first axis without explicitly rearranging/converting t
 This is the provider boundary for current math.gl projections and future engine-created transforms.
 
 ```ts
-import {projectionEngine} from '@math.gl/projection';
-import {planProjection} from '@luma.gl/experimental/gpu-project';
+import {projectionEngine} from '@math.gl/geospatial/projection';
+import {planProjection} from '@luma.gl/graph/gpu-project';
 
 const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
 const result = planProjection({
@@ -445,15 +455,15 @@ the application.
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/crs` and `@math.gl/projection` 5.x separately and import the CPU planner from
-`@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
+Install `@math.gl/geospatial` version `~5.0.0-beta.1` and import the CPU planner from
+`@luma.gl/graph/gpu-project-crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
 The default is raw binary64 `uint32x4` input and double-single output.
 
 ```ts
-import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
-import {GPUProjectionProgram} from '@luma.gl/experimental/gpu-project';
+import {planCRSProjection} from '@luma.gl/graph/gpu-project-crs';
+import {GPUProjectionProgram} from '@luma.gl/graph/gpu-project';
 
 const result = planCRSProjection({
   from: 'EPSG:4326',
@@ -490,8 +500,8 @@ use the authoritative CPU transform as an opaque oracle, and always produce adap
 They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
-import {lazyProjectionEngine} from '@math.gl/projection/projections/lazy';
-import {prepareCRSProjectionAsync} from '@luma.gl/experimental/gpu-project/crs';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection-projections-lazy';
+import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = await prepareCRSProjectionAsync({
   engine: lazyProjectionEngine,
@@ -755,7 +765,7 @@ Both `planCRSProjection()` and `planProjectionPipeline()` return structured `uns
 by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
 `reasons` contain the same planning diagnostics, including missing bounds, unavailable providers,
 and failed approximation budgets. This changes failure handling, not which semantics are accepted.
-The error class is exported from the optional `gpu-project/crs` entry, not the execution core.
+The error class is exported from the optional `gpu-project-crs` entry, not the execution core.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
 `true` to use declared CRS axes and directions. Native plans retain declared coordinate units
@@ -769,8 +779,8 @@ provider's output at the source-domain center; final Float32 rounding is additio
 ### Explicit PROJ pipelines
 
 ```ts
-import {parsePROJString} from '@math.gl/crs';
-import {planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
+import {parsePROJString} from '@math.gl/geospatial/crs';
+import {planProjectionPipeline} from '@luma.gl/graph/gpu-project-crs';
 
 const result = planProjectionPipeline({
   pipeline: parsePROJString(`+proj=pipeline
@@ -896,11 +906,11 @@ is unambiguous.
 Benchmark infrastructure is isolated behind an optional package entry point:
 
 ```ts
-import {createWebMercatorProjection} from '@luma.gl/experimental/gpu-project';
+import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {
   runGPUProjectionBenchmark,
   runProjectionBenchmark
-} from '@luma.gl/experimental/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 
 const options = {
   projection: createWebMercatorProjection(),
@@ -942,7 +952,7 @@ const report = await runProjectionProgramBenchmark(device, {
 });
 ```
 
-Import this helper from `@luma.gl/experimental/gpu-project/benchmarks`. All variants receive the
+Import this helper from `@luma.gl/graph/gpu-project-benchmarks`. All variants receive the
 same raw binary64 input rows and must share output precision; origin-relative output must also
 share its destination origin. Arithmetic metadata remains separate from output storage. Budgets
 are Euclidean destination-unit errors including native formula, fitting, and output rounding.
@@ -995,7 +1005,7 @@ not a proj4js wrapper or the native C++ PROJ library. Provider construction and 
 are outside CPU execution timing; callback/provider allocations and consumer writes are inside it.
 
 Pass `cpuVariants: createCRSProjectionCPUBenchmarks({projection, provider, isValid})`, importing
-the helper from `/gpu-project/crs`, to compare the retained transform's `projectToSync`,
+the helper from `/gpu-project-crs`, to compare the retained transform's `projectToSync`,
 `projectFlatSync`, and `ProjectionBuffer` contiguous, strided and column APIs. `provider` should
 include the actual package version. `isValid` must match the oracle's finite/domain predicate.
 All six API/layout baselines run both consumer modes. Their domain checks, batch input packing,
@@ -1027,9 +1037,9 @@ arithmetic differ, so the explicit accuracy budget still governs the comparison.
 The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_GPU_PROJECT_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
+  modules/graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
 The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failure-gate and
@@ -1038,13 +1048,13 @@ The benchmark does not automatically select arithmetic or relax application tole
 
 ### Production table-consumer benchmarks
 
-`runProjectionTableBenchmark()` from the optional `/gpu-project/benchmarks` entry point compares
+`runProjectionTableBenchmark()` from the optional `/gpu-project-benchmarks` entry point compares
 the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` materialization:
 
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/projection 5.0.0-alpha.15 TypeScript',
+  provider: '@math.gl/geospatial/projection 5.0.0-beta.1 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,
@@ -1089,16 +1099,16 @@ masked/invalid ones. Zero-resolution medians produce `null` rates/speedups.
 Reproduce the UTM/Albers physical-batch sweep (same cubic double-single plan and 1 mm budget):
 
 ```sh
-VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
+VITE_GPU_PROJECT_TABLE_ROWS=4096,65536 VITE_GPU_PROJECT_TABLE_BATCH_ROWS=4096,65536 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+  modules/graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
 This compares the current production CPU table adapter's reusable scalar API, not the fastest
 possible math.gl API. The separate program benchmark retains flat/bulk CPU baselines. Software
 adapters skip integer-fp64 hardware qualification. No backend-selection threshold is implied.
 
-Set `VITE_LUPROJ_TABLE_LARGE=true` for a 4K, 16K, 64K, 256K, 1M and 4M requested-row sweep with
+Set `VITE_GPU_PROJECT_TABLE_LARGE=true` for a 4K, 16K, 64K, 256K, 1M and 4M requested-row sweep with
 65,536-row physical batches. Each case adds eleven probes; explicit row/batch environment settings
 override this preset. The flat generator avoids allocating millions of coordinate tuples. The
 schema-v2 report and [large-sweep evidence](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gpu-project-table-performance.md)
@@ -1113,15 +1123,15 @@ scaling without conflating a Float32 precision reduction with a performance impr
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true \
-  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  VITE_GPU_PROJECT_SWEEP_ROWS=1024,16384,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-performance.spec.ts
+  modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 Rows are deterministic; each requested count adds nine valid boundary/seam probes and two invalid
 rows. Each path is validated before two warmups and after five measured submissions. Without
-`VITE_LUPROJ_SWEEP_ROWS`, this opt-in suite uses 32 rows, no warmups, and one measured iteration
-for a quick correctness check. Set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a **separate** instrumented
+`VITE_GPU_PROJECT_SWEEP_ROWS`, this opt-in suite uses 32 rows, no warmups, and one measured iteration
+for a quick correctness check. Set `VITE_GPU_PROJECT_SWEEP_GPU_TIMING=true` for a **separate** instrumented
 run. Reports prefixed `PROJECTION_PERFORMANCE_SWEEP` contain the complete JSON distributions,
 device description, patch counts, accuracy and memory results.
 
@@ -1148,7 +1158,7 @@ import {
   indexProjectionPlan,
   compileProjectionProgram,
   clipProjectionSegment
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/graph/gpu-project';
 
 const partition = compileProjectionPartition({
   branches: [
@@ -1193,7 +1203,7 @@ upload data or submit commands. Those operations remain caller-owned.
 
 ## Fixed-arithmetic routing measurements and execution selection
 
-The optional `gpu-project/benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
+The optional `gpu-project-benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
 options)`. Supply one double-single plan, coordinates, independent oracle and explicit error budget.
 It uses identical coefficients for scan/index full-program qualification, then times lookup-only
 shaders and verifies their selected IDs agree before/after measurement. Reports include index
@@ -1220,3 +1230,7 @@ See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
 [GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),
 and [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision) for related
 GPU execution and precision techniques.
+
+`CPUProjectionOperation` runs a prepared math.gl projection on CPU coordinate chunks in
+GPUGraph or GPUSimpleGraph, with executor-managed readback and upload. See
+[CPU coordinate projection](/docs/api-reference/graph/gpu-simple-graph#cpu-coordinate-projection).

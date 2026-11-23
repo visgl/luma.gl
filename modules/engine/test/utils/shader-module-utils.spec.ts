@@ -4,9 +4,9 @@
 
 import {expect, it} from 'vitest';
 import type {ShaderLayout} from '../../../core/src';
-import type {ShaderModule} from '../../../shadertools/src';
-import {lighting, pbrMaterial} from '../../../shadertools/src';
-import {projection} from '../../../shadertools/src/modules/engine/project/project';
+import type {ShaderModule} from '../../../shaders/src';
+import {lighting, pbrMaterial} from '../../../shaders/src';
+import {projection} from '../../../shaders/src/modules/engine/project/project';
 import {
   getShaderModuleUniformBlockLayouts,
   mergeInferredShaderLayout,

@@ -26,7 +26,7 @@ export function assertLongitudeLatitudeTaxiMetadata(metadata: TaxiPointSourceMet
     coordinateReferenceSystem !== 'WGS84'
   ) {
     throw new Error(
-      'luSpatial taxi sources must explicitly declare OGC:CRS84 or WGS84/EPSG:4326 longitude/latitude coordinates'
+      'GPU Spatial taxi sources must explicitly declare OGC:CRS84 or WGS84/EPSG:4326 longitude/latitude coordinates'
     );
   }
 }

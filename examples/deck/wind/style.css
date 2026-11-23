@@ -1,0 +1,2 @@
+html,body,#scene{margin:0;width:100%;height:100%;overflow:hidden;background:#060e1b;color:#e2eef3;font:13px system-ui}#scene{position:absolute;inset:0}#panels{position:absolute;inset:0;z-index:10;pointer-events:none}#panels>*{pointer-events:auto}footer{position:absolute;bottom:20px;left:24px;pointer-events:none;letter-spacing:.04em}pre{white-space:pre-wrap;font-size:11px}
+#panels .luma-example-infobox{pointer-events:auto}footer{z-index:5}

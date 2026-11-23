@@ -1,0 +1,606 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
+
+import type {
+  PROJJSONCRSByType,
+  ReadonlyCRSDefinition,
+  ReadonlyPROJJSONCRS
+} from '@math.gl/geospatial/crs';
+import {invertProjectionProgram, type ProjectionOperation} from './projection-program';
+import type {ProjectionPlanningReason} from './projection-pipeline';
+import {getConicParameters, type ConicOperation} from './projection-conic';
+import {resolveCRSIdentifier} from './projection-crs-identifiers';
+
+type ProjectedCRS = ReadonlyPROJJSONCRS<PROJJSONCRSByType<'ProjectedCRS'>>;
+type HorizontalCRS = ReadonlyPROJJSONCRS<
+  PROJJSONCRSByType<'GeographicCRS' | 'GeodeticCRS' | 'ProjectedCRS'>
+>;
+type GeographicCRS = ProjectedCRS['base_crs'];
+type CoordinateSystem = ProjectedCRS['coordinate_system'];
+type Unit = NonNullable<CoordinateSystem['axis'][number]['unit']>;
+type StaticDatum = Exclude<NonNullable<GeographicCRS['datum']>, {frame_reference_epoch: number}>;
+type Ellipsoid = StaticDatum['ellipsoid'];
+type Decline = {reason: ProjectionPlanningReason};
+type Reference = {identity: string; major: number; minor: number; meridian: number};
+type Conversion = {
+  method: number;
+  latitude: number;
+  longitude: number;
+  scale: number;
+  easting: number;
+  northing: number;
+  firstParallel?: number;
+  secondParallel?: number;
+};
+type Frame = {
+  operations: ProjectionOperation[];
+  reference: Reference;
+  conversion: Conversion | null;
+};
+
+const PARAMETER_NAMES = new Map([
+  ['Latitude of natural origin', 8801],
+  ['Longitude of natural origin', 8802],
+  ['Scale factor at natural origin', 8805],
+  ['False easting', 8806],
+  ['False northing', 8807],
+  ['Latitude of false origin', 8821],
+  ['Longitude of false origin', 8822],
+  ['Latitude of 1st standard parallel', 8823],
+  ['Latitude of 2nd standard parallel', 8824],
+  ['Easting at false origin', 8826],
+  ['Northing at false origin', 8827]
+]);
+const METHOD_NAMES = new Map([
+  ['Transverse Mercator', 9807],
+  ['Popular Visualisation Pseudo Mercator', 1024],
+  ['Lambert Conic Conformal (1SP)', 9801],
+  ['Lambert Conic Conformal (2SP)', 9802],
+  ['Albers Equal Area', 9822]
+]);
+
+/** Native coordinate frames and explicitly opted-in projection formulas; no datum transformations. */
+export function lowerCRSProjection(
+  from: ReadonlyCRSDefinition,
+  to: ReadonlyCRSDefinition,
+  enforceAxis: boolean,
+  projectionArithmetic: 'float32' | 'double-single' = 'double-single'
+): {operations: ProjectionOperation[]} | Decline {
+  const source = normalizeFrame(from, enforceAxis);
+  const target = normalizeFrame(to, enforceAxis);
+  for (const frame of [source, target]) {
+    if ('reason' in frame && !canUseCRSProvider(frame.reason)) {
+      return frame;
+    }
+  }
+  if ('reason' in source) return source;
+  if ('reason' in target) return target;
+  if (
+    source.reference.identity !== target.reference.identity ||
+    source.reference.major !== target.reference.major ||
+    source.reference.minor !== target.reference.minor
+  ) {
+    return decline(
+      'datum-transformation-required',
+      'native lowering requires the same explicit reference frame and ellipsoid'
+    );
+  }
+  let translation: readonly [number, number];
+  let conversions: ProjectionOperation[] | undefined;
+  if (!source.conversion && !target.conversion) {
+    translation = [source.reference.meridian - target.reference.meridian, 0];
+  } else if (
+    source.conversion &&
+    target.conversion &&
+    source.conversion.method === target.conversion.method &&
+    source.conversion.latitude === target.conversion.latitude &&
+    source.conversion.longitude + source.reference.meridian ===
+      target.conversion.longitude + target.reference.meridian &&
+    source.conversion.scale === target.conversion.scale &&
+    source.conversion.firstParallel === target.conversion.firstParallel &&
+    source.conversion.secondParallel === target.conversion.secondParallel
+  ) {
+    translation = [
+      target.conversion.easting - source.conversion.easting,
+      target.conversion.northing - source.conversion.northing
+    ];
+  } else if (supportsNativeConversion(source) && supportsNativeConversion(target)) {
+    if (projectionArithmetic !== 'float32') {
+      // Native conics are an opt-in optimization, not a replacement binary64 oracle or a
+      // restriction of existing adaptive coverage to the native local branch.
+      if ([source, target].some(frame => isConicConversion(frame.conversion))) {
+        return decline(
+          'crs-requires-provider',
+          'native conics require explicit float32 arithmetic; retain the provider for double-single'
+        );
+      }
+      return decline(
+        'unsupported-arithmetic',
+        'native projection formulas require explicit float32 arithmetic; use adaptive fitting for double-single'
+      );
+    }
+    translation = [0, 0];
+    conversions = [
+      ...lowerProjectionConversion(source, true),
+      {
+        type: 'affine',
+        scale: [1, 1],
+        offset: [
+          (source.conversion?.longitude ?? 0) +
+            source.reference.meridian -
+            (target.conversion?.longitude ?? 0) -
+            target.reference.meridian,
+          0
+        ]
+      },
+      ...lowerProjectionConversion(target, false)
+    ];
+  } else {
+    return decline(
+      'crs-requires-provider',
+      'different projection conversions require a bounded provider plan'
+    );
+  }
+  return {
+    operations: [
+      ...source.operations,
+      ...(conversions ?? [{type: 'affine' as const, scale: [1, 1] as const, offset: translation}]),
+      ...invertProjectionProgram({precision: 'double-single', operations: target.operations})
+        .operations
+    ]
+  };
+}
+
+function supportsNativeConversion(frame: Frame): boolean {
+  if (isConicConversion(frame.conversion)) {
+    try {
+      getConicParameters(makeConicOperation(frame));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return (
+    !frame.conversion ||
+    frame.conversion.method === 1024 ||
+    (frame.conversion.method === 9807 &&
+      frame.reference.minor >= 0.99 * frame.reference.major &&
+      Math.abs(frame.conversion.latitude) <= (85 * Math.PI) / 180)
+  );
+}
+
+function lowerProjectionConversion(frame: Frame, inverse: boolean): ProjectionOperation[] {
+  if (!frame.conversion) return [];
+  const operations: ProjectionOperation[] = [
+    frame.conversion.method === 1024
+      ? {type: 'web-mercator', arithmetic: 'float32', radius: frame.reference.major}
+      : isConicConversion(frame.conversion)
+        ? makeConicOperation(frame)
+        : {
+            type: 'transverse-mercator',
+            arithmetic: 'float32',
+            semiMajorAxis: frame.reference.major,
+            semiMinorAxis: frame.reference.minor,
+            scaleFactor: frame.conversion.scale,
+            latitudeOrigin: frame.conversion.latitude
+          },
+    {type: 'affine', scale: [1, 1], offset: [frame.conversion.easting, frame.conversion.northing]}
+  ];
+  return inverse
+    ? [...invertProjectionProgram({precision: 'double-single', operations}).operations]
+    : operations;
+}
+
+function isConicConversion(conversion: Conversion | null): boolean {
+  return Boolean(conversion && [9801, 9802, 9822].includes(conversion.method));
+}
+
+function makeConicOperation(frame: Frame): ConicOperation {
+  const conversion = frame.conversion!;
+  const shape = {
+    arithmetic: 'float32' as const,
+    semiMajorAxis: frame.reference.major,
+    semiMinorAxis: frame.reference.minor,
+    latitudeOrigin: conversion.latitude,
+    firstStandardParallel: conversion.firstParallel!,
+    secondStandardParallel: conversion.secondParallel!
+  };
+  return conversion.method === 9822
+    ? {type: 'albers-equal-area', ...shape}
+    : {type: 'lambert-conformal-conic', ...shape, scaleFactor: conversion.scale};
+}
+
+/** Do not send semantics known to be invalid or lossy through a permissive provider. */
+export function canUseCRSProvider(reason: ProjectionPlanningReason): boolean {
+  return [
+    'crs-requires-provider',
+    'unsupported-arithmetic',
+    'datum-transformation-required',
+    'unsupported-conversion'
+  ].includes(reason.code);
+}
+
+/** The public provider needs canonical identifiers and one shared horizontal-axis unit. */
+export function getCRSProviderReason(
+  definition: ReadonlyCRSDefinition
+): ProjectionPlanningReason | null {
+  if (!isHorizontalCRS(definition)) return null;
+  if (definition.type === 'ProjectedCRS') {
+    const conversion = definition.conversion;
+    const method = getEPSGCode(conversion.method);
+    if (
+      (method !== undefined &&
+        ((method !== 9807 && method !== 1024) ||
+          conversion.method.name !==
+            (method === 9807 ? 'Transverse Mercator' : 'Popular Visualisation Pseudo Mercator'))) ||
+      conversion.parameters?.some(parameter => {
+        const code = getEPSGCode(parameter);
+        return code !== undefined && PARAMETER_NAMES.get(parameter.name) !== code;
+      })
+    ) {
+      return {
+        code: 'unsupported-conversion',
+        message:
+          'adaptive provider requires a verified EPSG method/parameter mapping and canonical names; native lowering can use supported identifiers'
+      };
+    }
+  }
+  const projected = definition.type === 'ProjectedCRS';
+  const factors = definition.coordinate_system?.axis.map(axis =>
+    getUnitFactor(axis.unit, projected ? 'LinearUnit' : 'AngularUnit')
+  );
+  const baseFactors = projected
+    ? definition.base_crs.coordinate_system?.axis.map(axis =>
+        getUnitFactor(axis.unit, 'AngularUnit')
+      )
+    : factors;
+  if (
+    !factors ||
+    factors.some(factor => factor === null) ||
+    factors[0] !== factors[1] ||
+    !baseFactors ||
+    baseFactors.some(factor => factor === null) ||
+    baseFactors[0] !== baseFactors[1]
+  ) {
+    return {
+      code: 'unsupported-unit',
+      message:
+        'adaptive provider requires one shared horizontal-axis unit; native frame changes retain explicit per-axis units'
+    };
+  }
+  const geographic = definition.type === 'ProjectedCRS' ? definition.base_crs : definition;
+  const longitude = geographic.datum?.prime_meridian;
+  if (
+    longitude &&
+    typeof longitude === 'object' &&
+    'longitude' in longitude &&
+    typeof longitude.longitude !== 'number'
+  ) {
+    return {
+      code: 'unsupported-unit',
+      message: 'adaptive provider requires prime-meridian longitude as numeric degrees'
+    };
+  }
+  return null;
+}
+
+function normalizeFrame(definition: ReadonlyCRSDefinition, enforceAxis: boolean): Frame | Decline {
+  if (typeof definition === 'string') {
+    return decline(
+      'crs-requires-provider',
+      'serialized CRS definitions require a bounded provider plan'
+    );
+  }
+  if (!isHorizontalCRS(definition)) {
+    return decline(
+      'unsupported-dimensions',
+      'native lowering supports only explicit 2D geographic and projected CRS objects'
+    );
+  }
+  const projected = definition.type === 'ProjectedCRS';
+  const geographic = definition.type === 'ProjectedCRS' ? definition.base_crs : definition;
+  const reference = normalizeReference(geographic);
+  if ('reason' in reference) return reference;
+  const operations = normalizeAxes(definition.coordinate_system, projected, enforceAxis);
+  if ('reason' in operations) return operations;
+  if (projected) {
+    const conversion = normalizeConversion(definition.conversion);
+    if ('reason' in conversion) return conversion;
+    return {operations: operations.operations, reference, conversion};
+  }
+  return {operations: operations.operations, reference, conversion: null};
+}
+
+function isHorizontalCRS(definition: ReadonlyCRSDefinition): definition is HorizontalCRS {
+  return (
+    typeof definition !== 'string' &&
+    (definition.type === 'GeographicCRS' ||
+      definition.type === 'GeodeticCRS' ||
+      definition.type === 'ProjectedCRS')
+  );
+}
+
+function normalizeAxes(
+  system: CoordinateSystem | undefined,
+  projected: boolean,
+  enforceAxis: boolean
+): {operations: ProjectionOperation[]} | Decline {
+  if (
+    !system ||
+    system.axis.length !== 2 ||
+    system.subtype !== (projected ? 'Cartesian' : 'ellipsoidal')
+  ) {
+    return decline('unsupported-dimensions', 'coordinate system must have two horizontal axes');
+  }
+  const horizontal = system.axis.findIndex(
+    axis => axis.direction === 'east' || axis.direction === 'west'
+  );
+  const vertical = system.axis.findIndex(
+    axis => axis.direction === 'north' || axis.direction === 'south'
+  );
+  if (
+    horizontal < 0 ||
+    vertical < 0 ||
+    system.axis.some(
+      axis =>
+        axis.meridian ||
+        axis.minimum_value !== undefined ||
+        axis.maximum_value !== undefined ||
+        axis.range_meaning !== undefined
+    )
+  ) {
+    return decline(
+      'unsupported-coordinate-system',
+      'only unconstrained cardinal horizontal axes can be lowered natively'
+    );
+  }
+  const axisX = system.axis[horizontal];
+  const axisY = system.axis[vertical];
+  const factorX = getUnitFactor(axisX.unit, projected ? 'LinearUnit' : 'AngularUnit');
+  const factorY = getUnitFactor(axisY.unit, projected ? 'LinearUnit' : 'AngularUnit');
+  if (factorX === null || factorY === null) {
+    return decline(
+      'unsupported-unit',
+      'axes require explicit positive units of the appropriate dimension'
+    );
+  }
+  return {
+    operations: [
+      {type: 'axis', order: enforceAxis && horizontal === 1 ? [1, 0] : [0, 1]},
+      {
+        type: 'affine',
+        scale: [
+          factorX * (enforceAxis && axisX.direction === 'west' ? -1 : 1),
+          factorY * (enforceAxis && axisY.direction === 'south' ? -1 : 1)
+        ],
+        offset: [0, 0]
+      }
+    ]
+  };
+}
+
+function normalizeReference(
+  geographic: Pick<GeographicCRS, 'datum' | 'datum_ensemble' | 'deformation_models'>
+): Reference | Decline {
+  const datum = geographic.datum;
+  const ensemble = geographic.datum_ensemble;
+  if (
+    geographic.deformation_models?.length ||
+    (datum &&
+      ('frame_reference_epoch' in datum || (datum.type && datum.type !== 'GeodeticReferenceFrame')))
+  ) {
+    return decline(
+      'unsupported-datum',
+      'dynamic reference frames and deformation models require an explicit temporal transformation'
+    );
+  }
+  if (Boolean(datum) === Boolean(ensemble)) {
+    return decline('invalid-definition', 'exactly one static datum or datum ensemble is required');
+  }
+  const staticDatum = datum as StaticDatum | undefined;
+  const ellipsoid = staticDatum?.ellipsoid ?? ensemble?.ellipsoid;
+  if (!ellipsoid) return decline('invalid-definition', 'an explicit ellipsoid is required');
+  const axes = normalizeEllipsoid(ellipsoid);
+  if ('reason' in axes) return axes;
+  const primeMeridian = staticDatum?.prime_meridian;
+  const meridian = primeMeridian ? getMeasuredValue(primeMeridian.longitude, 'AngularUnit') : 0;
+  if (meridian === null)
+    return decline('invalid-definition', 'prime meridian requires an explicit finite longitude');
+  return {
+    identity: `${staticDatum ? 'datum' : 'ensemble'}:${referenceIdentity(staticDatum ?? ensemble)}`,
+    ...axes,
+    meridian
+  };
+}
+
+function normalizeEllipsoid(ellipsoid: Ellipsoid): {major: number; minor: number} | Decline {
+  if (
+    'radius' in ellipsoid
+      ? 'semi_major_axis' in ellipsoid ||
+        'semi_minor_axis' in ellipsoid ||
+        'inverse_flattening' in ellipsoid
+      : 'semi_minor_axis' in ellipsoid === 'inverse_flattening' in ellipsoid
+  ) {
+    return decline('invalid-definition', 'ellipsoid must have exactly one shape representation');
+  }
+  const major = getMeasuredValue(
+    'radius' in ellipsoid ? ellipsoid.radius : ellipsoid.semi_major_axis,
+    'LinearUnit'
+  );
+  let minor: number | null = null;
+  if ('radius' in ellipsoid) minor = major;
+  else if ('semi_minor_axis' in ellipsoid)
+    minor = getMeasuredValue(ellipsoid.semi_minor_axis, 'LinearUnit');
+  else if (
+    Number.isFinite(ellipsoid.inverse_flattening) &&
+    (ellipsoid.inverse_flattening === 0 || ellipsoid.inverse_flattening > 1)
+  ) {
+    minor =
+      major === null
+        ? null
+        : major * (ellipsoid.inverse_flattening === 0 ? 1 : 1 - 1 / ellipsoid.inverse_flattening);
+  }
+  if (major === null || minor === null || !(major > 0 && minor > 0 && minor <= major)) {
+    return decline(
+      'invalid-definition',
+      'ellipsoid axes must define a finite positive oblate ellipsoid'
+    );
+  }
+  return {major, minor};
+}
+
+function normalizeConversion(conversion: ProjectedCRS['conversion']): Conversion | Decline {
+  const method = resolveCRSIdentifier(conversion.method, METHOD_NAMES);
+  if (!method || ![9807, 1024, 9801, 9802, 9822].includes(method)) {
+    return decline(
+      'unsupported-conversion',
+      'native frame equivalence requires a known, unambiguous conversion method'
+    );
+  }
+  const parameters = new Map<number, number>();
+  const twoParallels = method === 9802 || method === 9822;
+  const required = twoParallels
+    ? [8821, 8822, 8823, 8824, 8826, 8827]
+    : [8801, 8802, 8806, 8807, ...(method !== 1024 ? [8805] : [])];
+  for (const parameter of conversion.parameters ?? []) {
+    const code = resolveCRSIdentifier(parameter, PARAMETER_NAMES);
+    if (!code || !required.includes(code)) {
+      return decline('unsupported-parameter', 'known conversion includes an unsupported parameter');
+    }
+    const factor = getUnitFactor(
+      parameter.unit,
+      code === 8805
+        ? 'ScaleUnit'
+        : [8801, 8802, 8821, 8822, 8823, 8824].includes(code)
+          ? 'AngularUnit'
+          : 'LinearUnit'
+    );
+    const value =
+      typeof parameter.value === 'number' && factor !== null ? parameter.value * factor : NaN;
+    if (parameters.has(code) || !Number.isFinite(value)) {
+      return decline(
+        'invalid-definition',
+        'conversion parameters must be unique finite quantities with explicit units'
+      );
+    }
+    parameters.set(code, value);
+  }
+  if (!required.every(code => parameters.has(code))) {
+    return decline(
+      'invalid-definition',
+      'conversion is missing required natural-origin parameters'
+    );
+  }
+  const latitude = parameters.get(twoParallels ? 8821 : 8801)!;
+  const firstParallel = twoParallels
+    ? parameters.get(8823)!
+    : method === 9801
+      ? latitude
+      : undefined;
+  const secondParallel = twoParallels
+    ? parameters.get(8824)!
+    : method === 9801
+      ? latitude
+      : undefined;
+  const scale = parameters.get(8805) ?? 1;
+  if (
+    Math.abs(latitude) >= Math.PI / 2 ||
+    scale <= 0 ||
+    (method === 1024 && latitude !== 0) ||
+    (firstParallel !== undefined &&
+      secondParallel !== undefined &&
+      (Math.abs(firstParallel) >= Math.PI / 2 ||
+        Math.abs(secondParallel) >= Math.PI / 2 ||
+        Math.abs(firstParallel + secondParallel) < 1e-10))
+  ) {
+    return decline('invalid-definition', 'conversion natural origin or scale is invalid');
+  }
+  return {
+    method,
+    latitude,
+    longitude: parameters.get(twoParallels ? 8822 : 8802)!,
+    scale,
+    easting: parameters.get(twoParallels ? 8826 : 8806)!,
+    northing: parameters.get(twoParallels ? 8827 : 8807)!,
+    firstParallel,
+    secondParallel
+  };
+}
+
+function getEPSGCode(object: {
+  readonly id?: {readonly authority: string; readonly code: string | number};
+  readonly ids?: readonly {readonly authority: string; readonly code: string | number}[];
+}): number | undefined {
+  const identifier = object.id ?? object.ids?.find(identifier => identifier.authority === 'EPSG');
+  return identifier?.authority === 'EPSG' ? Number(identifier.code) : undefined;
+}
+
+export function getUnitFactor(
+  unit: Unit | undefined,
+  dimension: 'LinearUnit' | 'AngularUnit' | 'ScaleUnit'
+): number | null {
+  if (unit === 'metre' && dimension === 'LinearUnit') return 1;
+  if (unit === 'degree' && dimension === 'AngularUnit') return Math.PI / 180;
+  if (unit === 'unity' && dimension === 'ScaleUnit') return 1;
+  if (
+    typeof unit === 'object' &&
+    unit.type === dimension &&
+    Number.isFinite(unit.conversion_factor) &&
+    unit.conversion_factor! > 0
+  )
+    return unit.conversion_factor!;
+  return null;
+}
+
+function getMeasuredValue(value: unknown, dimension: 'LinearUnit' | 'AngularUnit'): number | null {
+  if (typeof value === 'number') {
+    const result = value * (dimension === 'LinearUnit' ? 1 : Math.PI / 180);
+    return Number.isFinite(result) ? result : null;
+  }
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('value' in value) ||
+    typeof value.value !== 'number' ||
+    !('unit' in value)
+  )
+    return null;
+  const factor = getUnitFactor(value.unit as Unit, dimension);
+  const result = factor === null ? NaN : value.value * factor;
+  return Number.isFinite(result) ? result : null;
+}
+
+function referenceIdentity(reference: unknown): string {
+  // Labels/usage do not alter a frame. Keep names, identifiers, anchors, ensemble members,
+  // accuracy and unknown extensions: equal ellipsoids alone never establish datum equivalence.
+  const descriptive = new Set([
+    'ellipsoid',
+    'prime_meridian',
+    'type',
+    '$schema',
+    'remarks',
+    'scope',
+    'area',
+    'bbox',
+    'usages',
+    'vertical_extent',
+    'temporal_extent'
+  ]);
+  const identity = Object.fromEntries(
+    Object.entries(reference as object).filter(([key]) => !descriptive.has(key))
+  );
+  return JSON.stringify(identity, (_key, value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.fromEntries(
+        Object.entries(value).sort(([first], [second]) => first.localeCompare(second))
+      );
+    }
+    return value;
+  });
+}
+
+function decline(code: ProjectionPlanningReason['code'], message: string): Decline {
+  return {reason: {code, message}};
+}

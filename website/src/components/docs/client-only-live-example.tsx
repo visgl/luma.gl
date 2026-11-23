@@ -22,7 +22,6 @@ function ActivatedLiveExample({
   return (
     <div className="docs-live-example-activation" style={{minHeight: height}}>
       <div>
-        <strong>Interactive example</strong>
         {description ? <p>{description}</p> : null}
         <button type="button" onClick={() => setIsActive(true)}>
           {activationLabel}

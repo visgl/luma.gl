@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray, TypedArrayConstructor} from '../../types';
+import type {TypedArray, TypedArrayConstructor} from '../../api/types';
 import type {
   DataTypeInfo,
   NormalizedDataType,

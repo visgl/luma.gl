@@ -5,12 +5,12 @@
 /* eslint-disable no-continue */
 
 import {expect, it, vi} from 'vitest';
-import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
-import {TypedArray} from '@math.gl/types';
+import {TypedArray} from '@math.gl/core/types';
 import {Buffer, Device} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {GL} from '@luma.gl/webgl/constants';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {GL} from '@luma.gl/core/webgl-constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 

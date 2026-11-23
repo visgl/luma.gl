@@ -135,7 +135,7 @@
       "expectedBehaviors": [
         "Maintain matching WGSL and GLSL ES 3.00 implementations with one logical input contract.",
         "Align attributes, varyings, bindings, uniforms, module props, and observable output.",
-        "Use named auto bindings for WGSL assembled by shadertools when supported by the installed version.",
+        "Use named auto bindings for WGSL assembled by shaders when supported by the installed version.",
         "Force and compare both backends with logs and screenshots."
       ],
       "forbiddenMistakes": [
@@ -144,7 +144,7 @@
       ],
       "canonicalSources": [
         "docs/api-guide/shaders/writing-portable-shaders.md",
-        "docs/api-reference/shadertools/wgsl-support.md",
+        "docs/api-reference/shaders/wgsl-support.md",
         "docs/api-guide/gpu/gpu-bindings.md",
         "skills/lumagl/references/portability.md"
       ]

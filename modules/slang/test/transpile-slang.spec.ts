@@ -3,7 +3,7 @@
 
 import {expect, it} from 'vitest';
 import {transpileSlang, transpileSlangWGSL} from '@luma.gl/slang';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {COMPUTE_SHADER, MATRIX_SHADER, MATH_SHADER, RENDER_SHADER} from './fixtures';
 
 it('slang#GLSL shaders compile and link on WebGL 2', async () => {

@@ -5,31 +5,30 @@
 import {luma} from '@luma.gl/core';
 luma.log.set('debug', true);
 
-// Shadertools is a GLSL textual processing library, no actual WebGL dependencies
-import '@luma.gl/shadertools/test';
-import '@luma.gl/effects/test';
+// Shaders is a GLSL textual processing library, no actual WebGL dependencies
+import '@luma.gl/shaders/test';
+import '@luma.gl/engine/test/effects';
 
 // DEVICE INDEPENDENT TESTS
 import '@luma.gl/core/test';
-import '@luma.gl/test-utils/test';
+import '../modules/core/test/test-utils';
 
 // WEBGL ADAPTER TESTS
-import '@luma.gl/webgl/test';
+import '../modules/core/test/webgl/index';
 
 // WEBGPU ADAPTER TESTS
-import '@luma.gl/webgpu/test';
+import '../modules/core/test/webgpu/index';
 
 // CROSS-DEVICE TESTS
 import '@luma.gl/engine/test';
-import '@luma.gl/gltf/test';
-import '@luma.gl/experimental/test';
+import '@luma.gl/engine/test/gltf';
 
 // EXPERIMENTAL
-import '@luma.gl/arrow/test';
+// Arrow adapter suites are included through their owning packages.
 import '@deck.gl-community/arrow-layers/test';
 import '@deck.gl-community/gpu-layers/test';
-import '@luma.gl/gpgpu/test';
-import '@luma.gl/splats/test';
-import '@luma.gl/text/test';
+import '@luma.gl/graph/test';
+import '@luma.gl/engine/test/splats';
+import '@luma.gl/engine/test/text';
 // DEPRECATED TESTS
-import '@luma.gl/constants/test';
+import '../modules/core/test/webgl-constants/index';

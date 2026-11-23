@@ -22,6 +22,8 @@ export type ExampleRequirements = {
 
 export type ExampleSupportDefinition = {
   id: string;
+  /** Shared implementation directory, when it differs from the gallery identifier. */
+  sourceDirectory?: string;
   mobileMode: ExampleMobileMode;
   mobileProfile: ExampleMobileQualityProfile;
   requirements?: ExampleRequirements;

@@ -52,7 +52,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     output: 'An inspectable operation tree that a backend compiler can lower.',
     work: 'Metadata describes logical work; the selected lowering determines physical commands.',
     chunks: 'Logical shapes remain explicit and are not implicitly combined or repacked.',
-    execution: 'A GPUProgramCompiler selects and records the executable realization.',
+    execution: 'A GPUGraphCompiler selects and records the executable realization.',
     neighborhood: 'application intent → GPUOperation tree → backend lowering → command graph.',
     cost: 'Semantic construction is CPU-only; execution cost belongs to the chosen lowering.',
     mistake: 'Do not embed WebGPU resources or dispatch policy in a semantic operation.'
@@ -93,19 +93,19 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Linear CPU bookkeeping in the number of lowered nodes.',
     mistake: 'Do not discard semantic identity once a backend command is selected.'
   },
-  'gpu-program': {
+  'gpu-graph': {
     problem: 'Compose typed semantic GPU state and operations independently of an execution backend.',
     readsWrites: 'Operations reference program-owned logical scalars and vectors.',
     ownership: 'The program owns semantic declarations; compiled graphs own backend transients.',
     output: 'An immutable-view operation tree and typed logical value inventory.',
     work: 'Program construction performs no GPU work; lowering determines the command workload.',
     chunks: 'Vectors preserve their declared length and format without implicit packing.',
-    execution: 'GPUProgramCompiler validates bindings and lowers the program for WebGPU.',
-    neighborhood: 'typed logical values + operations → GPUProgram → backend compiler.',
+    execution: 'GPUGraphCompiler validates bindings and lowers the program for WebGPU.',
+    neighborhood: 'typed logical values + operations → GPUGraph → backend compiler.',
     cost: 'CPU-only semantic construction plus backend-specific compilation cost.',
-    mistake: 'Do not treat GPUProgram as an executable command graph or submission owner.'
+    mistake: 'Do not treat GPUGraph as an executable command graph or submission owner.'
   },
-  'gpu-program-lowering': {
+  'gpu-graph-lowering': {
     problem: 'Map semantic operation types to backend-specific executable realizations.',
     readsWrites: 'Resolves logical values into backend views and preserves operation resource intent.',
     ownership: 'The backend compiler owns its registry, capabilities, and lowering decisions.',
@@ -113,7 +113,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     work: 'Visits the bounded semantic tree and emits the selected command nodes.',
     chunks: 'Lowerers must explicitly preserve or transform logical storage boundaries.',
     execution: 'WebGPU lowering uses command nodes; another backend may choose native graph forms.',
-    neighborhood: 'GPUProgram + bindings + capabilities → lowering registry → executable graph.',
+    neighborhood: 'GPUGraph + bindings + capabilities → lowering registry → executable graph.',
     cost: 'Linear planning overhead plus backend pipeline compilation.',
     mistake: 'Do not let semantic operations mutate a backend graph directly.'
   },
@@ -129,8 +129,8 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Adds bounded gate dispatches while avoiding queue synchronization and readback.',
     mistake: 'Do not infer exact dispatch geometry from a workload estimate.'
   },
-  'gpu-program-pcg': {
-    problem: 'Express preconditioned conjugate gradient as one portable semantic GPU program.',
+  'gpu-graph-pcg': {
+    problem: 'Express preconditioned conjugate gradient as one portable semantic GPU graph.',
     readsWrites: 'Reads external CSR and vector state while updating logical solver vectors and scalars.',
     ownership: 'External inputs remain caller-owned; compiler-created scratch and gates are graph-owned.',
     output: 'A bounded approximate solution with GPU-resident convergence state.',

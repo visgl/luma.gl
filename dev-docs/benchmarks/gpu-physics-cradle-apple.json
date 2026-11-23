@@ -1,0 +1,2996 @@
+{
+  "runs": [
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "hierarchical-grid",
+        "iterations": 32,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 256
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 70.39999985694885,
+      "graphNodes": 14,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 256,
+        "pairWorkgroups": 4,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 2464,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 73728,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 4128,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "minima",
+            "byteLength": 144,
+            "uniform": false
+          },
+          {
+            "name": "maxima",
+            "byteLength": 144,
+            "uniform": false
+          },
+          {
+            "name": "object-attributes",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 2464,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 73728,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 159008
+      },
+      "graphBufferBytes": 159232,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.39999985694885254,
+          "p95": 1.0999999046325684,
+          "maximum": 2.0999999046325684
+        },
+        "completionWithDiagnostics": {
+          "median": 19,
+          "p95": 27.199999809265137,
+          "maximum": 29.59999990463257
+        },
+        "gpuWork": {
+          "median": 5.249042999999999,
+          "p95": 9.997099000000002,
+          "maximum": 11.133369000000002
+        },
+        "gpuSpan": {
+          "median": 7.023226976394653,
+          "p95": 13.066799879074097,
+          "maximum": 15.71271800994873
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 2,
+        "maximumCandidateTests": 55,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    },
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "all-pairs",
+        "iterations": 32,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 144
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 860.7000000476837,
+      "graphNodes": 8,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 144,
+        "pairWorkgroups": 3,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 41472,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 1840,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 41472,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 87744
+      },
+      "graphBufferBytes": 87680,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.20000004768371582,
+          "p95": 0.40000009536743164,
+          "maximum": 0.9000000953674316
+        },
+        "completionWithDiagnostics": {
+          "median": 12.299999952316284,
+          "p95": 18.40000009536743,
+          "maximum": 19
+        },
+        "gpuWork": {
+          "median": 3.08158,
+          "p95": 4.334099000000001,
+          "maximum": 5.738164
+        },
+        "gpuSpan": {
+          "median": 5.835411071777344,
+          "p95": 10.008971929550171,
+          "maximum": 10.23871922492981
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 0,
+        "maximumCandidateTests": 0,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    },
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "all-pairs",
+        "iterations": 16,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 144
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 412.40000009536743,
+      "graphNodes": 8,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 144,
+        "pairWorkgroups": 3,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 41472,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 1840,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 41472,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 87744
+      },
+      "graphBufferBytes": 87680,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.20000004768371582,
+          "p95": 0.5,
+          "maximum": 0.6000001430511475
+        },
+        "completionWithDiagnostics": {
+          "median": 10.399999856948853,
+          "p95": 19.899999856948853,
+          "maximum": 20.40000009536743
+        },
+        "gpuWork": {
+          "median": 1.595685,
+          "p95": 2.258672,
+          "maximum": 2.9037889999999997
+        },
+        "gpuSpan": {
+          "median": 1.8907208442687988,
+          "p95": 7.8740880489349365,
+          "maximum": 10.951582908630371
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 0,
+        "maximumCandidateTests": 0,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    },
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "all-pairs",
+        "iterations": 8,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 144
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 427.60000014305115,
+      "graphNodes": 8,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 144,
+        "pairWorkgroups": 3,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 41472,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 1840,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 41472,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 87744
+      },
+      "graphBufferBytes": 87680,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.20000004768371582,
+          "p95": 0.5,
+          "maximum": 0.5999999046325684
+        },
+        "completionWithDiagnostics": {
+          "median": 4.199999809265137,
+          "p95": 20.40000009536743,
+          "maximum": 21.40000009536743
+        },
+        "gpuWork": {
+          "median": 0.860737,
+          "p95": 2.0747189999999995,
+          "maximum": 2.2857570000000003
+        },
+        "gpuSpan": {
+          "median": 0.9756510257720947,
+          "p95": 6.639649152755737,
+          "maximum": 9.419856071472168
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 0,
+        "maximumCandidateTests": 0,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    }
+  ],
+  "confirmationRuns": [
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "all-pairs",
+        "iterations": 8,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 144
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 869.7999999523163,
+      "graphNodes": 8,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 144,
+        "pairWorkgroups": 3,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 41472,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 1840,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 400,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 41472,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 87744
+      },
+      "graphBufferBytes": 87680,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.20000004768371582,
+          "p95": 0.7000000476837158,
+          "maximum": 0.7999999523162842
+        },
+        "completionWithDiagnostics": {
+          "median": 6.900000095367432,
+          "p95": 10.400000095367432,
+          "maximum": 14.299999952316284
+        },
+        "gpuWork": {
+          "median": 0.935487,
+          "p95": 1.6770150000000001,
+          "maximum": 2.2957560000000004
+        },
+        "gpuSpan": {
+          "median": 1.03373384475708,
+          "p95": 3.433364152908325,
+          "maximum": 3.543821096420288
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 0,
+        "maximumCandidateTests": 0,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    },
+    {
+      "formatVersion": 1,
+      "stage": "full-rigid-body-step",
+      "fixture": "cradle",
+      "objectCount": 12,
+      "settings": {
+        "solver": "ordered",
+        "jointCount": 5,
+        "failurePolicy": "rollback",
+        "broadPhase": "hierarchical-grid",
+        "iterations": 32,
+        "timeStep": 0.0020833333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 256
+      },
+      "sampleCount": 60,
+      "warmupCount": 360,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "compileMilliseconds": 163.40000009536743,
+      "graphNodes": 14,
+      "capacity": {
+        "bodyCount": 12,
+        "colliderCount": 12,
+        "maximumPairs": 256,
+        "pairWorkgroups": 4,
+        "buffers": [
+          {
+            "name": "positions",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "orientations",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "angular-velocities",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "sleep",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "targets",
+            "byteLength": 2464,
+            "uniform": false
+          },
+          {
+            "name": "manifolds",
+            "byteLength": 73728,
+            "uniform": false
+          },
+          {
+            "name": "bodies",
+            "byteLength": 4128,
+            "uniform": false
+          },
+          {
+            "name": "settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "control-settings",
+            "byteLength": 64,
+            "uniform": true
+          },
+          {
+            "name": "simulation-statistics",
+            "byteLength": 64,
+            "uniform": false
+          },
+          {
+            "name": "minima",
+            "byteLength": 144,
+            "uniform": false
+          },
+          {
+            "name": "maxima",
+            "byteLength": 144,
+            "uniform": false
+          },
+          {
+            "name": "object-attributes",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "state-validity",
+            "byteLength": 48,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-0",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-1",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-2",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-3",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-4",
+            "byteLength": 192,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-5",
+            "byteLength": 2464,
+            "uniform": false
+          },
+          {
+            "name": "checkpoint-6",
+            "byteLength": 73728,
+            "uniform": false
+          }
+        ],
+        "ownedBufferBytes": 159008
+      },
+      "graphBufferBytes": 159232,
+      "maximumPendingSteps": 1,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.3000001907348633,
+          "p95": 0.7999999523162842,
+          "maximum": 0.8000001907348633
+        },
+        "completionWithDiagnostics": {
+          "median": 10.299999952316284,
+          "p95": 14,
+          "maximum": 14.700000047683716
+        },
+        "gpuWork": {
+          "median": 5.352628,
+          "p95": 7.741134,
+          "maximum": 9.323231999999999
+        },
+        "gpuSpan": {
+          "median": 6.114531993865967,
+          "p95": 10.195344924926758,
+          "maximum": 10.621338129043579
+        }
+      },
+      "diagnostics": {
+        "steps": 420,
+        "incompleteSteps": 0,
+        "droppedPairs": 0,
+        "droppedManifolds": 0,
+        "incompleteQueries": 0,
+        "invalidBounds": 0,
+        "droppedTriangleQueries": 0,
+        "unresolvedQueries": 0,
+        "incompleteIslandUnions": 0,
+        "incompleteMeshQueries": 0,
+        "incompleteContinuousBodies": 0,
+        "incompleteTriggerQueries": 0,
+        "invalidBodyStates": 0,
+        "maximumCandidatePairs": 2,
+        "maximumCandidateTests": 55,
+        "saturated": false,
+        "complete": true
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "finalState": [
+        {
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -1.6097263097763062,
+            0,
+            1.5000205039978027
+          ],
+          "orientation": [
+            0,
+            -1.4507184516177052e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002293779281899333,
+            0,
+            4.206816083751619e-05
+          ],
+          "angularVelocity": [
+            0,
+            -4.973893172333099e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            -0.7968974113464355,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -2.276149646367187e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002714979462325573,
+            0,
+            2.93072298518382e-06
+          ],
+          "angularVelocity": [
+            0,
+            -1.3323453451619116e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.01311322022229433,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            2.9846995101140417e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002500783419236541,
+            0,
+            4.043651642859913e-06
+          ],
+          "angularVelocity": [
+            0,
+            1.0924782606336336e-10,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8100000023841858,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0.8231229782104492,
+            0,
+            1.5000340938568115
+          ],
+          "orientation": [
+            0,
+            -3.2936747404975486e-13,
+            0,
+            1
+          ],
+          "velocity": [
+            -0.002286370377987623,
+            0,
+            3.9493010262958705e-05
+          ],
+          "angularVelocity": [
+            0,
+            -1.0658159250998e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.6200000047683716,
+            0,
+            4
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            1.7646527290344238,
+            0,
+            1.5041323900222778
+          ],
+          "orientation": [
+            0,
+            -1.261964165978624e-12,
+            0,
+            1
+          ],
+          "velocity": [
+            3.1446571350097656,
+            0,
+            0.17799732089042664
+          ],
+          "angularVelocity": [
+            0,
+            -5.506756856066275e-11,
+            0
+          ],
+          "sleeping": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            4.150000095367432
+          ],
+          "orientation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "sleeping": false
+        }
+      ],
+      "notes": [
+        "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+        "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+        "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+        "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+        "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+      ],
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1",
+      "softwareGpuRequested": false
+    }
+  ],
+  "stability": {
+    "maximumJointError": 5.6988120369361184e-05,
+    "maximumMiddleDisplacement": 0.21721303462982178,
+    "finalEndAmplitude": 1.450378541946411,
+    "endMotionRanges": [
+      1.4681882858276367,
+      1.4052646160125732
+    ],
+    "minimumEnergyRatio": 0.9979316918651595,
+    "maximumEnergyRatio": 1.0053019708928723,
+    "diagnostics": {
+      "steps": 28800,
+      "incompleteSteps": 0,
+      "droppedPairs": 0,
+      "droppedManifolds": 0,
+      "incompleteQueries": 0,
+      "invalidBounds": 0,
+      "droppedTriangleQueries": 0,
+      "unresolvedQueries": 0,
+      "incompleteIslandUnions": 0,
+      "incompleteMeshQueries": 0,
+      "incompleteContinuousBodies": 0,
+      "incompleteTriggerQueries": 0,
+      "invalidBodyStates": 0,
+      "maximumCandidatePairs": 0,
+      "maximumCandidateTests": 0,
+      "saturated": false,
+      "complete": true
+    }
+  },
+  "rendererClockBefore": {
+    "first": 0,
+    "last": 2567,
+    "wallSeconds": 10.369,
+    "simulationSeconds": 5.347916666666666,
+    "speedRatio": 0.5157601183013469
+  },
+  "rendererClockAfter": {
+    "first": 211,
+    "last": 4745,
+    "wallSeconds": 10.035,
+    "simulationSeconds": 9.445833333333333,
+    "speedRatio": 0.9412888224547417
+  }
+}

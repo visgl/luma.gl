@@ -59,7 +59,7 @@ export class CompactDropdown<Value extends string = string> {
     const listboxIdentifier = `compact-dropdown-listbox-${identifier}`;
 
     this.element = this.document.createElement('div');
-    this.element.dataset.compactDropdown = '';
+    this.element.dataset['compactDropdown'] = '';
     this.element.innerHTML = `<style>${COMPACT_DROPDOWN_CSS}</style>`;
 
     this.trigger = this.document.createElement('button');
@@ -70,12 +70,12 @@ export class CompactDropdown<Value extends string = string> {
     this.trigger.setAttribute('aria-haspopup', 'listbox');
     this.trigger.setAttribute('aria-controls', listboxIdentifier);
     this.trigger.setAttribute('aria-expanded', 'false');
-    this.trigger.dataset.compactDropdownTrigger = '';
+    this.trigger.dataset['compactDropdownTrigger'] = '';
 
     this.valueElement = this.document.createElement('span');
-    this.valueElement.dataset.compactDropdownValue = '';
+    this.valueElement.dataset['compactDropdownValue'] = '';
     const chevron = this.document.createElement('span');
-    chevron.dataset.compactDropdownChevron = '';
+    chevron.dataset['compactDropdownChevron'] = '';
     chevron.setAttribute('aria-hidden', 'true');
     this.trigger.append(this.valueElement, chevron);
     this.element.append(this.trigger);
@@ -85,7 +85,7 @@ export class CompactDropdown<Value extends string = string> {
     this.listbox.hidden = true;
     this.listbox.setAttribute('role', 'listbox');
     this.listbox.setAttribute('aria-label', this.ariaLabel);
-    this.listbox.dataset.compactDropdownPopup = '';
+    this.listbox.dataset['compactDropdownPopup'] = '';
 
     parent.append(this.element);
     this.document.body.append(this.listbox);
@@ -164,7 +164,7 @@ export class CompactDropdown<Value extends string = string> {
     if (this.activeIndex < 0) this.activeIndex = this.getNextEnabledIndex(-1, 1);
     this.listbox.hidden = false;
     this.trigger.setAttribute('aria-expanded', 'true');
-    this.element.dataset.open = 'true';
+    this.element.dataset['open'] = 'true';
     this.updateActiveOption(true);
     this.updatePopupPosition();
     this.document.defaultView?.addEventListener('resize', this.handleViewportChange);
@@ -178,7 +178,7 @@ export class CompactDropdown<Value extends string = string> {
     this.listbox.hidden = true;
     this.trigger.setAttribute('aria-expanded', 'false');
     this.trigger.removeAttribute('aria-activedescendant');
-    delete this.element.dataset.open;
+    delete this.element.dataset['open'];
     this.document.defaultView?.removeEventListener('resize', this.handleViewportChange);
     this.document.defaultView?.removeEventListener('scroll', this.handleViewportChange, true);
     if (options.restoreFocus) this.trigger.focus();
@@ -302,13 +302,13 @@ export class CompactDropdown<Value extends string = string> {
         optionElement.setAttribute('role', 'option');
         optionElement.setAttribute('aria-selected', String(option.value === this.selectedValue));
         if (option.disabled) optionElement.setAttribute('aria-disabled', 'true');
-        optionElement.dataset.compactDropdownOption = '';
-        optionElement.dataset.optionIndex = String(index);
+        optionElement.dataset['compactDropdownOption'] = '';
+        optionElement.dataset['optionIndex'] = String(index);
 
         const label = this.document.createElement('span');
         label.textContent = option.label;
         const status = this.document.createElement('span');
-        status.dataset.compactDropdownStatus = '';
+        status.dataset['compactDropdownStatus'] = '';
         status.setAttribute('aria-hidden', 'true');
         optionElement.append(label, status);
         return optionElement;
@@ -381,8 +381,8 @@ export class CompactDropdown<Value extends string = string> {
   private updateActiveOption(scrollIntoView: boolean): void {
     const optionElements = this.getOptionElements();
     for (const [index, optionElement] of optionElements.entries()) {
-      if (index === this.activeIndex && this.openState) optionElement.dataset.active = 'true';
-      else delete optionElement.dataset.active;
+      if (index === this.activeIndex && this.openState) optionElement.dataset['active'] = 'true';
+      else delete optionElement.dataset['active'];
     }
 
     const activeElement = optionElements[this.activeIndex];
@@ -411,7 +411,7 @@ export class CompactDropdown<Value extends string = string> {
     const element = target as Element | null;
     const optionElement = element?.closest<HTMLElement>('[data-compact-dropdown-option]');
     if (!optionElement || !this.listbox.contains(optionElement)) return -1;
-    return Number(optionElement.dataset.optionIndex ?? -1);
+    return Number(optionElement.dataset['optionIndex'] ?? -1);
   }
 
   private getOptionElements(): HTMLElement[] {

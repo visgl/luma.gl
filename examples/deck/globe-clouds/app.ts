@@ -4,7 +4,8 @@
 
 import {Deck, _GlobeView} from '@deck.gl/core';
 import {SkyLayer} from '@deck.gl-community/gpu-layers';
-import {DynamicTexture, loadImageBitmap} from '@luma.gl/engine';
+import {loadImageBitmap} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   createSkyObserver,
   getSunPosition,
@@ -13,7 +14,7 @@ import {
   getMoonLight,
   getSkyDirection,
   skyDirectionToGlobe
-} from '@math.gl/sun';
+} from '@math.gl/earth/sun';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {EarthLayer} from './earth-layer';
 import earthImage from '../../showcase/globe/earth.jpg';

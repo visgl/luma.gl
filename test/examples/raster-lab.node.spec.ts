@@ -4,7 +4,7 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
-import {GPURasterTileReader} from '../../modules/experimental/src/gpu-raster/gpu-raster-tile-source';
+import {GPURasterTileReader} from '../../modules/graph/src/gpu-raster/gpu-raster-tile-source';
 import {
   makeRasterLabDataset,
   RASTER_LAB_NO_DATA_VALUE

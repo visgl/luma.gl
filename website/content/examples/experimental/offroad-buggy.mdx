@@ -1,0 +1,17 @@
+---
+title: Off-road Buggy
+description: Three.js renders a four-wheel buggy driven by luma.gl GPU suspension and tire forces.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: unsupported
+  mobileProfile: standard
+  mobileUnsupportedReason: Manual driving requires a keyboard.
+  topics: [physics, compute]
+---
+import {OffroadBuggyExample} from '@site/src/examples';
+
+<OffroadBuggyExample />
+
+Use W/S for throttle and reverse, A/D to steer, and Space to brake. Steering or throttle takes over from the automatic lap. The Telemetry tab shows suspension travel, body attitude and axle load. Three.js renders the scenegraph with PBR materials and luma.gl runs the rigid-body simulation on WebGPU.

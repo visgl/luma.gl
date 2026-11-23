@@ -44,7 +44,7 @@ application, then make it easier to debug, faster to run, and lighter to ship.
 - [Testing](/docs/developer-guide/testing) covers reliable GPU-aware verification.
 - [Working with AI coding agents](/docs/developer-guide/working-with-ai) helps agents
   navigate the documentation and choose the right API layer.
-- [Editing](/docs/developer-guide/editing) improves your shader development environment.
+- [Setup](/docs/developer-guide/installing) improves your shader development environment.
 - [Contributing](/docs/developer-guide/contributing) explains how to work on luma.gl
   itself.
 

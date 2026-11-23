@@ -1,0 +1,5000 @@
+{
+  "compact": {
+    "formatVersion": 1,
+    "stage": "full-rigid-body-step",
+    "fixture": "sleepingIslands",
+    "objectCount": 96,
+    "solverWork": {
+      "compacted": true,
+      "activeContacts": 48,
+      "awakeBodies": 0,
+      "awakeContacts": 0,
+      "bodyWorkgroups": 0,
+      "pairCapacity": 8192,
+      "pairWorkgroups": 0
+    },
+    "settings": {
+      "solver": "parallel",
+      "compactContacts": true,
+      "sleepAfter": 0.3,
+      "restitutionThreshold": 0.5,
+      "jointCount": 0,
+      "failurePolicy": "report",
+      "broadPhase": "hierarchical-grid",
+      "iterations": 32,
+      "timeStep": 0.008333333333333333,
+      "warmStartFactor": 1,
+      "maximumPairs": 8192
+    },
+    "sampleCount": 30,
+    "warmupCount": 120,
+    "adapter": {
+      "type": "webgpu",
+      "vendor": "apple",
+      "renderer": "",
+      "version": "",
+      "gpu": "apple",
+      "gpuType": "unknown",
+      "gpuBackend": "unknown",
+      "gpuArchitecture": "metal-3",
+      "fallback": false,
+      "featureLevel": "core",
+      "subgroupMinSize": 32,
+      "subgroupMaxSize": 32,
+      "shadingLanguage": "wgsl",
+      "shadingLanguageVersion": 100
+    },
+    "timestampQueries": true,
+    "compileMilliseconds": 2317.4000000953674,
+    "graphNodes": 23,
+    "capacity": {
+      "bodyCount": 96,
+      "colliderCount": 96,
+      "maximumPairs": 8192,
+      "pairWorkgroups": 128,
+      "buffers": [
+        {
+          "name": "positions",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "orientations",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "velocities",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "angular-velocities",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "sleep",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "targets",
+          "byteLength": 68640,
+          "uniform": false
+        },
+        {
+          "name": "manifolds",
+          "byteLength": 3407872,
+          "uniform": false
+        },
+        {
+          "name": "bodies",
+          "byteLength": 80160,
+          "uniform": false
+        },
+        {
+          "name": "settings",
+          "byteLength": 64,
+          "uniform": true
+        },
+        {
+          "name": "control-settings",
+          "byteLength": 64,
+          "uniform": true
+        },
+        {
+          "name": "simulation-statistics",
+          "byteLength": 64,
+          "uniform": false
+        },
+        {
+          "name": "parallel-state",
+          "byteLength": 657680,
+          "uniform": false
+        },
+        {
+          "name": "parallel-dispatch",
+          "byteLength": 48,
+          "uniform": false
+        },
+        {
+          "name": "minima",
+          "byteLength": 1152,
+          "uniform": false
+        },
+        {
+          "name": "maxima",
+          "byteLength": 1152,
+          "uniform": false
+        },
+        {
+          "name": "object-attributes",
+          "byteLength": 384,
+          "uniform": false
+        }
+      ],
+      "ownedBufferBytes": 4224960
+    },
+    "graphBufferBytes": 4227200,
+    "maximumPendingSteps": 1,
+    "perStepMilliseconds": {
+      "cpuEncode": {
+        "median": 1,
+        "p95": 1.5,
+        "maximum": 2
+      },
+      "completionWithDiagnostics": {
+        "median": 7.300000190734863,
+        "p95": 21.700000047683716,
+        "maximum": 30.700000047683716
+      },
+      "gpuWork": {
+        "median": 0.4313299999999999,
+        "p95": 1.374941,
+        "maximum": 1.7186419999999996
+      },
+      "gpuSpan": {
+        "median": 1.6602251529693604,
+        "p95": 12.202688932418823,
+        "maximum": 13.748039960861206
+      }
+    },
+    "diagnostics": {
+      "steps": 150,
+      "incompleteSteps": 0,
+      "droppedPairs": 0,
+      "droppedManifolds": 0,
+      "incompleteQueries": 0,
+      "invalidBounds": 0,
+      "droppedTriangleQueries": 0,
+      "unresolvedQueries": 0,
+      "incompleteIslandUnions": 0,
+      "incompleteMeshQueries": 0,
+      "incompleteContinuousBodies": 0,
+      "incompleteTriggerQueries": 0,
+      "invalidBodyStates": 0,
+      "maximumCandidatePairs": 48,
+      "maximumCandidateTests": 784,
+      "saturated": false,
+      "complete": true
+    },
+    "finiteState": true,
+    "executionComplete": true,
+    "finalState": [
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      }
+    ],
+    "notes": [
+      "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+      "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+      "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+      "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+      "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+    ],
+    "browserVersion": "151.0.7922.34",
+    "nodeVersion": "22.22.1",
+    "softwareGpuRequested": false
+  },
+  "scan": {
+    "formatVersion": 1,
+    "stage": "full-rigid-body-step",
+    "fixture": "sleepingIslands",
+    "objectCount": 96,
+    "solverWork": {
+      "compacted": false,
+      "activeContacts": null,
+      "awakeBodies": null,
+      "awakeContacts": null,
+      "bodyWorkgroups": 2,
+      "pairCapacity": 8192,
+      "pairWorkgroups": 128
+    },
+    "settings": {
+      "solver": "parallel",
+      "compactContacts": false,
+      "sleepAfter": 0.3,
+      "restitutionThreshold": 0.5,
+      "jointCount": 0,
+      "failurePolicy": "report",
+      "broadPhase": "hierarchical-grid",
+      "iterations": 32,
+      "timeStep": 0.008333333333333333,
+      "warmStartFactor": 1,
+      "maximumPairs": 8192
+    },
+    "sampleCount": 30,
+    "warmupCount": 120,
+    "adapter": {
+      "type": "webgpu",
+      "vendor": "apple",
+      "renderer": "",
+      "version": "",
+      "gpu": "apple",
+      "gpuType": "unknown",
+      "gpuBackend": "unknown",
+      "gpuArchitecture": "metal-3",
+      "fallback": false,
+      "featureLevel": "core",
+      "subgroupMinSize": 32,
+      "subgroupMaxSize": 32,
+      "shadingLanguage": "wgsl",
+      "shadingLanguageVersion": 100
+    },
+    "timestampQueries": true,
+    "compileMilliseconds": 1084.2000000476837,
+    "graphNodes": 19,
+    "capacity": {
+      "bodyCount": 96,
+      "colliderCount": 96,
+      "maximumPairs": 8192,
+      "pairWorkgroups": 128,
+      "buffers": [
+        {
+          "name": "positions",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "orientations",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "velocities",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "angular-velocities",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "sleep",
+          "byteLength": 1536,
+          "uniform": false
+        },
+        {
+          "name": "targets",
+          "byteLength": 68640,
+          "uniform": false
+        },
+        {
+          "name": "manifolds",
+          "byteLength": 3407872,
+          "uniform": false
+        },
+        {
+          "name": "bodies",
+          "byteLength": 80160,
+          "uniform": false
+        },
+        {
+          "name": "settings",
+          "byteLength": 64,
+          "uniform": true
+        },
+        {
+          "name": "control-settings",
+          "byteLength": 64,
+          "uniform": true
+        },
+        {
+          "name": "simulation-statistics",
+          "byteLength": 64,
+          "uniform": false
+        },
+        {
+          "name": "parallel-state",
+          "byteLength": 657680,
+          "uniform": false
+        },
+        {
+          "name": "parallel-dispatch",
+          "byteLength": 48,
+          "uniform": false
+        },
+        {
+          "name": "minima",
+          "byteLength": 1152,
+          "uniform": false
+        },
+        {
+          "name": "maxima",
+          "byteLength": 1152,
+          "uniform": false
+        },
+        {
+          "name": "object-attributes",
+          "byteLength": 384,
+          "uniform": false
+        }
+      ],
+      "ownedBufferBytes": 4224960
+    },
+    "graphBufferBytes": 4227200,
+    "maximumPendingSteps": 1,
+    "perStepMilliseconds": {
+      "cpuEncode": {
+        "median": 0.6000001430511475,
+        "p95": 1.2999999523162842,
+        "maximum": 1.5999999046325684
+      },
+      "completionWithDiagnostics": {
+        "median": 7.799999952316284,
+        "p95": 20.59999990463257,
+        "maximum": 21.699999809265137
+      },
+      "gpuWork": {
+        "median": 0.586244,
+        "p95": 2.2437970000000003,
+        "maximum": 2.7197929999999997
+      },
+      "gpuSpan": {
+        "median": 2.885998010635376,
+        "p95": 10.630046129226685,
+        "maximum": 12.824220180511475
+      }
+    },
+    "diagnostics": {
+      "steps": 150,
+      "incompleteSteps": 0,
+      "droppedPairs": 0,
+      "droppedManifolds": 0,
+      "incompleteQueries": 0,
+      "invalidBounds": 0,
+      "droppedTriangleQueries": 0,
+      "unresolvedQueries": 0,
+      "incompleteIslandUnions": 0,
+      "incompleteMeshQueries": 0,
+      "incompleteContinuousBodies": 0,
+      "incompleteTriggerQueries": 0,
+      "invalidBodyStates": 0,
+      "maximumCandidatePairs": 48,
+      "maximumCandidateTests": 784,
+      "saturated": false,
+      "complete": true
+    },
+    "finiteState": true,
+    "executionComplete": true,
+    "finalState": [
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          1
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          2.200000047683716
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          3.4000000953674316
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          4.599999904632568
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          5.800000190734863
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.800000190734863,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -5.400000095367432,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -4.199999809265137,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -3.799999952316284,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.5999999046325684,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -2.200000047683716,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -1,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          -0.6000000238418579,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          0.6000000238418579,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          1,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.200000047683716,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          2.5999999046325684,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          3.799999952316284,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          4.199999809265137,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.400000095367432,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      },
+      {
+        "position": [
+          5.800000190734863,
+          0,
+          7
+        ],
+        "orientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "angularVelocity": [
+          0,
+          0,
+          0
+        ],
+        "sleeping": true
+      }
+    ],
+    "notes": [
+      "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
+      "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+      "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
+      "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
+      "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."
+    ],
+    "browserVersion": "151.0.7922.34",
+    "nodeVersion": "22.22.1",
+    "softwareGpuRequested": false
+  }
+}

@@ -8,14 +8,14 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUVolume,
   GPUVolumeClosing,
   GPUVolumeConnectedComponents,
   GPUVolumeRegionMeasurements,
   GPUVolumeThreshold
-} from '@luma.gl/experimental/lucim';
+} from '@luma.gl/graph/lucim';
 import {VOLUME_LAB_DEFAULT_THRESHOLD, type VolumeLabDataset} from './volume-lab-data';
 
 export type VolumeLabAnalysisStatus = {
@@ -25,7 +25,7 @@ export type VolumeLabAnalysisStatus = {
   regionOverflow: boolean;
 };
 
-/** Owns the synthetic volume buffers and one reusable LuCIM segmentation graph. */
+/** Owns the synthetic volume buffers and one reusable GPU Volume Algorithms segmentation graph. */
 export class VolumeLabEngine {
   readonly device: Device;
   readonly dataset: VolumeLabDataset;
@@ -58,7 +58,7 @@ export class VolumeLabEngine {
 
   constructor(device: Device, dataset: VolumeLabDataset) {
     if (device.type !== 'webgpu') {
-      throw new Error('LuCIM Volume Lab requires WebGPU');
+      throw new Error('GPU Volume Algorithms Volume Lab requires WebGPU');
     }
     this.device = device;
     this.dataset = dataset;

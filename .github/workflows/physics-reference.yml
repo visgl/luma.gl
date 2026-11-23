@@ -1,0 +1,52 @@
+name: Physics reference smoke
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/physics/matched/**'
+      - 'scripts/playwright/get-playwright-launch-options.mjs'
+      - 'modules/graph/src/gpu-physics/**'
+      - 'modules/graph/src/gpu-core/**'
+      - 'modules/core/src/**'
+      - 'modules/graph/src/**'
+      - 'examples/experimental/physics-stress/matched-fixtures.ts'
+      - 'test/devtools/physics-matched.node.spec.ts'
+      - '.github/workflows/physics-reference.yml'
+permissions:
+  contents: read
+concurrency:
+  group: physics-reference-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  reference:
+    name: Box3D and WebGPU adapter smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install dependencies
+        run: |
+          corepack enable
+          yarn install --immutable
+          yarn playwright install --with-deps chromium
+      - name: Run independent metric tests
+        run: yarn test-node --run test/devtools/physics-matched.node.spec.ts
+      - name: Compare real adapters with software WebGPU
+        run: |
+          yarn vite examples/experimental/physics-stress --host 127.0.0.1 --port 5242 --strictPort > /tmp/physics-reference-vite.log 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5242/ > /dev/null; then break; fi
+            sleep 1
+          done
+          xvfb-run -a node scripts/physics/matched/run.mjs --software --scenes matchedBallistic,matchedPile,matchedChain --count 4 --frames 12 --warmup 2 --repeats 1 --stride 2 --output physics-reference-smoke.json
+          node scripts/physics/matched/report.mjs physics-reference-smoke.json > physics-reference-smoke.md
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: physics-reference-smoke
+          path: physics-reference-smoke.*

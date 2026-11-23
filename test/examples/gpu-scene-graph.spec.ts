@@ -4,7 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import GPUSceneGraphAnimationLoopTemplate from '../../examples/experimental/gpu-scene-graph/app';
 import {SCENE_GRAPH_CAPACITY} from '../../examples/experimental/gpu-scene-graph/scene-graph-data';
 

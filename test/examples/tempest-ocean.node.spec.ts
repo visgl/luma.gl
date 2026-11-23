@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {Matrix4, radians} from '@math.gl/core';
-import {toHalfFloat} from '@luma.gl/shadertools';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import {toHalfFloat} from '@luma.gl/shaders';
 import {
   getTempestOceanMinimumCameraHeight,
   getTempestOceanSunDirection,

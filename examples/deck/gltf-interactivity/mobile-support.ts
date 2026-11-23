@@ -1,0 +1,11 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import type {ExampleSupportDefinition} from '../../example-support';
+const exampleSupport = {
+  id: 'deck/gltf-interactivity',
+  mobileMode: 'full',
+  mobileProfile: 'standard',
+  requirements: {backends: ['webgl2']}
+} satisfies ExampleSupportDefinition;
+export default exampleSupport;

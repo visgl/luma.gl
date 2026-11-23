@@ -14,8 +14,8 @@ import {
   makeGPUSplatData,
   type GPUSplatData,
   type SplatHierarchyView
-} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/engine/splats';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   default as GaussianSplatsAnimationLoopTemplate,
   getGaussianSplatExecutionMode
@@ -181,13 +181,14 @@ describe('published Gaussian splat viewer', () => {
       },
       __lumaGaussianSplatsLoaderBundleUrl: configuration.loaderBundleUrl
     });
-    vi.stubGlobal('document', {querySelectorAll: () => []});
+    vi.stubGlobal('document', {getElementById: () => null, querySelectorAll: () => []});
 
     class GaussianSplatViewerCanvas extends EventTarget {
       readonly style = {cursor: '', touchAction: ''};
 
       setAttribute(_name: string, _value: string): void {}
     }
+    vi.stubGlobal('HTMLElement', GaussianSplatViewerCanvas);
     vi.stubGlobal('HTMLCanvasElement', GaussianSplatViewerCanvas);
     const device = makeViewerWebGPUDevice();
     const animation = new GaussianSplatsAnimationLoopTemplate({
@@ -234,7 +235,8 @@ describe('published Gaussian splat viewer', () => {
 
     expect(viewerPanel).toContain('data-gaussian-splats-pipeline');
     expect(viewerPanel).toContain('data-gaussian-splats-execution');
-    expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
+    expect(viewerSource).toContain('this.diagnostics.inspectorPanel.panel');
+    expect(viewerSource).toContain('this.diagnostics.tracePanel.panel');
     expect(viewerPanel).toContain('data-gaussian-splats-rad-diagnostics');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
     expect(viewerSource).toContain('continueTraversal(this.renderProfile.maxTraversalRows)');
@@ -1303,7 +1305,7 @@ describe('published Gaussian splat viewer', () => {
 
     const receivedPages: GPUSplatData[] = [];
     const device = new NullDevice({});
-    const arrow = await import('@luma.gl/arrow');
+    const arrow = await import('@luma.gl/engine/arrow');
     for await (const page of arrow.makeGPUSplatDataFromArrowStream(
       device,
       loadLocalGaussianSplatArrowSources(configuration!)
@@ -1372,6 +1374,26 @@ describe('published Gaussian splat viewer', () => {
       sceneId: 'fixture',
       expectedSplatCount: 1_000,
       sourceUrl: '/@fs/checkouts/loaders.gl/modules/ply/test/data/gaussian/train-1000.ply'
+    });
+  });
+
+  test('loads the default cat capture without the optional loader bundle', () => {
+    installViewerWindow('', {__lumaGaussianSplatsLoaderBundleUrl: undefined});
+    expect(getLocalGaussianSplatLoadersConfiguration('cat')).toMatchObject({
+      sceneId: 'cat',
+      sourceFormat: 'SPZ',
+      expectedSplatCount: 105_128,
+      up: [0, 0, 1]
+    });
+  });
+
+  test('loads the embedded glTF showcase without the optional loader bundle', () => {
+    installViewerWindow('?scene=gltf-fixture', {__lumaGaussianSplatsLoaderBundleUrl: undefined});
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      sceneId: 'gltf-fixture',
+      sourceFormat: 'GLB',
+      expectedSplatCount: 256,
+      up: [0, 1, 0]
     });
   });
 

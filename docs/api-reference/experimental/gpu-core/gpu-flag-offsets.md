@@ -40,7 +40,7 @@ arithmetic, so callers must retain page or batch boundaries before overflow.
 ## Usage
 
 ```ts
-import {GPUCommandGraph, GPUFlagOffsets} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUFlagOffsets} from '@luma.gl/graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'nullable-column'});
 

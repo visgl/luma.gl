@@ -3,8 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {TextureTransform} from '@luma.gl/engine';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
+import {TextureTransform, GPUVectorModel} from '@luma.gl/engine';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {Device, Texture} from '@luma.gl/core';
 
 /** Creates a minimal, no-op transform. */
@@ -26,6 +27,9 @@ it('TextureTransform#constructor', async () => {
     vertexCount: 1
   });
   expect(transform, 'creates transform').toBeTruthy();
+  expect(transform.model.constructor).toBe(GPUVectorModel);
+  transform.destroy();
+  targetTexture.destroy();
 });
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
@@ -66,6 +70,56 @@ it('TextureTransform#attribute', async () => {
   expect(sum[0], 'computes sum').toBe(300);
 
   transform.destroy();
+});
+
+/** Computes a sum over vertex attribute values by writing to framebuffer. */
+it('TextureTransform#inputVectors', async () => {
+  const webglDevice = await getWebGLTestDevice();
+
+  const sourceBuffer = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
+  const targetTexture = webglDevice.createTexture({
+    data: new Float32Array([201, 202, 203, 1.0]),
+    width: 1,
+    height: 1,
+    format: 'rgba32float'
+  });
+  const input = new GPUVector({
+    type: 'data',
+    name: 'src',
+    format: 'float32',
+    data: [new GPUData({buffer: sourceBuffer, length: 6, format: 'float32'})]
+  });
+  const transform = new TextureTransform(webglDevice, {
+    vs: SUM_VS,
+    inputVectors: {src: input},
+    bufferLayout: [{name: 'src', format: 'float32'}],
+    topology: 'point-list',
+    targetTexture,
+    targetTextureChannels: 1,
+    targetTextureVarying: 'vSrc',
+    parameters: {
+      depthCompare: 'always',
+      blend: true,
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'one',
+      blendColorDstFactor: 'one'
+    }
+  });
+  const source = transform.getTargetTexture();
+
+  // TODO(donmccurdy): Consider having Transform inherit from Model, or at
+  // least mimic its API by accepting a RenderPass in .run().
+  expect(transform.model.vertexCount).toBe(6);
+  transform.run({clearColor: [0, 0, 0, 0], inputVectors: {src: input}});
+
+  const sum = await readF32(webglDevice, source, 16);
+  expect(sum[0], 'computes sum').toBe(300);
+
+  transform.destroy();
+  expect(sourceBuffer.destroyed).toBe(false);
+  input.destroy();
+  sourceBuffer.destroy();
+  targetTexture.destroy();
 });
 
 /** Computes a sum over texture pixels by writing to framebuffer. */

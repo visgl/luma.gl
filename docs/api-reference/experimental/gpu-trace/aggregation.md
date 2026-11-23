@@ -10,7 +10,7 @@ import {GPUTraceViewerExample} from '@site/src/examples';
 
 `GPUTraceAggregation` computes dense counts and duration statistics over canonical trace columns.
 `GPUTraceTimeBuckets` computes interval occupancy and clipped active duration over trace time. Both
-are exported from `@luma.gl/experimental/gpu-trace`; the underlying generic aggregations remain
+are exported from `@luma.gl/graph/gpu-trace`; the underlying generic aggregations remain
 [`GPUGroupAggregation`](../gpu-core/gpu-group-aggregation) and
 [`GPUHistogram`](../gpu-core/gpu-histogram).
 
@@ -31,7 +31,7 @@ same named series after a small asynchronous readback. Applications therefore do
 duplicate byte-offset arithmetic between their GPU graph and chart UI.
 
 ```ts
-import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/graph/gpu-trace';
 
 const outputLayout = new GPUTraceAnalyticsOutputLayout([
   {id: 'service-counts', format: 'uint32', length: serviceCount},
@@ -57,7 +57,7 @@ for a renderer; decoding is only for applications that choose to draw small DOM 
 ## Usage
 
 ```ts
-import {GPUTraceAggregation} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAggregation} from '@luma.gl/graph/gpu-trace';
 
 new GPUTraceAggregation({
   trace: traceView,
@@ -79,7 +79,7 @@ the accepted dense key range, and keys outside that range are ignored.
 ## Trace-time buckets
 
 ```ts
-import {GPUTraceTimeBuckets} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceTimeBuckets} from '@luma.gl/graph/gpu-trace';
 
 new GPUTraceTimeBuckets({
   trace: traceView,

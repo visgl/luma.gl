@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderModule} from '@luma.gl/shaders';
 
 const BACKGROUND_FS = /* glsl */ `\
 #version 300 es

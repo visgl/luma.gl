@@ -83,9 +83,9 @@ batch sizes; no coordinates are repacked or merged inside the benchmark.
 Run without concurrent builds/tests:
 
 ```sh
-VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
+VITE_GPU_PROJECT_TABLE_ROWS=4096,65536 VITE_GPU_PROJECT_TABLE_BATCH_ROWS=4096,65536 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+  modules/graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
 Without explicit rows the suite is a small smoke run and emits no measurement record. Hardware
@@ -121,9 +121,9 @@ staging and CPU copies. Keep sufficient host/GPU memory available and run withou
 builds/tests:
 
 ```sh
-VITE_LUPROJ_TABLE_LARGE=true yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+VITE_GPU_PROJECT_TABLE_LARGE=true yarn test-browser-benchmarks --silent=false --reporter=verbose \
+  modules/graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
-Explicit `VITE_LUPROJ_TABLE_ROWS` and `VITE_LUPROJ_TABLE_BATCH_ROWS` override the large preset.
+Explicit `VITE_GPU_PROJECT_TABLE_ROWS` and `VITE_GPU_PROJECT_TABLE_BATCH_ROWS` override the large preset.
 Schema v1 records above remain historical evidence; schema v2 includes the resident ratio.
