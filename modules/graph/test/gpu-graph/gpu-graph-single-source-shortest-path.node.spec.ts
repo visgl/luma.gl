@@ -66,14 +66,82 @@ describe('GPUGraphAlgorithmsSingleSourceShortestPath public GPU-resident API', (
     expect(submit).not.toHaveBeenCalled();
   });
 
-  test('caps the default relaxation count while allowing explicitly source-only results', () => {
+  test('defaults the round budget to every simple path, past 1,024 rounds', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {vertexCount: 2048});
 
-    expect(new GPUGraphAlgorithmsSingleSourceShortestPath(props).maxIterations).toBe(1024);
+    expect(new GPUGraphAlgorithmsSingleSourceShortestPath(props).maxIterations).toBe(2047);
+    expect(
+      new GPUGraphAlgorithmsSingleSourceShortestPath({...props, maxIterations: 5000}).maxIterations
+    ).toBe(5000);
     expect(
       new GPUGraphAlgorithmsSingleSourceShortestPath({...props, maxIterations: 0}).maxIterations
     ).toBe(0);
+  });
+
+  test('accepts caller-owned seeds in place of a constant source vertex', () => {
+    const fixture = createShortestPathFixture();
+    const {sourceVertex: _sourceVertex, ...props} = createShortestPathProps(fixture);
+    const seeds = createVector(fixture, 'seeds', 'uint32', [Uint32Array.from([0, 3])]);
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath({...props, seeds});
+
+    expect(search.seeds).toBe(seeds);
+    expect(search.sourceVertex).toBeUndefined();
+  });
+
+  test('requires exactly one of sourceVertex and seeds', () => {
+    const fixture = createShortestPathFixture();
+    const props = createShortestPathProps(fixture);
+    const {sourceVertex: _sourceVertex, ...withoutSource} = props;
+    const seeds = createVector(fixture, 'seeds', 'uint32', [Uint32Array.from([1])]);
+
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, seeds})).toThrow(
+      /sourceVertex|seeds/
+    );
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath(withoutSource)).toThrow(
+      /sourceVertex|seeds/
+    );
+  });
+
+  test.each([
+    {name: 'empty', chunks: [new Uint32Array(0)]},
+    {name: 'chunked', chunks: [Uint32Array.from([0]), Uint32Array.from([1])]},
+    {name: 'float32', chunks: [Float32Array.from([0])]}
+  ])('rejects $name seed vectors', ({chunks}) => {
+    const fixture = createShortestPathFixture();
+    const {sourceVertex: _sourceVertex, ...props} = createShortestPathProps(fixture);
+    const format = chunks[0] instanceof Float32Array ? 'float32' : 'uint32';
+    const seeds = createVector(fixture, 'seeds', format, chunks) as GPUVector<'uint32'>;
+
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, seeds})).toThrow(
+      /seeds/
+    );
+  });
+
+  test('rejects seeds that share an allocation with a writable output', () => {
+    const fixture = createShortestPathFixture();
+    const {sourceVertex: _sourceVertex, ...props} = createShortestPathProps(fixture);
+    const seeds = createVector(fixture, 'aliased-seeds', 'uint32', [Uint32Array.from([0])], {
+      buffer: props.distances.data[0].buffer
+    });
+
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, seeds})).toThrow(
+      /distinct|physical|allocation/
+    );
+  });
+
+  test.each([
+    0,
+    1025,
+    1.5,
+    Number.NaN
+  ])('rejects invalid rounds per submission: %s', async iterationsPerSubmit => {
+    const fixture = createShortestPathFixture();
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath(createShortestPathProps(fixture));
+    const submit = vi.spyOn(fixture.device, 'submit');
+
+    await expect(search.run({iterationsPerSubmit})).rejects.toThrow(/iterationsPerSubmit/);
+    expect(submit).not.toHaveBeenCalled();
   });
 
   test('accepts source zero and empty vertex-aligned destinations for an empty graph', () => {
@@ -106,13 +174,13 @@ describe('GPUGraphAlgorithmsSingleSourceShortestPath public GPU-resident API', (
     1.5,
     Number.NaN,
     Number.POSITIVE_INFINITY,
-    1025
-  ])('rejects invalid compiled iteration counts: %s', maxIterations => {
+    2 ** 32
+  ])('rejects invalid round budgets: %s', maxIterations => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture);
 
     expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, maxIterations})).toThrow(
-      /maxIterations|1024/
+      /maxIterations/
     );
   });
 
