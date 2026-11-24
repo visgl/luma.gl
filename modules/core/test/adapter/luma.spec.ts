@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {nullAdapter} from '@luma.gl/core/test-utils';
 import {luma, type Adapter} from '@luma.gl/core';
 
@@ -31,6 +33,34 @@ it('luma#createDevice', async () => {
   expect(device.info.vendor, 'info.vendor ok').toBe('no one');
   expect(device.info.renderer, 'info.renderer ok').toBe('none');
   void 0;
+});
+
+it.each([
+  'best-available',
+  'webgpu'
+] as const)('luma#createDevice with %s when requestAdapter returns null', async type => {
+  const requestAdapter = vi.fn().mockResolvedValue(null);
+  vi.stubGlobal('navigator', {gpu: {requestAdapter}});
+  const createWebGL = vi
+    .spyOn(webgl2Adapter, 'create')
+    .mockImplementation(props => nullAdapter.create(props));
+  const supportsWebGL = vi.spyOn(webgl2Adapter, 'isSupported').mockReturnValue(true);
+  try {
+    const result = luma.createDevice({type, adapters: [webgpuAdapter, webgl2Adapter]});
+    if (type === 'best-available') {
+      const device = await result;
+      expect(createWebGL).toHaveBeenCalledTimes(1);
+      device.destroy();
+    } else {
+      await expect(result).rejects.toThrow('navigator.gpu.requestAdapter() returned null');
+      expect(createWebGL).not.toHaveBeenCalled();
+    }
+    expect(requestAdapter).toHaveBeenCalledTimes(1);
+  } finally {
+    supportsWebGL.mockRestore();
+    createWebGL.mockRestore();
+    vi.unstubAllGlobals();
+  }
 });
 
 it('luma#createDevice alerts browser users to debug failures', async () => {

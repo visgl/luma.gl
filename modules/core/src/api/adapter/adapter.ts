@@ -5,6 +5,9 @@
 import {isBrowser} from 'probe.gl/env';
 import {Device, DeviceProps} from './device';
 
+// The backend and core may be loaded from separate package bundles.
+export const WEBGPU_ADAPTER_UNAVAILABLE = 'LUMA_WEBGPU_ADAPTER_UNAVAILABLE';
+
 /**
  * Create and attach devices for a specific backend.
  */
