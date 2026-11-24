@@ -5,7 +5,7 @@
 import type {Log} from 'probe.gl/log';
 import type {Device, DeviceProps} from './device';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
-import {Adapter} from './adapter';
+import {Adapter, WEBGPU_ADAPTER_UNAVAILABLE} from './adapter';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
@@ -103,7 +103,19 @@ export class Luma {
       if (props.waitForPageLoad) {
         await adapter.pageLoaded;
       }
-      return await adapter.create(props);
+      return await adapter.create(props).catch(error => {
+        if (
+          props.type === 'best-available' &&
+          adapter.type === 'webgpu' &&
+          error?.code === WEBGPU_ADAPTER_UNAVAILABLE
+        ) {
+          const webgl = this.selectAdapter('webgl', props.adapters);
+          if (webgl?.isSupported()) {
+            return webgl.create(props);
+          }
+        }
+        throw error;
+      });
     } catch (error) {
       if (props.debug) displayDeviceCreationError(error);
       throw error;
