@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray2, NumberArray16} from '@math.gl/core';
+import type {NumberArray2, NumberArray16} from '@math.gl/core/types';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 

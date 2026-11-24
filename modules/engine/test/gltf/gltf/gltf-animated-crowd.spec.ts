@@ -8,7 +8,7 @@ import {postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGPU call', async () => {

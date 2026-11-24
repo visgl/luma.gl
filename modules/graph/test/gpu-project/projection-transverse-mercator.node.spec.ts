@@ -11,7 +11,7 @@ import {
   invertProjectionProgram,
   type ProjectionProgram
 } from '@luma.gl/graph/gpu-project';
-import {planCRSProjection, planProjectionPipeline} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection, planProjectionPipeline} from '@luma.gl/graph/gpu-project-crs';
 import {
   geographicCRS,
   makeTransverseMercatorCRS,

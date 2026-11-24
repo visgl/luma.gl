@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/core';
+import type {TypedArray} from '@math.gl/core/types';
 import type {
   DeviceProps,
   DeviceInfo,
@@ -32,7 +32,7 @@ import type {
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
-  Resource,
+  DeviceResource,
   VertexFormat,
   DeviceLostInfo
 } from '../../index';
@@ -118,7 +118,6 @@ export class WebGLDevice extends Device {
 
   /** Store constants */
   // @ts-ignore TODO fix
-  _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
   readonly extensions!: GLExtensions;
@@ -147,6 +146,8 @@ export class WebGLDevice extends Device {
         return true;
     }
   }
+
+  private readonly contextEvents = new AbortController();
 
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
@@ -195,6 +196,7 @@ export class WebGLDevice extends Device {
       createBrowserContext(
         this.canvasContext.canvas,
         {
+          signal: this.contextEvents.signal,
           onContextLost: (_event: Event) =>
             this._resolveContextLost?.({
               reason: this._lossWasRequested ? 'destroyed' : 'unknown',
@@ -218,15 +220,9 @@ export class WebGLDevice extends Device {
     // This means that a newly created gl context may already have a device attached to it.
     device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
+      this.canvasContext.destroy();
+      this.contextEvents.abort();
       if (props._reuseDevices) {
-        log.log(
-          1,
-          `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
-          device
-        )();
-        // Destroy the orphaned canvas context that was created above (line 149)
-        // to prevent its ResizeObserver from firing callbacks with undefined device
-        this.canvasContext.destroy();
         device._reused = true;
         return device;
       }
@@ -259,10 +255,14 @@ export class WebGLDevice extends Device {
     }
 
     // Install context state tracking
-    const glState = new WebGLStateTracker(this.gl, {
-      log: (...args: any[]) => log.log(1, ...args)()
+    const glState =
+      WebGLStateTracker.get(this.gl) ||
+      new WebGLStateTracker(this.gl, {
+        log: (...args: any[]) => log.log(1, ...args)()
+      });
+    glState.trackState(this.gl, {
+      copyState: Boolean(externalGLContext || canvasContextProps.canvas)
     });
-    glState.trackState(this.gl, {copyState: false});
 
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
@@ -281,29 +281,30 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
-  /**
-   * Destroys the device
-   *
-   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
-   *
-   * @note The underlying WebGL context is not immediately destroyed,
-   * but may be destroyed later through normal JavaScript garbage collection.
-   * This is a fundamental limitation since WebGL does not offer any
-   * browser API for destroying WebGL contexts.
-   */
+  override get ownsHandle(): boolean {
+    return (
+      this.props.ownsHandle ?? (!this.props._handle && !this.props._reuseDevices && !this._reused)
+    );
+  }
+
+  /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
-    // Note that deck.gl (especially in React strict mode) depends on being able
-    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
-    // multiple times and getting the same device back. Since deck.gl is not aware
-    // of this sharing, it might call destroy() multiple times on the same device.
-    // Therefore we must do nothing in destroy() if props._reuseDevices is true
-    if (!this.props._reuseDevices && !this._reused) {
-      this._isLost = true;
-      this.commandEncoder?.destroy();
-      // Delete the reference to the device that we store on the WebGL context
-      const contextData = getWebGLContextData(this.handle);
-      contextData.device = null;
+    // Legacy callers may independently finalize the same reused wrapper. An explicit
+    // ownership setting leaves teardown to the caller that manages its lifetime.
+    if (
+      this.contextEvents.signal.aborted ||
+      (this.props.ownsHandle === undefined && (this.props._reuseDevices || this._reused))
+    ) {
+      return;
     }
+    this.contextEvents.abort();
+    this.commandEncoder?.destroy();
+    this.canvasContext.destroy();
+    getWebGLContextData(this.handle).device = null;
+    if (this.ownsHandle) {
+      this.loseDevice();
+    }
+    this._isLost = true;
   }
 
   get isLost(): boolean {
@@ -347,7 +348,7 @@ export class WebGLDevice extends Device {
 
   private _assertContext(): void {
     // Reject allocation before resource constructors register an unusable resource.
-    if (this.gl.isContextLost()) {
+    if (this.contextEvents.signal.aborted || this.gl.isContextLost()) {
       throw new Error('WebGL context is lost');
     }
   }
@@ -588,20 +589,8 @@ export class WebGLDevice extends Device {
    * Set a constant value for a location. Disabled attributes at that location will read from this value
    * @note WebGL constants are stored globally on the WebGL context, not the VertexArray
    * so they need to be updated before every render
-   * @todo - remember/cache values to avoid setting them unnecessarily?
    */
   setConstantAttributeWebGL(location: number, constant: TypedArray): void {
-    const maxVertexAttributes = this.limits.maxVertexAttributes;
-    this._constants = this._constants || new Array(maxVertexAttributes).fill(null);
-    const currentConstant = this._constants[location];
-    if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
-      log.info(
-        1,
-        `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`
-      )();
-    }
-    this._constants[location] = constant;
-
     switch (constant.constructor) {
       case Float32Array:
         setConstantFloatArray(this, location, constant as Float32Array);
@@ -631,7 +620,7 @@ export class WebGLDevice extends Device {
    */
   _setWebGLDebugMetadata(
     handle: unknown,
-    resource: Resource<any>,
+    resource: DeviceResource<any>,
     options: {spector: Record<string, unknown>}
   ): void {
     // @ts-expect-error
@@ -664,61 +653,20 @@ function setConstantFloatArray(device: WebGLDevice, location: number, array: Flo
   }
 }
 
-/** Set constant signed int array attribute */
+/** Set constant signed int array attribute. WebGL2 requires all four components. */
 function setConstantIntArray(device: WebGLDevice, location: number, array: Int32Array): void {
-  device.gl.vertexAttribI4iv(location, array);
-  // TODO - not clear if we need to use the special forms, more testing needed
-  // switch (array.length) {
-  //   case 1:
-  //     gl.vertexAttribI1iv(location, array);
-  //     break;
-  //   case 2:
-  //     gl.vertexAttribI2iv(location, array);
-  //     break;
-  //   case 3:
-  //     gl.vertexAttribI3iv(location, array);
-  //     break;
-  //   case 4:
-  //     break;
-  //   default:
-  //     assert(false);
-  // }
+  if (array.length < 4) {
+    device.gl.vertexAttribI4i(location, array[0] ?? 0, array[1] ?? 0, array[2] ?? 0, 1);
+  } else {
+    device.gl.vertexAttribI4iv(location, array);
+  }
 }
 
-/** Set constant unsigned int array attribute */
-function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array) {
-  device.gl.vertexAttribI4uiv(location, array);
-  // TODO - not clear if we need to use the special forms, more testing needed
-  // switch (array.length) {
-  //   case 1:
-  //     gl.vertexAttribI1uiv(location, array);
-  //     break;
-  //   case 2:
-  //     gl.vertexAttribI2uiv(location, array);
-  //     break;
-  //   case 3:
-  //     gl.vertexAttribI3uiv(location, array);
-  //     break;
-  //   case 4:
-  //     gl.vertexAttribI4uiv(location, array);
-  //     break;
-  //   default:
-  //     assert(false);
-  // }
-}
-
-/**
- * Compares contents of two typed arrays
- * @todo max length?
- */
-function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {
-  if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
-    return false;
+/** Set constant unsigned int array attribute. WebGL2 requires all four components. */
+function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array): void {
+  if (array.length < 4) {
+    device.gl.vertexAttribI4ui(location, array[0] ?? 0, array[1] ?? 0, array[2] ?? 0, 1);
+  } else {
+    device.gl.vertexAttribI4uiv(location, array);
   }
-  for (let i = 0; i < v1.length; ++i) {
-    if (v1[i] !== v2[i]) {
-      return false;
-    }
-  }
-  return true;
 }

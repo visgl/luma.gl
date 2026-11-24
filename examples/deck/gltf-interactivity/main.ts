@@ -13,7 +13,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {getDeckExampleProps} from '../deck-example-device';
 import {createInteractivityInfoBox} from './info-box';
 import {INTERACTIVITY_SAMPLES} from './samples';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 let selectedSampleIndex = 0;
 let loading = true;

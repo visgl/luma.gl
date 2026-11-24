@@ -608,6 +608,7 @@ it('convertArrowPathStorageToGPUVectors converts Float64 paths to per-row Float3
     ])
   );
   const prepared = await convertArrowPathStorageToGPUVectors(device, {paths});
+  expect(prepared.paths.data[0].valueOffsets).toEqual(new Int32Array([0, 3, 5]));
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   expect(

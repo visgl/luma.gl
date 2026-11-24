@@ -27,6 +27,7 @@ import type {
   ANARIFrameParameters,
   ANARIFrameStatistics,
   ANARIFrameChannels,
+  ANARIFrameRadiance,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,
@@ -290,6 +291,13 @@ export class ANARIDevice {
 
   captureFrameChannels(frame: ANARIFrame): ANARIFrameChannels | null {
     return this.frameRenderingRuntimes.get(frame.id)?.captureChannels?.(frame) ?? null;
+  }
+
+  /** Returns null when the frame has no submitted ray-tracing history. */
+  readFrameRadiance(frame: ANARIFrame): Promise<ANARIFrameRadiance | null> {
+    return (
+      this.frameRenderingRuntimes.get(frame.id)?.readRadiance?.(frame) ?? Promise.resolve(null)
+    );
   }
 
   destroyFrame(frame: ANARIFrame): void {

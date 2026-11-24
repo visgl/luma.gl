@@ -22,7 +22,7 @@ describe('reusable visual comparison examples', () => {
     const source = readFileSync(path.join(directory, 'app.ts'), 'utf8');
 
     expect(source).toMatch(
-      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental\/controls['"]/
+      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental-controls['"]/
     );
     expect(source).toMatch(/new\s+ComparisonSplitter\s*\(/);
     expect(source).toContain(`id: '${splitterId}'`);

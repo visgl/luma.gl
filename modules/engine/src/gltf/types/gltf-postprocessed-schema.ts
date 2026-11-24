@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) 2018 Benjamin Wasty
 
 // Types forked from https://github.com/bwasty/gltf-loader-ts under MIT license
 // Generated from official JSON schema using `npm run generate-type` = on 2018-02-24
@@ -635,6 +636,8 @@ export type GLTFNodePostprocessed = {
   mesh?: GLTFMeshPostprocessed;
   /** Index of the draft glTF 2.1 external asset instantiated by this node. */
   externalAsset?: GlTfId;
+  /** Draft glTF 2.1 authored spatial bound. */
+  boundingVolume?: import('./gltf-shape-schema').GLTFBoundingVolume;
   /**
    * The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.
    */
@@ -780,6 +783,8 @@ export type GLTFPostprocessed = {
   scene?: GLTFScenePostprocessed;
   /** An array of scenes. */
   scenes: GLTFScenePostprocessed[];
+  /** Draft glTF 2.1 analytic shapes shared by authored bounds and physics. */
+  shapes?: import('./gltf-shape-schema').GLTFShape[];
   /** An array of skins. */
   skins: GLTFSkinPostprocessed[];
   /** An array of textures. */

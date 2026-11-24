@@ -32,6 +32,7 @@ export {
   type CharacterMapping,
   type TextKerning,
   type TextGlyphLayout,
+  createTextCodePointSource,
   buildTextGlyphLayout,
   type TextCodePointSource,
   type TextLayoutOptions,

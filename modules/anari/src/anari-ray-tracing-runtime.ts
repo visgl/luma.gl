@@ -7,7 +7,12 @@ import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from './renderer
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter} from './anari-scene-adapter';
-import type {ANARIFrameStatistics, ANARIPickResult, ANARIFrameChannels} from './anari-types';
+import type {
+  ANARIFrameStatistics,
+  ANARIPickResult,
+  ANARIFrameChannels,
+  ANARIFrameRadiance
+} from './anari-types';
 
 /** Adapts retained ANARI objects into the reusable shared ray-tracing scene renderer. */
 export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
@@ -42,17 +47,26 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       samplingSeed: renderer.getParameter('samplingSeed'),
       historySampleLimit: renderer.getParameter('historySampleLimit'),
       denoiseRadius: renderer.getParameter('denoiseRadius'),
+      varianceGuidance: renderer.getParameter('varianceGuidance'),
       debugView: renderer.getParameter('debugView'),
       maxBounces: renderer.getParameter('maxBounces'),
       transportMode: renderer.getParameter('transportMode'),
+      environmentRadiance: renderer.getParameter('environmentRadiance'),
+      environmentMap: renderer.getParameter('environmentMap'),
       emitterSampling: renderer.getParameter('emitterSampling'),
       emitterSelection: renderer.getParameter('emitterSelection'),
       progressive: renderer.getParameter('progressive'),
       shadows: renderer.getParameter('shadows'),
+      filteredCutouts: renderer.getParameter('filteredCutouts'),
+      transmissiveShadows: renderer.getParameter('transmissiveShadows'),
       resolutionScale: renderer.getParameter('resolutionScale'),
       minimumResolutionScale: renderer.getParameter('minimumResolutionScale'),
       adaptiveResolution: renderer.getParameter('adaptiveResolution'),
       targetFrameTimeMilliseconds: renderer.getParameter('targetFrameTimeMilliseconds'),
+      previousFrameExecutionMilliseconds: renderer.getParameter(
+        'previousFrameExecutionMilliseconds'
+      ),
+      rayBatchPhaseCount: renderer.getParameter('rayBatchPhaseCount'),
       temporalReprojection: renderer.getParameter('temporalReprojection'),
       shadowSamplesPerFrame: renderer.getParameter('shadowSamplesPerFrame')
     });
@@ -94,6 +108,11 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
         };
       })
     };
+  }
+
+  /** Reads the submitted ray-tracing history before presentation. */
+  readRadiance(frame: ANARIFrame): Promise<ANARIFrameRadiance | null> {
+    return this.renderer.readRadiance(frame.id);
   }
 
   destroyFrame(frame: ANARIFrame): void {

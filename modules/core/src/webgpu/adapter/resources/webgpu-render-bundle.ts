@@ -8,7 +8,7 @@ import type {
   RenderPassBindingOptions,
   RenderPassDrawOptions,
   RenderBundleEncoderProps,
-  ResourceProps,
+  DeviceResourceProps,
   VertexArray
 } from '../../../index';
 import {
@@ -35,9 +35,9 @@ export class WebGPURenderBundle extends RenderBundle {
   /**
    * Wraps a finished native WebGPU render bundle.
    * @param device - Device that owns the native bundle.
-   * @param props - Resource metadata and the finished native handle.
+   * @param props - DeviceResource metadata and the finished native handle.
    */
-  constructor(device: WebGPUDevice, props: ResourceProps & {handle: GPURenderBundle}) {
+  constructor(device: WebGPUDevice, props: DeviceResourceProps & {handle: GPURenderBundle}) {
     super(device, props);
     this.device = device;
     this.handle = props.handle;
@@ -45,9 +45,7 @@ export class WebGPURenderBundle extends RenderBundle {
   }
 
   /** Releases the luma.gl resource wrapper. */
-  override destroy(): void {
-    this.destroyResource();
-  }
+  protected override destroyHandle(): void {}
 }
 
 /** WebGPU implementation of reusable draw-command recording. */
@@ -70,7 +68,7 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
   /**
    * Creates a native WebGPU render bundle encoder.
    * @param device - Device that records and owns the finished bundle.
-   * @param props - Resource metadata and render-attachment compatibility requirements.
+   * @param props - DeviceResource metadata and render-attachment compatibility requirements.
    */
   constructor(device: WebGPUDevice, props: RenderBundleEncoderProps = {}) {
     super(device, props);
@@ -90,9 +88,8 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
   }
 
   /** Releases the encoder without producing a render bundle. */
-  override destroy(): void {
+  protected override destroyHandle(): void {
     this.popRecordingErrorScope('destroy');
-    this.destroyResource();
   }
 
   /**

@@ -16,8 +16,6 @@ export class NullFence extends Fence {
     this.device = device;
   }
 
-  override destroy(): void {}
-
   isSignaled(): boolean {
     return true;
   }

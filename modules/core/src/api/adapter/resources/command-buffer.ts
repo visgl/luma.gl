@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /**
  * Represents the finished contents of a CommandEncoder.
@@ -14,16 +14,16 @@ import {Resource, ResourceProps} from './resource';
  * and `userData`. Command buffers are immutable, are submitted once, and may be retained only for
  * debugging or application bookkeeping.
  */
-export abstract class CommandBuffer extends Resource<ResourceProps> {
+export abstract class CommandBuffer extends DeviceResource<DeviceResourceProps> {
   override get [Symbol.toStringTag](): string {
     return 'CommandBuffer';
   }
 
-  constructor(device: Device, props: ResourceProps) {
+  constructor(device: Device, props: DeviceResourceProps) {
     super(device, props, CommandBuffer.defaultProps);
   }
 
-  static override defaultProps: Required<ResourceProps> = {
-    ...Resource.defaultProps
+  static override defaultProps: Required<DeviceResourceProps> = {
+    ...DeviceResource.defaultProps
   };
 }

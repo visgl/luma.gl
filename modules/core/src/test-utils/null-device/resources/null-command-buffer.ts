@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {
-  ResourceProps,
+  DeviceResourceProps,
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
@@ -18,7 +18,7 @@ export class NullCommandBuffer extends CommandBuffer {
   readonly device: NullDevice;
   readonly handle: null = null;
 
-  constructor(device: NullDevice, props: ResourceProps) {
+  constructor(device: NullDevice, props: DeviceResourceProps) {
     super(device, props);
     this.device = device;
   }

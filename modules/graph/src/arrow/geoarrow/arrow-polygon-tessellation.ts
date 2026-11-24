@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {tessellateGeoArrowPolygons} from '@math.gl/arrow/geoarrow-utils';
+import {tessellateGeoArrowPolygons} from '@math.gl/geometry/arrow';
 import {
   DataType,
   DenseUnion,

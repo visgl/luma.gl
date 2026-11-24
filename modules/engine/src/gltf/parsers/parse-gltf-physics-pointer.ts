@@ -16,7 +16,7 @@ export function isGLTFPhysicsPropertyPointer(pointer: string): boolean {
     if (Number(component[2]) < size) return isGLTFPhysicsPropertyPointer(component[1]);
   }
   return (
-    /^\/extensions\/KHR_implicit_shapes\/shapes\/\d+\/(sphere\/radius|box\/size|(?:capsule|cylinder)\/(height|radiusBottom|radiusTop)|plane\/(sizeX|sizeZ|doubleSided))$/.test(
+    /^(?:\/extensions\/KHR_implicit_shapes)?\/shapes\/\d+\/(sphere\/radius|box\/size|(?:capsule|cylinder)\/(height|radiusBottom|radiusTop)|plane\/(sizeX|sizeZ|doubleSided))$/.test(
       pointer
     ) ||
     /^\/nodes\/\d+\/extensions\/KHR_physics_rigid_bodies\/(motion\/(isKinematic|mass|centerOfMass|inertiaDiagonal|inertiaOrientation|linearVelocity|angularVelocity|gravityFactor)|joint\/enableCollision)$/.test(

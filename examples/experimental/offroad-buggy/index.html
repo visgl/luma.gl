@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Off-road buggy · luma.gl</title>
+  <link rel="stylesheet" href="./dashboard.css">
+</head>
+<body>
+  <canvas id="view" aria-label="Off-road buggy driving across uneven terrain"></canvas>
+  <div id="info"></div>
+  <section id="dashboard" hidden>
+    <div class="speed"><strong id="speed">—</strong> km/h <output id="status">Starting WebGPU…</output></div>
+    <div class="instruments">
+      <section><h2>Chassis attitude</h2>
+        <div class="attitude" aria-hidden="true"><div id="horizon"></div><i></i></div>
+        <div id="angles">Pitch — · Roll —</div>
+      </section>
+      <section><h2>Spring travel</h2><div id="suspension"></div></section>
+    </div>
+    <h2>Body motion <small>last 6 s</small></h2>
+    <canvas id="motion" width="620" height="80" aria-label="Recent pitch and roll around level, with a range of plus or minus 30 degrees"></canvas>
+    <div class="legend"><span>Pitch</span><span>Roll</span></div>
+    <h2>Axle load</h2>
+    <div class="axle-track" aria-hidden="true"><i id="front-load"></i></div>
+    <div id="load">Awaiting wheel contact</div>
+    <output id="terrain-tiles" aria-label="Resident collision terrain tiles"></output>
+    <div class="actions"><button id="reset">Reset</button><button id="camera">Chase camera</button><button id="demo">Drive manually</button><button id="sound">Enable sound</button></div>
+  </section>
+  <template id="wheel-instrument">
+    <div class="wheel-instrument">
+      <svg viewBox="0 0 24 40" aria-hidden="true" focusable="false">
+        <path class="shock-guide" d="M12 3V36 M2 7h2 m-2 7h2 m-2 7h2 m-2 7h2 m-2 7h2"/>
+        <g class="shock-coil">
+          <path d="M6 3h12 M12 3v2 L18 7 Q20 8 18 9 L6 12 Q4 13 6 14 L18 17 Q20 18 18 19 L6 22 Q4 23 6 24 L18 27 Q20 28 18 29 L6 32 Q4 33 6 34 L12 36 M6 36h12"/>
+        </g>
+      </svg>
+      <span class="wheel-label"></span><span class="wheel-travel">—</span>
+    </div>
+  </template>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

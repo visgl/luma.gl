@@ -7,7 +7,7 @@ import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrameDictionary} from './gpu-data-frame';
 import type {GPUDataFrameQuery} from './gpu-data-frame-query';
-import {getGPUExpressionColumnNames} from './gpu-expression';
+import {getGPUExpressionResultFormats} from './gpu-expression';
 import {
   compileGPUDataFrameGroupedAggregation,
   type CompiledGPUDataFrameGroupedAggregation
@@ -37,7 +37,12 @@ export type GPUDataFrameColumnNamesOfFormat<
 }[SelectedColumns];
 
 /** Optional dense key-domain size when source categorical labels cannot establish it. */
-export type GPUDataFrameGroupByOptions = Readonly<{groupCount?: number}>;
+export type GPUDataFrameGroupByOptions = Readonly<{
+  /** Dense category count when no dictionary supplies it. */
+  groupCount?: number;
+  /** Maximum temporary bytes for a partition of AVG accumulators. */
+  maxMeanScratchBytes?: number;
+}>;
 
 /** One named count or a float32 statistic referencing a selected numerical column. */
 export type GPUDataFrameAggregationValue<
@@ -45,6 +50,7 @@ export type GPUDataFrameAggregationValue<
   SelectedColumns extends keyof T & string
 > =
   | 'count'
+  | Readonly<{count: SelectedColumns}>
   | Readonly<{sum: GPUDataFrameColumnNamesOfFormat<T, SelectedColumns, 'float32'>}>
   | Readonly<{min: GPUDataFrameColumnNamesOfFormat<T, SelectedColumns, 'float32'>}>
   | Readonly<{max: GPUDataFrameColumnNamesOfFormat<T, SelectedColumns, 'float32'>}>
@@ -61,7 +67,9 @@ export type GPUDataFrameGroupedAggregationResult<
   Key extends string,
   Definitions extends Readonly<Record<string, unknown>>
 > = Record<Key, 'uint32'> & {
-  [Name in keyof Definitions & string]: Definitions[Name] extends 'count' ? 'uint32' : 'float32';
+  [Name in keyof Definitions & string]: Definitions[Name] extends 'count' | {count: string}
+    ? 'uint32'
+    : 'float32';
 };
 
 /**
@@ -82,6 +90,8 @@ export class GPUDataFrameGroupByQuery<
   readonly key: Key;
   /** Number of output groups inferred from labels or supplied explicitly by the caller. */
   readonly groupCount: number;
+  /** Optional temporary AVG count budget. */
+  readonly maxMeanScratchBytes?: number;
 
   /** Validates grouping metadata entirely on the CPU. @internal */
   constructor(
@@ -113,6 +123,13 @@ export class GPUDataFrameGroupByQuery<
       throw new Error('GPUDataFrame grouping requires a positive uint32 group count');
     }
 
+    if (
+      options.maxMeanScratchBytes !== undefined &&
+      (!Number.isSafeInteger(options.maxMeanScratchBytes) || options.maxMeanScratchBytes < 4)
+    ) {
+      throw new Error('GPUDataFrame mean scratch budget requires at least four bytes');
+    }
+    this.maxMeanScratchBytes = options.maxMeanScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -129,7 +146,7 @@ export class GPUDataFrameGroupByQuery<
       Key,
       Definitions,
       Source
-    >(this.query, this.key, this.groupCount, definitions);
+    >(this.query, this.key, this.groupCount, definitions, this.maxMeanScratchBytes);
   }
 }
 
@@ -147,6 +164,8 @@ export class GPUDataFrameGroupedAggregationQuery<
   readonly key: Key;
   /** Complete category domain and grouped output row count. */
   readonly groupCount: number;
+  /** Optional temporary AVG count budget. */
+  readonly maxMeanScratchBytes?: number;
   /** Named operations normalized in the caller's original object insertion order. */
   readonly definitions: readonly GPUDataFrameAggregationDefinition[];
 
@@ -155,8 +174,10 @@ export class GPUDataFrameGroupedAggregationQuery<
     query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
     key: Key,
     groupCount: number,
-    definitions: Definitions
+    definitions: Definitions,
+    maxMeanScratchBytes?: number
   ) {
+    this.maxMeanScratchBytes = maxMeanScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -182,20 +203,28 @@ export class GPUDataFrameGroupedAggregationQuery<
       this.key,
       this.groupCount,
       this.definitions,
-      graph
+      graph,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      this.maxMeanScratchBytes
     );
   }
 }
 
-/** Normalizes a closed set of operation shapes without accepting arbitrary shader expressions. */
-function normalizeGPUDataFrameAggregations<
+/** Normalizes a closed set of operation shapes without accepting arbitrary shader expressions. @internal */
+export function normalizeGPUDataFrameAggregations<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string,
   Source extends GPUTypeMap
 >(
-  query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
-  key: string,
-  definitions: GPUDataFrameAggregationDefinitions<Logical, SelectedColumns>
+  query: Pick<
+    GPUDataFrameQuery<Logical, SelectedColumns, Source>,
+    'source' | 'selectedColumns' | 'derivedColumns'
+  >,
+  outputKey: string | undefined,
+  definitions: Readonly<Record<string, unknown>>
 ): GPUDataFrameAggregationDefinition[] {
   const entries = Object.entries(definitions);
   if (entries.length === 0) {
@@ -205,7 +234,7 @@ function normalizeGPUDataFrameAggregations<
   const formats = getGPUDataFrameQueryColumnFormats(query);
   const normalized: GPUDataFrameAggregationDefinition[] = [];
   for (const [name, value] of entries) {
-    if (name.length === 0 || name === key) {
+    if (name.length === 0 || name === outputKey) {
       throw new Error('GPUDataFrame aggregation names must be distinct from the group key');
     }
     if (value === 'count') {
@@ -221,13 +250,19 @@ function normalizeGPUDataFrameAggregations<
       throw new Error(`GPUDataFrame aggregation "${name}" requires exactly one operation`);
     }
     const [operation, column] = operations[0];
-    if (operation !== 'sum' && operation !== 'min' && operation !== 'max' && operation !== 'mean') {
+    if (
+      operation !== 'count' &&
+      operation !== 'sum' &&
+      operation !== 'min' &&
+      operation !== 'max' &&
+      operation !== 'mean'
+    ) {
       throw new Error(`GPUDataFrame aggregation "${name}" has an unsupported operation`);
     }
     if (typeof column !== 'string' || !query.selectedColumns.includes(column as SelectedColumns)) {
       throw new Error(`GPUDataFrame aggregation "${name}" requires a selected input column`);
     }
-    if (formats.get(column) !== 'float32') {
+    if (operation !== 'count' && formats.get(column) !== 'float32') {
       throw new Error(`GPUDataFrame aggregation "${name}" requires a float32 input column`);
     }
     normalized.push(Object.freeze({name, operation, column}));
@@ -240,7 +275,9 @@ function normalizeGPUDataFrameAggregations<
 function getGPUDataFrameQueryColumnFormats<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string
->(query: GPUDataFrameQuery<Logical, SelectedColumns, any>): Map<string, string | undefined> {
+>(
+  query: Pick<GPUDataFrameQuery<Logical, SelectedColumns, any>, 'source' | 'derivedColumns'>
+): Map<string, string | undefined> {
   const formats = new Map<string, string | undefined>(
     query.source.schema.fields.map(
       field =>
@@ -249,8 +286,10 @@ function getGPUDataFrameQueryColumnFormats<
   );
 
   for (const definition of query.derivedColumns) {
-    const firstReference = getGPUExpressionColumnNames(definition.expression)[0];
-    formats.set(definition.name, definition.format ?? formats.get(firstReference) ?? 'float32');
+    const inferred = getGPUExpressionResultFormats(definition.expression.node, formats)
+      .values()
+      .next().value;
+    formats.set(definition.name, definition.format ?? inferred ?? 'float32');
   }
 
   return formats;

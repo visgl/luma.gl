@@ -56,7 +56,7 @@ For scenes with both stable and frequently changing draws, split the work into m
 
 ### `RenderBundleEncoderProps`
 
-`RenderBundleEncoderProps` extends [`ResourceProps`](resource.md#resourceprops). It includes only resource metadata and the attachment compatibility fields required to record a bundle; render-pass setup properties are not accepted.
+`RenderBundleEncoderProps` extends [`DeviceResourceProps`](device-resource.md#deviceresourceprops). It includes only resource metadata and the attachment compatibility fields required to record a bundle; render-pass setup properties are not accepted.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |

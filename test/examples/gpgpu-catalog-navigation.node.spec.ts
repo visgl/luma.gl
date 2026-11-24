@@ -146,10 +146,10 @@ describe('GPGPU example catalog navigation', () => {
     collectGraphCategories(documentationTableOfContents);
     expect(graphCategories).toHaveLength(1);
     const crossfilterCategory = graphCategories[0].items.find(
-      entry => typeof entry !== 'string' && entry.label === 'GPU Crossfilter'
+      entry => typeof entry !== 'string' && entry.label === '@luma.gl/graph/gpu-crossfilter'
     );
     expect(crossfilterCategory).toBeDefined();
-    expect(crossfilterCategory?.items).toContain('api-reference/experimental/gpu-crossfilter');
+    expect(crossfilterCategory).toMatchObject({id: 'api-reference/experimental/gpu-crossfilter'});
 
     const documentationSource = readFileSync(
       path.join(DOCUMENTATION_DIRECTORY, 'api-reference/experimental/gpu-crossfilter.md'),
@@ -260,11 +260,11 @@ describe('GPGPU example catalog navigation', () => {
     ) as ExampleSidebarEntry[];
     const officialModules = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Modules'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Packages'
     );
     const shaderProgramming = officialModules?.items.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Shaders'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === '@luma.gl/shaders'
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 

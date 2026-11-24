@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-/** Charge from zero over 1.6 seconds, hold at full for 0.35 seconds, then repeat. */
-export function getShotCharge(elapsedMilliseconds: number): number {
-  const cycle = Math.max(0, elapsedMilliseconds) % 1950;
-  return Math.min(100, (cycle / 1600) * 100);
+/** Add charge to the selected power, pause at full, then restart at the selection. */
+export function getShotCharge(elapsedMilliseconds: number, selectedPower = 0): number {
+  const ramp = (100 - selectedPower) * 16;
+  const pause = selectedPower === 0 ? 350 : 650;
+  const cycle = Math.max(0, elapsedMilliseconds) % (ramp + pause);
+  return Math.min(100, selectedPower + cycle / 16);
 }
 
 /** Only a completed full rack auto-resets; single-ball practice remains repeatable. */

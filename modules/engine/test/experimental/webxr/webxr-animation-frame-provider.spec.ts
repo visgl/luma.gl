@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {WebXRAnimationFrameProvider} from '@luma.gl/engine/experimental/webxr';
+import {WebXRAnimationFrameProvider} from '@luma.gl/engine/experimental-webxr';
 
 it('webxr#WebXRAnimationFrameProvider delegates to XRSession', () => {
   let scheduledCallback: XRFrameRequestCallback | null = null;

@@ -25,6 +25,7 @@ export type {ScenegraphPhysicsScene, ScenegraphPhysicsSessionCapture} from './sc
 export {PhysicsController} from './physics-controller';
 export type {
   PhysicsNodeReference,
+  PhysicsVehicleOptions,
   PhysicsJointOptions,
   PhysicsBodyOptions,
   PhysicsControllerProps,
@@ -32,3 +33,4 @@ export type {
   PhysicsBodyPose,
   PhysicsUpdateResult
 } from './physics-controller';
+export {ScenegraphRagdoll} from './scenegraph-ragdoll';

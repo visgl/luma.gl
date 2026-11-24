@@ -14,6 +14,7 @@ import type {
   ExternalTexture,
   RenderPass,
   RenderPassProps,
+  ComputeShaderLayout,
   Texture,
   TextureFormat,
   TextureView
@@ -612,6 +613,22 @@ export type GPUCommandGraphResourceSummary = Readonly<{
   depth?: number;
 }>;
 
+/** Static description of a compute kernel supplied by a command node. */
+export type GPUCommandGraphKernelMetadata = Readonly<{
+  entryPoint: string;
+  workgroupSize: readonly [number, number, number];
+  bindings: readonly Readonly<
+    Pick<ComputeShaderLayout['bindings'][number], 'name' | 'type' | 'group' | 'location'>
+  >[];
+  source?: string;
+}>;
+
+/** Controls which kernel details a compiled graph exposes to inspectors. */
+export type GPUCommandGraphCompileOptions = {
+  /** Collect declared kernel metadata. Use 'source' to also include WGSL text. */
+  kernelMetadata?: 'layout' | 'source';
+};
+
 /** Immutable per-node workload entry in a compiled graph preflight report. */
 export type GPUCommandGraphNodePreflight = Readonly<
   Required<Omit<GPUCommandGraphNodeWorkloadEstimate, 'operation' | 'variant'>> & {
@@ -619,6 +636,7 @@ export type GPUCommandGraphNodePreflight = Readonly<
     type: GPUCommandGraphNodeType;
     description?: string;
     resources?: readonly GPUCommandGraphResourceSummary[];
+    kernel?: GPUCommandGraphKernelMetadata;
     operation?: string;
     variant?: string;
     publication?: Readonly<GPUCommandGraphNodePublication>;
@@ -651,6 +669,8 @@ export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase<
 > & {
   /** Node discriminator. */
   type: 'compute';
+  /** Optional kernel details for graph inspection. */
+  kernel?: GPUCommandGraphKernelMetadata;
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
   /** Creates reusable node resources through asynchronous backend compilation when available. */

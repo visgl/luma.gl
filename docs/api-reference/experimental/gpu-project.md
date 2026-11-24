@@ -275,7 +275,7 @@ still rounds at the final origin-relative output boundary.
 
 ## Batch-preserving CPU/GPU table projection
 
-`ProjectionTableTransform` from `@luma.gl/graph/gpu-project/crs` uses a ready
+`ProjectionTableTransform` from `@luma.gl/graph/gpu-project-crs` uses a ready
 `prepareCRSProjection()` result for explicit CPU or GPU execution. This first table adapter is
 strictly 2D and requires the default raw-binary64 input format (`uint32x4` on GPU).
 It retains the prepared CPU transform, original spatial references and sampled GPU error metadata.
@@ -286,7 +286,7 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   prepareCRSProjection,
   ProjectionTableTransform
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = prepareCRSProjection({
   from: 'EPSG:4326',
@@ -456,13 +456,13 @@ the application.
 ## Optional math.gl CRS planner
 
 Install `@math.gl/geospatial` version `~5.0.0-beta.1` and import the CPU planner from
-`@luma.gl/graph/gpu-project/crs`. This optional peer is not loaded by the GPU execution
+`@luma.gl/graph/gpu-project-crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
 The default is raw binary64 `uint32x4` input and double-single output.
 
 ```ts
-import {planCRSProjection} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection} from '@luma.gl/graph/gpu-project-crs';
 import {GPUProjectionProgram} from '@luma.gl/graph/gpu-project';
 
 const result = planCRSProjection({
@@ -500,8 +500,8 @@ use the authoritative CPU transform as an opaque oracle, and always produce adap
 They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
-import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
-import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project/crs';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection-projections-lazy';
+import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = await prepareCRSProjectionAsync({
   engine: lazyProjectionEngine,
@@ -765,7 +765,7 @@ Both `planCRSProjection()` and `planProjectionPipeline()` return structured `uns
 by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
 `reasons` contain the same planning diagnostics, including missing bounds, unavailable providers,
 and failed approximation budgets. This changes failure handling, not which semantics are accepted.
-The error class is exported from the optional `gpu-project/crs` entry, not the execution core.
+The error class is exported from the optional `gpu-project-crs` entry, not the execution core.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
 `true` to use declared CRS axes and directions. Native plans retain declared coordinate units
@@ -780,7 +780,7 @@ provider's output at the source-domain center; final Float32 rounding is additio
 
 ```ts
 import {parsePROJString} from '@math.gl/geospatial/crs';
-import {planProjectionPipeline} from '@luma.gl/graph/gpu-project/crs';
+import {planProjectionPipeline} from '@luma.gl/graph/gpu-project-crs';
 
 const result = planProjectionPipeline({
   pipeline: parsePROJString(`+proj=pipeline
@@ -910,7 +910,7 @@ import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {
   runGPUProjectionBenchmark,
   runProjectionBenchmark
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 
 const options = {
   projection: createWebMercatorProjection(),
@@ -952,7 +952,7 @@ const report = await runProjectionProgramBenchmark(device, {
 });
 ```
 
-Import this helper from `@luma.gl/graph/gpu-project/benchmarks`. All variants receive the
+Import this helper from `@luma.gl/graph/gpu-project-benchmarks`. All variants receive the
 same raw binary64 input rows and must share output precision; origin-relative output must also
 share its destination origin. Arithmetic metadata remains separate from output storage. Budgets
 are Euclidean destination-unit errors including native formula, fitting, and output rounding.
@@ -1005,7 +1005,7 @@ not a proj4js wrapper or the native C++ PROJ library. Provider construction and 
 are outside CPU execution timing; callback/provider allocations and consumer writes are inside it.
 
 Pass `cpuVariants: createCRSProjectionCPUBenchmarks({projection, provider, isValid})`, importing
-the helper from `/gpu-project/crs`, to compare the retained transform's `projectToSync`,
+the helper from `/gpu-project-crs`, to compare the retained transform's `projectToSync`,
 `projectFlatSync`, and `ProjectionBuffer` contiguous, strided and column APIs. `provider` should
 include the actual package version. `isValid` must match the oracle's finite/domain predicate.
 All six API/layout baselines run both consumer modes. Their domain checks, batch input packing,
@@ -1048,7 +1048,7 @@ The benchmark does not automatically select arithmetic or relax application tole
 
 ### Production table-consumer benchmarks
 
-`runProjectionTableBenchmark()` from the optional `/gpu-project/benchmarks` entry point compares
+`runProjectionTableBenchmark()` from the optional `/gpu-project-benchmarks` entry point compares
 the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` materialization:
 
 ```typescript
@@ -1203,7 +1203,7 @@ upload data or submit commands. Those operations remain caller-owned.
 
 ## Fixed-arithmetic routing measurements and execution selection
 
-The optional `gpu-project/benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
+The optional `gpu-project-benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
 options)`. Supply one double-single plan, coordinates, independent oracle and explicit error budget.
 It uses identical coefficients for scan/index full-program qualification, then times lookup-only
 shaders and verifies their selected IDs agree before/after measurement. Reports include index

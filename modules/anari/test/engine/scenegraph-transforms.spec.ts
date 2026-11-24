@@ -21,7 +21,7 @@ import {
   type PreparedScene,
   type ShadowShaderProps
 } from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, test, vi} from 'vitest';
 
 const camera = {viewMatrix: new Matrix4(), projectionMatrix: new Matrix4(), position: [0, 0, 2]};

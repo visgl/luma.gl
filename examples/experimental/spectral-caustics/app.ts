@@ -21,7 +21,8 @@ import {
   type SpectralCausticsProps
 } from '@luma.gl/anari';
 import type {ShaderModule} from '@luma.gl/shaders';
-import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 80;

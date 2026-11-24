@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {ScenegraphPhysicsMotion} from '@luma.gl/engine/physics';
 import {
   parseGLTFPhysics,

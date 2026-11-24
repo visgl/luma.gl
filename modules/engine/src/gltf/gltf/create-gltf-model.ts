@@ -26,7 +26,7 @@ import {
 } from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {gpuAnimation, pbrMaterial, skin} from '@luma.gl/shaders';
-import type {NumericArray} from '@math.gl/core';
+import type {NumericArray} from '@math.gl/core/types';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import type {GLTFCrowdGPUAnimationLayout} from './gltf-gpu-animation';
 
@@ -549,6 +549,10 @@ export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOp
 
   const pbrMaterialProps = {...options.parsedPPBRMaterial.uniforms};
   delete pbrMaterialProps.camera;
+  // Environment controls belong to the scene uniforms of each model, not to the material.
+  delete pbrMaterialProps.environmentIntensity;
+  delete pbrMaterialProps.environmentRotation;
+  delete pbrMaterialProps.environmentMipCount;
   const materialBindings = Object.fromEntries(
     Object.entries({
       ...pbrMaterialProps,

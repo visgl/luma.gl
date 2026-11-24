@@ -159,10 +159,11 @@ irradiance, then bind the result to PBR materials. Reset after bake inputs chang
 Baked light can include direct illumination: disable corresponding live contributions to
 avoid counting them twice. Baking does not replace dynamic-object lighting or screen-space effects.
 
-The [Lightmap Baking example](/examples/api/lightmap-baking) keeps two connected rooms,
-colored objects and warm/cool lights static while the camera orbits. It combines punctual-light
-samples with `sampleLightmapEnvironment` directional samples, including shadow visibility.
-This captures direct environment illumination, not multi-bounce color bleeding.
+The [Lightmap Baking example](/examples/api/lightmap-baking) combines shadowed
+punctual lights and directional samples from `sampleLightmapEnvironment`. On
+WebGPU it also traces two diffuse bounces for indirect color bleed. The
+[lightmaps guide](./features/lightmaps.mdx) walks through baking a glTF scene
+and reloading its HDR result.
 
 Use `readLightmapData` and `encodeLightmapData` for explicit HDR export; reload with
 `decodeLightmapData` and `createLightmapFromData`. The returned result owns its GPU texture;

@@ -10,7 +10,7 @@ import {
 } from '@luma.gl/engine/gltf';
 import {describe, expect, test} from 'vitest';
 import {GroupNode, ScenegraphNode} from '@luma.gl/engine';
-import {Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
 
 function makeController(definition: GLTFBillboardDefinition = {}, allowLegacyYAxis = false) {
   const leaf = new ScenegraphNode();

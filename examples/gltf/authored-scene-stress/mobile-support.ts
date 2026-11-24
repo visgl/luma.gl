@@ -4,9 +4,19 @@
 
 import type {ExampleSupportDefinition} from '../../example-support';
 
-export default {
+/** Device policy shared by both authored physics examples. */
+const authoredSceneStressSupport = {
   id: 'gltf/authored-scene-stress',
   mobileMode: 'full',
   mobileProfile: 'standard',
   requirements: {backends: ['webgpu']}
+} satisfies ExampleSupportDefinition;
+
+export default authoredSceneStressSupport;
+
+/** Catalog alias for the separate marionette entry point in this workspace. */
+export const marionetteTheaterSupport = {
+  ...authoredSceneStressSupport,
+  id: 'gltf/marionette-theater',
+  sourceDirectory: 'gltf/authored-scene-stress'
 } satisfies ExampleSupportDefinition;

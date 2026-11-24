@@ -25,6 +25,7 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.CULL_FACE]: false,
   [GL.CULL_FACE_MODE]: GL.BACK,
   [GL.DEPTH_TEST]: false,
+  [GL.DEPTH_CLAMP_EXT]: false,
   [GL.DEPTH_CLEAR_VALUE]: 1,
   [GL.DEPTH_FUNC]: GL.LESS,
   [GL.DEPTH_RANGE]: new Float32Array([0, 1]), // TBD
@@ -40,6 +41,7 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.GENERATE_MIPMAP_HINT]: GL.DONT_CARE,
   [GL.LINE_WIDTH]: 1,
   [GL.POLYGON_OFFSET_FILL]: false,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: 0,
   [GL.POLYGON_OFFSET_FACTOR]: 0,
   [GL.POLYGON_OFFSET_UNITS]: 0,
   [GL.SAMPLE_ALPHA_TO_COVERAGE]: false,
@@ -89,7 +91,11 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.UNPACK_IMAGE_HEIGHT]: 0,
   [GL.UNPACK_SKIP_PIXELS]: 0,
   [GL.UNPACK_SKIP_ROWS]: 0,
-  [GL.UNPACK_SKIP_IMAGES]: 0
+  [GL.UNPACK_SKIP_IMAGES]: 0,
+
+  // EXT_clip_control: the WebGL defaults. Only changed when the extension is present.
+  [GL.CLIP_ORIGIN_EXT]: GL.LOWER_LEFT_EXT,
+  [GL.CLIP_DEPTH_MODE_EXT]: GL.NEGATIVE_ONE_TO_ONE_EXT
 };
 
 // SETTER TABLES - ENABLES SETTING ANY PARAMETER WITH A COMMON API
@@ -172,6 +178,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl: WebGL2RenderingContext, value) => gl.lineWidth(value),
   [GL.POLYGON_OFFSET_FILL]: enable,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: 'polygonOffset',
   [GL.POLYGON_OFFSET_FACTOR]: 'polygonOffset',
   [GL.POLYGON_OFFSET_UNITS]: 'polygonOffset',
   [GL.RASTERIZER_DISCARD]: enable,
@@ -207,7 +214,14 @@ export const GL_PARAMETER_SETTERS = {
 
   // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
 
-  [GL.DEPTH_CLAMP_EXT]: enable,
+  [GL.DEPTH_CLAMP_EXT]: (gl: WebGL2RenderingContext, value: boolean) => {
+    if (gl.getExtension('EXT_depth_clamp')) enable(gl, value, GL.DEPTH_CLAMP_EXT);
+  },
+
+  // EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/
+
+  [GL.CLIP_ORIGIN_EXT]: 'clipControl',
+  [GL.CLIP_DEPTH_MODE_EXT]: 'clipControl',
 
   // WEBGL_provoking_vertex https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
 
@@ -344,6 +358,18 @@ function getValue(glEnum, values, cache) {
 
 // COMPOSITE_WEBGL_PARAMETER_
 export const GL_COMPOSITE_PARAMETER_SETTERS = {
+  clipControl: (gl: WebGL2RenderingContext, values, cache) => {
+    const extension = gl.getExtension('EXT_clip_control');
+    if (!extension) return;
+    const origin = getValue(GL.CLIP_ORIGIN_EXT, values, cache);
+    const depthMode = getValue(GL.CLIP_DEPTH_MODE_EXT, values, cache);
+    // Extension methods bypass the hooked context setters. Save both values for pop().
+    const {valueChanged} = gl.lumaState._updateCache({
+      [GL.CLIP_ORIGIN_EXT]: origin,
+      [GL.CLIP_DEPTH_MODE_EXT]: depthMode
+    });
+    if (valueChanged) extension.clipControlEXT(origin, depthMode);
+  },
   blendEquation: (gl: WebGL2RenderingContext, values, cache) =>
     gl.blendEquationSeparate(
       getValue(GL.BLEND_EQUATION_RGB, values, cache),
@@ -356,11 +382,26 @@ export const GL_COMPOSITE_PARAMETER_SETTERS = {
       getValue(GL.BLEND_SRC_ALPHA, values, cache),
       getValue(GL.BLEND_DST_ALPHA, values, cache)
     ),
-  polygonOffset: (gl: WebGL2RenderingContext, values, cache) =>
-    gl.polygonOffset(
-      getValue(GL.POLYGON_OFFSET_FACTOR, values, cache),
-      getValue(GL.POLYGON_OFFSET_UNITS, values, cache)
-    ),
+  polygonOffset: (gl: WebGL2RenderingContext, values, cache) => {
+    const factor = getValue(GL.POLYGON_OFFSET_FACTOR, values, cache);
+    const units = getValue(GL.POLYGON_OFFSET_UNITS, values, cache);
+    const clamp = getValue(GL.POLYGON_OFFSET_CLAMP_EXT, values, cache);
+    if (!clamp) {
+      gl.polygonOffset(factor, units);
+      return;
+    }
+    const extension = gl.getExtension('EXT_polygon_offset_clamp');
+    if (
+      extension &&
+      gl.lumaState._updateCache({
+        [GL.POLYGON_OFFSET_FACTOR]: factor,
+        [GL.POLYGON_OFFSET_UNITS]: units,
+        [GL.POLYGON_OFFSET_CLAMP_EXT]: clamp
+      }).valueChanged
+    ) {
+      extension.polygonOffsetClampEXT(factor, units, clamp);
+    }
+  },
   sampleCoverage: (gl: WebGL2RenderingContext, values, cache) =>
     gl.sampleCoverage(
       getValue(GL.SAMPLE_COVERAGE_VALUE, values, cache),
@@ -408,25 +449,24 @@ const BUFFER_BINDING_PARAMETERS: Record<number, GL> = {
 };
 
 // Setter functions intercepted for cache updates
+/** Single-value setters: fixed parameter, fixed boolean, or (parameter, value). */
+export type ScalarSetter = {parameter?: GL; value?: boolean};
+export const GL_SCALAR_SETTERS: Record<string, ScalarSetter> = {
+  enable: {value: true},
+  disable: {value: false},
+  pixelStorei: {},
+  hint: {},
+  clearDepth: {parameter: GL.DEPTH_CLEAR_VALUE},
+  clearStencil: {parameter: GL.STENCIL_CLEAR_VALUE},
+  cullFace: {parameter: GL.CULL_FACE_MODE},
+  depthFunc: {parameter: GL.DEPTH_FUNC},
+  depthMask: {parameter: GL.DEPTH_WRITEMASK},
+  frontFace: {parameter: GL.FRONT_FACE},
+  lineWidth: {parameter: GL.LINE_WIDTH}
+};
+
 export const GL_HOOKED_SETTERS = {
   // GENERIC SETTERS
-
-  enable: (update: UpdateFunc, capability: GL) =>
-    update({
-      [capability]: true
-    }),
-  disable: (update: UpdateFunc, capability: GL) =>
-    update({
-      [capability]: false
-    }),
-  pixelStorei: (update: UpdateFunc, pname: GL, value) =>
-    update({
-      [pname]: value
-    }),
-  hint: (update: UpdateFunc, pname: GL, value: GL) =>
-    update({
-      [pname]: value
-    }),
 
   // SPECIFIC SETTERS
   useProgram: (update: UpdateFunc, value) =>
@@ -509,29 +549,9 @@ export const GL_HOOKED_SETTERS = {
       [GL.COLOR_CLEAR_VALUE]: new Float32Array([r, g, b, a])
     }),
 
-  clearDepth: (update: UpdateFunc, depth: number) =>
-    update({
-      [GL.DEPTH_CLEAR_VALUE]: depth
-    }),
-
-  clearStencil: (update: UpdateFunc, s: number) =>
-    update({
-      [GL.STENCIL_CLEAR_VALUE]: s
-    }),
-
   colorMask: (update: UpdateFunc, r: number, g: number, b: number, a: number) =>
     update({
       [GL.COLOR_WRITEMASK]: [r, g, b, a]
-    }),
-
-  cullFace: (update: UpdateFunc, mode) =>
-    update({
-      [GL.CULL_FACE_MODE]: mode
-    }),
-
-  depthFunc: (update: UpdateFunc, func) =>
-    update({
-      [GL.DEPTH_FUNC]: func
     }),
 
   depthRange: (update: UpdateFunc, zNear: number, zFar: number) =>
@@ -539,25 +559,11 @@ export const GL_HOOKED_SETTERS = {
       [GL.DEPTH_RANGE]: new Float32Array([zNear, zFar])
     }),
 
-  depthMask: (update: UpdateFunc, mask: number) =>
-    update({
-      [GL.DEPTH_WRITEMASK]: mask
-    }),
-
-  frontFace: (update: UpdateFunc, face) =>
-    update({
-      [GL.FRONT_FACE]: face
-    }),
-
-  lineWidth: (update: UpdateFunc, width) =>
-    update({
-      [GL.LINE_WIDTH]: width
-    }),
-
   polygonOffset: (update: UpdateFunc, factor, units) =>
     update({
       [GL.POLYGON_OFFSET_FACTOR]: factor,
-      [GL.POLYGON_OFFSET_UNITS]: units
+      [GL.POLYGON_OFFSET_UNITS]: units,
+      [GL.POLYGON_OFFSET_CLAMP_EXT]: 0
     }),
 
   sampleCoverage: (update: UpdateFunc, value, invert) =>
@@ -625,19 +631,28 @@ export const GL_HOOKED_SETTERS = {
 // GETTER TABLE - FOR READING OUT AN ENTIRE CONTEXT
 
 const isEnabled = (gl: WebGL2RenderingContext, key) => gl.isEnabled(key);
+/** EXT_clip_control enums are only valid after the extension is enabled. */
+const getClipControlParameter = (gl: WebGL2RenderingContext, key) =>
+  gl.getExtension('EXT_clip_control') ? gl.getParameter(key) : GL_PARAMETER_DEFAULTS[key];
 
 // Exceptions for any keys that cannot be queried by gl.getParameters
 export const GL_PARAMETER_GETTERS = {
   [GL.BLEND]: isEnabled,
   [GL.CULL_FACE]: isEnabled,
   [GL.DEPTH_TEST]: isEnabled,
+  [GL.DEPTH_CLAMP_EXT]: (gl: WebGL2RenderingContext) =>
+    Boolean(gl.getExtension('EXT_depth_clamp')) && gl.isEnabled(GL.DEPTH_CLAMP_EXT),
   [GL.DITHER]: isEnabled,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: (gl: WebGL2RenderingContext) =>
+    gl.getExtension('EXT_polygon_offset_clamp') ? gl.getParameter(GL.POLYGON_OFFSET_CLAMP_EXT) : 0,
   [GL.POLYGON_OFFSET_FILL]: isEnabled,
   [GL.SAMPLE_ALPHA_TO_COVERAGE]: isEnabled,
   [GL.SAMPLE_COVERAGE]: isEnabled,
   [GL.SCISSOR_TEST]: isEnabled,
   [GL.STENCIL_TEST]: isEnabled,
-  [GL.RASTERIZER_DISCARD]: isEnabled
+  [GL.RASTERIZER_DISCARD]: isEnabled,
+  [GL.CLIP_ORIGIN_EXT]: getClipControlParameter,
+  [GL.CLIP_DEPTH_MODE_EXT]: getClipControlParameter
 };
 
 export const NON_CACHE_PARAMETERS = new Set([

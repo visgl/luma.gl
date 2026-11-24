@@ -9,9 +9,10 @@ import {parse} from 'yaml';
 import {expect, test} from 'vitest';
 import {
   BROWSER_TEST_GROUPS,
+  RENDER_CONFORMANCE_TEST_PATTERNS,
   getBrowserTestGroup,
   getReleaseQualificationExcludes,
-  PHYSICS_QUALIFICATION_TEST_PATTERNS
+  PHYSICS_ENDURANCE_TEST_PATTERNS
 } from '../utils/browser-test-groups';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -81,8 +82,8 @@ test('browser group selection fails closed on unknown values', () => {
   expect(() => getBrowserTestGroup('unknown')).toThrow();
 });
 
-test('release selection keeps simulation qualification in the ordinary physics suites', () => {
-  expect(getReleaseQualificationExcludes('release')).toEqual(PHYSICS_QUALIFICATION_TEST_PATTERNS);
+test('release selection keeps simulation qualification in the endurance suite', () => {
+  expect(getReleaseQualificationExcludes('release')).toEqual(PHYSICS_ENDURANCE_TEST_PATTERNS);
   expect(getReleaseQualificationExcludes('release')).toContain(
     'modules/graph/test/gpu-physics/domino-spiral.spec.ts'
   );
@@ -114,4 +115,64 @@ test('bare test-utils imports preserve adapter registration', async () => {
   });
   expect(result.outputFiles[0].text).toContain('registerAdapters');
   expect(result.warnings.filter(warning => warning.id === 'ignored-bare-import')).toEqual([]);
+});
+
+test('full material conformance remains scheduled and cannot silently omit a case', () => {
+  const workflow = parse(
+    readFileSync(new URL('../../.github/workflows/render-conformance.yml', import.meta.url), 'utf8')
+  );
+  expect(workflow.on.schedule).toHaveLength(1);
+  expect(workflow.on).toHaveProperty('workflow_dispatch');
+  expect(workflow.on.pull_request.paths).toEqual(
+    expect.arrayContaining([
+      'vitest.config.ts',
+      'test/utils/**',
+      'modules/anari/src/**',
+      'modules/anari/test/engine/ray-material*',
+      'modules/shaders/src/**',
+      'modules/core/src/**'
+    ])
+  );
+  const steps = workflow.jobs.conformance.steps;
+  expect(
+    steps.find((step: {name: string}) => step.name === 'Require WebGPU and WebGL presentation')
+  ).toBeDefined();
+  expect(
+    steps.find((step: {name: string}) => step.name === 'Require WebGPU and WebGL presentation').run
+  ).toBe('xvfb-run -a yarn test-presentation');
+  const command = steps.find(
+    (step: {name: string}) => step.name === 'Run full material matrix'
+  ).run;
+  expect(command).toContain('LUMA_TEST_BROWSER_GROUP=render-conformance');
+  expect(command).toContain('yarn test-headless');
+  const verification = steps.find(
+    (step: {name: string}) => step.name === 'Verify the entire matrix executed'
+  ).run;
+  expect(verification).toContain(`tests="${RENDER_CONFORMANCE_TEST_PATTERNS.length + 14}"`);
+  expect(verification).toContain('<skipped');
+  for (const path of RENDER_CONFORMANCE_TEST_PATTERNS) {
+    const source = readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+    if (
+      path.endsWith('ray-secondary-emitter-mis.spec.ts') ||
+      path.endsWith('ray-environment-lighting.spec.ts')
+    ) {
+      expect(source.match(/^it\.each\(/gm), path).toHaveLength(1);
+      expect(source.match(/^it\(/gm) ?? [], path).toHaveLength(
+        path.endsWith('ray-environment-lighting.spec.ts') ? 1 : 0
+      );
+    } else if (path.endsWith('gltf-area-lights-render.spec.ts')) {
+      expect(source.match(/^test\.each\(/gm), path).toHaveLength(2);
+    } else if (path.endsWith('geographic-renderer.spec.ts')) {
+      expect(source.match(/^test\(/gm), path).toHaveLength(1);
+    } else if (path.endsWith('animated-renderer.spec.ts')) {
+      expect(source).toContain("['webgpu', 'webgl']");
+      expect(source).toContain("['morph', 'skin', 'instances']");
+    } else if (path.endsWith('physical-renderer.spec.ts')) {
+      expect(source).toContain("['webgpu', 'webgl']");
+      expect(source).toContain("['materials', 'transmission']");
+    } else {
+      expect(source.match(/^it\(/gm), path).toHaveLength(1);
+    }
+  }
+  expect(getBrowserTestGroup('render-conformance')).toBe('render-conformance');
 });

@@ -14,7 +14,7 @@ import {
   assertPolygonGPUVectorInputs,
   POLYGON_GPU_INPUT_SCHEMA,
   type PolygonBatchProps
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import {
   getPolygonPickingParameters,
   mergePolygonShaderModules,
