@@ -138,8 +138,12 @@ class GPUDataBufferOwner {
   /** Transfers backing-buffer ownership to another GPUData chunk over the same buffer. */
   transferBufferOwnership(target: GPUDataBufferOwner): void {
     if (target === this) return;
-    // Ownership moves to a borrower of the same buffer without changing the reference count.
-    assert(target.buffer === this.buffer && !target.bufferOwnership);
+    assert(
+      target.buffer === this.buffer,
+      'GPUData ownership can only be transferred to the same buffer'
+    );
+    // Ownership moves to a borrower without changing the reference count.
+    assert(!target.bufferOwnership);
     target.bufferOwnership = this.bufferOwnership;
     this.bufferOwnership = undefined;
   }

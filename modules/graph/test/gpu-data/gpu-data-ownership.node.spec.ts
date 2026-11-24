@@ -42,3 +42,32 @@ test('GPUData borrowers cannot fabricate or overwrite ownership references', () 
   owner.destroy();
   expect(buffer.destroyed).toBe(true);
 });
+
+test('transferBufferOwnership explains a buffer mismatch', () => {
+  const device = new NullDevice({});
+  const owner = new GPUData({
+    buffer: device.createBuffer({data: new Uint32Array(1)}),
+    format: 'uint32',
+    length: 1,
+    ownsBuffer: true
+  });
+  const other = new GPUData({
+    buffer: device.createBuffer({data: new Uint32Array(1)}),
+    format: 'uint32',
+    length: 1
+  });
+  expect(() => owner.transferBufferOwnership(other)).toThrow(/same buffer/);
+});
+
+test('transferBufferOwnership rejects a target that already owns a reference', () => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({data: new Uint32Array(1)});
+  const owner = new GPUData({buffer, format: 'uint32', length: 1, ownsBuffer: true});
+  const retained = new GPUData({buffer, format: 'uint32', length: 1});
+  owner.retainBufferOwnership(retained);
+  expect(() => owner.transferBufferOwnership(retained)).toThrow();
+  owner.destroy();
+  expect(buffer.destroyed).toBe(false);
+  retained.destroy();
+  expect(buffer.destroyed).toBe(true);
+});

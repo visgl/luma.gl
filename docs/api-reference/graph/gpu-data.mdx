@@ -187,7 +187,8 @@ of a buffer shared across the resulting batch groups can be destroyed in any ord
 ### `transferBufferOwnership(target): void`
 
 Moves this chunk's ownership reference to a borrowed chunk over the same buffer. The source
-becomes borrowed; no extra reference is created.
+becomes borrowed; no extra reference is created. Throws when the target views a different
+buffer or already owns a reference. Transferring to the same chunk does nothing.
 
 ### `destroy(): void`
 

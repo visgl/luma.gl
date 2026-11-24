@@ -21,6 +21,11 @@
 - Opt-in GPU BVH refits for batched ray and sphere casts against sphere and box
   colliders, with indexed and direct scan comparisons in Physics Batch Lab.
 
+- `GPUTable.detachBatches()` and `packBatches()` give each view of a buffer shared by both
+  batch groups its own reference, so the groups can be destroyed in any order.
+  `GPUData.transferBufferOwnership()` now rejects a target that already owns a reference.
+  [GPUData ownership](./api-reference/graph/gpu-data.mdx#ownership)
+
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4
