@@ -56,7 +56,7 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 ### `ComputePassProps`
 
-`ComputePassProps` extends [`ResourceProps`](resource.md#resourceprops) and accepts the following fields.
+`ComputePassProps` extends [`DeviceResourceProps`](device-resource.md#deviceresourceprops) and accepts the following fields.
 
 | Property               | Type            | Default     | Description |
 | ---------------------- | --------------- | ----------- | ----------- |

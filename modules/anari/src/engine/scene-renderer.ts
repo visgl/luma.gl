@@ -33,7 +33,8 @@ import {
   type SkinProps,
   skin
 } from '@luma.gl/shaders';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import {
   createPBRMaterial,
   createPBRMaterialFactory,
@@ -41,6 +42,7 @@ import {
   type PBRMaterial
 } from './pbr-material';
 import {createPBRModel, getPBRGeometryDefines} from './pbr-model';
+import {sceneProbeCamera} from './scene-probe-camera';
 import {sceneInstances} from './scene-instances';
 import {ScenegraphSurfaces} from './scenegraph-surfaces';
 import {
@@ -114,6 +116,8 @@ export type SceneCamera = {
   projectionMatrix: Readonly<NumericArray>;
   /** World-space camera position. */
   position: Readonly<NumericArray>;
+  /** WebGPU probe origin. viewMatrix contains only the face rotation. */
+  gpuOrigin?: Buffer;
   near?: number;
   far?: number;
   clipDepth?: 'negative-one-to-one' | 'zero-to-one';
@@ -209,7 +213,7 @@ export type RayTracingGraphStageStatistics = {
 
 /** Per-frame graph totals and the individual stages actually encoded for a ray-traced frame. */
 export type RayTracingGraphStatistics = RayTracingGraphStageStatistics & {
-  /** Mesh topology construction; present only when geometry changes. */
+  /** Mesh BVH construction or retained-order refit; present when geometry changes. */
   topology?: RayTracingGraphStageStatistics;
   /** Morton TLAS construction; mutually exclusive with `refit`. */
   acceleration?: RayTracingGraphStageStatistics;
@@ -314,6 +318,21 @@ export class SceneRenderer {
   /** Compiles, updates, orders, and draws one retained frame. */
   render(input: SceneRenderOptions | ScenegraphRenderOptions): SceneRenderStatistics {
     const options = this.resolveSceneOptions(input);
+    if (options.camera.gpuOrigin) {
+      const origin = options.camera.gpuOrigin;
+      // GPU-origin cameras use a rotation-only view and the forward color pipeline.
+      assert(
+        this.device.type === 'webgpu' &&
+          origin.device === this.device &&
+          origin.byteLength >= 16 &&
+          origin.usage & Buffer.STORAGE &&
+          !options.spotShadows &&
+          !options.rasterPass &&
+          (options.transmission === false ||
+            (options.renderMode && options.renderMode !== 'default') ||
+            !options.surfaces.some(isTransmissiveSurface))
+      );
+    }
     let shadowProps: ShadowShaderProps | undefined;
     if (options.spotShadows && !options.rasterPass) shadowProps = this.renderShadows(options);
     const transmission = this.getTransmissionResources(options);
@@ -629,6 +648,8 @@ export class SceneRenderer {
       compiledSurface.metadataBuffer.write(metadata);
       if (surface.gpuTransforms)
         compiledSurface.model.setBindings({sceneWorldMatrices: surface.gpuTransforms.matrices});
+      if (options.camera.gpuOrigin)
+        compiledSurface.model.setBindings({sceneProbeOrigin: options.camera.gpuOrigin});
       if (hasUsableSkin(surface)) {
         compiledSurface.model.shaderInputs.setProps({skin: surface.skin});
       }
@@ -769,6 +790,7 @@ export class SceneRenderer {
         instanceCount: surface.transforms.length,
         modules: [
           ...(surface.gpuTransforms ? [sceneInstances] : []),
+          ...(options.camera.gpuOrigin ? [sceneProbeCamera] : []),
           ...(options.spotShadows && !options.rasterPass ? [shadow] : [])
         ],
         bindings: surface.gpuTransforms ? {sceneWorldMatrices: surface.gpuTransforms.matrices} : {},
@@ -777,6 +799,7 @@ export class SceneRenderer {
           pbrScene,
           ...(hasSkin ? {skin} : {}),
           ...(surface.gpuTransforms ? {sceneInstances} : {}),
+          ...(options.camera.gpuOrigin ? {sceneProbeCamera} : {}),
           ...(options.spotShadows && !options.rasterPass ? {shadow} : {})
         }),
         colorAttachmentFormats: options.framebuffer?.colorAttachments.map(
@@ -804,6 +827,7 @@ export class SceneRenderer {
           HAS_INSTANCING: true,
           USE_SCENE_INSTANCES: true,
           HAS_GPU_TRANSFORMS: Boolean(surface.gpuTransforms),
+          USE_SCENE_PROBE_CAMERA: Boolean(options.camera.gpuOrigin),
           USE_SCENE_SHADOWS: Boolean(options.spotShadows && !options.rasterPass),
           SCENE_DEPTH_PASS: options.rasterPass === 'depth',
           SCENE_PICK_PASS: options.rasterPass === 'picking',
@@ -948,6 +972,7 @@ function getSceneSurfaceSignature(
 ): string {
   return JSON.stringify({
     gpuTransforms: Boolean(surface.gpuTransforms),
+    gpuOrigin: Boolean(options.camera.gpuOrigin),
     rasterPass: options.rasterPass,
     shadows: Boolean(options.spotShadows),
     depthFormat: options.framebuffer?.depthStencilAttachment?.texture.format,

@@ -563,10 +563,6 @@ class RecordingComputePass extends ComputePass {
     this.events = events;
   }
 
-  override destroy(): void {
-    this.destroyResource();
-  }
-
   override end(): void {
     this.events.push(`end:${this.id}`);
     this.destroy();

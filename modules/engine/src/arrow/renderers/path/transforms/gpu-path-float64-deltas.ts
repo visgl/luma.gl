@@ -157,6 +157,7 @@ export async function convertArrowPathFloat64ToGPUVector(
         byteStride: componentCount * Float32Array.BYTES_PER_ELEMENT,
         rowByteLength: componentCount * Float32Array.BYTES_PER_ELEMENT,
         ownsBuffer: true,
+        valueOffsets,
         readbackMetadata: {
           kind: 'variable-length-attribute',
           valueOffsets,

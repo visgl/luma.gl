@@ -7,7 +7,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {cameraReprojectionTaaResolve, ssrTemporal} from '@luma.gl/engine/effects';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 it.each([
   cameraReprojectionTaaResolve,

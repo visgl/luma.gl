@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import type {RenderPass, Texture, TextureFormatColor} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
-import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental/materials';
+import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental-materials';
 import {
   aBuffer,
   createPBRMaterial,
@@ -31,7 +31,7 @@ import {
   WGSLShaderAssembler
 } from '@luma.gl/shaders';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';

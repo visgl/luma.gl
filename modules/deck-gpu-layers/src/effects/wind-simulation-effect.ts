@@ -7,7 +7,7 @@ import type {Device} from '@luma.gl/core';
 import {
   ScientificFlowGraph,
   type ScientificFlowGraphProps
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import type {GPUCommandGraphEncoding} from '@luma.gl/graph/gpu-core';
 
 export type WindSimulationEffectProps = ScientificFlowGraphProps & {

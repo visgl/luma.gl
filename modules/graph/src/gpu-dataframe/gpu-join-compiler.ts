@@ -39,6 +39,7 @@ import type {GPUDataFrameJoinType, GPUDataFrameNormalizedJoinOptions} from './gp
 import {
   CompiledGPUDataFrameQuery,
   compileGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
   type GPUDataFrameQueryExtensionResult,
@@ -170,7 +171,8 @@ export function compileGPUDataFrameJoin<
   right: GPUDataFrame<Right>,
   options: GPUDataFrameNormalizedJoinOptions,
   joinType: GPUDataFrameJoinType,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): CompiledGPUDataFrameJoin<Selection, Right> {
   validateGPUJoinSources(source, right, options, graph);
   const retainedRight = right.select(right.columnNames);
@@ -181,8 +183,8 @@ export function compileGPUDataFrameJoin<
       Selection,
       CompiledGPUDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
-      allowEmptyPredicates: true,
-      prepare: context => addGPUJoinToGraph(context, retainedRight, options, joinType)
+      prepare: context =>
+        addGPUJoinToGraph(context, retainedRight, options, joinType, resultColumns)
     });
   } catch (error) {
     retainedRight.destroy();
@@ -213,7 +215,6 @@ export function compileGPUDataFrameLookup<
       Selection,
       CompiledGPUDataFrameLookup<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
-      allowEmptyPredicates: true,
       prepare: context => addGPULookupToGraph(context, retainedRight, options)
     });
   } catch (error) {
@@ -263,7 +264,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Left>,
   right: GPUDataFrame<Right>,
   options: GPUDataFrameNormalizedJoinOptions,
-  joinType: GPUDataFrameJoinType
+  joinType: GPUDataFrameJoinType,
+  resultColumns?: readonly (keyof Left & string)[]
 ): GPUDataFrameQueryExtensionResult<Left, CompiledGPUDataFrameJoin<Left, Right>> {
   const ownedVectors: GPUVector[] = [];
   const id = `${context.queryId}-${joinType}-join`;
@@ -403,10 +405,12 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
       indexStatistics: indexState.indexStatistics,
       contractViolation: indexState.contractViolation
     };
+    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
-      table: context.table,
-      validity: context.validity,
-      dictionaries: context.dictionaries,
+      table: projection?.table ?? context.table,
+      validity: projection?.validity ?? context.validity,
+      dictionaries: projection?.dictionaries ?? context.dictionaries,
+      ownedTables: projection ? [projection] : [],
       ownedVectors,
       createCompiled: props => new CompiledGPUDataFrameJoin(props, resources)
     };
@@ -482,6 +486,81 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     for (const vector of ownedVectors) {
       vector.destroy();
     }
+    throw error;
+  }
+}
+
+/** Bound unique-right join consumed as a source-aligned mask by aggregation. @internal */
+export type GPUAggregateJoin = Readonly<{
+  right: GPUDataFrame;
+  options: GPUDataFrameNormalizedJoinOptions;
+  type: GPUDataFrameJoinType;
+}>;
+
+/** Inserts join matching before an aggregate contribution without compacting the left columns. */
+export function prepareGPUJoinAggregation<
+  Source extends GPUTypeMap,
+  Selection extends GPUTypeMap,
+  Result extends GPUTypeMap,
+  Compiled extends CompiledGPUDataFrameQuery<Result>
+>(
+  source: GPUDataFrame<Source>,
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  join: GPUAggregateJoin,
+  prepare: (
+    context: GPUDataFrameQueryExtensionContext<Selection>
+  ) => GPUDataFrameQueryExtensionResult<Result, Compiled>
+): GPUDataFrameQueryExtensionResult<Result, Compiled> {
+  const {graph} = context;
+  validateGPUJoinSources(source, join.right, join.options, graph);
+  const right = join.right.select(join.right.columnNames);
+  const ownedVectors: GPUVector[] = [];
+  const id = context.queryId + '-aggregate-join';
+  try {
+    const state = buildGPUJoinIndex(context, right, join.options, ownedVectors, id);
+    const violation = graph.importGPUVector(id + '-violation', state.contractViolation).data[0];
+    const matches = createTransientVectorView(graph, id + '-matches', context.selectionMask);
+    const values = createTransientVectorView(graph, id + '-values', context.selectionMask);
+    const probes = createTransientVectorView(graph, id + '-probes', context.selectionMask);
+    const included = createTransientVectorView(graph, id + '-included', context.selectionMask);
+    const statistics = createTransientView(
+      graph,
+      id + '-statistics',
+      'uint32',
+      GPU_HASH_QUERY_STATISTICS_LENGTH
+    );
+    for (const [batchIndex, keys] of state.maskedLeftKeys.data.entries()) {
+      if (!keys.length) continue;
+      const batchId = id + '-' + batchIndex;
+      graph.add(
+        new GPUHashIndexQuery({
+          id: batchId,
+          index: state.index,
+          keys,
+          values: values.data[batchIndex],
+          found: matches.data[batchIndex],
+          probes: probes.data[batchIndex],
+          statistics,
+          maxProbeCount: join.options.maxProbeCount
+        })
+      );
+      addGPUJoinClassifyPass(graph, batchId + '-classify', {
+        matches: matches.data[batchIndex],
+        selection: context.selectionMask.data[batchIndex],
+        violation,
+        included: included.data[batchIndex],
+        joinType: join.type
+      });
+    }
+    const result = prepare({...context, selectionMask: included});
+    return {
+      ...result,
+      ownedVectors: [...ownedVectors, ...(result.ownedVectors ?? [])],
+      ownedTables: [...(result.ownedTables ?? []), right]
+    };
+  } catch (error) {
+    for (const vector of ownedVectors) vector.destroy();
+    right.destroy();
     throw error;
   }
 }

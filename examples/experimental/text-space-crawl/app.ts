@@ -15,7 +15,7 @@ import {
   loadMsdfFontAtlas,
   type FontAtlas
 } from '@luma.gl/engine/text-fonts';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

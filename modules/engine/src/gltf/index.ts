@@ -19,6 +19,11 @@ export {
   type GLTFScenegraphs
 } from './gltf/create-scenegraph-from-gltf';
 export {
+  createComposedScenegraphsFromGLTF,
+  type GLTFSceneComposition,
+  type GLTFSceneInstance
+} from './gltf/create-composed-scenegraphs-from-gltf';
+export {
   GLTFAnimationClip,
   type GLTFAnimationClipProps,
   type GLTFAnimationSelectionOptions,

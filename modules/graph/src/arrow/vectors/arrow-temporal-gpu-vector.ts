@@ -716,8 +716,8 @@ function getArrowTemporalScalarDataBufferSource(
   if (!values) {
     return data.type.ArrayType === BigInt64Array ? new BigInt64Array(0) : new Int32Array(0);
   }
-  const startIndex = data.offset ?? 0;
-  return values.subarray(startIndex, startIndex + data.length) as Int32Array | BigInt64Array;
+  // Arrow slices fixed-width values directly; the row offset still applies to the null bitmap.
+  return values.subarray(0, data.length) as Int32Array | BigInt64Array;
 }
 
 function getNormalizedArrowValueOffsets(data: Data<List<any>>): Int32Array {

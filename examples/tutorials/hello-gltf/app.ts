@@ -9,7 +9,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {Light, LightingProps} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {INFO_HTML, showError} from './app-ui';
 
 const MODEL_URL =

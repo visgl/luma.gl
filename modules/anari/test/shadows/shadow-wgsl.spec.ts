@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {WgslReflect} from 'wgsl_reflect';
 import {WGSLShaderAssembler} from '../../../shaders/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';

@@ -4,6 +4,7 @@
 
 import type {GPURigidBody, GPURigidBodyJoint} from '@luma.gl/graph/gpu-physics';
 
+import {makeRobotArm} from './robot-arm';
 import {makeWreckingBall} from './wrecking-ball';
 
 import type {GroupNode} from '@luma.gl/engine';
@@ -12,6 +13,7 @@ import {makeCradleFrame, makeCradleFrameBodies} from './cradle-geometry';
 export function makeMechanism(
   scene: string
 ): {bodies: GPURigidBody[]; joints: GPURigidBodyJoint[]; frame?: GroupNode} | null {
+  if (scene === 'robotArm') return makeRobotArm();
   if (scene === 'wreckingBall') return makeWreckingBall();
   const anchor: GPURigidBody = {
     position: [0, 0, 4],

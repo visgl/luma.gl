@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type Device, type CommandEncoder} from '@luma.gl/core';
-import {Vector3} from '@math.gl/core';
+import {Vector3} from '@math.gl/core/matrix';
 import type {ScenegraphNode} from '../../index';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
@@ -227,6 +227,32 @@ export class ScenegraphPhysicsInstance {
       }
       const replacement = await compile(this.device, props);
       try {
+        if (preserveState) {
+          const previousProps = this.definition.world;
+          const previousVehicles =
+            previousProps.vehicles ?? (previousProps.vehicle ? [previousProps.vehicle] : []);
+          const vehicles = props.vehicles ?? (props.vehicle ? [props.vehicle] : []);
+          const previousVehicleIndices = new Map(
+            previousVehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          const vehicleIndices = new Map(
+            vehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          for (const [node, bodyIndex] of authored.bodies) {
+            const previousBodyIndex = this.definition.bodies.get(node);
+            const vehicleIndex = vehicleIndices.get(bodyIndex);
+            const previousVehicleIndex =
+              previousBodyIndex === undefined
+                ? undefined
+                : previousVehicleIndices.get(previousBodyIndex);
+            if (vehicleIndex !== undefined && previousVehicleIndex !== undefined)
+              replacement.world.copyVehicleMotionFrom(
+                this.world,
+                vehicleIndex,
+                previousVehicleIndex
+              );
+          }
+        }
         prepare?.(replacement.world);
         replacement.world.publishPoses();
         await this.finishSubmission();

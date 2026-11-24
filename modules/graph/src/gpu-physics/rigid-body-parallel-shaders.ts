@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Sparse contact adjacency and block-Jacobi impulses; each dispatch has exclusive output owners. */
-export function getRigidBodyParallelShader(ensemble: boolean): string {
+export function getRigidBodyParallelShader(ensemble: boolean, blockContacts = false): string {
   return /* wgsl */ `
 struct ParallelState {
  diagnostics:array<atomic<u32>,4>,
@@ -173,32 +173,55 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  let relaxation=settings.stability.w/f32(max(1u,max(atomicLoad(&parallelState.degrees[first]),atomicLoad(&parallelState.degrees[second]))));
  var firstLinear=velocities[first].xyz;var secondLinear=velocities[second].xyz;
  var firstAngular=angularVelocities[first].xyz;var secondAngular=angularVelocities[second].xyz;
+ ${
+   blockContacts
+     ? `
+ // Solve the contact patch locally, then relax the whole block once. No extra dispatches.
+ var contacts:array<Contact,4>;
+ for(var slot=0u;slot<manifolds[pair].count;slot++){contacts[slot]=manifolds[pair].contacts[slot];}
+ for(var sweep=0u;sweep<2u;sweep++){
+ `
+     : ''
+ }
  for(var slot=0u;slot<manifolds[pair].count;slot++){
-  var contact=manifolds[pair].contacts[slot];let point=contact.point.xyz;let normal=contact.normal.xyz;
+  var contact=${blockContacts ? 'contacts[slot]' : 'manifolds[pair].contacts[slot]'};let point=contact.point.xyz;let normal=contact.normal.xyz;
   let firstLever=point-positions[first].xyz;let secondLever=point-positions[second].xyz;
   let relative=secondLinear+cross(secondAngular,secondLever)-firstLinear-cross(firstAngular,firstLever);
   let normalMass=effectiveMass(first,second,point,normal);if(normalMass<=0.0){continue;}
   let bias=min(settings.stability.z,settings.stability.y*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
   let desiredImpulse=max(0.0,contact.impulse.x+(max(bias,contact.normal.w)-dot(relative,normal))/normalMass);
-  let change=(desiredImpulse-contact.impulse.x)*relaxation;contact.impulse.x+=change;
+  let change=(desiredImpulse-contact.impulse.x)*${blockContacts ? '1.0' : 'relaxation'};contact.impulse.x+=change;
   var impulse=normal*change;
   if(dynamic(first)){firstLinear-=impulse*velocities[first].w;firstAngular-=inverseInertia(first,cross(firstLever,impulse));}
   if(dynamic(second)){secondLinear+=impulse*velocities[second].w;secondAngular+=inverseInertia(second,cross(secondLever,impulse));}
   let after=secondLinear+cross(secondAngular,secondLever)-firstLinear-cross(firstAngular,firstLever);
   let tangent=solveFriction(firstCollider,secondCollider,contact,after);
-  var relaxedTangent=contact.tangent.xyz+(tangent-contact.tangent.xyz)*relaxation;
+  var relaxedTangent=contact.tangent.xyz+(tangent-contact.tangent.xyz)*${blockContacts ? '1.0' : 'relaxation'};
   // A falling normal impulse must shrink the cone even when under-relaxing.
   let staticLimit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
   if(length(relaxedTangent)>staticLimit){relaxedTangent*=staticLimit/max(1e-30,length(relaxedTangent));}
   impulse=relaxedTangent-contact.tangent.xyz;contact.tangent=vec4f(relaxedTangent,0);
   if(dynamic(first)){firstLinear-=impulse*velocities[first].w;firstAngular-=inverseInertia(first,cross(firstLever,impulse));}
   if(dynamic(second)){secondLinear+=impulse*velocities[second].w;secondAngular+=inverseInertia(second,cross(secondLever,impulse));}
-  manifolds[pair].contacts[slot]=contact;
+  ${blockContacts ? 'contacts[slot]' : 'manifolds[pair].contacts[slot]'}=contact;
  }
- parallelState.deltas[pair*4u]=vec4f(firstLinear-velocities[first].xyz,0);
- parallelState.deltas[pair*4u+1u]=vec4f(firstAngular-angularVelocities[first].xyz,0);
- parallelState.deltas[pair*4u+2u]=vec4f(secondLinear-velocities[second].xyz,0);
- parallelState.deltas[pair*4u+3u]=vec4f(secondAngular-angularVelocities[second].xyz,0);
+ ${
+   blockContacts
+     ? `
+ }
+ // Interpolation of feasible impulses preserves the friction cone, including unloading.
+ for(var slot=0u;slot<manifolds[pair].count;slot++){
+  let previous=manifolds[pair].contacts[slot];
+  manifolds[pair].contacts[slot].impulse.x=mix(previous.impulse.x,contacts[slot].impulse.x,relaxation);
+  manifolds[pair].contacts[slot].tangent=mix(previous.tangent,contacts[slot].tangent,relaxation);
+ }
+ `
+     : ''
+ }
+ parallelState.deltas[pair*4u]=vec4f((firstLinear-velocities[first].xyz)*${blockContacts ? 'relaxation' : '1.0'},0);
+ parallelState.deltas[pair*4u+1u]=vec4f((firstAngular-angularVelocities[first].xyz)*${blockContacts ? 'relaxation' : '1.0'},0);
+ parallelState.deltas[pair*4u+2u]=vec4f((secondLinear-velocities[second].xyz)*${blockContacts ? 'relaxation' : '1.0'},0);
+ parallelState.deltas[pair*4u+3u]=vec4f((secondAngular-angularVelocities[second].xyz)*${blockContacts ? 'relaxation' : '1.0'},0);
 }
 @compute @workgroup_size(64) fn parallelGather(@builtin(global_invocation_id) invocation:vec3u){
  var body=invocation.x;

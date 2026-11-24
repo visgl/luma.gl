@@ -8,6 +8,9 @@ The provider-driven projection contributor uses these command-graph contracts bu
 [GPU Project roadmap](./gpu-project-roadmap.md) covering CRS planning, greater-than-Float32
 precision, native projection operations, and inline shader composition.
 
+For SQL and analytical queries, see the [GPU DataFrame roadmap](gpu-dataframe-roadmap.md).
+
+
 ## Phased roadmap
 
 The command-graph foundation and hierarchical-trace, analysis, texture, picking, and spatial

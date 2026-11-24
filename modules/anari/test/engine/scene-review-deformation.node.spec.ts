@@ -5,7 +5,7 @@
 import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test} from 'vitest';
 
 class InspectableSceneRenderer extends SceneRenderer {

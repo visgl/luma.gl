@@ -8,14 +8,17 @@ import {
   IcoSphereGeometry as MathIcoSphereGeometry,
   PlaneGeometry as MathPlaneGeometry,
   TruncatedConeGeometry as MathTruncatedConeGeometry,
-  unpackIndexedGeometry,
   type Geometry as MathGeometry,
   type GeometryAttributeInput,
   type SphereGeometryProps,
   type IcoSphereGeometryProps,
   type TruncatedConeGeometryProps
-} from '@math.gl/geometry';
-import {TorusGeometry as MathTorusGeometry, type TorusGeometryProps} from '@math.gl/geometry';
+} from '@math.gl/geometry/primitives';
+import {unpackIndexedGeometry} from '@math.gl/geometry/processing';
+import {
+  TorusGeometry as MathTorusGeometry,
+  type TorusGeometryProps
+} from '@math.gl/geometry/primitives';
 import {Geometry} from './geometry';
 
 export type {TorusGeometryProps};

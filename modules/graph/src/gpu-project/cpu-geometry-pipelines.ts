@@ -5,12 +5,12 @@
 
 import {assert} from '@luma.gl/core';
 import {CPUData, CPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
-import type {Projection} from '@math.gl/geospatial/projection/types';
+import type {Projection} from '@math.gl/geospatial/projection-types';
+import type {GeoArrowColumn} from '@math.gl/core/arrow';
 import {
   tessellateGeoArrowPolygons,
-  type GeoArrowColumn,
   type TessellateGeoArrowPolygonsOptions
-} from '@math.gl/arrow/geoarrow-utils';
+} from '@math.gl/geometry/arrow';
 import {makeGeoArrowColumnFromCPUVector, makeCPUVectorFromGeoArrowColumn} from './cpu-geoarrow';
 
 /** Project Float32 coordinates while retaining single-level row topology and null rows. */

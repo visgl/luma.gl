@@ -18,6 +18,7 @@ export function makeRigidBodyJointsFromScenegraph(
   };
   const base = {
     type: 'general' as const,
+    id: resolved.joint.id ?? resolved.joint.first.id,
     first: bodyIndex(resolved.first.body),
     second: bodyIndex(resolved.second.body),
     firstFrame: {position: resolved.first.position, orientation: resolved.first.orientation},

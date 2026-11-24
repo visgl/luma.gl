@@ -16,9 +16,9 @@ const config = {
   },
 
   aliases: {
-    '@luma.gl/graph/gpu-simple-graph/cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
-    '@luma.gl/graph/gpu-simple-graph/webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
-    '@luma.gl/graph/gpu-simple-graph/webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
+    '@luma.gl/graph/gpu-simple-graph-cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
+    '@luma.gl/graph/gpu-simple-graph-webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
+    '@luma.gl/graph/gpu-simple-graph-webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
 
     '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
     '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
@@ -68,7 +68,6 @@ const config = {
         'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',
         'physics-stress': '/examples/experimental/physics-stress',
-        'space-salvage': '/examples/experimental/space-salvage',
         'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
@@ -91,6 +90,7 @@ const config = {
         instancing: '/examples/showcase/instancing',
         'pbr-shadows': '/examples/api/pbr-shadows',
         'lightmap-baking': '/examples/api/lightmap-baking',
+        'baked-cornell-box': '/examples/api/baked-cornell-box',
         'prefiltered-environment': '/examples/api/prefiltered-environment',
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',

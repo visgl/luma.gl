@@ -13,7 +13,7 @@ opacity is clamped to the full zero-to-one range, allowing translucent links and
 metallic surfaces to share the same material.
 
 ```ts
-import {reflectiveMaterial, reflectiveMaterialPlugin, type ReflectiveMaterialProps, type ReflectiveMaterialUniforms} from '@luma.gl/engine/experimental/materials';
+import {reflectiveMaterial, reflectiveMaterialPlugin, type ReflectiveMaterialProps, type ReflectiveMaterialUniforms} from '@luma.gl/engine/experimental-materials';
 ```
 
 ## Properties
@@ -47,7 +47,7 @@ behavior when dynamic local lighting is unnecessary.
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {reflectiveMaterial, reflectiveMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {reflectiveMaterial, reflectiveMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 const shaderInputs = new ShaderInputs({reflectiveMaterial});
 

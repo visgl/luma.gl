@@ -15,29 +15,40 @@ import {applyExampleTheme} from '../../example-theme';
 /** Keep controls mounted while hidden; inspection reuses the example's existing timing samples. */
 export function createSphereInfoBox(
   initialGraph: CompiledGPUCommandGraph<void>,
-  scaleDemo: boolean
+  scaleDemo: boolean,
+  table: HTMLElement
 ) {
   const content = document.querySelector<HTMLElement>('aside')!;
   content.id = 'sphere-controls';
   content.hidden = true;
   const host = document.createElement('div');
   host.id = 'sphere-info';
-  host.dataset.infoBoxAppearance = 'light';
+  host.dataset.infoBoxAppearance = 'cinematic';
   const style = document.createElement('style');
   style.textContent = `
     #sphere-info {position:fixed;inset:16px;z-index:20;pointer-events:none}
     #sphere-controls {position:static;width:auto;padding:0;border:0;background:transparent;border-radius:0}
     #sphere-controls h1 {display:none}
-    #sphere-info [data-gpu-command-graph-inspector] :is(.graph-inspector-picker,.graph-inspector-memory,.graph-inspector-empty,.graph-inspector-counter,.graph-inspector-node,.graph-inspector-metric){color:#435c53;font-size:10px}
-    #sphere-info [data-gpu-command-graph-inspector] :is(strong,.graph-inspector-node i){color:#233d37;font-size:10px}
-    #sphere-info [data-gpu-command-graph-inspector] .graph-inspector-metric{background:#edf1e9;border-color:#cbd3c5}
-    #sphere-info [data-gpu-command-graph-inspector] :is(.graph-inspector-counter,.graph-inspector-node){border-bottom-color:#dce3d9}
-    #sphere-info [data-gpu-command-graph-inspector] .graph-inspector-node::after{background:#f8f7f2;color:#233d37;font-size:10px}
+    #sphere-controls :is(p,label,output) {color:var(--luma-example-text)}
+    #sphere-controls :is(button,select) {
+      background:var(--luma-example-surface-raised);
+      color:var(--luma-example-text);
+      border:1px solid var(--luma-example-border);
+    }
+    #sphere-info .deck-widget-box > section {
+      --menu-background:var(--luma-example-surface);
+      --menu-border:1px solid var(--luma-example-border);
+      --menu-text:var(--luma-example-text);
+      --menu-shadow:var(--luma-example-shadow);
+      --button-text:var(--luma-example-text);
+      --button-icon-idle:var(--luma-example-text-muted);
+      max-height:min(520px, calc(100dvh - 32px)) !important;
+    }
     #sphere-info [data-gpu-command-graph-inspector] .graph-inspector-nodes{max-height:300px}
   `;
   document.head.append(style);
   document.body.append(host);
-  applyExampleTheme(host, 'light');
+  applyExampleTheme(host, 'cinematic');
   const inspector = new GPUCommandGraphInspector({maxSamples: 90});
   let graph = initialGraph;
   let observation = inspector.observeGraph(graph);
@@ -63,19 +74,19 @@ export function createSphereInfoBox(
     id: 'sphere-info-box',
     title: scaleDemo ? 'luma.gl · Sphere Scale' : 'luma.gl · Sphere World',
     placement: 'top-left',
-    widthPx: 420,
+    widthPx: 362,
     collapsible: true,
     defaultOpen: false,
     panel: makeExampleTabbedPanel({
       id: 'sphere-info-tabs',
-      theme: 'light',
+      theme: 'dark',
       panels: [
         makeHtmlCustomPanel({
           id: 'sphere-controls-panel',
           title: 'Controls',
           html: '',
           onRender: root => {
-            configurePanelHostElement(root, 'light');
+            configurePanelHostElement(root, 'cinematic');
             content.hidden = false;
             root.append(content);
             return () => {
@@ -85,11 +96,21 @@ export function createSphereInfoBox(
           }
         }),
         makeHtmlCustomPanel({
+          id: 'sphere-table-panel',
+          title: 'Table',
+          html: '',
+          onRender: root => {
+            configurePanelHostElement(root, 'cinematic');
+            root.append(table);
+            return () => table.remove();
+          }
+        }),
+        makeHtmlCustomPanel({
           id: 'sphere-graph-panel',
           title: 'GPU Graph',
           html: `<p>Live graph nodes, CPU encoding and GPU timings. Timing samples reuse the existing diagnostics readback; rendering reads simulation buffers directly.</p><div data-sphere-graph></div>`,
           onRender: root => {
-            configurePanelHostElement(root, 'light');
+            configurePanelHostElement(root, 'cinematic');
             inspectorRoot = root.querySelector<HTMLElement>('[data-sphere-graph]')!;
             renderInspector();
             return () => {

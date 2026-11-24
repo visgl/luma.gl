@@ -12,6 +12,8 @@ import type {
 
 /** Raw glTF JSON, before loaders.gl replaces node indices with objects. */
 export type GLTFPhysicsDocument = {
+  /** Core analytic shapes in the glTF 2.1 document. */
+  shapes?: readonly unknown[];
   scene?: number;
   scenes?: readonly {nodes?: readonly number[]}[];
   nodes?: readonly {
@@ -101,6 +103,8 @@ export type ParseGLTFPhysicsOptions = {
   propertyBindings?: boolean;
   /** Bind rigid node translation/rotation channels through ScenegraphPhysicsMotion. */
   animationOwnership?: 'scenegraph';
+  /** Keep authored motion modes so a session can release animation-owned bodies into dynamics. */
+  preserveAnimatedBodyModes?: boolean;
   scene?: number;
   /** Decode one node's own mesh at its initial pose in that node's local space.
    * Include initial skinning and morph weights; the adapter combines child transforms.

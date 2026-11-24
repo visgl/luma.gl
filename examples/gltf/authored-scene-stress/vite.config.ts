@@ -13,9 +13,9 @@ const alias = {
   '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
-  '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
-  '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
-  '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
+  '@luma.gl/graph/gpu-simple-graph-cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
+  '@luma.gl/graph/gpu-simple-graph-webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
+  '@luma.gl/graph/gpu-simple-graph-webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
   '@luma.gl/graph/gpu-simple-graph': `${__dirname}/../../../modules/graph/src/gpu-simple-graph`,
   '@luma.gl/graph/_internal/arrow': `${__dirname}/../../../modules/graph/src/arrow/internal.ts`,
   '@luma.gl/graph/arrow': `${__dirname}/../../../modules/graph/src/arrow`,
@@ -30,5 +30,13 @@ const alias = {
 // https://vitejs.dev/config/
 export default defineConfig({
   resolve: {alias},
+  build: {
+    rollupOptions: {
+      input: {
+        stress: `${__dirname}/index.html`,
+        ragdolls: `${__dirname}/ragdolls.html`
+      }
+    }
+  },
   server: {open: true}
 });

@@ -46,6 +46,8 @@ type GPUGlobalMetricState = {
   sanitized: Map<string, GraphVectorView<GPUAnalyticsScalarFormat>>;
 };
 
+import {prepareGPUJoinAggregation, type GPUAggregateJoin} from './gpu-join-compiler';
+
 /** One-row GPU-resident global aggregation with source-aligned selection and explicit validity. */
 export class CompiledGPUDataFrameAggregation<
   T extends GPUTypeMap = GPUTypeMap
@@ -62,11 +64,14 @@ export function compileGPUDataFrameAggregation<
   selectedColumns: readonly (keyof Selection & string)[],
   derivedColumns: readonly GPUDataFrameDerivedColumn[],
   definitions: readonly GPUDataFrameAggregationDefinition[],
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  join?: GPUAggregateJoin
 ): CompiledGPUDataFrameAggregation<Result> {
   validateGPUAnalyticsSource(
     source,
-    definitions.flatMap(definition => (definition.column ? [definition.column] : []))
+    definitions.flatMap(definition =>
+      definition.operation !== 'count' && definition.column ? [definition.column] : []
+    )
   );
   return compileGPUDataFrameQuery<
     Source,
@@ -74,8 +79,11 @@ export function compileGPUDataFrameAggregation<
     Result,
     CompiledGPUDataFrameAggregation<Result>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
-    prepare: context => addGPUGlobalAggregationsToGraph<Selection, Result>(context, definitions)
+    prepare: context => {
+      const prepare = (input: typeof context) =>
+        addGPUGlobalAggregationsToGraph<Selection, Result>(input, definitions);
+      return join ? prepareGPUJoinAggregation(source, context, join, prepare) : prepare(context);
+    }
   });
 }
 
@@ -109,7 +117,9 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
         context.graph.add(
           new GPUReduction({
             id,
-            input: context.selectionMask,
+            input: definition.column
+              ? getGPUAnalyticsSelectionMask(context, definition.column, id)
+              : context.selectionMask,
             output: context.graph.importGPUVector(`${id}-output`, output).data[0],
             operation: 'sum'
           })

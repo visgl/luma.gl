@@ -8,7 +8,7 @@ import {
   FlowFieldAtlas,
   FlowParticleSimulation,
   isFlowParticleSimulationSupported
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 const PROPS = {

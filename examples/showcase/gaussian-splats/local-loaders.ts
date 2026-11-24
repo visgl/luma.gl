@@ -25,6 +25,7 @@ export type GaussianSplatSourceCatalogEntry = {
     | 'playroom'
     | 'truck'
     | 'coit'
+    | 'cat'
     | 'train-github'
     | 'fixture'
     | 'gltf-fixture';
@@ -226,6 +227,17 @@ const GRAPHDECO_CAMERA_UP = [0, -1, 0] as const;
 /** Selectable complete scenes, plus explicit GitHub fallback and lightweight parser fixture. */
 export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogEntry[] = [
   {
+    id: 'cat',
+    label: 'Cat figurine pair',
+    // CC0 capture from raymondyfei/SharedTestModels (SPZ v2, 2 MB).
+    sourceUrl:
+      'https://raw.githubusercontent.com/raymondyfei/SharedTestModels/92aec9410cd3cbc661d4c4e3c5e8c78157357988/a_cute_cat_float32.spz',
+    expectedSplatCount: 105_128,
+    upAxis: 'z',
+    // The figurine's authored upright direction is +Z in the decoded SPZ.
+    up: [0, 0, 1]
+  },
+  {
     id: 'train',
     label: 'HF Voxel51 Train 7K',
     sourceUrl: `${HUGGING_FACE_GAUSSIAN_SPLAT_BASE_URL}/train/point_cloud/iteration_7000/point_cloud.ply`,
@@ -319,6 +331,7 @@ export function getLocalGaussianSplatLoadersConfiguration(
 
   const loadersRoot = window.__lumaGaussianSplatsLocalLoadersRoot?.replace(/\/+$/, '') || '';
   const loaderBundleUrl = window.__lumaGaussianSplatsLoaderBundleUrl;
+  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const loaderMode: LocalGaussianSplatLoadersConfiguration['loaderMode'] =
     requestedLoaderMode === 'local' ? 'local' : 'bundled';
   if (loaderMode === 'local') {
@@ -327,7 +340,8 @@ export function getLocalGaussianSplatLoadersConfiguration(
     }
   } else if (
     !loaderBundleUrl &&
-    parameters.get('scene') !== 'gltf-fixture' &&
+    sceneId !== 'gltf-fixture' &&
+    sceneId !== 'cat' &&
     !parameters.get('source')?.toLowerCase().split('?')[0].endsWith('.glb')
   ) {
     return undefined;
@@ -359,7 +373,6 @@ export function getLocalGaussianSplatLoadersConfiguration(
     };
   }
 
-  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const scene = GAUSSIAN_SPLAT_SOURCE_CATALOG.find(candidate => candidate.id === sceneId);
   if (!scene) {
     throw new Error(`Unknown Gaussian splat scene: ${sceneId}.`);
@@ -627,7 +640,7 @@ export class LocalGaussianSplatRADPageSource {
           signal,
           radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
         });
-      const arrowSource = this.options.decodePage
+      const decodedPage = this.options.decodePage
         ? await this.options.decodePage({
             chunkIndex: request.chunkIndex,
             sourceUrl: this.configuration.sourceUrl,
@@ -637,6 +650,7 @@ export class LocalGaussianSplatRADPageSource {
             decodeDefault
           })
         : await decodeDefault();
+      const arrowSource = normalizeGaussianSplatArrowSource(decodedPage);
       signal.throwIfAborted();
 
       if (!isGaussianSplatArrowSource(arrowSource)) {
@@ -788,7 +802,7 @@ export async function openLocalGaussianSplatRADPageSource(
         worker: false,
         fetch: fetchSource,
         core: {batchSize: GAUSSIAN_SPLAT_ARROW_BATCH_SIZE},
-        splats: {shape: 'arrow-table'}
+        splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
       }
     );
     if (!isGaussianSplatRADSource(source)) {
@@ -919,11 +933,16 @@ export async function loadLocalGaussianSplatArrowSource(
   configuration: LocalGaussianSplatLoadersConfiguration
 ): Promise<GPUSplatArrowSource> {
   const {coreModule, loader, loaderName} = await loadLocalGaussianSplatLoaderModules(configuration);
-  const arrowSource: unknown = await coreModule.load(configuration.sourceUrl, loader, {
-    worker: false,
-    ply: {shape: 'arrow-table', pointCloud: true},
-    splats: {shape: 'arrow-table'}
-  });
+  const arrowSource: unknown = normalizeGaussianSplatArrowSource(
+    await coreModule.load(configuration.sourceUrl, loader, {
+      worker: false,
+      ply: {
+        shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow',
+        pointCloud: true
+      },
+      splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
+    })
+  );
   if (!isGaussianSplatArrowSource(arrowSource)) {
     throw new Error(`${loaderName} did not return a Gaussian Apache Arrow table.`);
   }
@@ -1017,8 +1036,11 @@ async function* loadGaussianSplatSourceUrls(
       worker: false,
       fetch: fetchSource,
       core: {batchSize: GAUSSIAN_SPLAT_ARROW_BATCH_SIZE},
-      ply: {shape: 'arrow-table', pointCloud: true},
-      splats: {shape: 'arrow-table'}
+      ply: {
+        shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow',
+        pointCloud: true
+      },
+      splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
     };
 
     if (configuration.sourceFormat === 'RAD') {
@@ -1061,10 +1083,12 @@ async function* loadGaussianSplatSourceUrls(
         ) {
           break;
         }
-        const arrowSource = await source.getChunkTable(chunkIndex, {
-          ...(options.signal ? {signal: options.signal} : {}),
-          radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
-        });
+        const arrowSource = normalizeGaussianSplatArrowSource(
+          await source.getChunkTable(chunkIndex, {
+            ...(options.signal ? {signal: options.signal} : {}),
+            radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
+          })
+        );
         if (!isGaussianSplatArrowSource(arrowSource)) {
           throw new Error('RADSourceLoader did not return a Gaussian Arrow page.');
         }
@@ -1105,7 +1129,8 @@ async function* loadGaussianSplatSourceUrls(
         loaderModules.loader,
         loaderOptions
       );
-      for await (const arrowSource of arrowSources) {
+      for await (const batch of arrowSources) {
+        const arrowSource = normalizeGaussianSplatArrowSource(batch);
         if (!isGaussianSplatArrowSource(arrowSource)) {
           throw new Error(`${loaderModules.loaderName} did not return a Gaussian Arrow batch.`);
         }
@@ -1115,10 +1140,8 @@ async function* loadGaussianSplatSourceUrls(
         yield arrowSource;
       }
     } else {
-      const arrowSource: unknown = await loaderModules.coreModule.load(
-        sourceUrl,
-        loaderModules.loader,
-        loaderOptions
+      const arrowSource: unknown = normalizeGaussianSplatArrowSource(
+        await loaderModules.coreModule.load(sourceUrl, loaderModules.loader, loaderOptions)
       );
       if (!isGaussianSplatArrowSource(arrowSource)) {
         throw new Error(
@@ -1142,6 +1165,17 @@ async function loadLocalGaussianSplatLoaderModules(
     configuration.sourceFormat === 'RAD'
       ? 'RADSourceLoader'
       : `${configuration.sourceFormat}Loader`;
+  if (
+    configuration.loaderMode === 'bundled' &&
+    configuration.sceneId === 'cat' &&
+    !configuration.loaderBundleUrl
+  ) {
+    const [coreModule, {SPZLoader}] = await Promise.all([
+      import('@loaders.gl/core'),
+      import('@loaders.gl/splats')
+    ]);
+    return {coreModule, loader: SPZLoader, loaderName};
+  }
   if (configuration.loaderMode === 'bundled') {
     if (!configuration.loaderBundleUrl) {
       throw new Error('The Gaussian splat loader bundle is unavailable.');
@@ -1166,12 +1200,32 @@ async function loadLocalGaussianSplatLoaderModules(
   );
   const formatModuleUrl = makeLocalLoadersFileUrl(
     configuration.loadersRoot,
-    `modules/${configuration.sourceFormat === 'PLY' ? 'ply' : 'splats'}/src/index.ts`
+    `modules/${configuration.sourceFormat === 'PLY' ? 'pointclouds' : 'splats'}/src/index.ts`
   );
   const [coreModule, formatModule] = await Promise.all([
     import(/* webpackIgnore: true */ /* @vite-ignore */ coreModuleUrl),
     import(/* webpackIgnore: true */ /* @vite-ignore */ formatModuleUrl)
   ]);
+  if (configuration.sourceFormat === 'RAD') {
+    const sourceModuleUrl = makeLocalLoadersFileUrl(
+      configuration.loadersRoot,
+      'modules/splats/src/rad-source-loader.ts'
+    );
+    const {createRADSource} = await import(
+      /* webpackIgnore: true */ /* @vite-ignore */ sourceModuleUrl
+    );
+    if (createRADSource) {
+      return {
+        coreModule: {
+          ...coreModule,
+          load: (url: string, _loader: unknown, options: Record<string, unknown>) =>
+            createRADSource(url, options)
+        },
+        loader: createRADSource,
+        loaderName
+      };
+    }
+  }
   const loader: unknown = formatModule[loaderName];
   if (!loader) {
     throw new Error(`The local loaders.gl checkout does not export ${loaderName}.`);
@@ -1183,6 +1237,9 @@ function getExpectedGaussianSplatBatchCount(
   scene: GaussianSplatSourceCatalogEntry,
   maxResidentSplatCount?: number
 ): number {
+  if (scene.id === 'cat') {
+    return 1;
+  }
   if (scene.id === 'train-github') {
     return (
       Math.ceil(370_941 / GAUSSIAN_SPLAT_ARROW_BATCH_SIZE) +
@@ -1242,6 +1299,13 @@ function getGaussianSplatSourceLabel(sourceUrl: string): string {
 
 function makeLocalLoadersFileUrl(loadersRoot: string, relativePath: string): string {
   return `/@fs${loadersRoot}/${relativePath}`;
+}
+
+function normalizeGaussianSplatArrowSource(value: unknown): unknown {
+  if (value && typeof value === 'object' && 'numRows' in value && 'schema' in value) {
+    return {data: value};
+  }
+  return value;
 }
 
 function isGaussianSplatArrowSource(value: unknown): value is {

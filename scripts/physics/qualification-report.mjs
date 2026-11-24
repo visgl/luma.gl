@@ -115,7 +115,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const reports = await Promise.all(
     files.map(async file => JSON.parse(await readFile(file, 'utf8')))
   );
-  const result = makeQualificationReport(await loadQualificationProfile(), reports, tranches);
+  const result = makeQualificationReport(await loadQualificationProfile(), reports.flat(), tranches);
   console.log(JSON.stringify(result, null, 2));
   if (!result.requestedComplete) process.exitCode = 2;
 }

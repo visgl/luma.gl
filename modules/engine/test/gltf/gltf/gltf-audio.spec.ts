@@ -8,7 +8,7 @@ import {describe, expect, test, vi} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 import type {GLTFAudioExtension} from '../../../src/gltf/gltf/gltf-audio';
 import {NullDevice} from '@luma.gl/core/test-utils';

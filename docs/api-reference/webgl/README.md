@@ -29,6 +29,18 @@ const device = await luma.createDevice({
 const buffer = device.createBuffer(...);
 ```
 
+## Optional depth extensions
+
+Check the created WebGL device with `device.features.has(...)`. Extension availability depends on the context and its driver.
+
+| Device feature | WebGL extension | luma.gl setting |
+| --- | --- | --- |
+| `clip-control-webgl` | [EXT_clip_control](https://registry.khronos.org/webgl/extensions/EXT_clip_control/) | `RenderPassProps.clipDepthMode` selects the projection's clip depth range. |
+| `depth-clip-control` | [EXT_depth_clamp](https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/) | Pipeline `unclippedDepth` controls clipping against the near and far planes. |
+| `polygon-offset-clamp-webgl` | [EXT_polygon_offset_clamp](https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/) | Pipeline `depthBiasClamp` bounds the polygon offset. Ordinary polygon offset is available in WebGL 2 core. |
+
+For shared WebGL contexts, set clip origin and depth mode through luma.gl's tracked `setGLParameters` when mixing these settings with render passes. Direct calls on the extension object bypass the tracker. See [Depth buffers](/docs/api-guide/gpu/depth-buffers) for projection examples and WebGPU equivalents.
+
 ## WebGL Constants
 
 When raw numeric WebGL enums are still needed, import them from

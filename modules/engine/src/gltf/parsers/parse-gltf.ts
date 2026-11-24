@@ -32,6 +32,7 @@ import {
 } from '../gltf/gltf-lightmap';
 import type {PrimitiveMaterialVariants} from '@luma.gl/engine';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
+import {type PBRLightingEnvironment} from '../../lighting/pbr-environment';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {resolveTextureCoordinateSet} from '../pbr/texture-transform';
 import {
@@ -47,12 +48,17 @@ export type ParseGLTFOptions = {
   properties?: import('@luma.gl/engine').InteractivityPropertyAdapter | null;
   /** Borrowed rigid GPU matrices. The renderer selects a body and local transform per draw. */
   publishedTransforms?: Buffer | null;
+  /** Compile skinned meshes for a storage palette, including small WebGPU rigs. */
+  storageSkinPalettes?: boolean;
   /** Additional model props applied to each generated primitive model. */
   modelOptions?: Partial<ModelProps>;
   /** Enables shader-level PBR debug output. */
   pbrDebug?: boolean;
-  /** Optional image-based lighting environment. */
-  imageBasedLightingEnvironment?: PBREnvironment;
+  /**
+   * Optional image-based lighting environment: a loaded `PBREnvironment`, or a
+   * `PBRLightingEnvironment` such as the textures of `createPrefilteredEnvironment`.
+   */
+  imageBasedLightingEnvironment?: PBREnvironment | PBRLightingEnvironment;
   /** Enables punctual light extraction. */
   lights?: boolean;
   /** Enables tangent usage when available. */
@@ -79,6 +85,7 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   properties: null,
   billboards: null,
   publishedTransforms: null,
+  storageSkinPalettes: false,
   modelOptions: {},
   pbrDebug: false,
   imageBasedLightingEnvironment: undefined!,
@@ -455,10 +462,9 @@ function createNodeForGLTFPrimitive({
     vertexCount,
     bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
     instanceMatrices: instancing?.matrices,
-    usesLargeSkinPalette: usesLargeSkinPalette(
-      gltfPrimitive.attributes.JOINTS_0,
-      gltfPrimitive.attributes.JOINTS_1
-    ),
+    usesLargeSkinPalette:
+      (options.storageSkinPalettes && device.type === 'webgpu') ||
+      usesLargeSkinPalette(gltfPrimitive.attributes.JOINTS_0, gltfPrimitive.attributes.JOINTS_1),
     morphTargets: morphTargetState?.targets
   });
 

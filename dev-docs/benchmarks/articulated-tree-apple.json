@@ -1,0 +1,75 @@
+{
+  "browser": "151.0.7922.34",
+  "adapter": {
+    "type": "webgpu",
+    "vendor": "apple",
+    "renderer": "",
+    "version": "",
+    "gpu": "apple",
+    "gpuType": "unknown",
+    "gpuBackend": "unknown",
+    "gpuArchitecture": "metal-3",
+    "fallback": false,
+    "featureLevel": "core",
+    "subgroupMinSize": 32,
+    "subgroupMaxSize": 32,
+    "shadingLanguage": "wgsl",
+    "shadingLanguageVersion": 100
+  },
+  "rows": [
+    {
+      "links": 4,
+      "payload": 3,
+      "frequency": 120,
+      "solver": "ordered",
+      "iterations": 64,
+      "qualified": false,
+      "originalWindow": {
+        "maximumTipError": 0.005083561033058005,
+        "maximumAnchorDrift": 0.009549713066723212,
+        "maximumTorqueError": 0.020119180008541276,
+        "p50": 8.400000095367432,
+        "p95": 10.799999952316284,
+        "qualified": true
+      },
+      "maximumTipError": 0.005083561033058005,
+      "maximumAnchorDrift": 0.010994848931981936,
+      "maximumTorqueError": 0.21482513439400122,
+      "samples": 240,
+      "motion": {
+        "peakAngle": 0.28703548641449494,
+        "finalElbowAngle": -0.24367192501579638,
+        "finalTipError": 0.021181168752953297
+      },
+      "p50": 8.700000047683716,
+      "p95": 9.900000095367432
+    },
+    {
+      "links": 4,
+      "payload": 3,
+      "frequency": 120,
+      "solver": "reduced-coordinate",
+      "iterations": null,
+      "qualified": true,
+      "originalWindow": {
+        "maximumTipError": 0.000007152557373046875,
+        "maximumAnchorDrift": 1.3714338822459587e-7,
+        "maximumTorqueError": 0.000010903579136491095,
+        "p50": 0.5999999046325684,
+        "p95": 0.8999998569488525,
+        "qualified": true
+      },
+      "maximumTipError": 0.000007152557373046875,
+      "maximumAnchorDrift": 1.3714338822459587e-7,
+      "maximumTorqueError": 0.000011136893953960514,
+      "samples": 240,
+      "motion": {
+        "peakAngle": 0.2878138891183829,
+        "finalElbowAngle": -0.24717912127857283,
+        "finalTipError": 0.07268153275410627
+      },
+      "p50": 0.5,
+      "p95": 1
+    }
+  ]
+}
