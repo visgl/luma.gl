@@ -559,8 +559,7 @@ Geospatial viewports, deck model/origin transforms, picking, extensions, layer p
 opacity are explicitly unsupported. Three material opacity and object transforms
 remain available. Picking behind these non-pickable meshes does not account for
 their occlusion. PBR, texture translation, instancing, skinning and automatic
-transparent-object sorting are deferred. This is not a general Three scene loader
-or a guarantee of compatibility with unpatched published deck/luma versions.
+transparent-object sorting are deferred.
 
 Browser verification compares the real deck/Three composition against upstream
 at three camera/animation states, checks a non-default depth format, reverses layer

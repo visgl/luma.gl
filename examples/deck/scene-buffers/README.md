@@ -22,8 +22,7 @@ vectors, temporal rejection, or screen-space reflections are applied here.
 
 This example requests `selection: true` for its outline and mask views. Four capture passes run in addition to Deck's normal draw. Captures cost about 17 bytes per
 physical canvas pixel per view, doubled with history, before bloom and presentation targets.
-The adapter uses Deck's experimental layer-pass interface and the repository's pinned patch;
-it is experimental and currently requires WebGPU.
+The adapter uses deck.gl’s experimental layer-pass interface and requires WebGPU.
 
 Run `yarn workspace luma.gl-examples-deck-scene-buffers test:visual` for the browser checks.
 
