@@ -16,6 +16,8 @@
 
 * Opt-in GPU BVH refits for batched ray and sphere casts against sphere and box colliders, with indexed and direct scan comparisons in Physics Batch Lab.
 
+* GPU weighted shortest paths stop on the GPU once converged, continue past 1,024 rounds with `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing. [Weighted routes](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
+
 See the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
