@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Layer, type LayerContext, type LayerProps, type PickingInfo} from '@deck.gl/core';
+import {
+  Layer,
+  type LayerContext,
+  type LayerProps,
+  type PickingInfo,
+  type UpdateParameters
+} from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DrawCommandBuffer} from '@luma.gl/graph/gpu-core';
@@ -142,6 +148,19 @@ export class GPUCulledTraceLayer extends Layer<GPUCulledTraceLayerProps> {
       parameters: TRACE_BLEND_PARAMETERS
     });
     this.setState({model, renderUniforms} satisfies GPUCulledTraceLayerState);
+  }
+
+  override updateState(params: UpdateParameters<this>): void {
+    super.updateState(params);
+    const {props, oldProps} = params;
+    const {model} = this.state as GPUCulledTraceLayerState;
+    // The model keeps the record it was given; point it at a replaced command buffer.
+    if (model && props.drawCommands !== oldProps.drawCommands) {
+      model.setIndirectBuffer(
+        props.drawCommands.buffer,
+        props.drawCommands.getCommandByteOffset(0)
+      );
+    }
   }
 
   override getModels(): Model[] {
