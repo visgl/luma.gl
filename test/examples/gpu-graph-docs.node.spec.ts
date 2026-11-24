@@ -560,8 +560,11 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
       'Directed `incoming` or `both` routing requires reverse CSR'
     );
     expect(graphDocumentation).toContain('bounded Bellman–Ford-style synchronized relaxation');
-    expect(graphDocumentation).toContain('from `0` through `1024`');
-    expect(graphDocumentation).toContain('`min(max(vertexCount - 1, 0), 1024)`');
+    expect(graphDocumentation).toContain('its default is `max(vertexCount - 1, 0)`');
+    expect(graphDocumentation).toContain(
+      'const {converged, iterations} = await shortestPaths.run();'
+    );
+    expect(graphDocumentation).toContain('`seeds` replaces `sourceVertex`');
     expect(graphDocumentation).toContain('partially relaxed routes');
     expect(graphDocumentation).toContain('`O(K × (V + E))`');
     expect(graphDocumentation).toContain('`O(V)` graph-owned scratch');
