@@ -579,7 +579,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 #### generated
 
 - [@luma.gl/core generated API](https://luma.gl/next/docs/api-reference/generated/core.md): Classes
-- [Abstract Class: Adapter](https://luma.gl/next/docs/api-reference/generated/core/classes/Adapter.md): Defined in11
+- [Abstract Class: Adapter](https://luma.gl/next/docs/api-reference/generated/core/classes/Adapter.md): Defined in14
 - [Abstract Class: Buffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md): Defined in29
 - [Abstract Class: CanvasContext](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md): Defined in12
 - [Abstract Class: CommandBuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandBuffer.md): Defined in17
