@@ -75,7 +75,7 @@ import {
   resetGLParameters
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
-import {getWebGLExtension} from '../context/helpers/webgl-extensions';
+import {getGLSLLanguageFeatures, getWebGLExtension} from '../context/helpers/webgl-extensions';
 import {createGLKeyByValue, type GLKeyByValue} from '../../webgl-constants/webgl-constant-utils';
 
 /** WebGPU style Device API for a WebGL context */
@@ -98,6 +98,7 @@ export class WebGLDevice extends Device {
   features!: WebGLDeviceFeatures;
   limits!: WebGLDeviceLimits;
   readonly info!: DeviceInfo;
+  declare readonly glslLanguageFeatures: ReadonlySet<string>;
   readonly canvasContext!: WebGLCanvasContext;
 
   readonly preferredColorFormat = 'rgba8unorm';
@@ -248,6 +249,7 @@ export class WebGLDevice extends Device {
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this.extensions);
+    this.glslLanguageFeatures = getGLSLLanguageFeatures(this.gl);
     this.limits = new WebGLDeviceLimits(this.gl);
     this.features = new WebGLDeviceFeatures(this.gl, this.extensions, this.props._disabledFeatures);
     if (this.props._initializeFeatures) {
