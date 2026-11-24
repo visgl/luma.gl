@@ -289,7 +289,7 @@ pixels retain the default roughness of 1.
 | Transparent layer | Blended over opaque color | Preserved | Preserved | Preserved |
 | Nonparticipating layer or external basemap | Absent | Absent | Absent | Absent |
 
-The GPU integration test exercises the unmodified `ScatterplotLayer` from Deck 9.4.0: opaque
+The GPU integration test exercises the unmodified `ScatterplotLayer` from deck.gl 10.0.0-alpha.2: opaque
 color/depth capture, transparent blending, exclusion, native picking, and removal of the effect.
 It does not establish compatibility with every stock layer or create normals for them. The pinned
 stock WebGPU shaders do not expose a consistent fragment normal/color-extension hook; supplying
@@ -323,7 +323,7 @@ canvas pixel per view, or 17 with selection, doubled when history is enabled, pl
 Capture issues three passes per view, or four with selection, and preserves the normal Deck display pass, so callers should measure the cost for
 their scenes. The adapter currently requires WebGPU and explicit layer participation.
 
-The repository's pinned Deck patch also adds depth to the first postprocessing scene target.
+The first postprocessing scene target needs a depth attachment.
 Without it, depth-writing layers are incompatible with that color-only WebGPU target as soon
 as a `postRender` effect is installed. The second fullscreen swap target remains color-only.
 ### Motion and shared shader-pass graphs

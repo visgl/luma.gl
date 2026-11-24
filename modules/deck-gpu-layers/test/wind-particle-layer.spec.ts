@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {COORDINATE_SYSTEM, Deck, OrthographicView} from '@deck.gl/core';
+import {Deck, OrthographicView} from '@deck.gl/core';
 import {luma, Texture, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {getTestDevice} from '@luma.gl/core/test-utils';
@@ -56,7 +56,7 @@ it('wind effect advances once per render, pauses, and the layer borrows live GPU
     new WindParticleLayer({
       id: 'wind-test',
       simulation: effect.simulation,
-      coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+      coordinateSystem: 'cartesian',
       widthPixels: 8,
       altitude: 0,
       pickable: true

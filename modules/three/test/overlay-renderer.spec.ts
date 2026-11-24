@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import {Deck, COORDINATE_SYSTEM} from '@deck.gl/core';
+import {Deck} from '@deck.gl/core';
 import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {luma} from '@luma.gl/core';
 import {AnimationLoop} from '@luma.gl/engine';
@@ -76,7 +76,7 @@ for (const backend of ['webgl', 'webgpu']) {
         id: 'host-points',
         opacity,
         transitions: {opacity: 1000},
-        coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+        coordinateSystem: 'cartesian',
         data: [point],
         getPosition: position => position,
         radiusUnits: 'pixels',
@@ -86,7 +86,7 @@ for (const backend of ['webgl', 'webgpu']) {
       }),
       new PathLayer({
         id: 'host-path',
-        coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+        coordinateSystem: 'cartesian',
         data: [
           {
             path: [

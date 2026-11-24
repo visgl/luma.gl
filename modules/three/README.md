@@ -181,7 +181,7 @@ compute interoperability path; it does not require replacing Three's backend.
 ## Choose an integration
 
 All paths are experimental and tested against Three **0.187.0**; the deck
-and overlay entry points additionally require this workspace's patched deck **9.4.0** and luma **10**.
+and overlay entry points additionally require this workspace's deck.gl **10.0.0-alpha.2** and luma **10**.
 These are tested combinations, not a broad version range.
 
 | Application needs | Entry point | Rendering and ownership contract |
@@ -515,7 +515,7 @@ the private hooks; no new luma core API was needed for this subset.
 ## Three meshes in a deck.gl scene
 
 `@luma.gl/three/deck` exports `ThreeMeshLayer` and `synchronizeThreeCamera`.
-The optional deck entry point uses this workspace's patched deck.gl 9.4.0 and
+The optional deck entry point uses this workspace's deck.gl 10.0.0-alpha.2 and
 luma 10 stack. It is independent of the renderer backend and compute bridge.
 
 ```ts
