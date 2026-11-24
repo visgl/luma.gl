@@ -104,7 +104,9 @@ export class ShaderBlockWriter {
     const data = new Uint8Array(buffer, 0, byteLength).fill(0);
 
     for (const name in flattenedUniformValues) {
-      this._writeLeafValue(scratchTypedArrays, name, flattenedUniformValues[name]);
+      if (Object.hasOwn(flattenedUniformValues, name)) {
+        this._writeLeafValue(scratchTypedArrays, name, flattenedUniformValues[name]);
+      }
     }
 
     return data;

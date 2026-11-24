@@ -173,6 +173,17 @@ it('ShaderInputs#bindings', () => {
   });
 });
 
+it('ShaderInputs#getBindingValues ignores inherited module bindings', () => {
+  const shaderInputs = new ShaderInputs({});
+  const realTexture = 'REAL_TEXTURE' as unknown as Texture;
+  const fallbackTexture = 'FALLBACK_TEXTURE' as unknown as Texture;
+
+  shaderInputs.moduleBindings = Object.create({inherited: {image: fallbackTexture}});
+  shaderInputs.moduleBindings.own = {image: realTexture};
+
+  expect(shaderInputs.getBindingValues()).toEqual({image: realTexture});
+});
+
 it('ShaderInputs#direct bindings', () => {
   const shaderInputs = new ShaderInputs({});
   const cameraTexture = 'CAMERA_TEXTURE' as unknown as Texture;

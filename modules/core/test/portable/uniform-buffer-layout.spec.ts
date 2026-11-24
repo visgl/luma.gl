@@ -615,6 +615,16 @@ it('ShaderBlockWriter ignores inherited enumerable fields', () => {
   ).toEqual({'light.position': [1, 2, 3]});
 });
 
+it('ShaderBlockWriter#getFlatData ignores inherited uniform values', () => {
+  const {writer} = makeLayoutWriter({scale: 'f32', offset: 'f32'});
+  const values = Object.assign(Object.create({offset: 2}), {scale: 1});
+
+  const data = writer.getFlatData(values);
+  const view = new Float32Array(data.buffer, data.byteOffset, 2);
+
+  expect(Array.from(view)).toEqual([1, 0]);
+});
+
 it('UniformBlock and UniformStore ignore inherited enumerable values', () => {
   const uniformBlock = new UniformBlock<{scale: number; offset: number}>();
   uniformBlock.setUniforms(Object.assign(Object.create({scale: 2}), {offset: 1}));

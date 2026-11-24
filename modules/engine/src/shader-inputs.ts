@@ -185,7 +185,9 @@ export class ShaderInputs<
   getBindingValues(): Record<string, ShaderInputBinding> {
     const bindings = {} as Record<string, ShaderInputBinding>;
     for (const moduleName in this.moduleBindings) {
-      Object.assign(bindings, this.moduleBindings[moduleName]);
+      if (Object.hasOwn(this.moduleBindings, moduleName)) {
+        Object.assign(bindings, this.moduleBindings[moduleName]);
+      }
     }
     Object.assign(bindings, this.directBindings);
     return bindings;

@@ -92,7 +92,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
     // Resource ownership adds 1,592 B minified / 445 B gzip / 347 B Brotli versus the PR base.
     // Shader uniform write optimization (#3421) adds 244 B minified / 115 B gzip / 66 B Brotli.
-    maximum: {minified: 105_400, gzip: 29_775, brotli: 26_075},
+    // Its own-property guard in ShaderBlockWriter#getFlatData adds 16 B minified / 35 B Brotli.
+    maximum: {minified: 105_450, gzip: 29_775, brotli: 26_125},
     targetGzip: 24_000
   },
   {
@@ -123,7 +124,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
     // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
     // Shader uniform write optimization (#3421) adds 244 B minified / 115 B gzip / 66 B Brotli.
-    maximum: {minified: 249_400, gzip: 70_550, brotli: 61_010},
+    // Its own-property guard in ShaderBlockWriter#getFlatData adds 16 B minified / 35 B Brotli.
+    maximum: {minified: 249_450, gzip: 70_600, brotli: 61_060},
     targetGzip: 54_000
   },
   {
