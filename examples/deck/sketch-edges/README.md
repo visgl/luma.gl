@@ -21,8 +21,7 @@ The fixed small clip-depth bias exposes coplanar edges; extremely close surfaces
 
 The scene has no animation loop. Deck redraws on camera and style changes. The application owns
 segment buffers; the layer owns its corner buffer and model. Picking returns the feature indexed
-by each segment. The shared Deck patch also used by the city showcase fixes WebGPU pick rectangles
-and readback orientation; no city or water example files are needed here.
+by each segment.
 
 `yarn test:visual` renders both backends with software GPU adapters and checks visible style
 changes, stable replacement, hidden-edge occlusion, picking, resize, grazing views, and cleanup.
