@@ -12,7 +12,7 @@ import {
   type PlatformInfo
 } from '@luma.gl/shaders';
 import {getWebGLTestDevice, getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 const GLSL_PLATFORM_INFO: PlatformInfo = {

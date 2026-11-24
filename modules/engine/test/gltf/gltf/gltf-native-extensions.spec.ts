@@ -9,7 +9,7 @@ import {Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
 
 import {getTestDevices} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('glTF renders official EXT_mesh_gpu_instancing through one real draw on available backends', async () => {

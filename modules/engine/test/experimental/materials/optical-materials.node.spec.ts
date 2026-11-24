@@ -24,7 +24,7 @@ import {
   opticalPointLightsPlugin,
   reflectiveMaterial,
   reflectiveMaterialPlugin
-} from '@luma.gl/engine/experimental/materials';
+} from '@luma.gl/engine/experimental-materials';
 import {aBuffer, aBufferPlugin, wboit, wboitPlugin} from '@luma.gl/anari';
 import {
   getShaderModuleUniformLayoutValidationResult,

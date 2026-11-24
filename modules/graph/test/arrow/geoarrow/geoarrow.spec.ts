@@ -29,7 +29,7 @@ it('convertGeoArrowTableToInterleavedAsync converts separated coordinates', asyn
   void 0;
 });
 
-it('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate offsets', () => {
+it('convertGeoArrowVectorToInterleaved preserves sliced validity while interleaving separated coordinates', () => {
   const vector = makeSeparatedPointVector(
     [
       [10, 20, 30],
@@ -42,7 +42,8 @@ it('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate of
   const slicedVector = vector.slice(1, 4);
   const convertedVector = convertGeoArrowVectorToInterleaved(slicedVector);
 
-  expect(convertedVector.data[0].offset, 'resets the compacted FixedSizeList chunk offset').toBe(0);
+  expect(convertedVector.data[0].offset).toBe(slicedVector.data[0].offset);
+  expect(convertedVector.data[0].nullBitmap).toBe(slicedVector.data[0].nullBitmap);
   expect(getVectorRows(convertedVector), 'preserves sliced validity and coordinate rows').toEqual([
     null,
     [4, 5, 6],

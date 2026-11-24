@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /**
  * Properties for creating a QuerySet
@@ -12,7 +12,7 @@ import {Resource, ResourceProps} from './resource';
  * - 'occlusion' - query the number of fragment samples that pass all per-fragment tests for a set of drawing commands
  *   including scissor, sample mask, alpha to coverage, stencil, and depth tests
  */
-export type QuerySetProps = ResourceProps & {
+export type QuerySetProps = DeviceResourceProps & {
   /**
    * The type of query set
    * occlusion - query the number of fragment samples that pass all the per-fragment tests for a set of drawing commands, including scissor, sample mask, alpha to coverage, stencil, and depth tests
@@ -25,7 +25,7 @@ export type QuerySetProps = ResourceProps & {
 };
 
 /** Immutable QuerySet object */
-export abstract class QuerySet extends Resource<QuerySetProps> {
+export abstract class QuerySet extends DeviceResource<QuerySetProps> {
   get [Symbol.toStringTag](): string {
     return 'QuerySet';
   }
@@ -35,7 +35,7 @@ export abstract class QuerySet extends Resource<QuerySetProps> {
   }
 
   static override defaultProps: Required<QuerySetProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     type: undefined!,
     count: undefined!
   };

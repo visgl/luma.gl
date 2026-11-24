@@ -2,13 +2,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, ExternalTexture, ResourceProps, Sampler, SamplerProps} from '@luma.gl/core';
+import type {
+  Device,
+  ExternalTexture,
+  DeviceResourceProps,
+  Sampler,
+  SamplerProps
+} from '@luma.gl/core';
 import {Texture, assert} from '@luma.gl/core';
 import {uid} from '../utils/uid';
 import type {TextureBindingLayout, TextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Properties for a live video binding source. */
-export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+export type VideoTextureProps = Pick<DeviceResourceProps, 'id'> & {
   /** Caller-owned live video source followed by this binding source. */
   source: HTMLVideoElement | VideoFrame;
   /** Color space requested for copied or imported video data. */
@@ -62,7 +68,7 @@ export class VideoTexture implements TextureBindingSource {
     return this._updateTimestamp;
   }
 
-  /** Resource label used by debug output. */
+  /** DeviceResource label used by debug output. */
   get [Symbol.toStringTag]() {
     return 'VideoTexture';
   }

@@ -96,7 +96,6 @@ export function compileGPUDataFrameSort<Source extends GPUTypeMap, Selection ext
     Selection,
     CompiledGPUDataFrameSort<Selection>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context => addGPUBatchSortToGraph(context, column, options)
   });
 }

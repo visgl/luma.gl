@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SHADOW_GLSL} from './shadow-glsl';
-import type {NumberArray3, NumberArray4, NumberArray16} from '@math.gl/core';
+import type {NumberArray3, NumberArray4, NumberArray16} from '@math.gl/core/types';
 import type {ShaderModule} from '../../../lib/shader-module/shader-module';
 import type {
   DirectionalShadowLight,

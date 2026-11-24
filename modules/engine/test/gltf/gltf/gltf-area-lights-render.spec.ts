@@ -8,7 +8,7 @@ import {ModelNode} from '@luma.gl/engine';
 import {createAreaLightLTCTextures} from '@luma.gl/engine';
 import {type AreaLight, pbrScene, pbrMaterial, skin} from '@luma.gl/shaders';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, test} from 'vitest';
 import {createScenegraphsFromGLTF} from '../../../src/gltf/gltf/create-scenegraph-from-gltf';
 
@@ -103,24 +103,24 @@ test.each([
             if (node instanceof ModelNode) models.push(node);
           });
           const color = device.createTexture({
-            width: 64,
-            height: 64,
+            width: 5,
+            height: 5,
             format: 'rgba8unorm',
             usage: Texture.RENDER | Texture.COPY_SRC
           });
           const depth = device.createTexture({
-            width: 64,
-            height: 64,
+            width: 5,
+            height: 5,
             format: 'depth24plus',
             usage: Texture.RENDER
           });
           const framebuffer = device.createFramebuffer({
-            width: 64,
-            height: 64,
+            width: 5,
+            height: 5,
             colorAttachments: [color],
             depthStencilAttachment: depth
           });
-          const layout = color.computeMemoryLayout({width: 64, height: 64});
+          const layout = color.computeMemoryLayout({width: 1, height: 1});
           const readback = device.createBuffer({
             byteLength: layout.byteLength,
             usage: Buffer.COPY_DST | Buffer.MAP_READ
@@ -163,9 +163,9 @@ test.each([
             }
             pass.end();
             device.submit();
-            color.readBuffer({width: 64, height: 64}, readback);
+            color.readBuffer({x: 2, y: 2, width: 1, height: 1}, readback);
             const pixels = await readback.readAsync(0, layout.byteLength);
-            return pixels[(32 * 64 + 32) * 4];
+            return pixels[0];
           };
           try {
             const rectangle = await render(light);
@@ -237,24 +237,24 @@ test.each([
       if (node instanceof ModelNode) models.push(node);
     });
     const color = device.createTexture({
-      width: 64,
-      height: 64,
+      width: 5,
+      height: 5,
       format: 'rgba8unorm',
       usage: Texture.RENDER | Texture.COPY_SRC
     });
     const depth = device.createTexture({
-      width: 64,
-      height: 64,
+      width: 5,
+      height: 5,
       format: 'depth24plus',
       usage: Texture.RENDER
     });
     const framebuffer = device.createFramebuffer({
-      width: 64,
-      height: 64,
+      width: 5,
+      height: 5,
       colorAttachments: [color],
       depthStencilAttachment: depth
     });
-    const layout = color.computeMemoryLayout({width: 64, height: 64});
+    const layout = color.computeMemoryLayout({width: 1, height: 1});
     const readback = device.createBuffer({
       byteLength: layout.byteLength,
       usage: Buffer.COPY_DST | Buffer.MAP_READ
@@ -278,9 +278,9 @@ test.each([
       }
       pass.end();
       device.submit();
-      color.readBuffer({width: 64, height: 64}, readback);
+      color.readBuffer({x: 2, y: 2, width: 1, height: 1}, readback);
       const pixels = await readback.readAsync(0, layout.byteLength);
-      return pixels[32 * layout.bytesPerRow + 32 * 4];
+      return pixels[0];
     };
     try {
       // Keep the light oblique so the unlit case does not normalize a zero half-vector.

@@ -19,7 +19,7 @@ import {
   resolveTextureCoordinateSet,
   resolveTextureTransform
 } from '@luma.gl/engine/gltf';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import type {
   ANARIJSONScene,
   JSONGeometryDeclaration,

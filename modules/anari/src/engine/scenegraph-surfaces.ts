@@ -4,7 +4,7 @@
 
 import {assert} from '@luma.gl/core';
 import {GroupNode, type ScenegraphNode, type ScenegraphTransformFrame} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {SceneMeshNode} from './scene-mesh-node';
 import {getSceneAlphaMode, type SceneSurface} from './scene-renderer';
 

@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {evaluateProjectionProgram} from '@luma.gl/graph/gpu-project';
-import {prepareCRSProjection, ProjectionTableTransform} from '@luma.gl/graph/gpu-project/crs';
+import {prepareCRSProjection, ProjectionTableTransform} from '@luma.gl/graph/gpu-project-crs';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';
 import {makePerformanceCoordinates} from './projection-performance-fixtures';
 

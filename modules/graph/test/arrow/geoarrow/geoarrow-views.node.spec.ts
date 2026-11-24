@@ -3,7 +3,7 @@
 
 import {expect, it} from 'vitest';
 import * as arrow from 'apache-arrow';
-import {materializeGeoArrowRows} from '@math.gl/arrow/geoarrow-utils';
+import {materializeGeoArrowRows} from '@math.gl/core/arrow';
 import {
   getGeoArrowRowViewFromArrowVector,
   iterateGeoArrowBatchesFromArrowVector

@@ -34,7 +34,7 @@ function list(value: unknown): unknown[] {
 
 export function parseGLTFJointDeclarations(
   document: {
-    nodes?: readonly {extensions?: Record<string, unknown>}[];
+    nodes?: readonly {name?: string; extensions?: Record<string, unknown>}[];
     extensions?: Record<string, unknown>;
   },
   sceneNodes: ReadonlyMap<number, ScenegraphNode>
@@ -131,7 +131,14 @@ export function parseGLTFJointDeclarations(
         nodeIndex,
         connectedNodeIndex: connectedNode,
         jointIndex: definitionIndex,
-        joint: {first, second, limits, drives, collideConnected: source['enableCollision'] === true}
+        joint: {
+          id: nodes[nodeIndex].name ?? `node-${nodeIndex}`,
+          first,
+          second,
+          limits,
+          drives,
+          collideConnected: source['enableCollision'] === true
+        }
       });
     } catch (error) {
       issues.push({

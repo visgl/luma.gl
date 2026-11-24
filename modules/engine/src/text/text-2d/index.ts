@@ -38,6 +38,7 @@ export {
   type TextKerning
 } from '../fonts/atlas/text-utils';
 export {type TextGlyphLayout} from './model-utils/gpu-text-types';
+export {createTextCodePointSource} from './model-utils/text-code-point-source';
 export {
   buildTextGlyphLayout,
   type TextCodePointSource,

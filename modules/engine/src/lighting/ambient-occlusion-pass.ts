@@ -3,7 +3,8 @@
 
 import {assert, type Device, type Texture} from '@luma.gl/core';
 import type {CompositeShaderPass} from '@luma.gl/shaders';
-import {Matrix4, type NumberArray16} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray16} from '@math.gl/core/types';
 import {ShaderPassRenderer} from '../passes/shader-pass-renderer';
 import {ssaoEvaluate} from '../effects/passes/screen-space/ssao';
 import {gtaoEvaluate} from '../effects/passes/screen-space/gtao';

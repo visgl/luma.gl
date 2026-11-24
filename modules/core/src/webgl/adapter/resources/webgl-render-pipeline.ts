@@ -92,14 +92,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       : this.introspectedLayout;
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     if (this.sharedRenderPipeline && !this.props._sharedRenderPipeline) {
       this.sharedRenderPipeline.destroy();
     }
-    this.destroyResource();
   }
 
   /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */

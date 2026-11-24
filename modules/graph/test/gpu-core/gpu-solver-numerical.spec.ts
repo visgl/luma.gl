@@ -6,8 +6,11 @@ import {expect, test} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUData} from '@luma.gl/graph/gpu-data';
-import {createGPUConjugateGradientGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
-import {GPUJacobiPCG} from '../../src/gpu-core/gpu-pcg';
+import {
+  createGPUConjugateGradientGraph,
+  GPUGraphCompiler,
+  GPUJacobiPCG
+} from '@luma.gl/graph/gpu-core';
 import {BatchConformanceFixture} from './batch-conformance-utils';
 
 for (const initial of [

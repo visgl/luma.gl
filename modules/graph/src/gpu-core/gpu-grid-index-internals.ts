@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GPU_GRID_COORDINATE_WGSL} from './gpu-grid-coordinate';
 import {type GPUCommandNode} from './gpu-command-node';
 import {type GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
@@ -246,21 +247,7 @@ const DEPTH: u32 = ${depth}u;
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
 ${bindings}
 
-fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
-  if (maximum == minimum || value == minimum) { return 0u; }
-  if (value == maximum) { return size - 1u; }
-  if (minimum < 0.0 && maximum > 0.0) {
-    let scale = max(abs(minimum), abs(maximum));
-    let scaledValue = value / scale;
-    let scaledMinimum = minimum / scale;
-    let scaledMaximum = maximum / scale;
-    return min(
-      u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
-      size - 1u
-    );
-  }
-  return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
-}
+${GPU_GRID_COORDINATE_WGSL}
 
 @compute @workgroup_size(256)
 fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {

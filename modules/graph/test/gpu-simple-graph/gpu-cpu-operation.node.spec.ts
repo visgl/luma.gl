@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/graph';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 
 async function readValues(vector: GPUVector): Promise<number[][]> {

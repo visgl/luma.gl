@@ -17,10 +17,10 @@ import {
   type CRSNormalizationOptions,
   type NormalizedCRS,
   type TypeScriptCRSInput
-} from '@math.gl/geospatial/projection/core';
-import {projJSONCRSParser} from '@math.gl/geospatial/projection/parsers/projjson';
-import {wktCRSParser} from '@math.gl/geospatial/projection/parsers/wkt';
-import {datumCatalog} from '@math.gl/geospatial/projection/datums';
+} from '@math.gl/geospatial/projection-core';
+import {projJSONCRSParser} from '@math.gl/geospatial/projection-parsers-projjson';
+import {wktCRSParser} from '@math.gl/geospatial/projection-parsers-wkt';
+import {datumCatalog} from '@math.gl/geospatial/projection-datums';
 import {normalizeCRSProviderDefinition} from './projection-crs-provider';
 import {
   lowerCRSProjection,

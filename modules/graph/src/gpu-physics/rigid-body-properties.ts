@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4, Quaternion} from '@math.gl/core';
+import {Matrix4, Quaternion} from '@math.gl/core/matrix';
+import type {GPURigidBodyHeightField} from './rigid-body-height-field';
 import type {RigidBodyMeshGeometry} from './rigid-body-mesh';
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 
@@ -16,7 +17,9 @@ export type GPURigidBodyShape =
   | {type: 'capsule'; height: number; radiusBottom: number; radiusTop: number}
   | {type: 'cylinder'; height: number; radiusBottom: number; radiusTop: number}
   | {type: 'convex-hull'; geometry: RigidBodyMeshGeometry}
-  | {type: 'triangle-mesh'; geometry: RigidBodyMeshGeometry};
+  | {type: 'triangle-mesh'; geometry: RigidBodyMeshGeometry}
+  /** Static Z-up terrain with on-GPU triangle reconstruction. */
+  | {type: 'height-field'; field: GPURigidBodyHeightField};
 export type GPURigidBodyMaterial = {
   restitution?: number;
   staticFriction?: number;

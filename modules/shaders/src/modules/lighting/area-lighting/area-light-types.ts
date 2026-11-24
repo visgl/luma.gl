@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray3} from '@math.gl/core/types';
 import {normalizeByteColor3} from '../../../lib/color/normalize-byte-colors';
 
 /** A uniformly emitting, one-sided rectangle or disk in world space. */

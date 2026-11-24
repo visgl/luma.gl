@@ -6,7 +6,7 @@ import type {Bindings, BindingsByGroup, RenderBundle, RenderPass} from '@luma.gl
 import {Buffer, Device, normalizeBindingsByGroup} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Model, OrbitControls} from '@luma.gl/engine';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

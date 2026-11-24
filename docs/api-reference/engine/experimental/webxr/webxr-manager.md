@@ -14,7 +14,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 ```typescript
 import type {Framebuffer} from '@luma.gl/core';
 import {AnimationLoop} from '@luma.gl/engine';
-import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/engine/experimental/webxr';
+import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/engine/experimental-webxr';
 
 const webXRManager = new WebXRManager(device);
 await webXRManager.setSession(session);

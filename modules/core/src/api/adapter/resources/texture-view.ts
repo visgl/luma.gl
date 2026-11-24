@@ -5,10 +5,10 @@
 import type {Device} from '../device';
 import type {Texture} from './texture';
 import type {TextureFormat} from '../../../shadertypes/texture-types/texture-formats';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Properties for initializing a texture view */
-export type TextureViewProps = ResourceProps & {
+export type TextureViewProps = DeviceResourceProps & {
   /** The format of the texture view. Must be either the format of the texture or one of the viewFormats specified during its creation. */
   format?: TextureFormat;
   /** The dimension to view the texture as. */
@@ -26,7 +26,7 @@ export type TextureViewProps = ResourceProps & {
 };
 
 /** Immutable TextureView object */
-export abstract class TextureView extends Resource<TextureViewProps> {
+export abstract class TextureView extends DeviceResource<TextureViewProps> {
   abstract texture: Texture;
 
   override get [Symbol.toStringTag](): string {
@@ -39,7 +39,7 @@ export abstract class TextureView extends Resource<TextureViewProps> {
   }
 
   static override defaultProps: Required<TextureViewProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     format: undefined!,
     dimension: undefined!,
     aspect: 'all',

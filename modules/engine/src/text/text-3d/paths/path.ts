@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js Path and Shape (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Vector2} from '@math.gl/core';
+import {Vector2} from '@math.gl/core/matrix';
 import {CurvePath} from './curve-path';
 import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from './curves';
 

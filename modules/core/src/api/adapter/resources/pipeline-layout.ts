@@ -4,14 +4,14 @@
 
 import {Device} from '../device';
 import {ShaderLayout} from '../types/shader-layout';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
-export type PipelineLayoutProps = ResourceProps & {
+export type PipelineLayoutProps = DeviceResourceProps & {
   shaderLayout: ShaderLayout;
 };
 
 /** Immutable PipelineLayout object */
-export abstract class PipelineLayout extends Resource<PipelineLayoutProps> {
+export abstract class PipelineLayout extends DeviceResource<PipelineLayoutProps> {
   get [Symbol.toStringTag](): string {
     return 'PipelineLayout';
   }
@@ -21,7 +21,7 @@ export abstract class PipelineLayout extends Resource<PipelineLayoutProps> {
   }
 
   static override defaultProps: Required<PipelineLayoutProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     shaderLayout: {
       attributes: [],
       bindings: []

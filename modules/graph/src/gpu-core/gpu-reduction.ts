@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
@@ -701,50 +702,39 @@ function addKernelPass<Parameters>(
     dispatchLayout?: GPUBoundedDispatchLayout;
   }
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id: props.id,
-      resources: props.resources,
-      compile: ({device}) => {
-        const bindingNames = Object.keys(props.bindings);
-        const kernel = new Kernel(device, {
-          id: props.id,
-          source: props.source,
-          shaderLayout: {
-            bindings: bindingNames.map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
+  const {x, y, z} = props.dispatchLayout ?? {x: props.dispatchCount ?? 1, y: 1, z: 1};
+  const node = createGPUComputeCommandNode<Parameters>({
+    id: props.id,
+    resources: props.resources,
+    compile: ({device}) => {
+      const bindingNames = Object.keys(props.bindings);
+      const kernel = new Kernel(device, {
+        id: props.id,
+        source: props.source,
+        shaderLayout: {
+          bindings: bindingNames.map((name, location) => ({
+            name,
+            type: 'storage' as const,
+            group: 0,
+            location
+          }))
+        }
+      });
+      return {
+        encode: ({computePass, getBuffer}) => {
+          const bindings: Record<string, Binding> = {};
+          for (const [name, view] of Object.entries(props.bindings)) {
+            bindings[name] = getViewBinding(view, getBuffer);
           }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(props.bindings)) {
-              bindings[name] = getViewBinding(view, getBuffer);
-            }
 
-            if (props.dispatchLayout) {
-              kernel.dispatch(computePass, {
-                bindings,
-                x: props.dispatchLayout.x,
-                y: props.dispatchLayout.y,
-                z: props.dispatchLayout.z
-              });
-            } else {
-              kernel.dispatch(computePass, {bindings, x: props.dispatchCount ?? 1});
-            }
-          },
-          destroy: () => kernel.destroy()
-        };
-      }
-    })
-  );
+          kernel.dispatch(computePass, {bindings, x, y, z});
+        },
+        destroy: () => kernel.destroy()
+      };
+    }
+  });
 
-  return nodes;
+  return [setGPUComputeDispatchWorkgroups(node, [x, y, z])];
 }
 
 /** Returns the WGSL scalar type corresponding to a supported GPU storage format. */

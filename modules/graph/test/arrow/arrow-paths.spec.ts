@@ -31,3 +31,33 @@ it('getArrowDataByPath', async () => {
 
   void 0;
 });
+
+// Structural wrappers model Arrow objects from another package instance without sharing prototypes.
+it('resolves paths from cross-instance Arrow tables and record batches', () => {
+  const {nestedTable} = ARROW_TABLES;
+  const recordBatch = nestedTable.batches[0];
+  const foreignTable = {
+    schema: nestedTable.schema,
+    numRows: nestedTable.numRows,
+    batches: nestedTable.batches,
+    data: nestedTable.data,
+    get: nestedTable.get.bind(nestedTable),
+    getChild: nestedTable.getChild.bind(nestedTable)
+  };
+  const foreignBatch = {
+    schema: recordBatch.schema,
+    numRows: recordBatch.numRows,
+    data: recordBatch.data,
+    get: recordBatch.get.bind(recordBatch),
+    getChild: recordBatch.getChild.bind(recordBatch)
+  };
+  for (const source of [foreignTable, foreignBatch]) {
+    expect(getArrowPaths(source as arrow.Table | arrow.RecordBatch)).toEqual([
+      'data.age',
+      'data.height'
+    ]);
+    expect(getArrowDataByPath(source as arrow.Table | arrow.RecordBatch, 'data.height')).toBe(
+      getArrowDataByPath(nestedTable, 'data.height')
+    );
+  }
+});

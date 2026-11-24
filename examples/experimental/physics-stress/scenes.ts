@@ -61,7 +61,7 @@ export function makeStressScene(
         mode: 'static',
         mass: 0,
         position: [0, 0, -0.5],
-        shape: {type: 'box', halfExtents: [8, 3, 0.5]},
+        shape: {type: 'box', halfExtents: [8, 8, 0.5]},
         restitution: 0,
         friction: 0.5
       }
@@ -72,7 +72,7 @@ export function makeStressScene(
   if (scene === 'ballistic')
     return {
       description:
-        'A freely falling sphere starts at height 8. The outline follows the exact ballistic solution. Halve the timestep and compare vertical error. Position uses semi-implicit Euler; the error should decrease with timestep.',
+        'A freely falling sphere starts at height 8. The Details readout compares against the exact ballistic solution. Halve the timestep and compare vertical error. Position uses semi-implicit Euler; the error should decrease with timestep.',
       props: {
         ...props,
         bodies: [{position: [-3, 0, 8], velocity: [2, 0, 0], shape: {type: 'sphere', radius: 0.3}}]

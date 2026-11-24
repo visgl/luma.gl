@@ -21,7 +21,7 @@ import {
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/graph/gpu-data';
-import type {TypedArray, TypedArrayConstructor} from '@math.gl/core';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/core/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 import type {GPUEvaluationScope} from './gpu-evaluation-scope';
@@ -929,6 +929,8 @@ function getVertexFormat(
   if (size < 1 || size > 4) {
     throw new Error(`Cannot synthesize a GPUVector vertex format with ${size} components`);
   }
+  // Binary16 RGB has no vertex format; retain byte-identical packed storage for compute readers.
+  if (type === 'float16' && size === 3 && !normalized) return 'uint16x3-webgl';
   let baseFormat: string = type;
   if (normalized) {
     switch (type) {

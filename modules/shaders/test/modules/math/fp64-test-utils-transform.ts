@@ -5,7 +5,7 @@
 import {Device} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shaders';
-import {equals, config} from '@math.gl/core';
+import {equals, config} from '@math.gl/core/matrix';
 import {expect} from 'vitest';
 
 const {fp64ify} = fp64;

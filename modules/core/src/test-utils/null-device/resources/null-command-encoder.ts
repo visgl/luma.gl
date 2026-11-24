@@ -27,10 +27,6 @@ export class NullCommandEncoder extends CommandEncoder {
     this.device = device;
   }
 
-  override destroy(): void {
-    this.destroyResource();
-  }
-
   finish(): NullCommandBuffer {
     const commandBuffer = new NullCommandBuffer(this.device, {
       id: this.id,

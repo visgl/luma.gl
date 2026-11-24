@@ -152,3 +152,33 @@ confirm the selected backend and GPU availability, and distinguish an assertion
 failure from a browser startup or canvas capture failure. If you change the test
 infrastructure itself, update the relevant root script, `vitest.config.ts`,
 `.ocularrc.js`, or `scripts/playwright/` alongside this guide.
+
+### Maintaining browser shard balance
+
+`test/utils/browser-test-sequencer.ts` assigns complete files using measured execution
+weights, longest first. A large file cannot be balanced internally: keep independent,
+expensive pixel scenarios in separate specs with a shared fixture helper. The ray material
+pixel scenarios retain isolated GPU resources and all assertions, but can execute on
+separate workers. Do not replace GPU behavior checks with source-text assertions or shorten
+simulation horizons just to improve a timing number.
+
+Refresh weights from completed GitHub Actions logs when expensive suites are added or
+moved. For example:
+
+```sh
+gh run view <run-id> --log > browser-run.log
+node scripts/ci/browser-timings.mjs browser-run.log > browser-timings.json
+```
+
+The extractor accepts raw ANSI and `gh`-escaped logs, ignores Node results, and retains the
+slowest observed file duration plus one second for page/import overhead. Keep Linux
+SwiftShader and native macOS physics measurements separate when updating the two maps.
+Incomplete files have no duration; inspect cancelled logs before trusting an apparent
+speedup. Measure both the longest job and total worker time after the change lands in CI.
+The presentation canary runs once in its dedicated job and once per coverage worker;
+repeating it in the dedicated job adds little coverage. Release jobs install Chromium only,
+matching their browser project.
+
+Keep the previous weight for any file missing from a new measurement, especially when a
+shard was cancelled. An absent result is not evidence that a suite became fast. Remove a
+weight only when the file is removed or a completed measurement replaces it.

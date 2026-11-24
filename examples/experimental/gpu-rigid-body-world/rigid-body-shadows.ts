@@ -6,7 +6,7 @@ import type {Buffer, Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {ShadowMapRenderer} from '@luma.gl/anari';
 import type {SpotLight} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {rigidBodyPose} from './rigid-body-shaders';
 
 /** One light definition drives both canonical PBR illumination and shadow projection. */
