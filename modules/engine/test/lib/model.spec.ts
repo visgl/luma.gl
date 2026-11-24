@@ -1406,11 +1406,10 @@ function cachedVariantCount(model: Model): number {
   return (model as unknown as {_pipelineCache: Map<string, unknown>})._pipelineCache.size;
 }
 
-it('Model#reuses one pipeline per attachment-format variant across alternating passes', async () => {
+it('Model#reuses one pipeline per attachment-format variant across alternating passes', async context => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    void 0;
-    return;
+    return context.skip('WebGPU unavailable');
   }
 
   const pipelineFactory = new PipelineFactory(webgpuDevice);
@@ -1489,11 +1488,10 @@ it('Model#reuses one pipeline per attachment-format variant across alternating p
   void 0;
 });
 
-it('Model#releases every cached pipeline variant on destroy', async () => {
+it('Model#releases every cached pipeline variant on destroy', async context => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    void 0;
-    return;
+    return context.skip('WebGPU unavailable');
   }
 
   const pipelineFactory = new PipelineFactory(webgpuDevice);
@@ -1549,11 +1547,10 @@ it('Model#releases every cached pipeline variant on destroy', async () => {
   void 0;
 });
 
-it('Model#discards cached variants when the pipeline shape changes', async () => {
+it('Model#discards cached variants when the pipeline shape changes', async context => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    void 0;
-    return;
+    return context.skip('WebGPU unavailable');
   }
 
   const pipelineFactory = new PipelineFactory(webgpuDevice);
@@ -1619,11 +1616,10 @@ it('Model#discards cached variants when the pipeline shape changes', async () =>
   void 0;
 });
 
-it('Model#bounds the number of cached pipeline variants', async () => {
+it('Model#bounds the number of cached pipeline variants', async context => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    void 0;
-    return;
+    return context.skip('WebGPU unavailable');
   }
 
   // More distinct attachment-format combinations than the model is allowed to cache,
@@ -1662,8 +1658,7 @@ it('Model#bounds the number of cached pipeline variants', async () => {
   if (framebuffers.length < 10) {
     // Not enough distinct render targets on this backend to force eviction.
     framebuffers.forEach(framebuffer => framebuffer!.destroy());
-    void 0;
-    return;
+    return context.skip('fewer than ten render-target formats available');
   }
 
   const pipelineFactory = new PipelineFactory(webgpuDevice);
@@ -1709,15 +1704,17 @@ it('Model#bounds the number of cached pipeline variants', async () => {
   void 0;
 });
 
-it('Model#evicts a cached variant that shares the bound pipeline object', async () => {
+it('Model#evicts a cached variant that shares the bound pipeline object', async context => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    void 0;
-    return;
+    return context.skip('WebGPU unavailable');
   }
 
   // The construction-time variant (no attachment formats) and an explicit pass with the
   // preferred color format and no depth resolve to one pipeline object under two keys.
+  // The seven other passes use combinations that differ from that one, whatever the
+  // preferred color format is, so together with the construction-time variant they fill
+  // the cache.
   const preferredColorFormat = webgpuDevice.preferredColorFormat;
   const otherFormats = [
     {color: 'rgba8unorm', depth: undefined},
@@ -1729,12 +1726,8 @@ it('Model#evicts a cached variant that shares the bound pipeline object', async 
     {color: 'rgba16float', depth: 'depth24plus'},
     {color: 'rgba16float', depth: 'depth32float'}
   ]
-    .filter(formats => formats.color !== preferredColorFormat)
+    .filter(formats => !(formats.color === preferredColorFormat && formats.depth === undefined))
     .slice(0, 7);
-  if (otherFormats.length < 7) {
-    void 0;
-    return;
-  }
   const framebuffers = [...otherFormats, {color: preferredColorFormat, depth: undefined}].map(
     (formats, index) =>
       webgpuDevice.createFramebuffer({

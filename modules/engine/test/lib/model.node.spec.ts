@@ -362,3 +362,27 @@ it('Model releases references when invalidation returns the same cached pipeline
     device.destroy();
   }
 });
+
+it('Model keeps a topology change made while the async pipeline compiles', async () => {
+  const device = new NullDevice({});
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling a triangle-list pipeline. Change the topology now.
+    model.setTopology('point-list');
+    await Promise.all(compilation);
+
+    model._updatePipeline();
+    expect(model.pipeline.props.topology).toBe('point-list');
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});

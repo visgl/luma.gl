@@ -116,6 +116,14 @@ const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
 /** Resource accepted by one model binding slot. */
 export type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
 type ModelBuffer = Buffer | DynamicBuffer;
+/** Pipeline props and shader references prepared for one pipeline create. */
+type PipelineUpdate = {
+  props: RenderPipelineProps;
+  vertexShader: Shader;
+  fragmentShader: Shader | null;
+  /** Whether the cached variants were stale when this update was prepared. */
+  releaseCache: boolean;
+};
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
@@ -1641,9 +1649,10 @@ export class GPUVectorModel {
       } catch (error) {
         this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
         this._pipelineNeedsUpdate = 'pipeline creation failed';
+        this._pipelineCacheStale ||= update.releaseCache;
         throw error;
       }
-      this._finishPipelineUpdate();
+      this._finishPipelineUpdate(update);
     }
     return this.pipeline;
   }
@@ -1651,14 +1660,15 @@ export class GPUVectorModel {
   /**
    * Creates or replaces the render pipeline through the backend's asynchronous compilation path.
    *
-   * The variant cache needs no in-flight bookkeeping here. The only caller is
-   * `_initializePipelineAsync()`, once per model from the constructor, so the cache is
-   * always empty at this point and the reuse check below is a no-op today - it is
-   * present so the two update paths stay consistent if a second caller appears.
-   * Concurrent requests for an equivalent pipeline are already deduplicated one layer
-   * down, by `PipelineFactory`'s pending-pipeline cache. And on failure nothing was
-   * inserted, because only `_finishPipelineUpdate()` inserts, so the `catch` below
-   * leaves any existing variants untouched and still valid.
+   * The only caller is `_initializePipelineAsync()`, once per model from the constructor,
+   * so the cache is always empty at this point and the reuse check below is a no-op
+   * today - it is present so the two update paths stay consistent if a second caller
+   * appears. Concurrent requests for an equivalent pipeline are already deduplicated one
+   * layer down, by `PipelineFactory`'s pending-pipeline cache. A topology, parameter or
+   * buffer-layout change made during the await marks the cache stale again, so the next
+   * update rebuilds and releases the pipeline created here along with the other variants.
+   * On failure nothing was inserted, because only `_finishPipelineUpdate()` inserts, so
+   * the `catch` below leaves any existing variants untouched and still valid.
    */
   async _updatePipelineAsync(): Promise<RenderPipeline> {
     if (this._pipelineNeedsUpdate && this._adoptCachedPipelineVariant()) {
@@ -1672,18 +1682,15 @@ export class GPUVectorModel {
       } catch (error) {
         this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
         this._pipelineNeedsUpdate = 'asynchronous pipeline creation failed';
+        this._pipelineCacheStale ||= update.releaseCache;
         throw error;
       }
-      this._finishPipelineUpdate();
+      this._finishPipelineUpdate(update);
     }
     return this.pipeline;
   }
 
-  private _preparePipelineUpdate(): {
-    props: RenderPipelineProps;
-    vertexShader: Shader;
-    fragmentShader: Shader | null;
-  } | null {
+  private _preparePipelineUpdate(): PipelineUpdate | null {
     if (!this._pipelineNeedsUpdate) return null;
     if (this.pipeline) {
       log.log(
@@ -1717,6 +1724,10 @@ export class GPUVectorModel {
       this._pipelineNeedsUpdate = 'shader creation failed';
       throw error;
     }
+    // Take the stale flag now. An invalidation while an async create awaits sets it
+    // again, so the next update rebuilds and releases the in-flight pipeline as well.
+    const releaseCache = this._pipelineCacheStale;
+    this._pipelineCacheStale = false;
     return {
       props: {
         ...this.props,
@@ -1731,11 +1742,12 @@ export class GPUVectorModel {
         fs: fragmentShader
       },
       vertexShader,
-      fragmentShader
+      fragmentShader,
+      releaseCache
     };
   }
 
-  private _finishPipelineUpdate(): void {
+  private _finishPipelineUpdate(update: PipelineUpdate): void {
     this._attributeInfos = getAttributeInfosFromLayouts(
       this.pipeline.shaderLayout,
       this.bufferLayout
@@ -1743,9 +1755,8 @@ export class GPUVectorModel {
 
     // The replacement now exists, so obsolete variants can be released safely: a shader
     // or pipeline shared with the replacement keeps a reference.
-    if (this._pipelineCacheStale) {
+    if (update.releaseCache) {
       this._releasePipelineCache();
-      this._pipelineCacheStale = false;
     }
     this._cachePipelineVariant();
   }

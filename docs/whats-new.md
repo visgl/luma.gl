@@ -20,6 +20,9 @@
   GPU dispatch and compact readback. [Batched collision casts](./api-reference/graph/gpu-physics.md#batched-collision-casts)
 - Opt-in GPU BVH refits for batched ray and sphere casts against sphere and box
   colliders, with indexed and direct scan comparisons in Physics Batch Lab.
+- [Model](./api-reference/engine/model.md) keeps one render pipeline per attachment-format
+  variant and now releases the pipeline and shader references it replaces, so with
+  `_destroyPipelines: true` replaced and evicted pipelines and their shaders are destroyed.
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
