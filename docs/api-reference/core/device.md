@@ -229,6 +229,17 @@ WGSL language extensions exposed by the browser. Unlike `device.features`, these
 discovered dynamically and are not requested during device creation. Non-WebGPU devices expose an
 empty set.
 
+### glslLanguageFeatures
+
+```typescript
+readonly glslLanguageFeatures: ReadonlySet<string>;
+```
+
+GLSL `#extension` directive names supported by the WebGL context. Check a name with
+`device.glslLanguageFeatures.has('GL_ANGLE_multi_draw')`. Enable the corresponding WebGL
+extension with `getExtension()` before compiling a shader that uses it. Non-WebGL devices
+expose an empty set.
+
 ### limits
 
 ```typescript

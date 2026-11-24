@@ -575,6 +575,8 @@ export abstract class Device {
   abstract features: DeviceFeatures;
   /** WGSL language extensions exposed by the browser. These are discovered, not requested. */
   readonly wgslLanguageFeatures: ReadonlySet<string> = new Set();
+  /** Supported GLSL #extension directive names. */
+  readonly glslLanguageFeatures: ReadonlySet<string> = new Set();
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 
