@@ -1437,8 +1437,10 @@ export class GPUVectorModel {
    * span more than one batch.
    */
   setIndirectBuffer(indirectBuffer: Buffer | null, indirectOffset: number = 0): void {
-    // Indirect draws are only supported in WebGPU
+    // Indirect draws require WebGPU
     assert(!indirectBuffer || this.device.type === 'webgpu');
+    // Indirect draw buffers need Buffer.INDIRECT usage
+    assert(!indirectBuffer || indirectBuffer.usage & Buffer.INDIRECT);
     this.indirectBuffer = indirectBuffer;
     this.indirectOffset = indirectBuffer ? indirectOffset : 0;
     this.setNeedsRedraw('indirectBuffer');
@@ -1458,6 +1460,8 @@ export class GPUVectorModel {
     indirectOffset: number = 0,
     commandEncoder?: CommandEncoder
   ): void {
+    // Read the count from the current buffers, as draw() does, in case a DynamicBuffer resized.
+    this._syncDynamicBuffers();
     const indexCount = this._getIndexCount();
     const countWord = new Uint32Array([indexCount ?? this.vertexCount]);
     // Words after instanceCount: firstIndex, baseVertex, firstInstance or firstVertex, firstInstance

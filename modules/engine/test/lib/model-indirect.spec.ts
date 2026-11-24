@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {Buffer, Texture, type Device, type Framebuffer} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {Kernel} from '@luma.gl/graph';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {NullDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const PIXEL_COUNT = 4;
 
@@ -279,6 +279,111 @@ void main() { fragColor = vec4(1.0); }`,
 
   model.destroy();
   buffer.destroy();
+});
+
+it('Model#setIndirectBuffer rejects a buffer without INDIRECT usage', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const model = new Model(device, {
+    source: INSTANCE_PER_PIXEL_WGSL,
+    topology: 'triangle-strip',
+    vertexCount: 4
+  });
+  const buffer = device.createBuffer({byteLength: 16, usage: Buffer.COPY_DST});
+
+  expect(() => model.setIndirectBuffer(buffer)).toThrow();
+  expect(model.indirectBuffer, 'failed call leaves direct draws active').toBe(null);
+
+  model.destroy();
+  buffer.destroy();
+});
+
+it('Model#draw records drawIndexedIndirect for indexed models and drawIndirect otherwise', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const {framebuffer, texture} = createTarget(device);
+  const indexBuffer = device.createBuffer({
+    usage: Buffer.INDEX,
+    data: new Uint16Array([0, 1, 2, 2, 1, 3])
+  });
+  const drawRecord = device.createBuffer({
+    usage: Buffer.INDIRECT | Buffer.COPY_DST,
+    data: new Uint32Array([6, 1, 0, 0, 0])
+  });
+  const indexedModel = new Model(device, {
+    source: INSTANCE_PER_PIXEL_WGSL,
+    topology: 'triangle-list',
+    indexBuffer,
+    indirectBuffer: drawRecord
+  });
+  const nonIndexedModel = new Model(device, {
+    source: INSTANCE_PER_PIXEL_WGSL,
+    topology: 'triangle-strip',
+    vertexCount: 4,
+    indirectBuffer: drawRecord
+  });
+
+  for (const {model, indexed} of [
+    {model: indexedModel, indexed: true},
+    {model: nonIndexedModel, indexed: false}
+  ]) {
+    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    const drawIndexedIndirect = vi.spyOn(renderPass, 'drawIndexedIndirect');
+    const drawIndirect = vi.spyOn(renderPass, 'drawIndirect');
+    expect(model.draw(renderPass)).toBe(true);
+    renderPass.end();
+    device.submit();
+
+    if (indexed) {
+      expect(drawIndexedIndirect).toHaveBeenCalledWith(drawRecord, 0);
+      expect(drawIndirect).not.toHaveBeenCalled();
+    } else {
+      expect(drawIndirect).toHaveBeenCalledWith(drawRecord, 0);
+      expect(drawIndexedIndirect).not.toHaveBeenCalled();
+    }
+  }
+
+  indexedModel.destroy();
+  nonIndexedModel.destroy();
+  indexBuffer.destroy();
+  drawRecord.destroy();
+  framebuffer.destroy();
+  texture.destroy();
+});
+
+it('Model#writeIndirectDrawRecord uses the current size of a resized dynamic index buffer', async () => {
+  const device = new NullDevice({});
+  const indices = new DynamicBuffer(device, {
+    byteLength: 6 * 2,
+    usage: Buffer.INDEX | Buffer.COPY_DST,
+    indexType: 'uint16'
+  });
+  const model = new Model(device, {
+    vs: `#version 300 es
+void main() { gl_Position = vec4(0.0); }`,
+    fs: `#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() { fragColor = vec4(1.0); }`,
+    indexBuffer: indices
+  });
+  // The application grows the index buffer from 6 to 12 uint16 indices.
+  indices.resize({byteLength: 12 * 2});
+
+  const drawRecord = device.createBuffer({
+    byteLength: 20,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  model.writeIndirectDrawRecord(drawRecord);
+  const words = await readWords(drawRecord);
+  expect(words[0], 'indexCount word').toBe(12);
+
+  model.destroy();
+  indices.destroy();
+  drawRecord.destroy();
+  device.destroy();
 });
 
 /** One instanced point per `positions` row, so each vector chunk is a separate batch. */
