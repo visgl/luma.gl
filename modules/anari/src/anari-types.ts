@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {NumberArray9, TypedArray} from '@math.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core/types';
 import type {
   ANARIArray,
   ANARICamera,
@@ -17,6 +17,16 @@ import type {
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
+
+/** CPU snapshot of the internal ray-tracing history before presentation. */
+export type ANARIFrameRadiance = {
+  /** Width of the internal history in pixels. */
+  width: number;
+  /** Height of the internal history in pixels. */
+  height: number;
+  /** Tightly packed little-endian RGBA16F rows, top-left origin. RGB includes exposure. */
+  data: Uint8Array;
+};
 
 /** Caller-owned full-resolution primary-hit GPU snapshot. Submit final GPU use before destroy(). */
 export type ANARIFrameChannels = {
@@ -222,6 +232,8 @@ export type ANARIWorldParameters = {
 };
 
 export type ANARILightParameters = {
+  /** Constant, linear, quadratic attenuation; preserves engine light snapshots. */
+  attenuation?: ANARIVector3;
   color?: ANARIVector3;
   direction?: ANARIVector3;
   position?: ANARIVector3;
@@ -243,9 +255,20 @@ export type ANARICameraParameters = {
   far?: number;
 };
 
+/** Immutable row-major latitude–longitude map storing three linear HDR channels per texel. */
+export type ANARIRayTracingEnvironmentMap = {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Float32Array | readonly number[];
+};
+
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
+  /** Constant linear RGB radiance illuminating ray-traced surfaces from infinity. */
+  environmentRadiance?: ANARIVector3;
+  /** Directional linear RGB illumination added to the constant environment radiance. */
+  environmentMap?: ANARIRayTracingEnvironmentMap;
   environment?: {
     diffuseTexture?: Texture;
     specularTexture?: Texture;
@@ -265,8 +288,10 @@ export type ANARIRendererParameters = {
   historySampleLimit?: number;
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
   denoiseRadius?: 0 | 1 | 2;
-  /** Presentation-only primary-hit diagnostics for ray tracing. */
-  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
+  /** Retains log-luminance moments for variance-guided ray tracing. */
+  varianceGuidance?: boolean;
+  /** Presentation diagnostics for ray tracing. */
+  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history' | 'variance';
   /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
   transportMode?: 'diffuse' | 'pbr';
   /** Explicit emissive geometry connections for ray lighting. */
@@ -277,10 +302,18 @@ export type ANARIRendererParameters = {
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;
+  /** Filters mipmapped triangle alpha masks for camera rays, secondary rays, shadows, and hit queries. */
+  filteredCutouts?: boolean;
+  /** Allows thin transmission and index-matched analytic spheres in PBR analytic-light shadows. */
+  transmissiveShadows?: boolean;
   resolutionScale?: number;
   minimumResolutionScale?: number;
   adaptiveResolution?: boolean;
   targetFrameTimeMilliseconds?: number;
+  /** Previous execution time excluding intentional idle time. Null skips this observation. */
+  previousFrameExecutionMilliseconds?: number | null;
+  /** Number of interleaved pixel batches per complete sweep. Preserves progressive history. */
+  rayBatchPhaseCount?: 1 | 2 | 4 | 8;
   /**
    * Enables camera-reprojection temporal antialiasing for raster renderers. Defaults to true.
    */

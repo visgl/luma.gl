@@ -32,7 +32,7 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
         forceWebGL: backendType === 'webgl',
         outputBufferType: UnsignedByteType
       });
-      const target = new RenderTarget(128, 128, {type: UnsignedByteType, generateMipmaps: false});
+      const target = new RenderTarget(64, 64, {type: UnsignedByteType, generateMipmaps: false});
       const referenceTarget = target.clone();
       const errors: string[] = [];
       const copyTexture = vi.spyOn(
@@ -62,13 +62,19 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
           await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
           renderer.render(scene.scene, scene.camera);
           reference.render(referenceScene.scene, referenceScene.camera);
-          const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+          const pixels = await renderer.readRenderTargetPixelsAsync(
+            target,
+            0,
+            0,
+            target.width,
+            target.height
+          );
           const referencePixels = await reference.readRenderTargetPixelsAsync(
             referenceTarget,
             0,
             0,
-            128,
-            128
+            referenceTarget.width,
+            referenceTarget.height
           );
           let maximum = 0;
           let total = 0;
@@ -95,8 +101,8 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
             target,
             0,
             0,
-            128,
-            128
+            target.width,
+            target.height
           );
           let changedPixels = 0;
           for (let index = 0; index < pixels.length; index += 4) {

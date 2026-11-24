@@ -12,6 +12,10 @@ test('shot charge rises, pauses at full power and restarts from zero', () => {
   expect(getShotCharge(1949)).toBe(100);
   expect(getShotCharge(1950)).toBe(0);
   expect(getShotCharge(2750)).toBe(50);
+  expect(getShotCharge(0, 85)).toBe(85);
+  expect(getShotCharge(600, 85)).toBe(100);
+  expect(getShotCharge(890, 85)).toBe(85);
+  expect(getShotCharge(1200, 100)).toBe(100);
 });
 
 test('only a cleared full rack requests automatic replacement', () => {

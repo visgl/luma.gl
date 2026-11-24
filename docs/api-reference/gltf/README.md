@@ -185,7 +185,7 @@ textures. The application-owned device and borrowed image-based-lighting texture
 type ParseGLTFOptions = {
   modelOptions?: Partial<ModelProps>;
   pbrDebug?: boolean;
-  imageBasedLightingEnvironment?: PBREnvironment;
+  imageBasedLightingEnvironment?: PBREnvironment | PBRLightingEnvironment;
   lights?: boolean;
   useTangents?: boolean;
   useByteColors?: boolean;
@@ -195,6 +195,10 @@ type ParseGLTFOptions = {
 - `modelOptions` supplies additional props to generated primitive models.
 - `pbrDebug` enables shader-level material debugging.
 - `imageBasedLightingEnvironment` supplies existing diffuse, specular, and BRDF lookup textures.
+  It accepts a loaded `PBREnvironment`, or a linear-light
+  [`PBRLightingEnvironment`](/docs/api-reference/engine/lighting/pbr-environment) such as the
+  textures of `createPrefilteredEnvironment()`. See
+  [image-based lighting](/docs/api-reference/gltf/gltf-materials#image-based-lighting).
 - `lights` controls the generated material's punctual-light shader configuration. The returned
   `lights` array is still parsed from the source asset.
 - `useTangents` enables existing authored `TANGENT` attributes; it does not generate missing

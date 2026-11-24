@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {fp64} from '@luma.gl/shaders';
-import {Pose} from '@math.gl/core';
+import {Pose} from '@math.gl/core/matrix';
 
 it('fp64#fp64LowPart', () => {
   const x = Math.PI;

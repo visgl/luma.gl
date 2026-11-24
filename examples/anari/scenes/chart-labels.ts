@@ -3,7 +3,7 @@
 
 import {Buffer, Texture, type Device, type RenderPass, type Sampler} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {CHART_BASELINE_DATA} from './chart-baseline';
 import type {ANARIJSONSceneHandle} from './playground-scene';
 

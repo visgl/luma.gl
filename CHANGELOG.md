@@ -2,6 +2,56 @@
 
 ## v10.0
 
+### v10.0.0-beta.2
+
+- Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
+- Flatten public luma.gl subpaths and consolidate the release notes and upgrade guide.
+- Expand GPU DataFrame SQL with scalar functions, casts, null handling, CASE expressions, and pagination. Fix column-only projections and preserve quoted column names.
+- Add reverse-Z depth controls and improve WebGL depth bias and depth clipping support.
+- Stream GPU physics terrain with automatic level-of-detail selection and independent terrain in batched worlds.
+- Improve ANARI ray tracing with directional environment sampling and emissive geometry lighting.
+
+### v10.0.0-beta.1
+
+- Upgrade math.gl to 5.0.0-rc.2 and loaders.gl to 5.0.0-rc.1. Use the updated zero-copy GeoArrow column view API.
+- Use math.gl as GPU SQL's tokenizer and parser. Double-quote reserved column names such as "limit" and "order". Column names still match the dataframe schema exactly.
+- Make native WebGPU and WebGL device handle ownership explicit so applications can control teardown for attached devices.
+
+### v10.0.0-alpha.17
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.12. Adopt the consolidated Arrow, GeoArrow tessellation, and Parquet entry points.
+- Accept a PBR lighting environment for scene-level glTF image-based lighting and make optional scene uniforms explicit.
+- Add GPU suspension and tire dynamics for the off-road buggy, and add GPU physics shot prediction and PBR rendering to GPU Pool Practice.
+- Expand PBR use in examples and add sun reflections to riverfront windows.
+
+### v10.0.0-alpha.16
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.11 across active packages and examples.
+- Migrate GPU SQL and portable expression parsing to the new `@math.gl/sql` package and its dedicated parser and expression entry points.
+- Recognize Arrow tables and record batches across package instances when resolving nested column paths, preserving their source data.
+
+### v10.0.0-alpha.15
+
+- Add a vector DataFrame AST bridge and layout planning, Arrow column format validation, kernel inspection, and parallel segmented scan and reduction, scatter, and sparse graph operations.
+- Upgrade math.gl and loaders.gl to beta.10. Use math.gl's typed SELECT parser and adapt Parquet and Gaussian splat loading to the updated APIs.
+- Expand ANARI ray-traced materials with alpha masks, normal maps, dielectric absorption and specular maps, clearcoat, sheen, iridescence, anisotropy, transmission, and ambient occlusion textures.
+- Add budgeted GPU reflection probes and expand lightmap baking with atlas packing, tiled baking, and portable GLB export.
+- Add G8 manifold contact solving and a 3D Physics Stress Lab, and qualify glTF GPU physics geometry and dynamics.
+- Support typed shader color inputs and short integer WebGL vertex constants, and fix GPU grid cell assignment across zero.
+
+### v10.0.0-alpha.14
+
+- Preserve graph color precision and support Float16 output.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.8. Use the standalone math.gl expression parser and the updated loaders.gl Parquet source API.
+
+### v10.0.0-alpha.13
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.7. Use math.gl to parse GPU SQL expressions and match column names and sort aliases exactly.
+- Add semantic grouped aggregation and reduction to GPUGraph, and broaden default GPUData buffer usage on WebGPU.
+- Introduce Resource ownership and DeviceResource, and release WebGPU devices when initialization fails.
+- Let the platform choose GPU power preference by default. Share WebGL scalar state tracking and invalidate tracked bindings when native resources are deleted.
+- Add an opt-in display-order text source adapter and expand project credits and distributed attribution notices.
+
 ### v10.0.0-alpha.12
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.6 across active packages and examples.

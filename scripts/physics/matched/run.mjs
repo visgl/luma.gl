@@ -37,7 +37,8 @@ export function validateOptions(options = {}) {
     workers: 1,
     iterations: 16,
     timeStep: 1 / 60,
-    solver: 'ordered'
+    solver: 'ordered',
+    contactSolver: 'scalar'
   };
   const settings = Object.fromEntries(
     Object.entries(defaults).map(([key, value]) => [key, options[key] ?? value])
@@ -63,7 +64,9 @@ export function validateOptions(options = {}) {
     settings.timeStep <= 0 ||
     settings.timeStep > 0.1 ||
     settings.warmup >= settings.frames ||
-    !['ordered', 'parallel'].includes(settings.solver)
+    !['ordered', 'parallel'].includes(settings.solver) ||
+    !['scalar', 'block'].includes(settings.contactSolver) ||
+    (settings.contactSolver === 'block' && settings.solver !== 'parallel')
   )
     throw new Error('Invalid integration settings');
   return settings;
@@ -131,7 +134,8 @@ export function checkInitialState(fixture, frames) {
 export function checkMassProperties(fixture, parameters) {
   if (parameters?.length !== fixture.bodies.length) return false;
   const close = (first, second) =>
-    Number.isFinite(first) && Math.abs(first - second) <= 1e-5 * Math.max(1e-5, Math.abs(second));
+    Number.isFinite(first) &&
+    Math.abs(first - second) <= 1e-5 * Math.max(1e-5, Math.abs(second));
   return fixture.bodies.every((body, index) => {
     const actual = parameters[index];
     if (!close(actual.mass, body.mass)) return false;
@@ -187,6 +191,10 @@ export async function runSuite(options = {}) {
       })
     );
     const page = await browser.newPage();
+    // Benchmark pages never participate in Vite HMR or run the diagnostic example.
+    await page.route('**/@vite/client', route =>
+      route.fulfill({contentType: 'text/javascript', body: ''})
+    );
     await page.route('**/main.ts*', route =>
       route.fulfill({contentType: 'text/javascript', body: ''})
     );
@@ -210,7 +218,8 @@ export async function runSuite(options = {}) {
                   fixture,
                   settings.timeStep / settings.substeps,
                   settings.solver,
-                  settings.iterations
+                  settings.iterations,
+                  settings.contactSolver
                 ),
                 settings,
                 quality: false
@@ -231,7 +240,8 @@ export async function runSuite(options = {}) {
                 fixture,
                 settings.timeStep / settings.substeps,
                 settings.solver,
-                settings.iterations
+                settings.iterations,
+                settings.contactSolver
               ),
               settings,
               quality: false,
@@ -245,7 +255,8 @@ export async function runSuite(options = {}) {
             fixture,
             settings.timeStep / settings.substeps,
             settings.solver,
-            settings.iterations
+            settings.iterations,
+            settings.contactSolver
           ),
           settings,
           quality: true
@@ -305,6 +316,12 @@ export async function runSuite(options = {}) {
             gpuTimestampMilliseconds: summarize(
               (profile?.timings ?? []).map(sample => sample.gpu).filter(value => value !== null)
             ),
+            gpuStageMilliseconds: Object.fromEntries(
+              Object.entries(profile?.stageTimings ?? {}).map(([stage, samples]) => [
+                stage,
+                summarize(samples)
+              ])
+            ),
             gpuToNativeCompletionRatio:
               executionComplete && qualityMatched && hardware && !options.software
                 ? gpuTiming.p95 / nativeTiming.p95
@@ -331,6 +348,9 @@ export async function runSuite(options = {}) {
       formatVersion: 1,
       sourceHashes: Object.fromEntries(
         [
+          'modules/graph/src/gpu-physics/gpu-rigid-body-world.ts',
+          'modules/graph/src/gpu-physics/rigid-body-parallel-shaders.ts',
+          'modules/graph/src/gpu-physics/rigid-body-shaders.ts',
           'scripts/physics/matched/run.mjs',
           'scripts/physics/matched/reference.c',
           'scripts/physics/matched/build-reference.mjs',
@@ -345,7 +365,10 @@ export async function runSuite(options = {}) {
         ])
       ),
       createdAt: new Date().toISOString(),
-      gitRevision: execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim(),
+      gitRevision: execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: root,
+        encoding: 'utf8'
+      }).trim(),
       gitDirty: Boolean(
         execFileSync('git', ['status', '--porcelain'], {cwd: root, encoding: 'utf8'}).trim()
       ),
@@ -398,6 +421,7 @@ async function runGPUReplay({root, props, settings, quality, profile = false}) {
     const setupMilliseconds = performance.now() - setupStart;
     const timings = [],
       frames = [];
+    const stageTimings = {};
     if (quality) frames.push({step: 0, states: await world.readState()});
     for (let frame = 0; frame < settings.frames; frame++) {
       const query =
@@ -430,6 +454,14 @@ async function runGPUReplay({root, props, settings, quality, profile = false}) {
         if (query) {
           const reports = await Promise.all(encodings.map(encoding => encoding.readTimings()));
           gpuTime = reports.reduce((sum, report) => sum + report.gpuTimeMilliseconds, 0);
+          const frameStages = {};
+          for (const report of reports)
+            for (const node of report.nodes) {
+              if (node.gpuTimeMilliseconds === undefined) continue;
+              frameStages[node.id] = (frameStages[node.id] ?? 0) + node.gpuTimeMilliseconds;
+            }
+          for (const [stage, duration] of Object.entries(frameStages))
+            (stageTimings[stage] ??= []).push(duration);
         }
         if (!quality && frame >= settings.warmup)
           timings.push({encode: encoded - start, completion: completed - start, gpu: gpuTime});
@@ -455,6 +487,7 @@ async function runGPUReplay({root, props, settings, quality, profile = false}) {
       capacity: world.getCapacityInfo(),
       diagnostics: await world.readSimulationDiagnostics(),
       timings,
+      stageTimings,
       ...(quality ? {frames} : {})
     };
   } finally {
@@ -481,7 +514,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       'workers',
       'iterations',
       'timeStep',
-      'solver'
+      'solver',
+      'contactSolver'
     ].map(name => [name, {type: 'string'}])
   );
   const {values} = parseArgs({

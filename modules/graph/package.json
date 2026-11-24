@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.12",
+  "version": "10.0.0-beta.2",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -23,7 +23,9 @@
     "src",
     "dist",
     "dist.min.js",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "sideEffects": false,
   "scripts": {
@@ -58,7 +60,7 @@
       "import": "./dist/gpu-graph/index.js",
       "require": "./dist/gpu-graph/index.cjs"
     },
-    "./gpu-graph-algorithms/benchmarks": {
+    "./gpu-graph-algorithms-benchmarks": {
       "types": "./dist/gpu-graph-algorithms/benchmarks.d.ts",
       "import": "./dist/gpu-graph-algorithms/benchmarks.js",
       "require": "./dist/gpu-graph-algorithms/benchmarks.cjs"
@@ -73,7 +75,7 @@
       "import": "./dist/gpu-dggs/index.js",
       "require": "./dist/gpu-dggs/index.cjs"
     },
-    "./gpu-dggs/benchmarks": {
+    "./gpu-dggs-benchmarks": {
       "types": "./dist/gpu-dggs/benchmarks.d.ts",
       "import": "./dist/gpu-dggs/benchmarks.js",
       "require": "./dist/gpu-dggs/benchmarks.cjs"
@@ -133,22 +135,22 @@
       "import": "./dist/gpu-project/index.js",
       "require": "./dist/gpu-project/index.cjs"
     },
-    "./gpu-project/benchmarks": {
+    "./gpu-project-benchmarks": {
       "types": "./dist/gpu-project/benchmarks.d.ts",
       "import": "./dist/gpu-project/benchmarks.js",
       "require": "./dist/gpu-project/benchmarks.cjs"
     },
-    "./gpu-project/geoarrow": {
+    "./gpu-project-geoarrow": {
       "types": "./dist/gpu-project/geoarrow.d.ts",
       "import": "./dist/gpu-project/geoarrow.js",
       "require": "./dist/gpu-project/geoarrow.cjs"
     },
-    "./gpu-project/graph": {
+    "./gpu-project-graph": {
       "types": "./dist/gpu-project/graph.d.ts",
       "import": "./dist/gpu-project/graph.js",
       "require": "./dist/gpu-project/graph.cjs"
     },
-    "./gpu-project/crs": {
+    "./gpu-project-crs": {
       "types": "./dist/gpu-project/crs.d.ts",
       "import": "./dist/gpu-project/crs.js",
       "require": "./dist/gpu-project/crs.cjs"
@@ -188,12 +190,12 @@
       "import": "./dist/gpu-simple-graph/index.js",
       "require": "./dist/gpu-simple-graph/index.cjs"
     },
-    "./experimental/simulation": {
+    "./experimental-simulation": {
       "types": "./dist/experimental/simulation/index.d.ts",
       "import": "./dist/experimental/simulation/index.js",
       "require": "./dist/experimental/simulation/index.cjs"
     },
-    "./experimental/models": {
+    "./experimental-models": {
       "types": "./dist/experimental/models/index.d.ts",
       "import": "./dist/experimental/models/index.js",
       "require": "./dist/experimental/models/index.cjs"
@@ -223,25 +225,25 @@
       "import": "./dist/execution/*.js",
       "require": "./dist/execution/*.cjs"
     },
-    "./gpu-simple-graph/cpu": {
+    "./gpu-simple-graph-cpu": {
       "types": "./dist/gpu-simple-graph/operations/cpu/index.d.ts",
       "import": "./dist/gpu-simple-graph/operations/cpu/index.js",
       "require": "./dist/gpu-simple-graph/operations/cpu/index.cjs"
     },
-    "./gpu-simple-graph/webgl": {
+    "./gpu-simple-graph-webgl": {
       "types": "./dist/gpu-simple-graph/operations/webgl/index.d.ts",
       "import": "./dist/gpu-simple-graph/operations/webgl/index.js",
       "require": "./dist/gpu-simple-graph/operations/webgl/index.cjs"
     },
-    "./gpu-simple-graph/webgpu": {
+    "./gpu-simple-graph-webgpu": {
       "types": "./dist/gpu-simple-graph/operations/webgpu/index.d.ts",
       "import": "./dist/gpu-simple-graph/operations/webgpu/index.js",
       "require": "./dist/gpu-simple-graph/operations/webgpu/index.cjs"
     }
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.12",
-    "@luma.gl/shaders": "~10.0.0-alpha.12",
+    "@luma.gl/core": "~10.0.0-beta.2",
+    "@luma.gl/shaders": "~10.0.0-beta.2",
     "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
@@ -250,9 +252,10 @@
     }
   },
   "dependencies": {
-    "@math.gl/arrow": "~5.0.0-beta.6",
-    "@math.gl/core": "~5.0.0-beta.6",
-    "@math.gl/geospatial": "~5.0.0-beta.6",
+    "@math.gl/core": "^5.0.0",
+    "@math.gl/geometry": "^5.0.0",
+    "@math.gl/geospatial": "^5.0.0",
+    "@math.gl/sql": "^5.0.0",
     "probe.gl": "^5.0.0"
   }
 }

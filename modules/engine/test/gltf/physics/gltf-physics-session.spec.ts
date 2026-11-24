@@ -113,6 +113,7 @@ it('reimports automatically derived inertia under nonuniform box scale', async c
   if (!device) return context.skip('WebGPU unavailable');
   const source = document();
   source.nodes![1].scale = [2, 1, 3];
+  source.nodes![1].rotation = [0, 0, 0.7071, 0.7071];
   const description = parseGLTFPhysics(source);
   expect(description.issues).toEqual([]);
   const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
@@ -122,6 +123,10 @@ it('reimports automatically derived inertia under nonuniform box scale', async c
     );
     expect(result.issues).toEqual([]);
     expect(result.bodies[0].body.inertiaDiagonal).toBeUndefined();
+    expect(result.bodies[0].body.orientation![2]).toBeCloseTo(Math.SQRT1_2, 7);
+    expect(result.colliders[0].collider.shape).toMatchObject({
+      halfExtents: [expect.closeTo(1, 7), expect.closeTo(0.5, 7), expect.closeTo(1.5, 7)]
+    });
   } finally {
     await session.destroy();
   }
@@ -235,3 +240,142 @@ it('rejects exporting explicit inertia under unequal scale instead of returning 
     await session.destroy();
   }
 });
+
+it('exports a settled animated collider frame and shared analytic scale without recooking', async context => {
+  /** This round trip exercises the same CPU-independent physics world used by rendering. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  /** Start with two rigid bodies that share a primitive declaration. */
+  const original = document();
+  /** Copy the node array so additional children keep stable glTF indices. */
+  const nodes = [...original.nodes!];
+  nodes[1].children = [3, 4, 5];
+  /** Move the first collider off the body node to exercise compound ownership. */
+  const extension = nodes[1].extensions!['KHR_physics_rigid_bodies'] as Record<string, unknown>;
+  delete extension['collider'];
+  nodes.push({
+    translation: [1, 0, 0],
+    extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}, physicsMaterial: 0}}}
+  });
+  // Use a rounded source quaternion to exercise the physics importer's normalization.
+  nodes.push({scale: [0, 1, 1]}, {scale: [1, 0, 1], rotation: [0, 0, 0.70710677, 0.70710677]});
+  /** Exercise both standard and pointer-targeted scale channels. */
+  const source: GLTFPhysicsDocument = {
+    ...original,
+    nodes,
+    animations: [
+      {
+        channels: [
+          {target: {node: 3, path: 'scale'}},
+          {target: {node: 4, path: 'scale'}},
+          {
+            target: {
+              path: 'pointer',
+              extensions: {KHR_animation_pointer: {pointer: '/nodes/5/scale/0'}}
+            }
+          }
+        ]
+      }
+    ]
+  };
+  /** Let the scenegraph drive changes to the cooked collider. */
+  const options = {animationOwnership: 'scenegraph', propertyBindings: true} as const;
+  /** Cook the original hierarchy before applying the live changes. */
+  const description = parseGLTFPhysics(source, options);
+  expect(description.issues).toEqual([]);
+  /** Live node whose matrix supplies the compound collider placement. */
+  const child = description.sceneNodes.get(3)!;
+  /** Live visual sibling with no collider binding. */
+  const renderOnlyChild = description.sceneNodes.get(4)!;
+  /** Disable gravity so the test isolates the authored scale and placement changes. */
+  const session = await ScenegraphPhysicsSession.create(
+    device,
+    makeGLTFPhysicsScene(description, undefined, {gravity: [0, 0, 0]})
+  );
+  try {
+    await session.step(new Set([child, renderOnlyChild]), () => {
+      child.setPosition([2, 0, 0]);
+      child.setScale([1.5, 2, 1]);
+      child.updateMatrix();
+      renderOnlyChild.setScale([0, -2, 3]).updateMatrix();
+    });
+    /** Source-only export cannot reconstruct a child changed by live animation. */
+    await expect(exportGLTFPhysicsState(source, description, session.world)).rejects.toThrow(
+      'Export scene scale does not match'
+    );
+    /** Export applies the accepted GPU pose and original shared primitive declaration. */
+    const saved = await session.withWorld(world =>
+      exportGLTFPhysicsState(source, description, world, {sceneNodes: description.sceneNodes})
+    );
+    expect(saved.nodes![3].matrix).toBeUndefined();
+    expect(saved.nodes![3].translation).toEqual([2, 0, 0]);
+    expect(saved.nodes![3].scale).toEqual([1.5, 2, 1]);
+    expect(saved.nodes![4].matrix).toBeUndefined();
+    expect(saved.nodes![4].scale).toEqual([0, -2, 3]);
+    expect(saved.nodes![5].matrix).toBeUndefined();
+    expect(saved.nodes![5].scale).toEqual([1, 0, 1]);
+    expect(saved.nodes![5].rotation![2]).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(source.nodes![3].translation).toEqual([1, 0, 0]);
+    /** Reimport the exported pose to compare the newly cooked colliders. */
+    const roundTrip = parseGLTFPhysics(saved, options);
+    expect(roundTrip.issues).toEqual([]);
+    for (const collider of roundTrip.colliders) {
+      /** The imported collider's bounds and frame must agree with the accepted revision. */
+      const old = description.colliders.find(
+        candidate => candidate.nodeIndex === collider.nodeIndex
+      )!;
+      expect(collider.shapeIndex).toBe(0);
+      expect(collider.collider.shape).toEqual(session.world.getColliderShape(old.colliderIndex));
+      expect(collider.collider.position).toEqual(
+        session.world.getColliderTransform(old.colliderIndex).position
+      );
+    }
+  } finally {
+    await session.destroy();
+  }
+}, 120000);
+
+it('exports absolute body poses after a physics origin shift', async context => {
+  /** Source coordinates should not become simulation-local after rebasing. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  /** Cook the authored collider near zero, before moving its body to a distant origin. */
+  const source = document();
+  /** Exactly representable in the GPU origin-shift command. */
+  const origin = 2 ** 40;
+  source.nodes![0].translation = [0, 0, 0];
+  source.nodes![1].children = [3];
+  /** Put a small offset on the rotated collider so validation must work in a local frame. */
+  const rigidBody = source.nodes![1].extensions!['KHR_physics_rigid_bodies'] as Record<
+    string,
+    unknown
+  >;
+  source.nodes!.push({
+    translation: [1, 0, 0],
+    extensions: {KHR_physics_rigid_bodies: {collider: rigidBody['collider']}}
+  });
+  delete rigidBody['collider'];
+  rigidBody['motion'] = {isKinematic: true, mass: 1, centerOfMass: [0.1, 0, 0]};
+  /** Cook the bodies in the original world frame. */
+  const description = parseGLTFPhysics(source);
+  /** Attach the scene to a real GPU world so the rebase updates live buffers. */
+  const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
+  try {
+    session.world.shiftOrigin([origin, 0, 0]);
+    session.world.setKinematicTarget(0, [2, 1, 0], [0, 0, Math.sin(0.1), Math.cos(0.1)]);
+    await session.step();
+    /** Confirm the GPU pose shifted before reading the exported pose. */
+    const live = await session.world.readState();
+    expect(live[0].position[0]).toBeCloseTo(2 + 0.1 * Math.cos(0.2), 6);
+    /** Export using the saved origin and live local poses. */
+    const saved = await exportGLTFPhysicsState(source, description, session.world);
+    /** Verify import reconstructs the moved body’s absolute world translation. */
+    const imported = parseGLTFPhysics(saved);
+    expect(imported.issues).toEqual([]);
+    expect(imported.bodies[0].worldMatrix[12] - origin).toBeCloseTo(2, 3);
+    expect(saved.nodes![1].translation![0] - origin).toBeCloseTo(2, 3);
+    expect(saved.nodes![3].translation).toEqual([1, 0, 0]);
+  } finally {
+    await session.destroy();
+  }
+}, 120000);

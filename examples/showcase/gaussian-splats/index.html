@@ -8,6 +8,7 @@
       content="Interactive anisotropic 3D Gaussian splat rendering with luma.gl WebGPU and WebGL2."
     />
     <title>Gaussian Splats · luma.gl</title>
+    <link rel="icon" href="data:," />
     <style>
       * { box-sizing: border-box; }
       html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
@@ -29,6 +30,8 @@
         left: 24px;
         z-index: 2;
         width: min(328px, calc(100vw - 48px));
+        max-height: calc(100dvh - 48px);
+        overflow-y: auto;
         padding: 19px 20px 20px;
         border: 1px solid rgb(160 178 255 / 16%);
         border-radius: 14px;
@@ -73,11 +76,11 @@
       import {makeAnimationLoop} from '@luma.gl/engine';
       import {webgl2Adapter} from '@luma.gl/core/webgl';
       import {webgpuAdapter} from '@luma.gl/core/webgpu';
-      import AnimationLoopTemplate, {makeGaussianSplatInfoHtml} from './app.ts';
+      import {GaussianSplatsShowcase} from './app.ts';
 
       window.__lumaGaussianSplatsLocalLoadersRoot = import.meta.env.VITE_LOADERS_GL_ROOT || '';
       document.getElementById('gaussian-splats-panel-container').innerHTML =
-        makeGaussianSplatInfoHtml();
+        GaussianSplatsShowcase.info;
 
       try {
         const requestedDevice = new URLSearchParams(window.location.search).get('device');
@@ -114,7 +117,7 @@
         } else {
           device = await luma.createDevice(deviceOptions);
         }
-        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+        const animationLoop = makeAnimationLoop(GaussianSplatsShowcase, {
           device,
           autoResizeViewport: true
         });

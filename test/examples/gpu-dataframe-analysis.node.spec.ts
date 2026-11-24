@@ -48,10 +48,10 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
 
     expect(graphCategories).toHaveLength(1);
     const dataframesCategory = graphCategories[0].items.find(
-      entry => typeof entry !== 'string' && entry.label === 'GPU Dataframe'
+      entry => typeof entry !== 'string' && entry.label === '@luma.gl/graph/gpu-dataframe'
     );
     expect(dataframesCategory).toBeDefined();
-    expect(dataframesCategory?.items).toContain(GPU_DATAFRAME_DOCUMENT_IDENTIFIER);
+    expect(dataframesCategory).toMatchObject({link: {id: GPU_DATAFRAME_DOCUMENT_IDENTIFIER}});
 
     const documentation = readGPUDataFrameDocumentation();
     const overview = readRepositoryFile('docs/api-reference/experimental/README.md');

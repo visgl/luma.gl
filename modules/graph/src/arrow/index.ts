@@ -4,6 +4,8 @@
 
 export {
   convertArrowColumnToGPUVector,
+  getArrowConversionFormat,
+  type ArrowColumnFormatOptions,
   type ArrowColumnGPUVectorOptions,
   type PreparedArrowColumnGPUVector
 } from './gpu/arrow-column-gpu-vector';
@@ -26,6 +28,7 @@ export {
   type ArrowTableFromGPUAnalyticsTableProps
 } from './gpu/arrow-gpu-analytics-readback';
 export {
+  consumeArrowGPURecordBatches,
   convertArrowRecordBatchToGPURecordBatch,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,

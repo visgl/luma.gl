@@ -8,6 +8,7 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUSphereWorld,
   decodeGPUSphereWorldDiagnostics,
+  type GPUSphereWorldProps,
   type GPUSphereBodyState
 } from '@luma.gl/graph/gpu-physics';
 import {
@@ -19,6 +20,7 @@ import {
   findCuePosition,
   isShotSettled
 } from './table';
+import {createShotForecast, makePoolStrike, MAX_SHOT_SPEED} from './shot-forecast';
 import {createPoolRenderer} from './render';
 import {createPoolInfoBox} from './info-box';
 import {PoolAudio} from './audio';
@@ -34,10 +36,19 @@ const reset = element<HTMLButtonElement>('reset');
 const power = element<HTMLInputElement>('power');
 const angle = element<HTMLInputElement>('angle');
 const practice = element<HTMLSelectElement>('practice');
-const aimLine = document.querySelector<SVGLineElement>('#aim-line')!;
+const forecastStatus = element<HTMLOutputElement>('forecast-status');
+const aimGuide = document.querySelector<SVGGElement>('#aim-guide')!;
+const aimLine = document.querySelector<SVGPolylineElement>('#aim-line')!;
+const objectLine = document.querySelector<SVGPathElement>('#object-line')!;
+const guideToggle = element<HTMLButtonElement>('guides');
+let guidesEnabled = true;
+guideToggle.onclick = () => {
+  guidesEnabled = !guidesEnabled;
+  guideToggle.setAttribute('aria-pressed', String(guidesEnabled));
+};
 const cueTrail = document.querySelector<SVGPolylineElement>('#cue-trail')!;
 const recentCueTrail = document.querySelector<SVGPolylineElement>('#cue-trail-recent')!;
-const cueStick = document.querySelector<SVGGElement>('#cue-stick')!;
+const cueStyle = element<HTMLSelectElement>('cue-style');
 const audio = new PoolAudio();
 
 try {
@@ -62,7 +73,7 @@ try {
   }
   const velocities = createBuffer(velocityData);
   const orientations = createBuffer(orientationData);
-  const world = new GPUSphereWorld({
+  const worldProps: GPUSphereWorldProps = {
     count: 16,
     continuous: true,
     warmStarting: true,
@@ -87,12 +98,14 @@ try {
     sleepAngularSpeed: 0.12,
     restitutionThreshold: 0.08,
     planes: TABLE_PLANES
-  });
+  };
+  const world = new GPUSphereWorld(worldProps);
   const definition = new GPUCommandGraph<void>(device);
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
+  const forecast = await createShotForecast(device, world, worldProps);
   const infoBox = createPoolInfoBox(graph);
-  const renderer = createPoolRenderer(device, positions, orientations);
+  const renderer = createPoolRenderer(device, element<HTMLCanvasElement>('cue-preview'));
   let states: GPUSphereBodyState[] = await world.readState();
   let phase: 'aiming' | 'striking' | 'rolling' | 'complete' = 'aiming';
   let shotCount = 0;
@@ -113,6 +126,7 @@ try {
   let alive = true;
   let animation = 0;
   let chargeStart: number | null = null;
+  let startingPower = 0;
   let chargePointer: number | null = null;
   let aimPointer: number | null = null;
   let chargeKeyboard: 'Space' | 'Enter' | null = null;
@@ -141,15 +155,14 @@ try {
     if (phase !== 'aiming' || chargeStart !== null) return;
     audio.unlock();
     chargeStart = performance.now();
-    setPower(0);
-    shoot.textContent = 'Release to shoot';
+    startingPower = Number(power.value);
+    shoot.textContent = 'Release';
     shoot.setAttribute('aria-pressed', 'true');
     status.value = 'Charging — release to shoot · Esc to cancel';
     updateControls();
   }
   function releaseCharge() {
     if (chargeStart === null) return;
-    setPower(getShotCharge(performance.now() - chargeStart));
     cancelCharge();
     if (Number(power.value) > 0) startShot();
     else {
@@ -236,11 +249,13 @@ try {
   element('cut-throw').onclick = () => {
     cutInducedThrow = !cutInducedThrow;
     world.update({cutInducedThrow});
+    forecast.setThrow(cutInducedThrow, spinInducedThrow);
     element('cut-throw').setAttribute('aria-pressed', String(cutInducedThrow));
   };
   element('spin-throw').onclick = () => {
     spinInducedThrow = !spinInducedThrow;
     world.update({spinInducedThrow});
+    forecast.setThrow(cutInducedThrow, spinInducedThrow);
     element('spin-throw').setAttribute('aria-pressed', String(spinInducedThrow));
   };
   function getExtent(): [number, number] {
@@ -262,7 +277,7 @@ try {
       event.preventDefault();
       return;
     }
-    if (event.button !== 0 || phase !== 'aiming') return;
+    if (event.button !== 0 || phase !== 'aiming' || aimPointer !== null) return;
     canvas.focus();
     aimPointer = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
@@ -270,13 +285,16 @@ try {
     audio.unlock();
   };
   canvas.onpointerup = event => {
-    if (event.button !== 0 || !canvas.hasPointerCapture(event.pointerId)) return;
+    if (event.pointerId !== aimPointer) return;
     aimPointer = null;
     canvas.releasePointerCapture(event.pointerId);
-    aimAt(event);
-    startShot();
   };
-  canvas.onpointermove = aimAt;
+  canvas.onpointermove = event => {
+    if (event.pointerId === aimPointer) aimAt(event);
+  };
+  canvas.onlostpointercapture = event => {
+    if (event.pointerId === aimPointer) aimPointer = null;
+  };
   power.oninput = () => {
     element('power-value').textContent = power.value + '%';
     power.style.setProperty('--power', power.value + '%');
@@ -315,15 +333,31 @@ try {
       updateControls();
     }
   };
-  shoot.onkeydown = event => {
-    if (event.code === 'Space' || event.code === 'Enter') {
+  window.addEventListener(
+    'keydown',
+    event => {
+      const target = event.target;
+      const interactive =
+        target instanceof HTMLElement &&
+        target.closest(
+          'button, input, select, textarea, summary, a, [contenteditable], #contact-ball'
+        );
+      const shootKey = event.code === 'Space' || (target === shoot && event.code === 'Enter');
+      if (
+        !shootKey ||
+        (interactive && target !== shoot) ||
+        phase !== 'aiming' ||
+        event.defaultPrevented
+      )
+        return;
       event.preventDefault();
-      if (!event.repeat && phase === 'aiming' && chargeStart === null) {
-        chargeKeyboard = event.code;
+      if (!event.repeat && chargeStart === null) {
+        chargeKeyboard = event.code === 'Enter' ? 'Enter' : 'Space';
         beginCharge();
       }
-    }
-  };
+    },
+    {signal: inputEvents.signal}
+  );
   window.addEventListener(
     'keyup',
     event => {
@@ -370,15 +404,10 @@ try {
   element<HTMLButtonElement>('sound').onclick = () => {
     audio.enabled = !audio.enabled;
     if (audio.enabled) audio.unlock();
-    element('sound').textContent = audio.enabled ? 'Sound on' : 'Sound off';
     element('sound').setAttribute('aria-pressed', String(audio.enabled));
   };
   canvas.onkeydown = event => {
     if (phase !== 'aiming') return;
-    if (event.code === 'Space') {
-      event.preventDefault();
-      startShot();
-    }
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       setAim(direction + ((event.key === 'ArrowLeft' ? 1 : -1) * Math.PI) / 180);
@@ -555,6 +584,7 @@ try {
           states[0].enabled = true;
           scratch = false;
         }
+        cueTrailPoints.length = 0;
         phase = objectBallCount > 0 && potted.size === objectBallCount ? 'complete' : 'aiming';
         if (shouldRackBalls(practice.value, potted.size, objectBallCount))
           rackAt = performance.now() + 1200;
@@ -566,27 +596,11 @@ try {
       }
     } else settledSince = 0;
   }
-  function setLine(line: SVGLineElement, start: number[], end: number[]) {
-    const extent = getExtent();
-    const screen = (point: number[]) => [
-      ((point[0] / extent[0] + 1) * canvas.clientWidth) / 2,
-      ((1 - point[1] / extent[1]) * canvas.clientHeight) / 2
-    ];
-    const first = screen(start);
-    const second = screen(end);
-    for (const [name, value] of Object.entries({
-      x1: first[0],
-      y1: first[1],
-      x2: second[0],
-      y2: second[1]
-    }))
-      line.setAttribute(name, String(value));
-  }
   function frame(now: number) {
     if (!alive) return;
     try {
       if (failure) throw failure;
-      if (chargeStart !== null) setPower(getShotCharge(now - chargeStart));
+      if (chargeStart !== null) setPower(getShotCharge(now - chargeStart, startingPower));
       if (rackAt && now >= rackAt && !reset.disabled) {
         rackAt = 0;
         void resetTable();
@@ -594,20 +608,14 @@ try {
       const elapsed = Math.min((now - previous) / 1000, 0.05);
       previous = now;
       if (phase === 'striking' && !reset.disabled && now - strikeStart >= 180) {
-        const speed = 0.3 + 11.7 * (Number(power.value) / 100) ** 1.6;
-        audio.playCue(speed / 12);
-        const forward = [Math.cos(direction), Math.sin(direction)];
-        const depth = Math.sqrt(1 - contactPoint[0] ** 2 - contactPoint[1] ** 2);
-        const center = states[0].position;
-        world.applyImpulse(
-          0,
-          [forward[0] * speed, forward[1] * speed, 0],
-          [
-            center[0] + BALL_RADIUS * (-forward[0] * depth + forward[1] * contactPoint[0]),
-            center[1] + BALL_RADIUS * (-forward[1] * depth - forward[0] * contactPoint[0]),
-            center[2] + BALL_RADIUS * contactPoint[1]
-          ]
+        const strike = makePoolStrike(
+          states[0].position,
+          direction,
+          contactPoint,
+          Number(power.value)
         );
+        audio.playCue(strike.speed / MAX_SHOT_SPEED);
+        world.applyImpulse(0, strike.impulse, strike.point);
         phase = 'rolling';
         shotCount++;
         shotStart = now;
@@ -637,7 +645,6 @@ try {
         }
       }
       const extent = getExtent();
-      renderer.draw(extent);
       infoBox.update(now);
       const trailScreenPoints = cueTrailPoints.map(
         point =>
@@ -646,27 +653,46 @@ try {
       cueTrail.setAttribute('points', trailScreenPoints.join(' '));
       recentCueTrail.setAttribute('points', trailScreenPoints.slice(-12).join(' '));
       const showCue = (phase === 'aiming' || phase === 'striking') && !reset.disabled;
-      cueStick.style.display = showCue ? '' : 'none';
-      aimLine.style.display = showCue ? '' : 'none';
+      let cueTip: [number, number] | undefined;
+      const showForecast = showCue && phase === 'aiming' && guidesEnabled && states[0].enabled;
+      aimGuide.style.display = showForecast ? '' : 'none';
+      if (!showForecast) {
+        forecast.cancel();
+        forecastStatus.hidden = true;
+      }
       if (showCue) {
         const point = states[0].position;
         const vector = [Math.cos(direction), Math.sin(direction)];
         const pullback = 0.15 + (Number(power.value) / 100) * 0.65;
         const pull =
           phase === 'striking' ? Math.max(0, 1 - (now - strikeStart) / 180) * pullback : pullback;
-        const extent = getExtent();
-        const scale = canvas.clientWidth / (extent[0] * 2);
-        const tip = [point[0] - vector[0] * (0.21 + pull), point[1] - vector[1] * (0.21 + pull)];
-        cueStick.setAttribute(
-          'transform',
-          `translate(${((tip[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - tip[1] / extent[1]) * canvas.clientHeight) / 2}) rotate(${(-direction * 180) / Math.PI}) scale(${scale})`
-        );
-        setLine(
-          aimLine,
-          [point[0] + vector[0] * 0.3, point[1] + vector[1] * 0.3],
-          [point[0] + vector[0] * 4, point[1] + vector[1] * 4]
-        );
+        cueTip = [point[0] - vector[0] * (0.21 + pull), point[1] - vector[1] * (0.21 + pull)];
+        if (showForecast) {
+          const selectedPower = Number(power.value);
+          const strike = makePoolStrike(point, direction, contactPoint, selectedPower);
+          const revision = [
+            direction,
+            ...contactPoint,
+            selectedPower,
+            cutInducedThrow,
+            spinInducedThrow
+          ].join(',');
+          const {paths, failed} = forecast.update(now, states, revision, strike);
+          forecastStatus.hidden = !failed;
+          const screen = (position: number[]) =>
+            `${((position[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - position[1] / extent[1]) * canvas.clientHeight) / 2}`;
+          aimLine.setAttribute('points', paths[0].map(screen).join(' '));
+          objectLine.setAttribute(
+            'd',
+            paths
+              .slice(1)
+              .filter(path => path.length > 1)
+              .map(path => 'M' + path.map(screen).join(' L'))
+              .join(' ')
+          );
+        }
       }
+      renderer.draw(extent, states, cueTip, direction, cueStyle.value, now, phase === 'rolling');
       animation = requestAnimationFrame(frame);
     } catch (error) {
       status.value = `Pool stopped: ${String(error)}`;
@@ -684,7 +710,7 @@ try {
       inputEvents.abort();
       cancelCharge();
       cancelAnimationFrame(animation);
-      void Promise.allSettled([snapshot, infoBoxCleanup]).then(() => {
+      void Promise.allSettled([snapshot, infoBoxCleanup, forecast.destroy()]).then(() => {
         audio.destroy();
         renderer.destroy();
         graph.destroy();

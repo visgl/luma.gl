@@ -39,9 +39,8 @@ export class WEBGLBuffer extends Buffer {
       spector: {...this.props, data: typeof this.props.data}
     });
 
-    // - In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
-    //   otherwise buffer type will lock to generic (non-element) buffer
-    // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
+    // The initial bind classifies the buffer as element-array or other data.
+    // WebGL forbids rebinding either class to the other's targets.
     this.glTarget = getWebGLTarget(this.props.usage);
     this.glUsage = getWebGLUsage(this.props.usage);
     // Note: uint8 indices are converted to uint16 during device normalization for WebGPU compatibility
@@ -72,7 +71,6 @@ export class WEBGLBuffer extends Buffer {
     byteOffset: number = 0,
     byteLength: number = data.byteLength + byteOffset
   ): void {
-    // const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
     const glTarget = this.glTarget;
     this.gl.bindBuffer(glTarget, this.handle);
     this.gl.bufferData(glTarget, byteLength, this.glUsage);
@@ -102,7 +100,6 @@ export class WEBGLBuffer extends Buffer {
       data = new Float32Array(0);
     }
 
-    // const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
     const glTarget = this.glTarget;
 
     this.gl.bindBuffer(glTarget, this.handle);
@@ -127,8 +124,7 @@ export class WEBGLBuffer extends Buffer {
     const srcOffset = 0;
     const byteLength = undefined; // data.byteLength;
 
-    // Create the buffer - binding it here for the first time locks the type
-    // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
+    // Copy targets can update buffers of either already-initialized class.
     const glTarget = GL.COPY_WRITE_BUFFER;
     this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
@@ -221,8 +217,6 @@ function getWebGLTarget(
     return GL.UNIFORM_BUFFER;
   }
 
-  // Binding a buffer for the first time locks the type
-  // In WebGL2, we can use GL.COPY_WRITE_BUFFER to avoid locking the type
   return GL.ARRAY_BUFFER;
 }
 

@@ -123,7 +123,7 @@ test('projects a point chunk in one batched call', async () => {
 
 test('direct GeoArrow adapters borrow coordinate buffers and preserve topology', async () => {
   const {makeGeoArrowColumnFromCPUVector, makeCPUVectorFromGeoArrowColumn} = await import(
-    '@luma.gl/graph/gpu-project/geoarrow'
+    '@luma.gl/graph/gpu-project-geoarrow'
   );
   const source = makeCPUVectorFromArrow(
     arrow.vectorFromArray(
@@ -142,7 +142,7 @@ test('direct GeoArrow adapters borrow coordinate buffers and preserve topology',
 });
 
 test('direct GeoArrow tessellation handles polygon holes without Apache Arrow conversion', async () => {
-  const {makeGeoArrowColumnFromGeometryRows} = await import('@math.gl/arrow/geoarrow-utils');
+  const {makeGeoArrowColumnFromGeometryRows} = await import('@math.gl/core/arrow');
   const {tessellateGeoArrowColumnToCPUVectors} = await import('@luma.gl/graph/arrow');
   const column = makeGeoArrowColumnFromGeometryRows(
     [

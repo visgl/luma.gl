@@ -8,20 +8,21 @@ import {expect, it, vi} from 'vitest';
 
 it('two opaque reflections reach hidden emission and analytic lighting at the reflected surface', async () => {
   if (!webgpuAdapter.isSupported()) return;
+  const size = 8;
   const graphics = await webgpuAdapter.create({
     featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(16, 16)}
+    createCanvasContext: {canvas: new OffscreenCanvas(size, size)}
   });
   const errors = vi.spyOn(graphics, 'reportError');
   const color = graphics.createTexture({
-    width: 16,
-    height: 16,
+    width: size,
+    height: size,
     format: 'rgba32float',
     usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
   });
   const framebuffer = graphics.createFramebuffer({
-    width: 16,
-    height: 16,
+    width: size,
+    height: size,
     colorAttachments: [color],
     depthStencilAttachment: graphics.preferredDepthFormat
   });
@@ -108,7 +109,7 @@ it('two opaque reflections reach hidden emission and analytic lighting at the re
       progressive: false,
       background: [0, 0, 0, 1]
     });
-    const frame = device.newFrame({world, camera, renderer, size: [16, 16]});
+    const frame = device.newFrame({world, camera, renderer, size: [size, size]});
     const buffer = graphics.createBuffer({
       byteLength: color.computeMemoryLayout().byteLength,
       usage: Buffer.COPY_DST | Buffer.COPY_SRC
@@ -122,11 +123,11 @@ it('two opaque reflections reach hidden emission and analytic lighting at the re
       expect(Array.from(values).every(Number.isFinite)).toBe(true);
       let red = 0;
       const rowStride = color.computeMemoryLayout().bytesPerRow / 4;
-      for (let vertical = 0; vertical < 16; vertical++) {
-        for (let horizontal = 0; horizontal < 16; horizontal++)
+      for (let vertical = 0; vertical < size; vertical++) {
+        for (let horizontal = 0; horizontal < size; horizontal++)
           red += values[vertical * rowStride + horizontal * 4];
       }
-      return red / (16 * 16);
+      return red / (size * size);
     } finally {
       buffer.destroy();
       frame.destroy();

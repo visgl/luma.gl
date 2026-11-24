@@ -147,7 +147,7 @@ payloads when Arrow requires contiguous aligned arrays. Normalized formats and F
 are outside this adapter's initial supported memory formats.
 
 `makeGeoArrowColumnFromCPUVector` and `makeCPUVectorFromGeoArrowColumn` live in the optional
-`@luma.gl/graph/gpu-project/geoarrow` entry. Packed Float32 coordinate buffers are borrowed
+`@luma.gl/graph/gpu-project-geoarrow` entry. Packed Float32 coordinate buffers are borrowed
 without constructing Apache Arrow objects. Reverse conversion accepts normalized interleaved
 point, linestring and multipoint layouts representable by CPUVector. Deeper geometry topology
 stays in math.gl GeoArrow descriptors. Unsupported layouts are rejected, not silently flattened.
@@ -166,7 +166,7 @@ scheduling remain explicit math.gl/application concerns.
 layers. It selects GPUGraph on WebGPU and GPUSimpleGraph on other supported devices.
 
 ```typescript
-import {CoordinateProjectionGraph} from '@luma.gl/graph/gpu-project/graph';
+import {CoordinateProjectionGraph} from '@luma.gl/graph/gpu-project-graph';
 import {projectArrowCoordinates} from '@luma.gl/graph/arrow';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 

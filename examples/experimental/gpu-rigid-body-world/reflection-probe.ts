@@ -5,7 +5,8 @@
 import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {ClipSpace} from '@luma.gl/engine';
 import {PBREnvironmentGenerator} from '@luma.gl/anari';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 
 /** Captures static scene surfaces once; all capture and GGX filtering stay on the GPU. */
 export function captureReflectionProbe(

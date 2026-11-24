@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {isArrowRecordBatch, isArrowTable} from '@math.gl/core/arrow';
+
 import {Data, DataType, Field, RecordBatch, Schema, Table, Vector, makeVector} from 'apache-arrow';
 
 /** Returns all leaf column paths in an Arrow object, using dot notation for nested structs. */
@@ -39,7 +41,7 @@ export function findArrowFieldByPath(
   schemaOrTable: Schema | Table,
   columnPath: string
 ): Field | null {
-  const schema = schemaOrTable instanceof Table ? schemaOrTable.schema : schemaOrTable;
+  const schema = isArrowTable(schemaOrTable) ? schemaOrTable.schema : schemaOrTable;
   const path = decomposePath(columnPath);
   let fields = schema.fields;
   let resolvedField: Field | null = null;
@@ -164,9 +166,9 @@ export function getArrowFieldByPath(arrowObject: Table | RecordBatch, columnPath
 
 /** Returns the data chunks contained by an Arrow object. */
 export function getArrowDataArray(arrowObject: Data | Table | RecordBatch | Vector): Data[] {
-  if (arrowObject instanceof Table) {
+  if (isArrowTable(arrowObject)) {
     return arrowObject.data;
-  } else if (arrowObject instanceof RecordBatch) {
+  } else if (isArrowRecordBatch(arrowObject)) {
     return [arrowObject.data];
   } else if (arrowObject instanceof Vector) {
     // @ts-expect-error for some reason read-only in this context

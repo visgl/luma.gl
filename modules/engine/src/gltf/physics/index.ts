@@ -95,6 +95,6 @@ export function makeGLTFPhysicsDefinition(
 }
 export {makeGLTFPhysicsScene} from './scene-bindings';
 
-export {exportGLTFPhysicsState} from './export-state';
+export {exportGLTFPhysicsState, type GLTFPhysicsExportOptions} from './export-state';
 
 export {snapshotGLTFPhysicsScene} from './snapshot-scene';

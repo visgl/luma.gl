@@ -15,7 +15,7 @@ import {
   getPBREnvironmentBindings,
   getPBREnvironmentUniforms
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 for (const resolutionScale of [undefined, 1]) {
   for (const mode of ['ssao', 'gtao'] as const) {

@@ -46,6 +46,10 @@ model.draw(renderPass);
 Viewport and scissor coordinates use drawing-buffer pixels, not CSS pixels.
 Use `scissorRect` to restrict writes; changing a viewport alone does not clip to its rectangle.
 
+## Reverse-Z depth
+
+See [Depth buffers](/docs/api-guide/gpu/depth-buffers#reverse-z) for the projection, attachment, clear value and comparison to use together.
+
 ## Next steps
 
 - [GPU parameter reference](/docs/api-reference/core/parameters) lists accepted values.

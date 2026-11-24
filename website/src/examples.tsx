@@ -34,6 +34,7 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadBakedCornellBoxApp = () => import('../../examples/api/baked-cornell-box/app');
 const loadLightmapBakingApp = () => import('../../examples/api/lightmap-baking/app');
 const loadPBRShadowsApp = () => import('../../examples/api/pbr-shadows/app');
 const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
@@ -77,6 +78,11 @@ const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/ap
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
 const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
+/** Loads the captured-scene default for the standalone website showcase. */
+const loadGaussianSplatsShowcaseApp = async () => ({
+  default: (await loadGaussianSplatsApp()).GaussianSplatsShowcase
+});
+
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
 const loadArrowText2DApp = () => import('../../examples/arrow/arrow-text-2d/app');
@@ -1069,10 +1075,10 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
     <LumaExample
       id="gaussian-splats"
       title="Gaussian Splats"
-      subtitle="Progressive HDR Gaussian splat rendering"
+      subtitle="Moving glass and Gaussian splat compositing"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
-      loadTemplate={loadGaussianSplatsApp}
+      loadTemplate={props.embedded ? loadGaussianSplatsApp : loadGaussianSplatsShowcaseApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       showStats
@@ -2974,19 +2980,18 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
   return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };
 
-export const SpaceSalvageExample: React.FC = () => {
-  const source = useBaseUrl('/standalone-examples/space-salvage/index.html');
-  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
-    <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
-  </ExamplePage>;
-};
-
-
 export const GPURigidBodyWorldExample: React.FC<{scene?: RigidBodyScene; title?: string}> = ({scene, title = 'Rigid Body Lab'}) => {
   const baseSource = useBaseUrl('/standalone-examples/gpu-rigid-body-world/index.html');
   const source = scene ? `${baseSource}?scene=${encodeURIComponent(scene)}` : baseSource;
   return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
     <iframe title={title} src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const OffroadBuggyExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/offroad-buggy/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Off-road Buggy" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
 
@@ -3000,6 +3005,15 @@ export const PhysicsStressExample: React.FC = () => {
 export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample id="authored-scene-stress" title="Authored Scene Stress Lab" directory="gltf"
     loadTemplate={() => import('../../examples/gltf/authored-scene-stress/app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);
+
+/** A composed glTF 2.1 scene with independent GPU ragdoll puppets. */
+export const MarionetteTheaterExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="marionette-theater" title="Marionette Theater" directory="gltf"
+    sourcePath="examples/gltf/authored-scene-stress/ragdoll-app.ts"
+    infoBoxAppearance="cinematic"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/ragdoll-app')}
     config={exampleConfig} devices={['webgpu']} {...props} />
 );
 
@@ -3041,7 +3055,7 @@ export const GPUSphereScaleExample: React.FC = () => {
 export const GPUPoolExample: React.FC = () => {
   const source = useBaseUrl('/standalone-examples/gpu-pool/index.html');
   return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
-    <iframe title="Pool" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+    <iframe title="GPU Pool Practice" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
 
@@ -3053,6 +3067,18 @@ export const LightmapBakingExample: React.FC<WebsiteExampleProps> = props => (
     loadTemplate={loadLightmapBakingApp}
     config={exampleConfig}
     devices={['webgl2', 'webgpu']}
+    {...props}
+  />
+);
+
+export const BakedCornellBoxExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="baked-cornell-box"
+    title="Baked Cornell Box"
+    directory="api"
+    loadTemplate={loadBakedCornellBoxApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );

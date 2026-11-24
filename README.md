@@ -40,6 +40,12 @@
 
 <p align="center"><small>WebGPU logo by <a href="https://www.w3.org/">W3C</a>, licensed under CC BY 4.0. Khronos marks belong to The Khronos Group.</small></p>
 
+## References and credits
+
+We gratefully acknowledge the people, projects, research, and assets behind luma.gl.
+See [References and credits](docs/references-and-credits.md) and each package’s
+shipped third-party notices for implementation provenance and full terms.
+
 ## Overview
 
 luma.gl is a modular GPU toolkit for the web. Its portable device API stays close to WebGPU while

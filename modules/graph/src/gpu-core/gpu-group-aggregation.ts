@@ -58,6 +58,8 @@ type GPUGroupAggregationBaseProps = {
   keys: GPUGroupAggregationKeys;
   /** Optional nonzero/zero selection with the same logical length as `keys`; chunk boundaries may differ. */
   mask?: GPUGroupAggregationMask;
+  /** Upper bound on mean count scratch, in bytes. Partitions the output key domain. */
+  maxMeanScratchBytes?: number;
 };
 
 /** Properties for graph-native dense group aggregation. */
@@ -102,6 +104,8 @@ export class GPUGroupAggregation {
   readonly mask?: GPUGroupAggregationMask;
   /** Group statistic computed by this aggregation. */
   readonly operation: GPUGroupAggregationOperation;
+  /** Maximum number of groups using one shared count scratch buffer. */
+  readonly meanPartitionSize: number;
 
   /** Creates and validates a dense group-aggregation description. */
   constructor(props: GPUGroupAggregationProps) {
@@ -111,6 +115,11 @@ export class GPUGroupAggregation {
     this.output = props.output;
     this.mask = props.mask;
     this.operation = props.operation ?? 'count';
+    const budget = props.maxMeanScratchBytes;
+    if (budget !== undefined && (!Number.isSafeInteger(budget) || budget < 4)) {
+      throw new Error(`${this.id} mean scratch budget requires at least four bytes`);
+    }
+    this.meanPartitionSize = Math.min(this.output.length, Math.floor((budget ?? Infinity) / 4));
 
     for (const [chunkIndex, chunk] of getGroupChunks(this.keys).entries()) {
       validateScalarInputView(chunk, 'uint32', `${this.id} keys chunk ${chunkIndex}`);
@@ -219,37 +228,64 @@ export class GPUGroupAggregation {
 
     const output = this.output as GraphDataView<'float32'>;
     const operation = this.operation;
-    const counts =
+    /** Number of domain keys processed together under the configured mean budget. */
+    const partitionSize = operation === 'mean' ? this.meanPartitionSize : output.length;
+    /** Scratch reused from initialization through finalization for each key range. */
+    const countScratch =
       operation === 'mean'
-        ? createTransientView(graph, `${this.id}-counts`, 'uint32', output.length)
+        ? createTransientView(graph, this.id + '-counts', 'uint32', partitionSize)
         : undefined;
-    nodes.push(...addInitializeGroupStatisticsPass(graph, this.id, output, operation, counts));
-    for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
-      const keys = keyChunks[chunkIndex];
-      if (keys.length === 0) continue;
-      nodes.push(
-        ...addGroupStatisticPass(graph, {
-          id:
-            this.keys instanceof GraphVectorView || keyChunks.length > 1
-              ? `${this.id}-chunk-${chunkIndex}`
-              : this.id,
-          keys,
-          values: valueChunks![chunkIndex],
-          mask: maskChunks?.[chunkIndex],
-          output,
-          operation,
-          counts,
-          dispatchLayout: getGPUGroupAggregationDispatchLayout(
-            keys.length,
-            graph.device.limits.maxComputeWorkgroupsPerDimension
-          )
-        })
-      );
+    for (let firstGroup = 0; firstGroup < output.length; firstGroup += partitionSize) {
+      /** Final partitions may be smaller than the configured range. */
+      const length = Math.min(partitionSize, output.length - firstGroup);
+      /** Writable subview of the final output for the current key range. */
+      const partition =
+        firstGroup === 0 && length === output.length
+          ? output
+          : graph.createDataView(output.buffer, {
+              format: 'float32',
+              length,
+              byteOffset: output.byteOffset + firstGroup * 4
+            });
+      /** The active prefix of the shared count buffer for this partition. */
+      const counts =
+        countScratch && length !== countScratch.length
+          ? graph.createDataView(countScratch.buffer, {
+              format: 'uint32',
+              length,
+              byteOffset: countScratch.byteOffset
+            })
+          : countScratch;
+      /** Distinguishes partition command IDs while preserving existing single-pass IDs. */
+      const id = partitionSize === output.length ? this.id : this.id + '-partition-' + firstGroup;
+      nodes.push(...addInitializeGroupStatisticsPass(graph, id, partition, operation, counts));
+      for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
+        const keys = keyChunks[chunkIndex];
+        if (keys.length === 0) continue;
+        nodes.push(
+          ...addGroupStatisticPass(graph, {
+            id:
+              this.keys instanceof GraphVectorView || keyChunks.length > 1
+                ? id + '-chunk-' + chunkIndex
+                : id,
+            keys,
+            values: valueChunks![chunkIndex],
+            mask: maskChunks?.[chunkIndex],
+            output: partition,
+            operation,
+            counts,
+            firstGroup,
+            dispatchLayout: getGPUGroupAggregationDispatchLayout(
+              keys.length,
+              graph.device.limits.maxComputeWorkgroupsPerDimension
+            )
+          })
+        );
+      }
+      if (operation !== 'sum') {
+        nodes.push(...addFinalizeGroupStatisticsPass(graph, id, partition, operation, counts));
+      }
     }
-    if (operation !== 'sum') {
-      nodes.push(...addFinalizeGroupStatisticsPass(graph, this.id, output, operation, counts));
-    }
-
     return nodes;
   }
 }
@@ -488,6 +524,7 @@ function addGroupStatisticPass<Parameters>(
     output: GraphDataView<'float32'>;
     operation: Exclude<GPUGroupAggregationOperation, 'count'>;
     counts?: GraphDataView<'uint32'>;
+    firstGroup: number;
     dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
 ): readonly GPUCommandNode<Parameters>[] {
@@ -539,10 +576,11 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
   var groupIndex = 0u;
   var value = 0.0;
   if (index < ELEMENT_COUNT && ${maskCondition}) {
-    groupIndex = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
+    let key = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
+    groupIndex = key - ${props.firstGroup}u;
     value = inputValues[VALUES_OFFSET + index * VALUES_STRIDE];
     let finiteValue = value == value && abs(value) <= 3.402823466e+38;
-    accepted = groupIndex < GROUP_COUNT && finiteValue;
+    accepted = key >= ${props.firstGroup}u && groupIndex < GROUP_COUNT && finiteValue;
   }
 ${accumulation}
 }`;

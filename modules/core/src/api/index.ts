@@ -73,6 +73,7 @@ export {ShaderFactory} from './factories/shader-factory';
 export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
 
 export type {
+  ClipDepthMode,
   RenderPassProps,
   RenderPassDrawOptions,
   RenderPassBindingOptions
@@ -144,6 +145,7 @@ export type {
   RasterizationParameters,
   CompareFunction,
   StencilOperation,
+  StencilFaceState,
   DepthStencilParameters,
   BlendFactor,
   BlendOperation,

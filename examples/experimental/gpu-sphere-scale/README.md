@@ -8,10 +8,11 @@ orientation buffers are rendered directly. Sparse layers, dense piles and racks 
 different candidate and contact workloads; a larger selectable count is not a claim
 that every scene fits every adapter's performance budget.
 
-Interactive playback submits at most one 1/120-second physics step per rendered frame
-and reports the actual simulation-time/wall-time ratio. It deliberately slows simulation
-under load instead of building an unbounded queue of catch-up work. The benchmark runs
-one step per frame and reports GPU timing separately from frame and CPU encoding time.
+Interactive playback uses fixed 1/60-second steps with up to two steps per rendered
+frame and reports the simulation-time/wall-time ratio. It waits for the submitted
+interactive frame to finish before issuing more work. Under load it drops excess
+catch-up time so a new tilt can affect the next physics batch. The benchmark runs one
+fixed step per frame and reports GPU timing separately from frame and CPU encoding time.
 Dropped contacts, invalid bodies or exhausted candidate budgets invalidate a run.
 Use the benchmark export to record adapter-specific results.
 

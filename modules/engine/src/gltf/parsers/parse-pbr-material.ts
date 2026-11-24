@@ -15,10 +15,15 @@ export type {
   CompressedImageMipmapArray,
   CompressedMipLevel
 } from '../types/gltf-types';
-import {Matrix3} from '@math.gl/core';
+import {Matrix3} from '@math.gl/core/matrix';
 import type {Device, ExternalImage, SamplerProps, TextureFormat} from '@luma.gl/core';
 import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shaders';
+import {
+  getPBREnvironmentBindings,
+  getPBREnvironmentUniforms,
+  type PBRLightingEnvironment
+} from '../../lighting/pbr-environment';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {
@@ -238,8 +243,12 @@ export type ParsePBRMaterialOptions = {
   lights?: any;
   /** Use tangents */
   useTangents?: boolean;
-  /** provide an image based (texture cube) lighting environment */
-  imageBasedLightingEnvironment?: PBREnvironment;
+  /**
+   * Image-based lighting environment. A `PBREnvironment` keeps the legacy sRGB decode and
+   * fixed mip range. A `PBRLightingEnvironment` is sampled as linear light and also supplies
+   * the `pbrScene` environment intensity, rotation and mip count.
+   */
+  imageBasedLightingEnvironment?: PBREnvironment | PBRLightingEnvironment;
   /** parent post-processed glTF, used to resolve extension texture infos */
   gltf?: GLTFPostprocessed;
   /** run primitive-attribute diagnostics such as missing TEXCOORD_0 / NORMAL */
@@ -249,6 +258,13 @@ export type ParsePBRMaterialOptions = {
   /** Defer only lightmap UV assertions until node overrides are selected. */
   validateLightmapAttributes?: boolean;
 };
+
+/** Distinguishes borrowed linear-light textures from the legacy dynamic-texture environment. */
+function isPBRLightingEnvironment(
+  environment: PBREnvironment | PBRLightingEnvironment
+): environment is PBRLightingEnvironment {
+  return 'specularTexture' in environment;
+}
 
 /**
  * Parses a GLTF material definition into uniforms and parameters for the PBR shader module
@@ -281,11 +297,23 @@ export function parsePBRMaterial(
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
-    parsedMaterial.bindings.pbr_diffuseEnvSampler =
-      imageBasedLightingEnvironment.diffuseEnvSampler.texture;
-    parsedMaterial.bindings.pbr_specularEnvSampler =
-      imageBasedLightingEnvironment.specularEnvSampler.texture;
-    parsedMaterial.bindings.pbr_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
+    if (isPBRLightingEnvironment(imageBasedLightingEnvironment)) {
+      Object.assign(
+        parsedMaterial.bindings,
+        getPBREnvironmentBindings(imageBasedLightingEnvironment)
+      );
+      Object.assign(
+        parsedMaterial.uniforms,
+        getPBREnvironmentUniforms(imageBasedLightingEnvironment)
+      );
+      parsedMaterial.defines['USE_SCENE_ENVIRONMENT'] = true;
+    } else {
+      parsedMaterial.bindings.pbr_diffuseEnvSampler =
+        imageBasedLightingEnvironment.diffuseEnvSampler.texture;
+      parsedMaterial.bindings.pbr_specularEnvSampler =
+        imageBasedLightingEnvironment.specularEnvSampler.texture;
+      parsedMaterial.bindings.pbr_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
+    }
     parsedMaterial.uniforms.IBLenabled = true;
     parsedMaterial.uniforms.scaleIBLAmbient = [1, 1];
   }

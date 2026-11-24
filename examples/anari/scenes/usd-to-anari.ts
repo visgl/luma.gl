@@ -1,4 +1,4 @@
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import type {ANARIVector3} from '@luma.gl/anari';
 import type {
   ANARIJSONScene,

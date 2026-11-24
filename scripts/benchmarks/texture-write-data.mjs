@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-// node scripts/benchmarks/texture-write-data.mjs [checkout-to-measure]
+// node scripts/benchmarks/texture-write-data.mjs [checkout-to-measure] [texture|scalar]
 // Requires installed workspace dependencies and Playwright Chromium.
 import {resolve} from 'node:path';
 import {build} from 'esbuild';
 import {chromium} from 'playwright';
 
 const root = resolve(process.argv[2] || '.');
+const scalar = process.argv[3] === 'scalar';
 const writesPerBatch = 1500;
 const batchCount = 120;
 const bundle = await build({
@@ -27,8 +28,10 @@ const bundle = await build({
         const data = new Uint8Array(16).fill(127);
         const options = {width: 4, height: 1};
         const gl = device.gl;
+        let matchingState = true;
         return {
           configure(matching) {
+            matchingState = matching;
             gl.pixelStorei(gl.UNPACK_ALIGNMENT, matching ? 1 : 4);
             gl.pixelStorei(gl.UNPACK_ROW_LENGTH, matching ? 4 : 0);
             gl.pixelStorei(gl.UNPACK_IMAGE_HEIGHT, matching ? 1 : 0);
@@ -38,7 +41,17 @@ const bundle = await build({
             const started = performance.now();
             for (let batch = 0; batch < batchCount; batch++) {
               const batchStarted = performance.now();
-              for (let write = 0; write < writesPerBatch; write++) texture.writeData(data, options);
+              for (let write = 0; write < writesPerBatch; write++) {
+                if (${scalar}) {
+                  const alternate = !matchingState && write % 2 === 0;
+                  gl.clearDepth(alternate ? 0.25 : 0.75);
+                  gl.depthMask(alternate);
+                  if (alternate) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
+                  gl.hint(gl.GENERATE_MIPMAP_HINT, alternate ? gl.FASTEST : gl.NICEST);
+                } else {
+                  texture.writeData(data, options);
+                }
+              }
               cpuMilliseconds += performance.now() - batchStarted;
               if (yieldFrames) await new Promise(requestAnimationFrame);
             }
@@ -89,14 +102,16 @@ try {
       allocationByFunction.set(name, (allocationByFunction.get(name) || 0) + sample.size);
     }
     results.push({
-      mode: matching ? 'matching unpack state' : 'different unpack state',
+      mode: scalar
+        ? matching ? 'matching scalar state' : 'changing scalar state'
+        : matching ? 'matching unpack state' : 'different unpack state',
       ...timing,
       sampledAllocationBytes,
       topAllocators: [...allocationByFunction].sort((left, right) => right[1] - left[1]).slice(0, 10)
     });
   }
   await page.evaluate(async () => (await globalThis.benchmarkReady).destroy());
-  console.log(JSON.stringify({root, browser: browser.version(), writesPerBatch, batchCount, results}, null, 2));
+  console.log(JSON.stringify({root, workload: scalar ? 'scalar' : 'texture', browser: browser.version(), writesPerBatch, batchCount, results}, null, 2));
 } finally {
   await browser.close();
 }

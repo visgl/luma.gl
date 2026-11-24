@@ -5,7 +5,7 @@ import {expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {ClusteredLightGrid, CLUSTERED_POINT_LIGHT_LAYOUT} from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 it('clustered grid preserves deterministic overflow, clears frames and borrows inputs', async context => {
   const device = await getWebGPUTestDevice();

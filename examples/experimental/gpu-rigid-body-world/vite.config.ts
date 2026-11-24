@@ -3,16 +3,21 @@ import {defineConfig} from 'vite';
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: {index: `${__dirname}/index.html`, wreckingBall: `${__dirname}/wrecking-ball.html`}
+      input: {
+        armContact: `${__dirname}/arm-contact.html`,
+        index: `${__dirname}/index.html`,
+        wreckingBall: `${__dirname}/wrecking-ball.html`
+      }
     }
   },
   resolve: {
     alias: {
-      '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
-      '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
-      '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
+      '@luma.gl/graph/gpu-simple-graph-cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
+      '@luma.gl/graph/gpu-simple-graph-webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
+      '@luma.gl/graph/gpu-simple-graph-webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
 
       '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
+      '@luma.gl/engine/lighting': `${__dirname}/../../../modules/engine/src/lighting`,
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
       '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,

@@ -16,7 +16,7 @@ import {
   getPBREnvironmentBindings,
   getPBREnvironmentUniforms
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
   test(`directional contact visibility respects occluders, self bias and ownership (${getDevice.name})`, async context => {

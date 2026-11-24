@@ -113,6 +113,49 @@ export function getSphereContactShader(mode: 'count' | 'emit', allPairs: boolean
 @group(0) @binding(6) var<storage, read> offsets: array<u32>;
 @group(0) @binding(7) var<storage, read_write> contacts: array<vec2u>;
 @group(0) @binding(8) var<storage, read_write> diagnostics: array<atomic<u32>>;
+${
+  mode === 'count'
+    ? `var<workgroup> contactDiagnostics: array<vec4u, 64>;
+
+fn addSaturated(counterIndex: u32, amount: u32) {
+  var current = atomicLoad(&diagnostics[counterIndex]);
+  loop {
+    let next = current + min(amount, 0xffffffffu - current);
+    let result = atomicCompareExchangeWeak(&diagnostics[counterIndex], current, next);
+    if (result.exchanged) { break; }
+    current = result.old_value;
+  }
+}
+
+fn countContacts(localIndex: u32, contactCount: u32, candidateCount: u32) {
+  contactDiagnostics[localIndex] = vec4u(
+    contactCount - min(contactCount, MAXIMUM_CONTACTS),
+    candidateCount,
+    contactCount,
+    select(0u, 2u, MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES)
+  );
+  workgroupBarrier();
+  for (var stride = 32u; stride > 0u; stride >>= 1u) {
+    if (localIndex < stride) {
+      let first = contactDiagnostics[localIndex];
+      let second = contactDiagnostics[localIndex + stride];
+      contactDiagnostics[localIndex] = vec4u(
+        first.x + second.x, first.y + second.y, max(first.z, second.z), first.w + second.w
+      );
+    }
+    workgroupBarrier();
+  }
+  if (localIndex == 0u) {
+    let totals = contactDiagnostics[0];
+    if (totals.x > 0u) { addSaturated(0u, totals.x); }
+    if (totals.y > 0u) { addSaturated(5u, totals.y); }
+    if (totals.z > 0u) { atomicMax(&diagnostics[6], totals.z); }
+    if (totals.w > 0u) { atomicAdd(&diagnostics[7], totals.w); }
+  }
+}
+`
+    : ''
+}
 fn lowerBound(key: u32) -> u32 {
   var first = 0u; var last = BODY_COUNT;
   while (first < last) {
@@ -122,12 +165,16 @@ fn lowerBound(key: u32) -> u32 {
   return first;
 }
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) invocation: vec3u) {
+fn main(
+  @builtin(global_invocation_id) invocation: vec3u,
+  @builtin(local_invocation_index) localIndex: u32
+) {
   let index = invocation.x;
-  if (index >= BODY_COUNT) { return; }
-  let sphere = positions[index];
   var contactCount = 0u;
   var candidateCount = 0u;
+  // Out-of-range lanes supply zero counts and still participate in the reduction.
+  var sphere = vec4f(0.0);
+  if (index < BODY_COUNT) { sphere = positions[index]; }
   if (isValidSphere(sphere)) {
     let cell = getCell(sphere.xyz);
     ${allPairs ? 'let neighborCount = 1u;' : 'let neighborCount = 27u;'}
@@ -167,24 +214,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   }
   ${
     mode === 'count'
-      ? `counts[index] = min(contactCount, MAXIMUM_CONTACTS);
-    if (contactCount > MAXIMUM_CONTACTS) {
-      var current = atomicLoad(&diagnostics[0]);
-      loop {
-        let next = current + min(contactCount - MAXIMUM_CONTACTS, 0xffffffffu - current);
-        let result = atomicCompareExchangeWeak(&diagnostics[0], current, next);
-        if (result.exchanged) {break;} current = result.old_value;
-      }
-    }
-    var currentCandidates = atomicLoad(&diagnostics[5]);
-    loop {
-      let next = currentCandidates + min(candidateCount, 0xffffffffu - currentCandidates);
-      let result = atomicCompareExchangeWeak(&diagnostics[5], currentCandidates, next);
-      if (result.exchanged) {break;} currentCandidates = result.old_value;
-    }
-    atomicMax(&diagnostics[6], contactCount);
-    if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {atomicAdd(&diagnostics[7], 2u);}`
-      : 'atomicAdd(&diagnostics[2], min(contactCount, MAXIMUM_CONTACTS));'
+      ? `if (index < BODY_COUNT) { counts[index] = min(contactCount, MAXIMUM_CONTACTS); }
+    countContacts(localIndex, contactCount, candidateCount);`
+      : 'if (contactCount > 0u) { atomicAdd(&diagnostics[2], min(contactCount, MAXIMUM_CONTACTS)); }'
   }
 }
 `;

@@ -34,6 +34,8 @@ when the destination is in range. Out-of-range destinations are ignored. Source 
 the same packed fixed-width GPU format.
 
 ```ts
+import {GPUScatter} from '@luma.gl/graph/gpu-core';
+
 graph.add(new GPUScatter({
   source,
   indices,
