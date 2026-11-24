@@ -512,6 +512,9 @@ function buildGPUSQLPlan(
         }
       );
       const {predicates, selectedColumns, derivedColumns} = query;
+      if (Object.keys(definitions).length === 0) {
+        throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+      }
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,
