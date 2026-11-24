@@ -93,6 +93,7 @@
     "yaml": "^2.8.1"
   },
   "resolutions": {
+    "@deck.gl/core@npm:10.0.0-alpha.2": "patch:@deck.gl/core@npm%3A10.0.0-alpha.2#~/.yarn/patches/@deck.gl-core-npm-10.0.0-alpha.2-85f6768bd1.patch",
     "@cmfcmf/docusaurus-search-local": "^2.0.1",
     "@docusaurus/plugin-client-redirects": "^3.10.2",
     "@docusaurus/plugin-content-docs": "^3.10.2",
