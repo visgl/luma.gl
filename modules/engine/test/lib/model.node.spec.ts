@@ -386,3 +386,39 @@ it('Model keeps a topology change made while the async pipeline compiles', async
     device.destroy();
   }
 });
+
+it('Model caches an async pipeline under the attachment formats it was built for', async () => {
+  const device = makeWebGPUDevice();
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    source: WGSL_SOURCE,
+    vertexCount: 1,
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling for the default render target. Switch targets now.
+    const syncAttachmentFormats = (
+      model as unknown as {_syncAttachmentFormats(renderPass: unknown): void}
+    )._syncAttachmentFormats.bind(model);
+    syncAttachmentFormats({
+      props: {colorAttachmentFormats: ['rgba16float'], depthStencilAttachmentFormat: 'depth24plus'}
+    });
+    await Promise.all(compilation);
+
+    const asyncPipeline = model.pipeline;
+
+    model._updatePipeline();
+    expect(model.pipeline.props.colorAttachmentFormats).toEqual(['rgba16float']);
+    expect(model.pipeline.props.depthStencilAttachmentFormat).toBe('depth24plus');
+
+    // Switching back to the default render target adopts the pipeline compiled for it.
+    syncAttachmentFormats({props: {}});
+    model._updatePipeline();
+    expect(model.pipeline).toBe(asyncPipeline);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});

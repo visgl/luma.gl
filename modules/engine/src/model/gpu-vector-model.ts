@@ -123,6 +123,8 @@ type PipelineUpdate = {
   fragmentShader: Shader | null;
   /** Whether the cached variants were stale when this update was prepared. */
   releaseCache: boolean;
+  /** The render-target shape the pipeline is built for, taken when the update was prepared. */
+  attachmentFormatKey: string;
 };
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
@@ -1667,6 +1669,8 @@ export class GPUVectorModel {
    * layer down, by `PipelineFactory`'s pending-pipeline cache. A topology, parameter or
    * buffer-layout change made during the await marks the cache stale again, so the next
    * update rebuilds and releases the pipeline created here along with the other variants.
+   * A render-target change during the await caches the pipeline for the formats it was
+   * built for, and the current target's variant is adopted or rebuilt.
    * On failure nothing was inserted, because only `_finishPipelineUpdate()` inserts, so
    * the `catch` below leaves any existing variants untouched and still valid.
    */
@@ -1743,7 +1747,8 @@ export class GPUVectorModel {
       },
       vertexShader,
       fragmentShader,
-      releaseCache
+      releaseCache,
+      attachmentFormatKey: this._getAttachmentFormatKey()
     };
   }
 
@@ -1758,7 +1763,16 @@ export class GPUVectorModel {
     if (update.releaseCache) {
       this._releasePipelineCache();
     }
-    this._cachePipelineVariant();
+    this._cachePipelineVariant(update.attachmentFormatKey);
+
+    // The render target changed while an async create awaited. The new pipeline is cached
+    // for the formats it was built for; bind the current target's variant or rebuild it.
+    if (
+      update.attachmentFormatKey !== this._getAttachmentFormatKey() &&
+      !this._adoptCachedPipelineVariant()
+    ) {
+      this._setPipelineNeedsUpdate(ATTACHMENT_FORMATS_CHANGED);
+    }
   }
 
   /** Reuse a variant already built for the current render target, if there is one. */
@@ -1795,11 +1809,15 @@ export class GPUVectorModel {
    * Record the pipeline just built as the variant for the current render target, taking
    * ownership of one reference to it and to its shaders.
    */
-  private _cachePipelineVariant(): void {
-    // The key is never cached here: a cached key is adopted instead of rebuilt, and a stale
-    // rebuild clears the cache first.
-    const key = this._getAttachmentFormatKey();
-    if (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
+  private _cachePipelineVariant(key: string): void {
+    // A cached key is normally adopted instead of rebuilt, and a stale rebuild clears the
+    // cache first. A synchronous update can still cache the key while an async create for
+    // it awaits, so the newer entry replaces that one and releases its references.
+    const replaced = this._pipelineCache.get(key);
+    if (replaced) {
+      this._pipelineCache.delete(key);
+      this._releasePipelineVariant(replaced.pipeline);
+    } else if (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
       // Map iteration order is least-recently-used first. Each entry owns its own reference,
       // so evicting one that shares the bound pipeline object leaves the bound entry intact.
       const [evictedKey, evicted] = this._pipelineCache.entries().next().value!;
