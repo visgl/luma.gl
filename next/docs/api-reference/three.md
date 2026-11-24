@@ -64,7 +64,7 @@ The bridge supports packed Float32 vertex and instanced attributes and uint16/ui
 | Add deck.gl layers above an existing Three.js canvas                | `@luma.gl/three/overlay`                       | Three.js WebGL/WebGPU host; separate WebGL2 overlay |
 | Add Three.js objects to a deck.gl layer list                        | `@luma.gl/three/deck`                          | WebGPU                                              |
 
-The deck.gl integrations require the workspace's patched deck.gl **9.4.0** and luma.gl **10** stack. These are tested versions, rather than a general compatibility range.
+The deck.gl integrations require the workspace's deck.gl **10.0.0-alpha.2** and luma.gl **10** stack. These are tested versions, rather than a general compatibility range.
 
 ## Other luma.gl integrations[​](#other-lumagl-integrations "Direct link to Other luma.gl integrations")
 
