@@ -1,0 +1,1 @@
+import"./Arrow.dom-B_xHmvfZ.js";import"./log-Dpt7o4NC.js";import{t as e}from"./gltf-loader-C6nNrzQ-.js";export{e as GLTFLoaderWithParser};

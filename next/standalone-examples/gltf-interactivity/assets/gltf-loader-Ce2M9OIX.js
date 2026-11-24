@@ -1,0 +1,1 @@
+import"./Arrow.dom-B_xHmvfZ.js";import"./log-Dpt7o4NC.js";import{n as e}from"./gltf-loader-_ayHaGF8.js";export{e as parse};

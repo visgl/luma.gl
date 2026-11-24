@@ -1,1 +1,0 @@
-import"./log-6ICLTgtF.js";import{n as e}from"./gltf-loader-D70F3jU8.js";import"./draco-loader-types-ChJo9A85.js";export{e as parse};
