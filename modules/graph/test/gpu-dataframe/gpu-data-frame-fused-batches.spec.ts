@@ -9,6 +9,7 @@ import {
   column,
   literal,
   parameter,
+  vector,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
@@ -216,6 +217,63 @@ it('GPUDataFrame fuses derived columns and downstream aggregation over shared ba
   } finally {
     derived.destroy();
     aggregate.destroy();
+    destroyFixture(fixture);
+  }
+});
+
+it('GPUDataFrame packs vector-format derived columns at their stride across fused batches', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    skip('WebGPU unavailable');
+    return;
+  }
+
+  const fixture = createFusedFixture(device, 'shared');
+  const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
+    id: 'gpu-dataframe-fused-vector-derived'
+  });
+  const query = fixture.frame
+    .withColumn(
+      'farePair',
+      vector('float32x2', [column('fare'), column('fare').multiply(literal(2))]),
+      {
+        format: 'float32x2'
+      }
+    )
+    .select(['farePair', 'category'])
+    .compile(graph);
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-fused-vector-derived'});
+    query.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+
+    const pairVector = query.table.gpuVectors.farePair as GPUVector<'float32x2'>;
+    expect(
+      new Set(pairVector.data.map(chunk => chunk.buffer)).size,
+      'fused vector values are packed per-batch chunks plus the trailing empty batch'
+    ).toBe(2);
+    expect(
+      pairVector.data.map(chunk => chunk.byteOffset),
+      'packed vector chunks advance by the 8-byte float32x2 stride'
+    ).toEqual([0, 24, 24, 5624, 5664, 0]);
+    const pairValues = await Promise.all(
+      pairVector.data.map(chunk => readChunk(chunk, Float32Array, chunk.length * 2))
+    );
+    fixture.fares.forEach((fares, batchIndex) => {
+      fares.forEach((fare, rowIndex) => {
+        if (fixture.fareValidity[batchIndex][rowIndex] === 1) {
+          expect(
+            Array.from(pairValues[batchIndex].subarray(rowIndex * 2, rowIndex * 2 + 2)),
+            `batch ${batchIndex} row ${rowIndex} reads its own vector value`
+          ).toEqual([Math.fround(fare), Math.fround(Math.fround(fare) * 2)]);
+        }
+      });
+    });
+  } finally {
+    query.destroy();
     destroyFixture(fixture);
   }
 });

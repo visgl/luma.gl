@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
+// Loads the dataframe entry point first, so its module cycle initializes in the public order.
+import '@luma.gl/graph/gpu-dataframe';
 import {
   getGPUQueryBatchSegments,
   type GPUQueryBatchSegment
@@ -184,6 +186,23 @@ it('getGPUQueryBatchSegments keeps fused bindings and outputs inside device limi
     ),
     'batches larger than one output buffer keep the per-batch path'
   ).toEqual(rowCounts.map((_, batchIndex) => [batchIndex, 1]));
+
+  const vectorRowCounts = [256, 256, 256, 256];
+  expect(
+    getSegmentRanges(
+      getGPUQueryBatchSegments(
+        makeBatches(vectorRowCounts),
+        [makeSharedChunks({}, vectorRowCounts)],
+        {maxStorageBufferBindingSize: 4096, maxBufferSize: 1 << 28},
+        // A float32x2 output needs 8 bytes per row, so 4096 / 8 = 512 rows per segment.
+        8
+      )
+    ),
+    'wide outputs split runs that their uint32 inputs alone would fuse'
+  ).toEqual([
+    [0, 2],
+    [2, 2]
+  ]);
 
   expect(
     getSegmentRanges(

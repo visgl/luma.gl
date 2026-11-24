@@ -302,7 +302,11 @@ export function compileGPUDataFrameQuery<
     const segments = getGPUQueryBatchSegments(
       retainedSource.batches,
       getGPUQueryBatchInputs(retainedSource, plan),
-      graph.device.limits
+      graph.device.limits,
+      Math.max(
+        UINT32_BYTE_LENGTH,
+        ...plan.outputs.map(output => getGPUVectorWGSLLayout(output.format).packedByteStride)
+      )
     );
     const rowLengths = getGPUQueryOutputBufferLayout(segments);
     const countLengths = rowLengths.map(lengths => lengths.map(() => 1));
@@ -575,7 +579,7 @@ function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
               ownsBuffer: data.length === firstChunkIndex
             })
           );
-          byteOffset += length * UINT32_BYTE_LENGTH;
+          byteOffset += length * packedByteStride;
         }
       } catch (error) {
         if (data.length === firstChunkIndex) {
@@ -1061,16 +1065,18 @@ type GPUQueryBatchPlacement = {
  * fused segment fits one storage binding per input and one output allocation. Fusing replaces one
  * predicate, identity, scan, and scatter chain per batch with a constant number of dispatches per
  * segment. Queries without input columns keep the per-batch path, because nothing indicates that
- * callers expect shared-buffer output chunks. @internal
+ * callers expect shared-buffer output chunks. `outputByteStride` is the widest packed row of any
+ * output, such as 8 bytes for a `float32x2` derived column. @internal
  */
 export function getGPUQueryBatchSegments(
   batches: readonly Pick<GPURecordBatch, 'numRows' | 'sourceInfo'>[],
   inputs: readonly (readonly GPUQueryBatchInputChunk[])[],
-  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>
+  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>,
+  outputByteStride: number = UINT32_BYTE_LENGTH
 ): GPUQueryBatchSegment[] {
   const placements = getGPUQueryBatchPlacements(batches, inputs);
   return findGPUQueryContiguousRuns(placements).flatMap(batchIndices =>
-    splitGPUQueryRunByLimits(batchIndices, placements, limits)
+    splitGPUQueryRunByLimits(batchIndices, placements, limits, outputByteStride)
   );
 }
 
@@ -1151,12 +1157,14 @@ function findGPUQueryContiguousRuns(placements: readonly GPUQueryBatchPlacement[
  * Splits one contiguous run into fused segments that fit device limits, and single-batch segments.
  *
  * A fused segment binds each input from the aligned offset at or before its first row, writes
- * outputs packed from offset zero, and uploads a batch table of `2 * batchCount + 1` words.
+ * outputs packed from offset zero at their format's packed stride (at most `outputByteStride`
+ * bytes per row), and uploads a batch table of `2 * batchCount + 1` words.
  */
 function splitGPUQueryRunByLimits(
   batchIndices: readonly number[],
   placements: readonly GPUQueryBatchPlacement[],
-  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>
+  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>,
+  outputByteStride: number
 ): GPUQueryBatchSegment[] {
   const maximumBatchCount = Math.floor(
     (Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize) / UINT32_BYTE_LENGTH - 1) /
@@ -1169,7 +1177,8 @@ function splitGPUQueryRunByLimits(
 
   const fitsLimits = (nextRowCount: number, prefixByteLength: number) =>
     prefixByteLength + nextRowCount * UINT32_BYTE_LENGTH <= limits.maxStorageBufferBindingSize &&
-    nextRowCount * UINT32_BYTE_LENGTH <= limits.maxBufferSize;
+    nextRowCount * outputByteStride <=
+      Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize);
   const closePiece = () => {
     segments.push(...getGPUQueryRunSegments(pieceBatchIndices, placements));
     pieceBatchIndices = [];

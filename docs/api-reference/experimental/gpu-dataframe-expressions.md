@@ -101,10 +101,10 @@ path.
 
 The outputs keep one chunk per source batch. The chunks of a fused run are consecutive views of
 one buffer, owned by the run's first chunk, so consumers must honor each chunk's `byteOffset`.
-These offsets are exact but generally not multiples of `minStorageBufferOffsetAlignment`, and
-vertex attributes bound through `GPUTableShaderBindings` start at the buffer's first byte, so
-bind fused output chunks through command-graph views or `byteOffset`-aware readback. Trailing
-empty batches of a run keep independently allocated chunks.
+These offsets are exact but generally not multiples of `minStorageBufferOffsetAlignment`, so
+bind fused chunks as storage through command-graph views, which add the offset inside an aligned
+binding. Vertex attributes bound through `GPUTableShaderBindings` already apply each chunk's
+`byteOffset`. Trailing empty batches of a run keep independently allocated chunks.
 
 Compile each independent plan into a new `GPUCommandGraph`; a graph becomes immutable once
 compiled. Re-encode the same compiled query with new parameters for repeated interactions.
