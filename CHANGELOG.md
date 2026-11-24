@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-beta.4
+
+- Upgrade loaders.gl to 5.0.0, math.gl to 5.0.3, and the deck.gl integrations to 10.0.0-alpha.2.
+- Fall back to WebGL2 when WebGPU returns no adapter. Add portable two-sided stencil state, stencil clears, and attachment handling.
+- Extend GPU SQL with HAVING, grouped ordering and pagination, and aggregation over joins. Split streamed Arrow batches to stay within GPU memory budgets.
+- Improve GPU shortest paths with GPU-side termination, support for more than 1,024 rounds, and source buffers.
+- Drive active GPU ragdolls from scene poses and solve fixed-base articulations with joint-space dynamics and work-stop contacts.
+- Refit ANARI ray-tracing BVHs after deformation, support glTF alpha blending, and adapt progressive batches to GPU time.
+
 ### v10.0.0-beta.2
 
 - Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
