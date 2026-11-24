@@ -5,7 +5,7 @@
 import {isBrowser} from 'probe.gl/env';
 import {Device, DeviceProps} from './device';
 
-// The backend and core may be loaded from separate package bundles.
+/** Identifies a null initial WebGPU adapter across bundles so best-available can use WebGL2. */
 export const WEBGPU_ADAPTER_UNAVAILABLE = 'LUMA_WEBGPU_ADAPTER_UNAVAILABLE';
 
 /**
