@@ -81,8 +81,10 @@ extends beyond the standard and does not become a seventh official workload.
 one chosen vertex. Existing nonnegative `float32` edge weights determine route cost; missing
 weights mean every relationship costs one. Unreachable vertices receive `+Infinity`, equal-cost
 routes choose fewer hops and then the lowest stable predecessor, and invalid or negative weights
-fail closed. Bounded synchronized relaxation and an optional GPU convergence flag keep the actual
-iteration budget visible; they do not imply automatic convergence or support negative weights.
+fail closed. Synchronized relaxation stops on the GPU in the first round that changes nothing;
+`run()` continues in batches past the 1,024 rounds that one command graph encodes and reports
+`converged` and `iterations`. Caller-owned `seeds` let one compiled search serve any source, or
+several sources at once. Negative weights are not supported.
 
 `GPUGraphAlgorithmsLocalClusteringCoefficient` asks whether each vertex's distinct incoming-or-outgoing
 neighbors also connect to one another. Directed graphs count distinct directed links among those

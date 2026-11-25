@@ -91,9 +91,9 @@ export const BUNDLE_SIZE_FIXTURES = [
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
     // Resource ownership adds 1,592 B minified / 445 B gzip / 347 B Brotli versus the PR base.
-    // Shader uniform write optimization (#3421) adds 244 B minified / 115 B gzip / 66 B Brotli.
-    // Its own-property guard in ShaderBlockWriter#getFlatData adds 16 B minified / 35 B Brotli.
-    maximum: {minified: 105_450, gzip: 29_775, brotli: 26_125},
+    // Null-adapter fallback measures 105,356 B minified and 29,723 B gzip.
+    // With the shader uniform write optimization (#3421): 105,620 B minified, 29,843 B gzip, 26,190 B Brotli.
+    maximum: {minified: 105_650, gzip: 29_875, brotli: 26_225},
     targetGzip: 24_000
   },
   {
@@ -123,9 +123,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     sum: ['core', 'webgl'],
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
     // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
-    // Shader uniform write optimization (#3421) adds 244 B minified / 115 B gzip / 66 B Brotli.
-    // Its own-property guard in ShaderBlockWriter#getFlatData adds 16 B minified / 35 B Brotli.
-    maximum: {minified: 249_450, gzip: 70_600, brotli: 61_060},
+    // With the shader uniform write optimization (#3421): 249,607 B minified, 70,634 B gzip, 61,116 B Brotli.
+    maximum: {minified: 249_650, gzip: 70_675, brotli: 61_150},
     targetGzip: 54_000
   },
   {

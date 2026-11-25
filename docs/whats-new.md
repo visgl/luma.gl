@@ -20,6 +20,9 @@
   GPU dispatch and compact readback. [Batched collision casts](./api-reference/graph/gpu-physics.md#batched-collision-casts)
 - Opt-in GPU BVH refits for batched ray and sphere casts against sphere and box
   colliders, with indexed and direct scan comparisons in Physics Batch Lab.
+- GPU weighted shortest paths stop on the GPU once converged, continue past 1,024 rounds with
+  `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing.
+  [Weighted routes](./api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
