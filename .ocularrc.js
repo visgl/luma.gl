@@ -65,7 +65,6 @@ const config = {
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
         'wrecking-ball': '/examples/experimental/gpu-rigid-body-world/wrecking-ball.html',
         'vector-observatory': '/examples/experimental/vector-observatory',
-        'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',
         'physics-stress': '/examples/experimental/physics-stress',
         'sphere-world': '/examples/experimental/gpu-sphere-world',
