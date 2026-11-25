@@ -95,7 +95,10 @@ export async function createGeographicComparison(
     const id = typeof info?.object?.id === 'string' ? info.object.id : undefined;
     scene.select(id);
     referenceScene.select(id);
-    onSelect(id, info?.layer?.id === 'geographic-lanterns' ? info.coordinate : undefined);
+    onSelect(
+      id,
+      info?.layer?.id === 'geographic-lanterns' ? (info.coordinate ?? undefined) : undefined
+    );
     updateLayers();
   }
   const selection = createSceneSelection({

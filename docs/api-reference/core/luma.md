@@ -136,7 +136,10 @@ To create a Device instance, the application calls `luma.createDevice()`.
 - `...deviceProps`: See [`DeviceProps`](./device.md#deviceprops) for device specific options.
 
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
-luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
+luma.gl prefers WebGPU. If the browser exposes WebGPU but `navigator.gpu.requestAdapter()`
+returns `null`, luma.gl uses a supported, registered WebGL2 adapter when available.
+An explicit `type: 'webgpu'` reports the adapter error. Errors after acquiring a WebGPU
+adapter, such as a rejected device request, propagate for either selection mode.
 
 When `debug` is enabled in a browser and device creation fails, luma.gl displays the error in a
 browser alert. To enable debugging from a browser URL, including on a mobile device, append the

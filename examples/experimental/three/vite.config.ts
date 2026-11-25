@@ -33,6 +33,9 @@ export default defineConfig(({mode}) => ({
         new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgpu', import.meta.url)
       ),
 
+      '@luma.gl/graph/_internal/arrow': fileURLToPath(
+        new URL('../../../modules/graph/src/arrow/internal.ts', import.meta.url)
+      ),
       '@luma.gl/graph/_internal': fileURLToPath(
         new URL('../../../modules/graph/src/execution', import.meta.url)
       ),

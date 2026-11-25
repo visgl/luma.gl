@@ -68,8 +68,7 @@ afterward to avoid using the background depth. Neither path models a planet-scal
 Run `yarn workspace luma.gl-examples-deck-weather test:visual` for both-backend movement,
 pause, fog, map/globe projection, depth-occlusion, surface-mask, and ownership checks. GPU module tests separately
 check analytic fog and seeded, world-anchored motion. Projection tests round-trip local positions
-through the actual Deck shaders, including high latitudes and globe poles. The pinned Deck patch
-corrects its WGSL globe tangent-basis selection to match GLSL.
+through the actual Deck shaders, including high latitudes and globe poles.
 
 The district geometry is rendered by `../river-district-layer.ts`, shared with the other riverfront
 examples. It uses luma.gl's Lambert material for lighting, optional `heightFog`, and `surfaceBuffer`

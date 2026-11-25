@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {COORDINATE_SYSTEM, OrthographicView} from '@deck.gl/core';
+import {OrthographicView} from '@deck.gl/core';
 import {
   GPUBitmapLayer,
   WindParticleLayer,
@@ -227,14 +227,14 @@ function updateLayers() {
           id: 'earth',
           image: earth,
           bounds: [-180, -90, 180, 90],
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           tintColor: [75, 100, 120, 255]
         }),
       effect &&
         new WindParticleLayer({
           id: 'winds',
           simulation: effect.simulation,
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           widthPixels: settings.widthPixels,
           trailSeconds: settings.trailSeconds,
           altitude: 0.1,
