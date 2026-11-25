@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {PipelineFactory, ShaderFactory, type Device} from '@luma.gl/core';
+import {
+  PipelineFactory,
+  ShaderFactory,
+  type Device,
+  type RenderPipeline,
+  type RenderPipelineProps
+} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shaders';
 import {NullDevice} from '@luma.gl/core/test-utils';
@@ -417,6 +423,66 @@ it('Model caches an async pipeline under the attachment formats it was built for
     syncAttachmentFormats({props: {}});
     model._updatePipeline();
     expect(model.pipeline).toBe(asyncPipeline);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});
+
+/** Pipeline factory whose async creates resolve only when the test calls `resolveAsync()`. */
+class DeferredPipelineFactory extends PipelineFactory {
+  /** Pending async creates, oldest first. */
+  private pendingCreates: (() => void)[] = [];
+  /** Every pipeline handed back through `release()`, in order. */
+  releasedPipelines: RenderPipeline[] = [];
+
+  override createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline> {
+    return new Promise(resolve => {
+      this.pendingCreates.push(() => resolve(this.createRenderPipeline(props)));
+    });
+  }
+
+  override release(pipeline: RenderPipeline): void {
+    this.releasedPipelines.push(pipeline);
+    super.release(pipeline);
+  }
+
+  /** Resolve the oldest pending async create. */
+  resolveAsync(): void {
+    this.pendingCreates.shift()?.();
+  }
+}
+
+it('Model releases a stale async pipeline instead of the newer one built while it compiled', async () => {
+  const device = new NullDevice({});
+  const pipelineFactory = new DeferredPipelineFactory(device);
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory,
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling a triangle-list pipeline. Change the topology and
+    // draw before that compile resolves.
+    model.setTopology('point-list');
+    model.predraw(device.commandEncoder);
+    const pointPipeline = model.pipeline;
+    expect(pointPipeline.props.topology).toBe('point-list');
+
+    pipelineFactory.resolveAsync();
+    await Promise.all(compilation);
+
+    const [stalePipeline] = pipelineFactory.releasedPipelines;
+    expect(pipelineFactory.releasedPipelines).toHaveLength(1);
+    expect(stalePipeline.props.topology).toBe('triangle-list');
+    expect(pointPipeline.destroyed).toBe(false);
+
+    model.predraw(device.commandEncoder);
+    expect(model.pipeline).toBe(pointPipeline);
   } finally {
     model.destroy();
     device.destroy();

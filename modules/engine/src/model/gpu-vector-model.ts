@@ -125,6 +125,8 @@ type PipelineUpdate = {
   releaseCache: boolean;
   /** The render-target shape the pipeline is built for, taken when the update was prepared. */
   attachmentFormatKey: string;
+  /** Increases with every prepared update, so an async create can tell it was overtaken. */
+  sequence: number;
 };
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
@@ -417,6 +419,10 @@ export class GPUVectorModel {
   >();
   /** Set when an invalidation other than attachment formats makes every cached variant obsolete. */
   private _pipelineCacheStale = false;
+  /** Sequence number of the last prepared pipeline update. */
+  private _preparedPipelineUpdate = 0;
+  /** Sequence number of the update that built the bound pipeline. */
+  private _appliedPipelineUpdate = 0;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   private _needsRedraw: string | false = 'initializing';
@@ -1666,11 +1672,17 @@ export class GPUVectorModel {
    * so the cache is always empty at this point and the reuse check below is a no-op
    * today - it is present so the two update paths stay consistent if a second caller
    * appears. Concurrent requests for an equivalent pipeline are already deduplicated one
-   * layer down, by `PipelineFactory`'s pending-pipeline cache. A topology, parameter or
-   * buffer-layout change made during the await marks the cache stale again, so the next
-   * update rebuilds and releases the pipeline created here along with the other variants.
-   * A render-target change during the await caches the pipeline for the formats it was
-   * built for, and the current target's variant is adopted or rebuilt.
+   * layer down, by `PipelineFactory`'s pending-pipeline cache.
+   *
+   * Changes made during the await are kept:
+   * - If a newer update was applied, for example by `predraw()`, this create is stale. It
+   *   releases only its own pipeline and shaders and leaves the bound pipeline and the cache
+   *   alone. A stale failure is dropped for the same reason.
+   * - Otherwise a topology, parameter or buffer-layout change left the pipeline marked for
+   *   update and the cache stale, so the next update rebuilds and releases the pipeline
+   *   created here along with the other variants.
+   * - A render-target change caches the pipeline for the formats it was built for, and the
+   *   current target's variant is adopted or rebuilt.
    * On failure nothing was inserted, because only `_finishPipelineUpdate()` inserts, so
    * the `catch` below leaves any existing variants untouched and still valid.
    */
@@ -1681,14 +1693,27 @@ export class GPUVectorModel {
     }
     const update = this._preparePipelineUpdate();
     if (update) {
+      let pipeline: RenderPipeline;
       try {
-        this.pipeline = await this.pipelineFactory.createRenderPipelineAsync(update.props);
+        pipeline = await this.pipelineFactory.createRenderPipelineAsync(update.props);
       } catch (error) {
         this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        if (this._appliedPipelineUpdate > update.sequence) {
+          return this.pipeline;
+        }
         this._pipelineNeedsUpdate = 'asynchronous pipeline creation failed';
         this._pipelineCacheStale ||= update.releaseCache;
         throw error;
       }
+      if (this._appliedPipelineUpdate > update.sequence) {
+        // Release the pipeline before the shaders it uses. This update took the stale
+        // flag, and the newer update may not have released the variants it covered.
+        this.pipelineFactory.release(pipeline);
+        this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        this._pipelineCacheStale ||= update.releaseCache;
+        return this.pipeline;
+      }
+      this.pipeline = pipeline;
       this._finishPipelineUpdate(update);
     }
     return this.pipeline;
@@ -1748,11 +1773,13 @@ export class GPUVectorModel {
       vertexShader,
       fragmentShader,
       releaseCache,
-      attachmentFormatKey: this._getAttachmentFormatKey()
+      attachmentFormatKey: this._getAttachmentFormatKey(),
+      sequence: ++this._preparedPipelineUpdate
     };
   }
 
   private _finishPipelineUpdate(update: PipelineUpdate): void {
+    this._appliedPipelineUpdate = update.sequence;
     this._attributeInfos = getAttributeInfosFromLayouts(
       this.pipeline.shaderLayout,
       this.bufferLayout
@@ -1811,8 +1838,8 @@ export class GPUVectorModel {
    */
   private _cachePipelineVariant(key: string): void {
     // A cached key is normally adopted instead of rebuilt, and a stale rebuild clears the
-    // cache first. A synchronous update can still cache the key while an async create for
-    // it awaits, so the newer entry replaces that one and releases its references.
+    // cache first. Overlapping async creates can still finish for the same key, so the
+    // newer entry replaces the older one and releases its references.
     const replaced = this._pipelineCache.get(key);
     if (replaced) {
       this._pipelineCache.delete(key);
