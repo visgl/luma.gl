@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  COORDINATE_SYSTEM,
   _GlobeViewport,
   Layer,
   type LayerContext,
@@ -110,7 +109,7 @@ export class ThreeMeshLayer extends Layer<ThreeMeshLayerProps> {
   static override layerName = 'ThreeMeshLayer';
   static override defaultProps = {
     meshes: {type: 'object', value: [], compare: false},
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN
+    coordinateSystem: 'cartesian'
   };
   declare state: {camera: Camera; adapters: ThreeMeshAdapter[]; attachmentKey?: string};
 
@@ -129,7 +128,7 @@ export class ThreeMeshLayer extends Layer<ThreeMeshLayerProps> {
       this.props.modelMatrix ||
       Object.keys(this.props.parameters || {}).length ||
       this.props.coordinateOrigin.some(value => value !== 0) ||
-      this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN
+      this.props.coordinateSystem !== 'cartesian'
     )
       throw new Error(
         'ThreeMeshLayer supports non-pickable Cartesian meshes; use Three transforms and materials'
@@ -202,7 +201,7 @@ export type ThreeSceneLayerProps = LayerProps & {
 export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
   static override layerName = 'ThreeSceneLayer';
   static override defaultProps = {
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     pickingObjects: {type: 'object', value: [], compare: false}
   };
   declare state: {
@@ -223,9 +222,9 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
       this.props.opacity !== 1 ||
       this.props.extensions.length ||
       Object.keys(this.props.parameters || {}).length ||
-      (this.props.coordinateSystem !== COORDINATE_SYSTEM.METER_OFFSETS &&
+      (this.props.coordinateSystem !== 'meter-offsets' &&
         (this.props.coordinateOrigin.some(value => value !== 0) ||
-          this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN))
+          this.props.coordinateSystem !== 'cartesian'))
     )
       throw new Error(
         "ThreeSceneLayer requires a prepared adapter on deck's device and a Cartesian or local meter scene"
@@ -289,7 +288,7 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
       this.props.camera,
       this.context.viewport,
       WebGPUCoordinateSystem,
-      this.props.coordinateSystem === COORDINATE_SYSTEM.METER_OFFSETS
+      this.props.coordinateSystem === 'meter-offsets'
         ? [
             this.props.coordinateOrigin[0],
             this.props.coordinateOrigin[1],

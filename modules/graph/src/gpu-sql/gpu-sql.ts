@@ -303,7 +303,7 @@ function buildGPUSQLPlan(
   if (statement.having && !statement.groupBy) {
     throw new Error('GPUSQL HAVING requires GROUP BY');
   }
-  if (aggregates.length > 0 || statement.having) {
+  if (aggregates.length > 0 || statement.having || (statement.groupBy && statement.orderBy)) {
     if (
       !statement.groupBy &&
       (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined)
@@ -444,45 +444,42 @@ function buildGPUSQLPlan(
       if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
         throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
       }
+      /** Resolves or registers an aggregate used by a post-group clause. */
+      const bindAggregateCall = (call: Extract<Expression, {type: 'CallExpression'}>) => {
+        const name =
+          call.callee.type === 'Identifier' ? String(call.callee['name']).toLowerCase() : '';
+        const operation = name === 'avg' ? 'mean' : name;
+        if (
+          operation !== 'count' &&
+          operation !== 'sum' &&
+          operation !== 'min' &&
+          operation !== 'max' &&
+          operation !== 'mean'
+        )
+          return undefined;
+        if (call.arguments.length !== 1) throw new Error('GPUSQL aggregates require one argument');
+        const argument = call.arguments[0] as Expression;
+        const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+        if (wildcard && operation !== 'count') {
+          throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
+        }
+        const input = wildcard ? undefined : lowerSQLExpression(argument, parameters, resolve);
+        const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
+        if (output !== undefined) return column(output).node;
+        let hiddenName: string;
+        do {
+          hiddenName = '__sqlPostGroupAggregate' + inputIndex++;
+        } while (occupied.has(hiddenName));
+        occupied.add(hiddenName);
+        return column(registerAggregate(operation, input, hiddenName)).node;
+      };
       const having = statement.having
         ? new GPUExpression<boolean, string>(
             lowerSQLExpression(
               statement.having,
               parameters,
               reference => resolveGPUSQLColumn(reference, '', columns),
-              call => {
-                const name =
-                  call.callee.type === 'Identifier'
-                    ? String(call.callee['name']).toLowerCase()
-                    : '';
-                const operation = name === 'avg' ? 'mean' : name;
-                if (
-                  operation !== 'count' &&
-                  operation !== 'sum' &&
-                  operation !== 'min' &&
-                  operation !== 'max' &&
-                  operation !== 'mean'
-                )
-                  return undefined;
-                if (call.arguments.length !== 1)
-                  throw new Error('GPUSQL aggregates require one argument');
-                const argument = call.arguments[0] as Expression;
-                const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
-                if (wildcard && operation !== 'count') {
-                  throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
-                }
-                const input = wildcard
-                  ? undefined
-                  : lowerSQLExpression(argument, parameters, resolve);
-                const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
-                if (output !== undefined) return column(output).node;
-                let hiddenName: string;
-                do {
-                  hiddenName = '__sqlHavingAggregate' + inputIndex++;
-                } while (occupied.has(hiddenName));
-                occupied.add(hiddenName);
-                return column(registerAggregate(operation, input, hiddenName)).node;
-              }
+              bindAggregateCall
             )
           )
         : undefined;
@@ -494,11 +491,16 @@ function buildGPUSQLPlan(
               : expression.type === 'Identifier' && !('gpuSQLParameter' in expression)
                 ? expression.name
                 : undefined;
-          if (column === undefined || !columns.includes(column)) {
-            throw new Error('GPUSQL grouped ORDER BY requires a SELECT output name or position');
+          const aggregate =
+            expression.type === 'CallExpression' ? bindAggregateCall(expression) : undefined;
+          const sortColumn = aggregate?.kind === 'column' ? aggregate.name : column;
+          if (sortColumn === undefined || (!aggregate && !columns.includes(sortColumn))) {
+            throw new Error(
+              'GPUSQL grouped ORDER BY requires a SELECT output name, position, or aggregate call'
+            );
           }
           return {
-            column,
+            column: sortColumn,
             options: {
               direction,
               nulls: nulls ?? 'last',
@@ -510,6 +512,9 @@ function buildGPUSQLPlan(
         }
       );
       const {predicates, selectedColumns, derivedColumns} = query;
+      if (Object.keys(definitions).length === 0) {
+        throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+      }
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,

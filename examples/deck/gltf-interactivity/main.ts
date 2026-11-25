@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Interactivity} from '@luma.gl/engine';
-import {Deck, OrbitView, COORDINATE_SYSTEM} from '@deck.gl/core';
+import {Deck, OrbitView} from '@deck.gl/core';
 import type {GroupNode, Material} from '@luma.gl/engine';
 import {ScenegraphLayer} from '@deck.gl/mesh-layers';
 import {TextLayer} from '@deck.gl/layers';
@@ -253,7 +253,7 @@ function createLabelLayer() {
   return new TextLayer<ReadableLabel>({
     id: 'readable-check-labels',
     data: readableLabels,
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     getPosition: label => label.position,
     getText: label => label.text,
     getSize: label => (label.title ? 16 : 11),
@@ -313,7 +313,7 @@ function createLayers() {
     data: [{position: [0, 0, 0]}],
     scenegraph: loadReadableScenegraph(sample),
     _lighting: 'pbr',
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     sizeScale: 1,
     pickable: false,
     getPosition: d => d.position,
