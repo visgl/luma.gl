@@ -44,7 +44,7 @@ Defined in: [modules/engine/src/audio/audio-controller.ts:114](https://github.co
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/audio/audio-controller.ts:408](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-controller.ts#L408)
+Defined in: [modules/engine/src/audio/audio-controller.ts:412](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-controller.ts#L412)
 
 Disconnect owned nodes and cancel pending loads; never closes the borrowed context.
 
@@ -142,7 +142,7 @@ Defined in: [modules/engine/src/audio/audio-controller.ts:299](https://github.co
 
 > **update**(`listenerMatrix`): `void`
 
-Defined in: [modules/engine/src/audio/audio-controller.ts:312](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-controller.ts#L312)
+Defined in: [modules/engine/src/audio/audio-controller.ts:316](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-controller.ts#L316)
 
 Call after animation updates, with the camera's inverse view matrix. Distances are in meters.
 

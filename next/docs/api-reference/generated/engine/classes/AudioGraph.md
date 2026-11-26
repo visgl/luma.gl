@@ -10,7 +10,7 @@ Owns only processing nodes. Scheduled sources and destination nodes remain calle
 
 > **new AudioGraph**(`definition`, `context`, `destination`, `getEmitterInputs`): `AudioGraph`
 
-Defined in: [modules/engine/src/audio/audio-graph.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L49)
+Defined in: [modules/engine/src/audio/audio-graph.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L52)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -40,7 +40,7 @@ Defined in: [modules/engine/src/audio/audio-graph.ts:49](https://github.com/visg
 
 > `readonly` **definition**: [`AudioGraphDefinition`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/AudioGraphDefinition.md)
 
-Defined in: [modules/engine/src/audio/audio-graph.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L50)
+Defined in: [modules/engine/src/audio/audio-graph.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L53)
 
 ***
 
@@ -56,7 +56,7 @@ Defined in: [modules/engine/src/audio/audio-graph.ts:48](https://github.com/visg
 
 > **connectSource**(`index`, `source`): `void`
 
-Defined in: [modules/engine/src/audio/audio-graph.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L139)
+Defined in: [modules/engine/src/audio/audio-graph.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L157)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 
@@ -78,9 +78,23 @@ Defined in: [modules/engine/src/audio/audio-graph.ts:139](https://github.com/vis
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/audio/audio-graph.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L172)
+Defined in: [modules/engine/src/audio/audio-graph.ts:192](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L192)
 
 #### Returns[​](#returns-2 "Direct link to Returns")
+
+`void`
+
+***
+
+### reset()[​](#reset "Direct link to reset()")
+
+> **reset**(): `void`
+
+Defined in: [modules/engine/src/audio/audio-graph.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L95)
+
+Flush buffered samples while retaining gain automation.
+
+#### Returns[​](#returns-3 "Direct link to Returns")
 
 `void`
 
@@ -90,7 +104,7 @@ Defined in: [modules/engine/src/audio/audio-graph.ts:172](https://github.com/vis
 
 > **setGain**(`index`, `gain`, `time?`): `void`
 
-Defined in: [modules/engine/src/audio/audio-graph.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L147)
+Defined in: [modules/engine/src/audio/audio-graph.ts:167](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/audio/audio-graph.ts#L167)
 
 Apply a scene-driven gain change using the authored transition shape.
 
@@ -108,6 +122,6 @@ Apply a scene-driven gain change using the authored transition shape.
 
 `number` = `...`
 
-#### Returns[​](#returns-3 "Direct link to Returns")
+#### Returns[​](#returns-4 "Direct link to Returns")
 
 `void`
