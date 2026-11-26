@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "bundle-size": "yarn --cwd ../../.. bundle-size"
-  }
-}
