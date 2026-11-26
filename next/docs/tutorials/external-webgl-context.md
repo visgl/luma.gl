@@ -14,10 +14,12 @@ This example uses [OpenFreeMap basemaps](https://openfreemap.org/) so you do not
 
 ## Attach luma.gl to MapLibre[​](#attach-lumagl-to-maplibre "Direct link to Attach luma.gl to MapLibre")
 
-Create the map first so MapLibre owns the WebGL canvas, then attach the device to that context:
+Configure the MapLibre worker before creating the map. This example uses a Vite worker URL import. For other bundlers, serve the MapLibre worker module and its shared module together and pass the worker URL to `setWorkerUrl`. Then attach the luma.gl device to the WebGL context created by the map.
 
 ```
-import maplibregl from 'maplibre-gl'
+import {Map, setWorkerUrl} from 'maplibre-gl'
+
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
 import {Matrix4} from '@math.gl/core/matrix'
 
@@ -27,13 +29,17 @@ import {Model} from '@luma.gl/engine'
 
 
 
-const map = new maplibregl.Map({
+setWorkerUrl(maplibreWorkerUrl)
+
+
+
+const map = new Map({
 
   container: 'map',
 
   style: 'https://tiles.openfreemap.org/styles/positron',
 
-  antialias: true,
+  canvasContextAttributes: {antialias: true},
 
   pitch: 60,
 
