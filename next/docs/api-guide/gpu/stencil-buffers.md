@@ -186,3 +186,7 @@ Use a single color attachment for portable color write masks. With multiple colo
 * Visualize a mask by drawing a solid color through the stencil comparison. For a regression test, read back the resulting color pixels.
 
 See also [GPU parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md), the [RenderPass API](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md), and the [WebGPU depth/stencil state specification](https://www.w3.org/TR/webgpu/#depth-stencil-state).
+
+## Read stencil in a shader[​](#read-stencil-in-a-shader "Direct link to Read stencil in a shader")
+
+On WebGL2, check `device.features.has('stencil-texturing-webgl')`. Create a stencil-only texture view with `texture.createView({aspect: 'stencil-only'})` from an attachment created with sampling usage. Bind it as `texture_2d<u32>` in WGSL or `usampler2D` in GLSL and use integer texel loads. WebGPU provides stencil aspect views in core. WebGL2 requires [WEBGL\_stencil\_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/). On WebGL2 the selected aspect belongs to the texture object. Use separate draws when reading depth and stencil from the same packed texture.

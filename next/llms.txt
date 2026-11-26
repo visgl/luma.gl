@@ -586,7 +586,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in160
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in21
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in526
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in527
 - [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in261
 - [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in109
 - [Abstract Class: DeviceResource<Props>](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md): Defined in98
