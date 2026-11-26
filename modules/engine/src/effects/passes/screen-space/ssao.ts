@@ -48,7 +48,9 @@ fn ssaoEvaluate_sampleColor(
   let dimensions = vec2f(textureDimensions(depthTexture));
   let linearDepth = advancedLinearDepth(depth, ssaoEvaluate.nearPlane, ssaoEvaluate.farPlane);
   let reconstructedNormal = advancedDepthNormal(depthTexture, depthTextureSampler, sceneCoord);
-  let textureNormal = normalize(textureSample(normalTexture, normalTextureSampler, sceneCoord).xyz * 2.0 - 1.0);
+  let viewNormal = textureSample(normalTexture, normalTextureSampler, sceneCoord).xyz * 2.0 - 1.0;
+  // G-buffer normals use +Y up, while WebGPU texture sample offsets use +Y down.
+  let textureNormal = normalize(viewNormal * vec3f(1.0, -1.0, 1.0));
   let normal = normalize(mix(reconstructedNormal, textureNormal, ssaoEvaluate.useNormalTexture));
   let angle = fract(sin(dot(texCoord * dimensions, vec2f(12.9898, 78.233))) * 43758.5453) * 6.2831853;
   var occlusion = 0.0;
