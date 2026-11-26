@@ -5,6 +5,8 @@
 import type {FramebufferProps} from '../../../index';
 import {Framebuffer} from '../../../index';
 import {GL} from '../../../webgl-constants/index';
+import {assert} from '../../../api/utils/assert';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
@@ -114,20 +116,18 @@ export class WEBGLFramebuffer extends Framebuffer {
   private attachStencilRenderbuffer(): void {
     const {gl} = this;
     this.stencilRenderbuffer ??= gl.createRenderbuffer();
-    if (!this.stencilRenderbuffer) throw new Error('Could not allocate stencil8 renderbuffer');
-    const previousRenderbuffer = gl.getParameter(GL.RENDERBUFFER_BINDING);
-    try {
-      gl.bindRenderbuffer(GL.RENDERBUFFER, this.stencilRenderbuffer);
+    const renderbuffer = this.stencilRenderbuffer;
+    // Allocation can fail if the context is lost.
+    assert(renderbuffer);
+    withGLParameters(gl, {[GL.RENDERBUFFER_BINDING]: renderbuffer}, () => {
       gl.renderbufferStorage(GL.RENDERBUFFER, GL.STENCIL_INDEX8, this.width, this.height);
-      gl.framebufferRenderbuffer(
-        GL.FRAMEBUFFER,
-        GL.STENCIL_ATTACHMENT,
-        GL.RENDERBUFFER,
-        this.stencilRenderbuffer
-      );
-    } finally {
-      gl.bindRenderbuffer(GL.RENDERBUFFER, previousRenderbuffer);
-    }
+    });
+    gl.framebufferRenderbuffer(
+      GL.FRAMEBUFFER,
+      GL.STENCIL_ATTACHMENT,
+      GL.RENDERBUFFER,
+      renderbuffer
+    );
   }
 
   // PRIVATE
