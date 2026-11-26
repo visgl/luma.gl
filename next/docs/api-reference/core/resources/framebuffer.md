@@ -42,12 +42,13 @@ For canvas rendering, obtain the current framebuffer with `canvasContext.getCurr
 
 `FramebufferProps` extends [DeviceResourceProps](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops).
 
-| Property                  | Type                                                          | Default | Description                                          |
-| ------------------------- | ------------------------------------------------------------- | ------- | ---------------------------------------------------- |
-| `width?`                  | `number`                                                      | `1`     | Width of attachments created from format strings.    |
-| `height?`                 | `number`                                                      | `1`     | Height of attachments created from format strings.   |
-| `colorAttachments?`       | `(TextureView \| Texture \| TextureFormatColor)[]`            | `[]`    | Color targets; format strings create owned textures. |
-| `depthStencilAttachment?` | `TextureView \| Texture \| TextureFormatDepthStencil \| null` | `null`  | Optional depth/stencil target.                       |
+| Property                  | Type                                                          | Default | Description                                                                                                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `width?`                  | `number`                                                      | `1`     | Width of attachments created from format strings.                                                                                                                                                                                                              |
+| `height?`                 | `number`                                                      | `1`     | Height of attachments created from format strings.                                                                                                                                                                                                             |
+| `colorAttachments?`       | `(TextureView \| Texture \| TextureFormatColor)[]`            | `[]`    | Color targets; format strings create owned textures.                                                                                                                                                                                                           |
+| `samples?`                | `1 \| 4`                                                      | `1`     | Render sample count for managed offscreen MSAA. Four-sample passes resolve into the single-sample color attachments when the pass ends. See [Explicit Multisampling](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md#explicit-multisampling). |
+| `depthStencilAttachment?` | `TextureView \| Texture \| TextureFormatDepthStencil \| null` | `null`  | Optional depth/stencil target.                                                                                                                                                                                                                                 |
 
 At least one attachment is required. Supplied textures must support render-attachment usage. Use a `TextureView` to select a mip level or array layer; a `Texture` uses its default view. Attachment dimensions, formats, and sample counts must be compatible with the pass and pipeline.
 
@@ -57,7 +58,7 @@ At least one attachment is required. Supplied textures must support render-attac
 * `props: FramebufferProps`: creation properties.
 * `width: number`, `height: number`: framebuffer dimensions.
 * `colorAttachments: TextureView[]`: resolved color attachment views.
-* `depthStencilAttachment: TextureView | null`: resolved depth/stencil view.
+* `depthStencilAttachment: TextureView | null`: depth/stencil texture view when texture-backed. WebGL2 renderbuffer-backed attachments have no texture view.
 * `handle: unknown`: underlying WebGL framebuffer; WebGPU has no native framebuffer object.
 
 ## Methods and ownership[​](#methods-and-ownership "Direct link to Methods and ownership")

@@ -48,7 +48,7 @@ The best result is often a combination: correct device-pixel resolution, mipmapp
 
 ## Try Common Techniques[​](#try-common-techniques "Direct link to Try Common Techniques")
 
-The comparison below keeps the before side as the single-sample baseline and applies the selected technique on the after side. Drag the divider to inspect the transition. It intentionally uses techniques available through the portable luma.gl API today; canvas-context antialiasing, raw WebGL MSAA, and TAA are explained in later sections.
+The comparison below keeps the before side as the single-sample baseline and applies the selected technique on the after side. Drag the divider to inspect the transition. It intentionally uses techniques available through the portable luma.gl API. Canvas antialiasing, offscreen MSAA, and TAA are explained in later sections.
 
 ### Antialiasing Techniques
 
@@ -106,16 +106,9 @@ The request does not antialias textures attached to application-created framebuf
 
 Multisample antialiasing stores more than one coverage/depth/color sample per pixel during rasterization, then resolves those samples into a normal single-sample image. It usually improves polygon and alpha-to-coverage edges without running the fragment shader once for every supersampled pixel.
 
-| Backend | Canvas path                                            | Offscreen path                                                                                                             | luma.gl status                                                                                                                  |
-| ------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| WebGL 2 | `webgl.antialias` controls the default drawing buffer. | Render to multisampled renderbuffers, then `blitFramebuffer` into textures.                                                | No managed offscreen resolve path yet; `Texture.samples` is ignored by `WEBGLTexture`.                                          |
-| WebGPU  | No context-level antialias switch.                     | Render into a multisampled `GPUTexture`, use a matching pipeline sample count, and provide a single-sample resolve target. | `Texture.samples` and pipeline `sampleCount` reach WebGPU, but luma.gl does not yet expose a complete managed resolve workflow. |
+### Render an antialiased offscreen image[​](#render-an-antialiased-offscreen-image "Direct link to Render an antialiased offscreen image")
 
-For the raw WebGL sequence, see the [WebGL2Samples `fbo_multisample` example](https://webglsamples.org/WebGL2Samples/samples/fbo_multisample.html). For WebGPU concepts and sample-count constraints, see the [WebGPU multisampling guide](https://webgpufundamentals.org/webgpu/lessons/webgpu-multisampling.html) and the [WebGPU specification](https://gpuweb.github.io/gpuweb/).
-
-Proposed API, not implemented
-
-[RFC #2741](https://github.com/visgl/luma.gl/issues/2741) proposes a framebuffer-level request for color-only offscreen MSAA:
+Set `samples: 4` on the framebuffer and `sampleCount: 4` on each pipeline that draws into it. This example assumes backend-appropriate vertex and fragment shaders. It uses ordinary depth testing for opaque geometry.
 
 ```
 const colorTexture = device.createTexture({
@@ -140,12 +133,68 @@ const framebuffer = device.createFramebuffer({
 
   samples: 4,
 
-  colorAttachments: [colorTexture]
+  colorAttachments: [colorTexture],
+
+  depthStencilAttachment: 'depth24plus'
 
 });
+
+
+
+const pipeline = device.createRenderPipeline({
+
+  vs,
+
+  fs,
+
+  colorAttachmentFormats: ['rgba8unorm'],
+
+  depthStencilAttachmentFormat: 'depth24plus',
+
+  parameters: {
+
+    sampleCount: 4,
+
+    depthCompare: 'less',
+
+    depthWriteEnabled: true
+
+  }
+
+});
+
+
+
+const pass = device.beginRenderPass({framebuffer, clearDepth: 1});
+
+pass.setPipeline(pipeline);
+
+pass.draw({vertexCount});
+
+pass.end();
+
+device.submit();
+
+
+
+const resolvedColor = framebuffer.colorAttachments[0];
 ```
 
-Under that proposal, the color texture remains single-sampled and sampleable. WebGL would render into private multisampled renderbuffers and resolve into the supplied texture when `RenderPass.end()` is called. The first scope is color-only and rejects depth/stencil attachments.
+Bind `resolvedColor` in a later pass to composite the antialiased image or apply an effect. The pass resolves color when it ends. The underlying texture remains single-sampled. Reuse the framebuffer across frames and destroy it and the supplied color texture when finished.
+
+### Attachment rules[​](#attachment-rules "Direct link to Attachment rules")
+
+| Setting                  | Requirement                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Framebuffer sample count | Use `1` for ordinary rendering or `4` for managed offscreen MSAA.                                                                |
+| Pipeline sample count    | Match the framebuffer on every draw.                                                                                             |
+| Color attachments        | Use format strings for render-only color, or supply matching single-sample textures with the usage flags needed by later passes. |
+| Depth/stencil            | Supply a format string to allocate matching multisampled storage. Omit it for color-only rendering.                              |
+| Later passes             | Use the same framebuffer and load the aspects you want to preserve. Only color is resolved.                                      |
+
+WebGL2 uses private renderbuffers and resolves color with a framebuffer blit. It requires four-sample renderbuffer support for each attachment format. WebGPU uses multisampled textures and native color resolve targets. Its explicit texture-sample and render-pass `resolveTargets` API is also available when the application manages the attachments.
+
+Canvas antialiasing is separate. `webgl.antialias` applies to the default drawing buffer. Both backends can present the resolved offscreen color texture in a later canvas pass.
 
 ## Depth, Stencil, and Shadows[​](#depth-stencil-and-shadows "Direct link to Depth, Stencil, and Shadows")
 

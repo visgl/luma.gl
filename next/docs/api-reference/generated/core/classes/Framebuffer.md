@@ -1,6 +1,6 @@
 # Abstract Class: Framebuffer
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L27)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L29)
 
 Create new textures with correct size for all attachments.
 
@@ -18,7 +18,7 @@ resize() destroys existing textures (if size has changed).
 
 > **new Framebuffer**(`device`, `props?`): `Framebuffer`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L41)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L43)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:41](https://g
 
 > `abstract` **colorAttachments**: [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)\[]
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L37)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L39)
 
 Color attachments
 
@@ -54,7 +54,7 @@ Color attachments
 
 > `abstract` **depthStencilAttachment**: [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md) | `null`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L39)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L41)
 
 Depth-stencil attachment, if provided
 
@@ -92,7 +92,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **height**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L35)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L37)
 
 Height of all attachments in this framebuffer
 
@@ -144,7 +144,7 @@ User data object, reserved for the application
 
 > **width**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L33)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L35)
 
 Width of all attachments in this framebuffer
 
@@ -154,7 +154,7 @@ Width of all attachments in this framebuffer
 
 > `static` **defaultProps**: `Required`<[`FramebufferProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/FramebufferProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L195)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:222](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L222)
 
 Default properties for resource
 
@@ -170,7 +170,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L28)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L30)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -312,7 +312,7 @@ Use resource.transferOwnershipTo(this).
 
 > **clone**(`size?`): `Framebuffer`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L51)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L72)
 
 Create a copy of this framebuffer with new attached textures, with same props but of the specified size.
 
@@ -474,7 +474,7 @@ returns a map of overridden default props
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L86)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L109)
 
 Resizes all attachments
 
@@ -506,7 +506,7 @@ Use framebuffer.clone()
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L87)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L110)
 
 Resizes all attachments
 
@@ -532,7 +532,7 @@ Use framebuffer.clone()
 
 > **resize**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L88)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L111)
 
 Resizes all attachments
 

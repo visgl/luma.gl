@@ -18,6 +18,12 @@ Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:16](https://g
 
 > `optional` **height?**: `number`
 
+### samples?[​](#samples "Direct link to samples?")
+
+> `optional` **samples?**: `1` | `4`
+
+Sample count for automatically allocated offscreen render storage.
+
 ### width?[​](#width "Direct link to width?")
 
 > `optional` **width?**: `number`

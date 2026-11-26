@@ -592,7 +592,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: DeviceResource<Props>](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md): Defined in98
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
-- [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
+- [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in29
 - [Class: PipelineFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in31
 - [Abstract Class: PipelineLayout](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineLayout.md): Defined in14
 - [Abstract Class: PresentationContext](https://luma.gl/next/docs/api-reference/generated/core/classes/PresentationContext.md): Defined in14
