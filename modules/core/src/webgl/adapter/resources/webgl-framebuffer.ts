@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {FramebufferProps, Texture, TextureFormat} from '../../../index';
+import type {FramebufferProps} from '../../../index';
 import {Framebuffer} from '../../../index';
 import {GL} from '../../../webgl-constants/index';
 import {assert} from '../../../api/utils/assert';
@@ -30,11 +30,6 @@ export class WEBGLFramebuffer extends Framebuffer {
     return this.stencilRenderbuffer !== null;
   }
 
-  /** Leaves stencil8 allocation to the renderbuffer attachment path. */
-  protected override createDepthStencilTexture(format: TextureFormat): Texture | null {
-    return format === 'stencil8' ? null : super.createDepthStencilTexture(format);
-  }
-
   constructor(device: WebGLDevice, props: FramebufferProps) {
     super(device, props);
 
@@ -54,7 +49,8 @@ export class WEBGLFramebuffer extends Framebuffer {
 
       if (!props.handle) {
         // Auto create textures for attachments if needed
-        this.autoCreateAttachmentTextures();
+        const attachment = this.props.depthStencilAttachment;
+        this.autoCreateAttachmentTextures(attachment === 'stencil8' ? null : attachment);
 
         try {
           this.updateAttachments();

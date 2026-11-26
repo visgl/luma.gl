@@ -98,8 +98,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     }
   }
 
-  /** Auto creates any textures */
-  protected autoCreateAttachmentTextures(): void {
+  /** Creates attachment textures. Backends can pass null for native depth/stencil storage. */
+  protected autoCreateAttachmentTextures(attachment = this.props.depthStencilAttachment): void {
     if (this.props.colorAttachments.length === 0 && !this.props.depthStencilAttachment) {
       throw new Error('Framebuffer has noattachments');
     }
@@ -116,14 +116,11 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
       return attachment;
     });
 
-    const attachment = this.props.depthStencilAttachment;
     if (attachment) {
       if (typeof attachment === 'string') {
         const texture = this.createDepthStencilTexture(attachment);
-        if (texture) {
-          this.attachResource(texture);
-          this.depthStencilAttachment = texture.view;
-        }
+        this.attachResource(texture);
+        this.depthStencilAttachment = texture.view;
       } else if (attachment instanceof Texture) {
         this.depthStencilAttachment = attachment.view;
       } else {
@@ -148,8 +145,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
     });
   }
 
-  /** Creates a depth/stencil texture, or returns null when the backend owns different storage. */
-  protected createDepthStencilTexture(format: TextureFormat): Texture | null {
+  /** Creates a depth/stencil texture. */
+  protected createDepthStencilTexture(format: TextureFormat): Texture {
     return this.device.createTexture({
       id: `${this.id}-depth-stencil-attachment`,
       usage: Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
