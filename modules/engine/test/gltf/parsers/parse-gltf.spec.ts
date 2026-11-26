@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {
   postProcessGLTF,
   type GLTFPostprocessed,

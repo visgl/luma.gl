@@ -4,7 +4,7 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {describe, expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';

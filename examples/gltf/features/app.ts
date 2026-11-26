@@ -7,7 +7,7 @@ import {parseGLTFAreaLights, parseGLTFBillboards} from '@luma.gl/engine/gltf';
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {createAreaLightLTCTextures} from '@luma.gl/engine';

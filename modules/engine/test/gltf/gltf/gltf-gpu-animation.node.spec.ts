@@ -5,7 +5,7 @@
 import {readFile} from 'node:fs/promises';
 
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {
   type GLTFPostprocessed,
   postProcessGLTF,

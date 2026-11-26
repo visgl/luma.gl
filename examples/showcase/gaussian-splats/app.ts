@@ -482,7 +482,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const signal = this.loadAbortController!.signal;
     const [{load}, {GLTFLoader}, {SPZLoader}, gltfModule, arrowModule] = await Promise.all([
       import('@loaders.gl/core'),
-      import('@loaders.gl/scene/gltf/bundled'),
+      import('@loaders.gl/scene/gltf'),
       import('@loaders.gl/splats/spz/bundled'),
       import('@luma.gl/engine/gltf'),
       import('@luma.gl/engine/arrow')

@@ -43,7 +43,7 @@ A rendering application also needs a configured `Device` from `@luma.gl/core`, b
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);

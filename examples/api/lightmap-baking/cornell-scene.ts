@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {Geometry} from '@luma.gl/engine';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createLightmapAtlas, validateLightmapAtlas} from '@luma.gl/engine/lighting';

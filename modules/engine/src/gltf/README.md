@@ -13,7 +13,7 @@ native animation pointers, and source-faithful rendering on WebGPU and WebGL.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
