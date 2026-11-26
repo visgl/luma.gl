@@ -161,7 +161,12 @@
     "ws@npm:^7.3.1": "7.5.11",
     "ws@npm:^8.18.0": "8.21.0",
     "zod@npm:^4.1.12": "4.6.6",
-    "zod@npm:^4.4.3": "4.6.6"
+    "zod@npm:^4.4.3": "4.6.6",
+    "@ungap/structured-clone@npm:^1.0.0": "1.4.0",
+    "cross-spawn@npm:^5.0.1": "6.0.6",
+    "diff@npm:^4.0.1": "4.0.4",
+    "pacote@npm:21.0.1": "21.5.3",
+    "tar@npm:7.5.20": "7.5.23"
   },
   "pre-commit": [
     "test-fast"
