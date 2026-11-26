@@ -53,6 +53,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
       colorAttachment.texture.clone(size)
     );
 
+    // Backend-owned storage may have no texture view. Preserve the requested format so
+    // the new framebuffer can allocate its own storage.
     const depthStencilAttachment =
       this.depthStencilAttachment?.texture.clone(size) ??
       (typeof this.props.depthStencilAttachment === 'string'
@@ -100,6 +102,8 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
 
   /** Creates attachment textures. Backends can pass null for native depth/stencil storage. */
   protected autoCreateAttachmentTextures(attachment = this.props.depthStencilAttachment): void {
+    // Validate the requested attachments. A backend can omit a texture here and attach
+    // native storage separately, such as a WebGL stencil renderbuffer.
     if (this.props.colorAttachments.length === 0 && !this.props.depthStencilAttachment) {
       throw new Error('Framebuffer has noattachments');
     }
