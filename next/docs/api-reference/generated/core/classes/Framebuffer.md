@@ -154,7 +154,7 @@ Width of all attachments in this framebuffer
 
 > `static` **defaultProps**: `Required`<[`FramebufferProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/FramebufferProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L187)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L195)
 
 Default properties for resource
 
@@ -474,7 +474,7 @@ returns a map of overridden default props
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L79)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L86)
 
 Resizes all attachments
 
@@ -506,7 +506,7 @@ Use framebuffer.clone()
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L80)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L87)
 
 Resizes all attachments
 
@@ -532,7 +532,7 @@ Use framebuffer.clone()
 
 > **resize**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L81)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L88)
 
 Resizes all attachments
 

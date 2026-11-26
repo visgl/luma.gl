@@ -190,3 +190,7 @@ See also [GPU parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters
 ## Read stencil in a shader[​](#read-stencil-in-a-shader "Direct link to Read stencil in a shader")
 
 On WebGL2, check `device.features.has('stencil-texturing-webgl')`. Create a stencil-only texture view with `texture.createView({aspect: 'stencil-only'})` from an attachment created with sampling usage. Bind it as `texture_2d<u32>` in WGSL or `usampler2D` in GLSL and use integer texel loads. WebGPU provides stencil aspect views in core. WebGL2 requires [WEBGL\_stencil\_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/). On WebGL2 the selected aspect belongs to the texture object. Use separate draws when reading depth and stencil from the same packed texture.
+
+## Allocate stencil without depth[​](#allocate-stencil-without-depth "Direct link to Allocate stencil without depth")
+
+Set `depthStencilAttachment: 'stencil8'` when a framebuffer only needs stencil. WebGPU allocates a texture. WebGL2 allocates a framebuffer-owned renderbuffer and keeps the `depthStencilAttachment` texture view null. The WebGL2 texture capability queries still report `stencil8` as unsupported because they describe texture storage.
