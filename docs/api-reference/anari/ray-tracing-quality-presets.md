@@ -120,7 +120,7 @@ Analytic spheres and triangle-list meshes, scalar metallic/roughness direct ligh
 bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
 Scalar and textured `MASK` visibility, base-color/emissive/metallic-roughness/transmission maps, triangle mesh normal maps,
 smooth dielectric transport and opt-in explicit emitter sampling are supported.
-Alpha blending, rough transmission, hardware ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
+Rough transmission, hardware ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
 
 ## Reference-image error measurements
 
@@ -167,7 +167,7 @@ for the material terms.
 Secondary rays gather emission and explicit directional/point/spot lighting at
 hits. A miss contributes zero: the background remains a primary display color,
 not an environment light. PBR dielectric continuation can escape to the display background.
-Material maps and smooth dielectric transmission with IOR are supported; alpha blending,
+Material maps and smooth dielectric transmission with IOR and alpha blending are supported;
 rough transmission and environment-map illumination remain unsupported.
 Explicit emitter sampling is an opt-in control described below. Small emitters and rough
 reflections may require more samples.

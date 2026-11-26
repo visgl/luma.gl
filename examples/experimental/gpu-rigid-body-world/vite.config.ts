@@ -3,7 +3,11 @@ import {defineConfig} from 'vite';
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: {index: `${__dirname}/index.html`, wreckingBall: `${__dirname}/wrecking-ball.html`}
+      input: {
+        armContact: `${__dirname}/arm-contact.html`,
+        index: `${__dirname}/index.html`,
+        wreckingBall: `${__dirname}/wrecking-ball.html`
+      }
     }
   },
   resolve: {

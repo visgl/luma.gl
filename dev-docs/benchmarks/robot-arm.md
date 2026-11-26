@@ -22,3 +22,37 @@ node scripts/physics/benchmark-robot-arm.mjs http://127.0.0.1:5312/
 ```
 
 The GPU regression suite also commands a target step at 60 and 120 Hz, measures settling and overshoot, checks torque saturation, and presses the four-link arm against a stop before lifting clear.
+
+## Reduced-coordinate tree comparison
+
+The two solvers ran on the same Apple Metal WebGPU adapter in Chromium, using the same 3 kg load, body inertias, gravity, spring gains, torque caps, 120 Hz timestep and six-second warmup. The tree models the stationary support as a fixed base and the payload as a welded link. This fixture measures a suspended arm in free space. The ordered pipeline also performs collision discovery; the tree workload has no collision pass.
+
+| Solver | 30-step p50 / p95 | Max tip error | Max link-anchor drift | Max shoulder torque error | Original gates |
+| --- | --- | --- | --- | --- | --- |
+| Ordered, 64 iterations | 8.4 / 10.8 ms | 5.08 mm | 9.55 mm | 2.01% | Pass |
+| Reduced-coordinate | 0.6 / 0.9 ms | 0.0072 mm | 0.00014 mm | 0.0011% | Pass |
+
+The first 30 samples reproduce the original accuracy window. Continuing to 240 samples, the reduced-coordinate step took **1.0 ms p95** versus an 8.33 ms budget. It stayed within all three accuracy limits. Ordered took 9.9 ms p95 and its worst anchor drift and torque error reached 11.0 mm and 21.5%. Timing includes CPU encoding, submission and waiting for GPU completion. This establishes 120 Hz physics headroom for this desktop workload. Rendering, collisions, mobile hardware and other tree sizes need independent measurements.
+
+A separate −0.24 rad elbow command moved the payload in both simulations. Two simulated seconds later ordered and reduced-coordinate elbow angles were −0.244 and −0.247 rad, with tool errors of 2.1 and 7.3 cm. These transient samples are outside the static-hold qualification. [Raw measurements](./articulated-tree-apple.json).
+
+```sh
+node scripts/physics/benchmark-robot-arm.mjs http://127.0.0.1:5312/ --compare-tree
+```
+
+## Press and lift at 120 Hz
+
+Four one-meter links press a 3 kg welded sphere onto a finite, frictionless work stop for two seconds, then lift for two seconds. Both solvers receive the same elbow targets (+0.65 and −0.3 rad), gains, 25 N·m press cap and 300 N·m lift cap. The other three joints hold zero with a 300 N·m cap. The shoulder needs more than 150 N·m to support this arm horizontally.
+
+| Solver | Step p50 / p95 | Peak sampled penetration | Supported center height | Height after lift |
+| --- | --- | --- | --- | --- |
+| Ordered, 64 iterations | 10.9 / 15.2 ms | 25.38 mm | 1.2880 m | 2.0335 m |
+| Reduced-coordinate | 0.4 / 1.5 ms | 0.0041 mm | 1.2900 m | 2.0977 m |
+
+Both completed all 480 steps, seated within 2 cm of 1.29 m, stayed within the 3 cm sampled penetration limit and raised the center above 2 m. The tree reported 52.7 N while supported and zero after lifting. Each timing includes encoding, submission and the GPU completion fence. The 464 samples omit the first eight steps of each phase and exclude rendering and diagnostic reads. Height was sampled every eight steps. Only the reduced-coordinate solver met the 8.33 ms p95 latency budget on this adapter. [Raw measurements](./arm-contact-apple.json).
+
+Start the Rigid Body Lab and run the comparison against its local URL:
+
+```sh
+node scripts/physics/benchmark-arm-contact.mjs http://127.0.0.1:5317/
+```

@@ -39,7 +39,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       );
       expect(() =>
         context.query('SELECT category, COUNT(*) FROM trips GROUP BY category HAVING SUM(fare) > 0')
-      ).toThrow(/aggregates must appear in SELECT/);
+      ).not.toThrow();
       expect(() =>
         context.query(
           'SELECT category, COUNT(*) FROM trips GROUP BY category ORDER BY 2 HAVING COUNT(*) > 0'
@@ -397,6 +397,9 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() => context.query('SELECT category, COUNT(*) FROM trips GROUP BY 0')).toThrow(
       /one-based SELECT column/
     );
+    expect(() =>
+      context.query('SELECT category FROM trips GROUP BY category ORDER BY category')
+    ).toThrow('GPUSQL GROUP BY requires at least one aggregation');
     expect(() => context.query('SELECT fare FROM trips OFFSET 1')).toThrow(/ORDER BY/i);
     expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 1')).not.toThrow();
     expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 4294967296')).toThrow(

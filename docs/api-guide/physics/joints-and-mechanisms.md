@@ -80,3 +80,44 @@ const torque = await world.readAngularActuatorTorque('elbow', 1);
 The axis is local to the joint frame (X = 0, Y = 1, Z = 2). Angles are radians. Torque is the signed angular constraint impulse divided by the fixed timestep, in N·m. A motor at its cap can sustain a pose error under gravity or contact. Use the torque readback for telemetry at a lower rate than simulation. Rendering can consume the published body transforms directly.
 
 In the **Robot arm** scenario, open **Info → Settings** to change payload mass, elbow target and torque cap. Lower the arm onto the work stop, then raise the target to lift away. Reset preserves your settings.
+
+## Fixed-base articulated trees
+
+Use `GPUArticulationTree` for a small mechanism moving under gravity and joint torques. Specify its links in parent-before-child order. Each revolute link adds one independent angle. A welded link adds inertia to its ancestors. The solver derives each child pose from its parent and attachment frames, so a joint cannot pull apart under load.
+
+```ts
+import {GPUArticulationTree} from '@luma.gl/graph/gpu-physics';
+
+const tree = new GPUArticulationTree({
+  timeStep: 1 / 120,
+  base: [0, 0, 2],
+  links: [{
+    id: 'shoulder',
+    parent: -1,
+    parentAnchor: [0, 0, 0],
+    childAnchor: [-0.5, 0, 0],
+    axis: [0, 1, 0],
+    mass: 1,
+    inertia: [0.02, 1 / 12, 1 / 12]
+  }]
+});
+const poses = tree.addToGraph(graph);
+tree.setDrive('shoulder', {angle: 0, stiffness: 100, damping: 8, maximumTorque: 20});
+```
+
+Compile and submit the graph once per fixed step. A downstream GPU pass can read the returned pose handle after the solver pass. Each 64-byte record has four `vec4f` fields: world COM position, XYZW orientation, linear velocity and angular velocity. The CPU diagnostics and torque readbacks are optional. Destroy the compiled graph before the tree.
+
+Supply positive principal inertia about each link's COM. Anchors are offsets from the parent and child COMs. The unit axis is in parent space; omit it to weld a payload. An optional rest quaternion rotates the child into the parent frame at zero joint angle. The current solver handles up to 16 links on a stationary base. Use the general rigid-body world for arbitrary collision geometry, joint limits, closed loops or a floating base. A numerical failure latches diagnostics and preserves the last accepted output; build a fresh tree after correcting the inputs.
+
+### Pressing against a work stop
+
+Pass a `contact` when constructing the tree to couple one link-centered sphere to a stationary, world-axis-aligned box. The normal reaction acts through the articulated mass matrix alongside the drive impulses. It can support the load and falls to zero when the link lifts away. This contact is frictionless.
+
+```ts
+const arm = new GPUArticulationTree({
+  links, base, timeStep: 1 / 120, publishMatrices: true,
+  contact: {link: 'payload', radius: 0.25, center: [3.55, 0, 0.52], halfExtents: [0.6, 0.5, 0.52]}
+});
+```
+
+After registering the tree, a renderer can consume `arm.poseMatrices` in link order. After stepping, `readSimulationDiagnostics().then(status => status.normalForce)` reports the compressive reaction in newtons. In the Robot arm scenario, open **Try the 3 kg work-stop comparison** to switch solvers and press or lift the load.

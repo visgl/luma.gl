@@ -196,6 +196,8 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     });
     const native = new PolygonLayer({
       id: 'native',
+      // Compare geometric depth in the 16-bit pick target, including both layer orders.
+      getPolygonOffset: () => [0, 0],
       data: [{id: 'native-square'}],
       pickable: true,
       getPolygon: () => [

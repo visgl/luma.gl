@@ -185,6 +185,23 @@ describe('WebGPU device creation lifecycle', () => {
     expect(destroyedDevice.device.destroy).toHaveBeenCalledTimes(1);
   });
 
+  test.each([
+    [{}, 'navigator.gpu is unavailable'],
+    [{gpu: {}}, 'navigator.gpu.requestAdapter is unavailable']
+  ] as const)('identifies a missing WebGPU entry point', async (environment, message) => {
+    vi.stubGlobal('navigator', environment);
+    await expect(new WebGPUAdapter().create({})).rejects.toThrow(message);
+  });
+
+  test('identifies a rejected adapter request and preserves its cause', async () => {
+    const cause = new Error('Adapter access denied');
+    vi.mocked(navigator.gpu.requestAdapter).mockRejectedValue(cause);
+    await expect(new WebGPUAdapter().create({})).rejects.toMatchObject({
+      message: 'navigator.gpu.requestAdapter() failed',
+      cause
+    });
+  });
+
   test('preserves native request failures as causes of ordinary errors', async () => {
     const nativeError = new Error('Invalid required limit');
     const nativeAdapter = {
@@ -198,7 +215,7 @@ describe('WebGPU device creation lifecycle', () => {
     const adapter = new MockWebGPUAdapter([nativeAdapter]);
 
     await expect(adapter.create({} as DeviceProps)).rejects.toMatchObject({
-      message: 'WebGPU device request failed',
+      message: 'GPUAdapter.requestDevice() failed',
       cause: nativeError
     });
   });

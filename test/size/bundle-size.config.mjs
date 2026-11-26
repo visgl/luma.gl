@@ -91,7 +91,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
     // Resource ownership adds 1,592 B minified / 445 B gzip / 347 B Brotli versus the PR base.
-    maximum: {minified: 105_175, gzip: 29_650, brotli: 26_050},
+    // Null-adapter fallback measures 105,356 B minified and 29,723 B gzip.
+    maximum: {minified: 105_375, gzip: 29_725, brotli: 26_050},
     targetGzip: 24_000
   },
   {
@@ -121,7 +122,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     sum: ['core', 'webgl'],
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
     // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
-    maximum: {minified: 216_700, gzip: 63_000, brotli: 55_200},
+    maximum: {minified: 216_900, gzip: 63_000, brotli: 55_200},
     targetGzip: 54_000
   },
   {

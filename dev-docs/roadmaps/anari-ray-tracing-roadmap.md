@@ -74,7 +74,7 @@ implementation tranche.
 | Transport and convergence | Bounded diffuse and GGX paths, smooth dielectric interfaces, explicit emitter sampling and power-weighted selection. Emissive geometry and constant environment radiance use MIS with BSDF sampling. Directional environment maps sample texels by luminance and solid angle. The display backdrop is independent of environment lighting. An emitter CDF accounts for source power but not receiver location or orientation. | [PBRT's reference path integrator](https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer) |
 | Shadows | Direct lights use hard visibility and optional rotation across lights. Sampled emissive geometry can give area-light penumbrae. Shadow rays treat transmissive glass as an occluder even when camera paths refract through it. Straight-line colored shadow transmittance would be an approximation and cannot reproduce refracted caustics. | [PBRT surface transport](https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer), [Bidirectional ReSTIR caustics research](https://research.nvidia.com/labs/rtr/publication/hedstrom2025restir/hedstrom2025restir.pdf) |
 | Reconstruction | Retained-identity reprojection rejects incompatible clipping neighbors and reduces history confidence at partial disocclusions. Guided spatial filtering fades with retained sample count. Optional per-pixel log-luminance variance guides spatial filtering. More complete motion validation and separate diffuse/specular history remain open. | [SVGF](https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/), [RTXPT design](https://github.com/NVIDIA-RTX/RTXPT/blob/main/Docs/Design.md) |
-| Materials and assets | The shipped subset handles common metallic/roughness materials, cutouts, smooth glass, specular maps and clearcoat. Mip-zero material sampling, the per-frame texture binding budget, and missing deformation all affect ordinary asset fidelity. Rough refraction, nested media, alpha blending, and further glTF extensions need distinct acceptance scenes. | [Khronos glTF material extensions](https://www.khronos.org/gltf/pbr) |
+| Materials and assets | The shipped subset handles common metallic/roughness materials, cutouts, smooth glass, specular maps and clearcoat. Mip-zero material sampling, the per-frame texture binding budget, and missing deformation all affect ordinary asset fidelity. Rough refraction, nested media and further glTF extensions need distinct acceptance scenes. | [Khronos glTF material extensions](https://www.khronos.org/gltf/pbr) |
 | Research frontier | Production-oriented native examples use hardware traversal with next-event estimation, reconstruction, and optional reservoirs or radiance caches. Recent reservoir methods improve reuse for difficult paths, but introduce state, visibility checks and history rejection costs. Their native performance figures cannot predict a portable browser implementation. | [RTXPT design](https://github.com/NVIDIA-RTX/RTXPT/blob/main/Docs/Design.md), [ReSTIR PT Enhanced](https://research.nvidia.com/labs/rtr/publication/lin2026restirptenhanced/) |
 
 ### Priority and acceptance gates
@@ -155,8 +155,13 @@ factor participates in triangle mask visibility and sampled emitter endpoints.
 The next increment preserves glTF unlit base color and interpolates authored
 tangents, including handedness and morph deltas. Skeletal skinning now supports retained CPU joint palettes with four influences
 per vertex, after morphing positions, normals, and tangents. GPU-only and
-per-instance palettes, bottom-level deformation refits, alpha blending, and
-dispersion remain open on the ray path. Stable CPU pose updates reuse the packed
-mesh layout and compiled graphs, rebuild the affected frame's bottom-level
-hierarchies from the updated triangles, and refit the top-level hierarchy with
-periodic Morton rebuilds. Deformation still invalidates progressive history.
+per-instance palettes and dispersion remain open on the ray
+path. Compatible CPU pose updates refresh packed triangles and refit mesh and
+scene hierarchies on the GPU in their retained triangle and primitive order.
+Periodic Morton rebuilds restore spatial ordering. Structural changes and pose
+changes that alter the packed layout rebuild the graphs. Deformation still
+invalidates progressive history.
+
+The ray tracer now supports glTF alpha blending through stochastic surface
+coverage for camera, continuation, and shadow rays. Explicit emitter samples
+weight radiance by coverage. Hit queries skip fully transparent layers.

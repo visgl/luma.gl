@@ -42,7 +42,7 @@ scenegraph metadata.
 
 Marionette Theater uses the same glTF-authored joints and skins as the engine, with
 two independent physics sessions. A fixed-step animation release feeds live pose
-matrices to the standard skin palette on the GPU. The G9 active-ragdoll checkpoint adds torque-limited animation tracking to dynamic joints. Marionette Theater can release, recover its relative pose on the stage, and reset either puppet independently. Reduced-coordinate articulations, balance control, progressive asset
+matrices to the standard skin palette on the GPU. The G9 active-ragdoll checkpoint adds torque-limited animation tracking to dynamic joints. Marionette Theater can release, recover its relative pose on the stage, and reset either puppet independently. Contact-coupled articulations, balance control, progressive asset
 materialization, broader draft conformance, and cross-device limits remain open.
 
 ## G7 glTF physics qualification checkpoint
@@ -563,7 +563,9 @@ the whole step. Qualification across adapters and broader fault attribution rema
 
 ### G9. Articulations and mechanism quality
 
-The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold is the next reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
+The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. A [3 kg work-stop trial](../benchmarks/robot-arm.md#press-and-lift-at-120-hz) qualifies unilateral sphere–static-box contact through press and release. Multiple simultaneous contacts, friction, moving counterparts, floating bases, limits and larger-tree scaling remain open.
+
+The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold was chosen as the reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
 
 Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate
 reduced-coordinate articulation solving, contact coupling, motors, limits and closed-loop

@@ -50,6 +50,8 @@ import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.g
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
+  RAY_BLEND_ALPHA_MODE,
+  RAY_OPAQUE_ALPHA_MODE,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   getRayTracingMomentShader,
   RAY_TRACING_SCENE_SHADER,
@@ -702,6 +704,12 @@ type RayTracingFrameResources = {
   /** Optional retained first and second log-luminance moments. */
   momentHistory?: GPUTextureHistory;
   topologyGraph: CompiledGPUCommandGraph;
+  /** Lazily compiled mesh bounds update that reads the retained triangle order. */
+  meshRefitGraph?: CompiledGPUCommandGraph;
+  /** Number of mesh refits since the last Morton sort. */
+  meshRefitsSinceRebuild: number;
+  /** Packed layout to refresh before the scene hierarchy update. */
+  pendingMeshRefit?: RayTracingTopology;
   accelerationGraph: CompiledGPUCommandGraph;
   refitGraph: CompiledGPUCommandGraph;
   traceGraph: CompiledGPUCommandGraph<RayTracingTraceGraphParameters>;
@@ -1079,7 +1087,11 @@ export class RayTracingSceneRenderer {
           resources.triangleBuffer.write(topology.triangles);
           resources.geometryLayouts = topology.geometryLayouts;
           resources.historyNeedsReset = true;
-          resources.topologyNeedsUpdate = true;
+          if (resources.meshRefitsSinceRebuild >= MORTON_REBUILD_REFIT_INTERVAL) {
+            resources.topologyNeedsUpdate = true;
+          } else {
+            resources.pendingMeshRefit = topology;
+          }
           scheduleRefittableAccelerationUpdate(resources);
         }
         if (primitiveData) {
@@ -1292,6 +1304,22 @@ export class RayTracingSceneRenderer {
         parameters: undefined
       }).stats;
       resources.topologyNeedsUpdate = false;
+      resources.meshRefitsSinceRebuild = 0;
+      resources.pendingMeshRefit = undefined;
+    } else if (resources.pendingMeshRefit) {
+      resources.meshRefitGraph ??= this.createTopologyGraph({
+        frameIdentifier: options.id,
+        topology: resources.pendingMeshRefit,
+        triangleBuffer: resources.triangleBuffer,
+        blasNodesBuffer: resources.blasNodesBuffer,
+        blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
+        reuseTriangleOrder: true
+      });
+      topologyEncodingStats = resources.meshRefitGraph.encode(this.device.commandEncoder, {
+        parameters: undefined
+      }).stats;
+      resources.pendingMeshRefit = undefined;
+      resources.meshRefitsSinceRebuild++;
     }
     if (resources.accelerationUpdateMode === 'rebuild') {
       accelerationEncodingStats = resources.accelerationGraph.encode(this.device.commandEncoder, {
@@ -1761,6 +1789,7 @@ export class RayTracingSceneRenderer {
       return;
     }
     resources.topologyGraph.destroy();
+    resources.meshRefitGraph?.destroy();
     resources.accelerationGraph.destroy();
     resources.refitGraph.destroy();
     resources.traceGraph.destroy();
@@ -2040,6 +2069,7 @@ export class RayTracingSceneRenderer {
       previousCameraPosition: Array.from(props.cameraPosition),
       historyNeedsReset: true,
       topologyNeedsUpdate: true,
+      meshRefitsSinceRebuild: 0,
       accelerationUpdateMode: 'rebuild',
       refitsSinceMortonRebuild: 0,
       frameIndex: 0,
@@ -2174,9 +2204,10 @@ export class RayTracingSceneRenderer {
     triangleBuffer: Buffer;
     blasNodesBuffer: Buffer;
     blasTriangleIdsBuffer: Buffer;
+    reuseTriangleOrder?: boolean;
   }): CompiledGPUCommandGraph {
     const graph = new GPUCommandGraph(this.device, {
-      id: `scene-${props.frameIdentifier}-ray-tracing-topology`
+      id: `scene-${props.frameIdentifier}-ray-tracing-${props.reuseTriangleOrder ? 'mesh-refit' : 'topology'}`
     });
     const triangles = graph.importBuffer(
       {
@@ -2429,7 +2460,7 @@ export class RayTracingSceneRenderer {
       const overflow = createDataSubview(graph, blasOverflows, 'uint32', geometryIndex, 1);
       const usesSegmentedSort = geometryLayout.triangleCount <= 256;
 
-      if (geometryLayout.triangleCount > 0) {
+      if (!props.reuseTriangleOrder) {
         const sceneBounds: GraphDataView<'uint32'> = createTransientView(
           graph,
           `blas-${geometryIndex}-scene-bounds`,
@@ -2561,134 +2592,134 @@ export class RayTracingSceneRenderer {
             })
           );
         }
+      }
 
-        const addGatherPass = (): void => {
-          graph.addComputePass({
-            id: `${props.frameIdentifier}-blas-${geometryIndex}-gather-sorted-bounds`,
-            resources: [
-              {buffer: geometryTriangleMinima, usage: 'storage-read'},
-              {buffer: geometryTriangleMaxima, usage: 'storage-read'},
-              {buffer: geometrySortedTriangleIds, usage: 'storage-read'},
-              {buffer: geometrySortedMinima, usage: 'storage-write'},
-              {buffer: geometrySortedMaxima, usage: 'storage-write'}
-            ],
-            compile: ({device}) => {
-              const computation = new Computation(device, {
-                id: `${props.frameIdentifier}-blas-${geometryIndex}-gather-sorted-bounds-computation`,
-                source: replaceShaderConstants(RAY_TRACING_BLAS_GATHER_SORTED_BOUNDS_SHADER, {
-                  TRIANGLE_COUNT: geometryLayout.triangleCount,
-                  MINIMA_OFFSET: getViewElementOffset(geometryTriangleMinima),
-                  MAXIMA_OFFSET: getViewElementOffset(geometryTriangleMaxima),
-                  SORTED_TRIANGLE_IDS_OFFSET: getViewElementOffset(geometrySortedTriangleIds),
-                  SORTED_MINIMA_OFFSET: getViewElementOffset(geometrySortedMinima),
-                  SORTED_MAXIMA_OFFSET: getViewElementOffset(geometrySortedMaxima)
-                }),
-                shaderLayout: {
-                  bindings: [
-                    {name: 'triangleMinima', type: 'read-only-storage', group: 0, location: 0},
-                    {name: 'triangleMaxima', type: 'read-only-storage', group: 0, location: 1},
-                    {name: 'sortedTriangleIds', type: 'read-only-storage', group: 0, location: 2},
-                    {name: 'sortedMinima', type: 'storage', group: 0, location: 3},
-                    {name: 'sortedMaxima', type: 'storage', group: 0, location: 4}
-                  ]
-                }
-              });
-              return {
-                encode: ({computePass, getBuffer}) => {
-                  computation.setBindings({
-                    triangleMinima: getViewBinding(geometryTriangleMinima, getBuffer),
-                    triangleMaxima: getViewBinding(geometryTriangleMaxima, getBuffer),
-                    sortedTriangleIds: getViewBinding(geometrySortedTriangleIds, getBuffer),
-                    sortedMinima: getViewBinding(geometrySortedMinima, getBuffer),
-                    sortedMaxima: getViewBinding(geometrySortedMaxima, getBuffer)
-                  });
-                  computation.dispatch(computePass, Math.ceil(geometryLayout.triangleCount / 128));
-                },
-                destroy: () => computation.destroy()
-              };
-            }
-          });
-        };
-
-        const addHierarchyPass = (): void => {
-          const blas = new GPUBVH({
-            id: `${props.frameIdentifier}-blas-${geometryIndex}-bvh`,
-            minima: geometrySortedMinima,
-            maxima: geometrySortedMaxima,
-            leafCapacity: geometryLayout.blasLeafCapacity,
-            nodeMinima: geometryNodeMinima,
-            nodeMaxima: geometryNodeMaxima,
-            nodeChildren: geometryNodeChildren,
-            leafIds: geometryLeafIds,
-            count,
-            overflow
-          });
-          graph.add(blas);
-        };
-
-        const addPackPass = (): void => {
-          graph.addComputePass({
-            id: `${props.frameIdentifier}-blas-${geometryIndex}-pack-nodes`,
-            resources: [
-              {buffer: geometryNodeMinima, usage: 'storage-read'},
-              {buffer: geometryNodeMaxima, usage: 'storage-read'},
-              {buffer: geometryPackedNodes, usage: 'storage-write'}
-            ],
-            compile: ({device}) => {
-              const computation = new Computation(device, {
-                id: `${props.frameIdentifier}-blas-${geometryIndex}-pack-nodes-computation`,
-                source: replaceShaderConstants(RAY_TRACING_BLAS_PACK_NODES_SHADER, {
-                  NODE_COUNT: geometryNodeCount,
-                  NODE_MINIMA_OFFSET: getViewElementOffset(geometryNodeMinima),
-                  NODE_MAXIMA_OFFSET: getViewElementOffset(geometryNodeMaxima),
-                  PACKED_NODES_OFFSET: getViewElementOffset(geometryPackedNodes)
-                }),
-                shaderLayout: {
-                  bindings: [
-                    {name: 'nodeMinima', type: 'read-only-storage', group: 0, location: 0},
-                    {name: 'nodeMaxima', type: 'read-only-storage', group: 0, location: 1},
-                    {name: 'packedNodes', type: 'storage', group: 0, location: 2}
-                  ]
-                }
-              });
-              return {
-                encode: ({computePass, getBuffer}) => {
-                  computation.setBindings({
-                    nodeMinima: getViewBinding(geometryNodeMinima, getBuffer),
-                    nodeMaxima: getViewBinding(geometryNodeMaxima, getBuffer),
-                    packedNodes: getViewBinding(geometryPackedNodes, getBuffer)
-                  });
-                  computation.dispatch(computePass, Math.ceil(geometryNodeCount / 128));
-                },
-                destroy: () => computation.destroy()
-              };
-            }
-          });
-        };
-
-        if (usesSegmentedSort) {
-          const usesSegmentedHierarchy = geometryLayout.blasLeafCapacity <= 128;
-          if (usesSegmentedHierarchy) {
-            localHierarchySegments.push({
-              sourceOffset: geometryLayout.triangleStart,
-              sourceCount: geometryLayout.triangleCount,
-              nodeOffset: geometryLayout.blasNodeStart,
-              leafOffset: geometryLayout.blasTriangleIdStart,
-              metadataOffset: geometryIndex,
-              leafCapacity: geometryLayout.blasLeafCapacity
+      const addGatherPass = (): void => {
+        graph.addComputePass({
+          id: `${props.frameIdentifier}-blas-${geometryIndex}-gather-sorted-bounds`,
+          resources: [
+            {buffer: geometryTriangleMinima, usage: 'storage-read'},
+            {buffer: geometryTriangleMaxima, usage: 'storage-read'},
+            {buffer: geometrySortedTriangleIds, usage: 'storage-read'},
+            {buffer: geometrySortedMinima, usage: 'storage-write'},
+            {buffer: geometrySortedMaxima, usage: 'storage-write'}
+          ],
+          compile: ({device}) => {
+            const computation = new Computation(device, {
+              id: `${props.frameIdentifier}-blas-${geometryIndex}-gather-sorted-bounds-computation`,
+              source: replaceShaderConstants(RAY_TRACING_BLAS_GATHER_SORTED_BOUNDS_SHADER, {
+                TRIANGLE_COUNT: geometryLayout.triangleCount,
+                MINIMA_OFFSET: getViewElementOffset(geometryTriangleMinima),
+                MAXIMA_OFFSET: getViewElementOffset(geometryTriangleMaxima),
+                SORTED_TRIANGLE_IDS_OFFSET: getViewElementOffset(geometrySortedTriangleIds),
+                SORTED_MINIMA_OFFSET: getViewElementOffset(geometrySortedMinima),
+                SORTED_MAXIMA_OFFSET: getViewElementOffset(geometrySortedMaxima)
+              }),
+              shaderLayout: {
+                bindings: [
+                  {name: 'triangleMinima', type: 'read-only-storage', group: 0, location: 0},
+                  {name: 'triangleMaxima', type: 'read-only-storage', group: 0, location: 1},
+                  {name: 'sortedTriangleIds', type: 'read-only-storage', group: 0, location: 2},
+                  {name: 'sortedMinima', type: 'storage', group: 0, location: 3},
+                  {name: 'sortedMaxima', type: 'storage', group: 0, location: 4}
+                ]
+              }
             });
+            return {
+              encode: ({computePass, getBuffer}) => {
+                computation.setBindings({
+                  triangleMinima: getViewBinding(geometryTriangleMinima, getBuffer),
+                  triangleMaxima: getViewBinding(geometryTriangleMaxima, getBuffer),
+                  sortedTriangleIds: getViewBinding(geometrySortedTriangleIds, getBuffer),
+                  sortedMinima: getViewBinding(geometrySortedMinima, getBuffer),
+                  sortedMaxima: getViewBinding(geometrySortedMaxima, getBuffer)
+                });
+                computation.dispatch(computePass, Math.ceil(geometryLayout.triangleCount / 128));
+              },
+              destroy: () => computation.destroy()
+            };
           }
-          deferredHierarchyPasses.push({
-            addGatherPass,
-            addHierarchyPass,
-            addPackPass,
-            usesSegmentedHierarchy
+        });
+      };
+
+      const addHierarchyPass = (): void => {
+        const blas = new GPUBVH({
+          id: `${props.frameIdentifier}-blas-${geometryIndex}-bvh`,
+          minima: geometrySortedMinima,
+          maxima: geometrySortedMaxima,
+          leafCapacity: geometryLayout.blasLeafCapacity,
+          nodeMinima: geometryNodeMinima,
+          nodeMaxima: geometryNodeMaxima,
+          nodeChildren: geometryNodeChildren,
+          leafIds: geometryLeafIds,
+          count,
+          overflow
+        });
+        graph.add(blas);
+      };
+
+      const addPackPass = (): void => {
+        graph.addComputePass({
+          id: `${props.frameIdentifier}-blas-${geometryIndex}-pack-nodes`,
+          resources: [
+            {buffer: geometryNodeMinima, usage: 'storage-read'},
+            {buffer: geometryNodeMaxima, usage: 'storage-read'},
+            {buffer: geometryPackedNodes, usage: 'storage-write'}
+          ],
+          compile: ({device}) => {
+            const computation = new Computation(device, {
+              id: `${props.frameIdentifier}-blas-${geometryIndex}-pack-nodes-computation`,
+              source: replaceShaderConstants(RAY_TRACING_BLAS_PACK_NODES_SHADER, {
+                NODE_COUNT: geometryNodeCount,
+                NODE_MINIMA_OFFSET: getViewElementOffset(geometryNodeMinima),
+                NODE_MAXIMA_OFFSET: getViewElementOffset(geometryNodeMaxima),
+                PACKED_NODES_OFFSET: getViewElementOffset(geometryPackedNodes)
+              }),
+              shaderLayout: {
+                bindings: [
+                  {name: 'nodeMinima', type: 'read-only-storage', group: 0, location: 0},
+                  {name: 'nodeMaxima', type: 'read-only-storage', group: 0, location: 1},
+                  {name: 'packedNodes', type: 'storage', group: 0, location: 2}
+                ]
+              }
+            });
+            return {
+              encode: ({computePass, getBuffer}) => {
+                computation.setBindings({
+                  nodeMinima: getViewBinding(geometryNodeMinima, getBuffer),
+                  nodeMaxima: getViewBinding(geometryNodeMaxima, getBuffer),
+                  packedNodes: getViewBinding(geometryPackedNodes, getBuffer)
+                });
+                computation.dispatch(computePass, Math.ceil(geometryNodeCount / 128));
+              },
+              destroy: () => computation.destroy()
+            };
+          }
+        });
+      };
+
+      if (usesSegmentedSort) {
+        const usesSegmentedHierarchy = geometryLayout.blasLeafCapacity <= 128;
+        if (usesSegmentedHierarchy) {
+          localHierarchySegments.push({
+            sourceOffset: geometryLayout.triangleStart,
+            sourceCount: geometryLayout.triangleCount,
+            nodeOffset: geometryLayout.blasNodeStart,
+            leafOffset: geometryLayout.blasTriangleIdStart,
+            metadataOffset: geometryIndex,
+            leafCapacity: geometryLayout.blasLeafCapacity
           });
-        } else {
-          addGatherPass();
-          addHierarchyPass();
-          addPackPass();
         }
+        deferredHierarchyPasses.push({
+          addGatherPass,
+          addHierarchyPass,
+          addPackPass,
+          usesSegmentedHierarchy
+        });
+      } else {
+        addGatherPass();
+        addHierarchyPass();
+        addPackPass();
       }
     }
 
@@ -2703,7 +2734,9 @@ export class RayTracingSceneRenderer {
           segments: localSortSegments
         })
       );
+    }
 
+    if (deferredHierarchyPasses.length > 0) {
       for (const hierarchyPasses of deferredHierarchyPasses) {
         hierarchyPasses.addGatherPass();
       }
@@ -4231,7 +4264,11 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 51] = geometryLayout?.blasLeafCapacity ?? 0;
       primitiveValues.set(previousTransform, primitiveOffset + 52);
       primitiveValues[primitiveOffset + 68] =
-        surface.material.alphaMode === 'MASK' ? (materialUniforms?.alphaCutoff ?? 0.5) : -1;
+        surface.material.alphaMode === 'MASK'
+          ? (materialUniforms?.alphaCutoff ?? 0.5)
+          : surface.material.alphaMode === 'BLEND'
+            ? RAY_BLEND_ALPHA_MODE
+            : RAY_OPAQUE_ALPHA_MODE;
       primitiveValues[primitiveOffset + 69] = materialUniforms?.transmissionFactor ?? 0;
       primitiveValues[primitiveOffset + 70] = materialUniforms?.ior ?? 1.5;
       primitiveValues[primitiveOffset + 71] = surfaceIndex;
@@ -4604,6 +4641,9 @@ function makeUniformData(props: {
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
   unsignedData[88] = Number(props.options.filteredCutouts ?? false);
+  unsignedData[89] = Number(
+    props.options.surfaces.some(surface => surface.material.alphaMode === 'BLEND')
+  );
   unsignedData[24] = props.internalWidth;
   unsignedData[25] = props.internalHeight;
   unsignedData[26] = props.primitiveCount;
@@ -4965,10 +5005,11 @@ function getRayTracingMemoryStatistics(
     resources.internalWidth * resources.internalHeight * (resources.momentHistory ? 48 : 32);
   const graphTransientBytes = [
     resources.topologyGraph,
+    resources.meshRefitGraph,
     resources.accelerationGraph,
     resources.refitGraph,
     resources.traceGraph
-  ].reduce((total, graph) => total + graph.stats.physicalTransientResourceBytes, 0);
+  ].reduce((total, graph) => total + (graph?.stats.physicalTransientResourceBytes ?? 0), 0);
   return {
     sceneBufferBytes,
     historyTextureBytes,
