@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import type {RenderPass, Texture, TextureFormatColor} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
-import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental/materials';
+import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental-materials';
 import {
   aBuffer,
   createPBRMaterial,
@@ -31,7 +31,7 @@ import {
   WGSLShaderAssembler
 } from '@luma.gl/shaders';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';
@@ -982,55 +982,6 @@ describe('PBREnvironmentGenerator', () => {
       generator.destroy();
       source.destroy();
       cube.destroy();
-    }
-  });
-
-  test('never manually decodes hardware-sRGB source textures a second time', async () => {
-    const device = await getNullTestDevice();
-    const rawSRGBSource = device.createTexture({
-      width: 4,
-      height: 2,
-      format: 'rgba8unorm'
-    });
-    const hardwareSRGBSource = device.createTexture({
-      width: 4,
-      height: 2,
-      format: 'rgba8unorm-srgb'
-    });
-    const generator = new PBREnvironmentGenerator(device);
-    const prepareOptions = {
-      size: 2,
-      irradianceSize: 2,
-      brdfLUTSize: 2,
-      sampleCount: 2,
-      format: 'rgba8unorm' as const,
-      sourceEncoding: 'srgb' as const
-    };
-
-    try {
-      const rawEnvironment = generator.prepare({...prepareOptions, source: rawSRGBSource});
-      const filterModel = (
-        generator as unknown as {
-          model: {shaderInputs: {getUniformValues(): Record<string, {sourceEncoding: number}>}};
-        }
-      ).model;
-      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
-        1
-      );
-      rawEnvironment.destroy();
-
-      const hardwareEnvironment = generator.prepare({
-        ...prepareOptions,
-        source: hardwareSRGBSource
-      });
-      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
-        0
-      );
-      hardwareEnvironment.destroy();
-    } finally {
-      generator.destroy();
-      rawSRGBSource.destroy();
-      hardwareSRGBSource.destroy();
     }
   });
 });

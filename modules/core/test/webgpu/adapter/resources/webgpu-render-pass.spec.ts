@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Buffer, type RenderPassProps} from '@luma.gl/core';
+import {Buffer, RenderPass, type RenderPassProps} from '@luma.gl/core';
 import {WebGPURenderBundleEncoder} from '../../../../src/webgpu/adapter/resources/webgpu-render-bundle';
 import {WebGPURenderPass} from '../../../../src/webgpu/adapter/resources/webgpu-render-pass';
 
@@ -46,6 +46,17 @@ it('WebGPURenderPass sets load and store operations for each depth-stencil aspec
     .depthStencilAttachment!;
   expect(stencilOnly.depthLoadOp, 'stencil format has no depth operations').toBeUndefined();
   expect(stencilOnly.stencilLoadOp, 'stencil format clears stencil').toBe('clear');
+});
+
+it('WebGPURenderPass discards stencil independently of depth', () => {
+  const attachment = makeRenderPass({
+    clearDepth: false,
+    clearStencil: false,
+    stencilStoreOp: 'discard'
+  }).getRenderPassDescriptor(makeFramebuffer('depth24plus-stencil8')).depthStencilAttachment!;
+  expect(attachment.depthStoreOp).toBe('store');
+  expect(attachment.stencilLoadOp).toBe('load');
+  expect(attachment.stencilStoreOp).toBe('discard');
 });
 
 it('WebGPURenderPass uses the view format and omits read-only stencil operations', () => {
@@ -166,7 +177,7 @@ function makeRenderPass(props: RenderPassProps): {
   const renderPass = Object.create(WebGPURenderPass.prototype) as WebGPURenderPass & {
     props: RenderPassProps;
   };
-  renderPass.props = props;
+  renderPass.props = {...RenderPass.defaultProps, ...props};
   return renderPass;
 }
 

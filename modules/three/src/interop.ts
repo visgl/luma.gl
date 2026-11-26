@@ -7,10 +7,11 @@ import {
   InstancedBufferAttribute,
   REVISION,
   StaticDrawUsage,
+  StandardDrawingPipeline,
   type WebGPURenderer
 } from 'three/webgpu';
 
-// Three 0.185.1 has no public borrowed-buffer API. Keep its private contract here.
+// Three 0.187.0 has no public borrowed-buffer API. Keep its private contract here.
 type AttributeBackend = {
   borrowedBufferBridge?: ThreeBufferBridge;
   isWebGPUBackend: boolean;
@@ -29,7 +30,12 @@ export function getThreeBufferBridgeSupport(
   renderer: WebGPURenderer
 ): {supported: true} | {supported: false; reason: string} {
   const backend = renderer.backend as unknown as Partial<AttributeBackend>;
-  if (REVISION !== '185') return {supported: false, reason: 'Requires Three revision 185'};
+  if (REVISION !== '187') return {supported: false, reason: 'Requires Three revision 187'};
+  if (renderer.drawingPipeline && renderer.drawingPipeline.constructor !== StandardDrawingPipeline)
+    return {
+      supported: false,
+      reason: 'Requires StandardDrawingPipeline; meshlet and visibility pipelines are unsupported'
+    };
   if (device.type !== 'webgpu' || !backend?.isWebGPUBackend)
     return {supported: false, reason: 'Requires a WebGPU device and renderer'};
   if (!backend.device)

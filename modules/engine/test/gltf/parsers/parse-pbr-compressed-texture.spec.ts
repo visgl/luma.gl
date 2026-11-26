@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import type {TextureFormat} from '@luma.gl/core';
+import type {TextureLevel} from '@loaders.gl/core/schema';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   createCompressedTexture,
@@ -23,6 +24,27 @@ const BASE_OPTIONS = {
   id: 'test-texture',
   sampler: {}
 };
+
+it('gltf#createCompressedTexture - accepts loaders.gl ETC1 mip levels', () => {
+  const level: TextureLevel = {
+    shape: 'texture-level',
+    compressed: true,
+    width: 4,
+    height: 4,
+    textureFormat: 'etc1-rgb-unorm-webgl',
+    data: new Uint8Array(8)
+  };
+  const texture = createCompressedTexture(
+    device,
+    {compressed: true, mipmaps: true, data: [level]},
+    BASE_OPTIONS
+  );
+
+  expect(texture.format).toBe('etc1-rgb-unorm-webgl');
+  expect(texture.width).toBe(4);
+  expect(texture.height).toBe(4);
+  texture.destroy();
+});
 
 // --- loaders.gl current format: data is Array, mipmaps is boolean, textureFormat is a TextureFormat ---
 

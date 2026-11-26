@@ -22,10 +22,6 @@ export type {
   ResolvedShaderPlugins,
   ResolvedShaderPluginInterStageVariable,
   ShaderPlugin,
-  ShaderPluginHook,
-  ShaderPluginTarget,
-  ShaderPluginInjection,
-  ShaderPluginInjectionTarget,
   ShaderPluginInterStageVariable,
   ShaderPluginInterStageVariableInterpolation
 } from './lib/shader-plugin';
@@ -67,8 +63,11 @@ export {resolveModules as _resolveModules} from './lib/shader-module/shader-modu
 
 // ShaderAssembler
 export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
-export type {ShaderHook, ShaderHookOptions} from './lib/shader-assembly/shader-hooks';
-export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
+export type {ShaderInjectionTarget} from './lib/shader-assembly/shader-injection-targets';
+export type {
+  ShaderInjection,
+  ResolvedShaderInjection
+} from './lib/shader-assembly/shader-injections';
 
 // SHADER HELPERS
 
@@ -169,6 +168,7 @@ export {lighting} from './modules/lighting/lights/lighting';
 export type {IBLBindings} from './modules/lighting/ibl/ibl';
 export {ibl} from './modules/lighting/ibl/ibl';
 export {dirlight} from './modules/lighting/no-material/dirlight';
+export {unlitMaterial} from './modules/lighting/unlit-material/unlit-material';
 export type {LambertMaterialProps} from './modules/lighting/lambert-material/lambert-material';
 export {lambertMaterial} from './modules/lighting/lambert-material/lambert-material';
 export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';
@@ -258,3 +258,54 @@ export {
   type AreaLight,
   type AreaLightingProps
 } from './modules/lighting/area-lighting/area-lighting';
+
+export {
+  pbrEnvironmentFilter,
+  PBR_ENVIRONMENT_FRAGMENT_GLSL,
+  PBR_ENVIRONMENT_FRAGMENT_WGSL
+} from './modules/lighting/prefiltered-environment/prefiltered-environment';
+export type {
+  PBREnvironmentFilterProps,
+  PBREnvironmentFilterUniforms,
+  PBREnvironmentFilterBindings
+} from './modules/lighting/prefiltered-environment/prefiltered-environment';
+
+export {shadow} from './modules/lighting/shadow/shadow';
+export type {ShadowBindings, ShadowUniforms} from './modules/lighting/shadow/shadow';
+export type {
+  DirectionalShadowLight,
+  SpotShadowLight,
+  PointShadowLight,
+  ShadowProps,
+  ShadowTexture,
+  ShadowBiasProps
+} from './modules/lighting/shadow/shadow-types';
+
+export {pbrShadow} from './modules/lighting/pbr-shadow/pbr-shadow';
+export type {PBRShadowProps, PBRShadowUniforms} from './modules/lighting/pbr-shadow/pbr-shadow';
+
+export {pbrSurface} from './modules/lighting/pbr-surface/pbr-surface';
+export type {PBRSurfaceProps, PBRSurfaceUniforms} from './modules/lighting/pbr-surface/pbr-surface';
+
+export {
+  contactShadowTrace,
+  contactShadowBilateralBlur,
+  contactShadowComposite
+} from './modules/lighting/contact-shadow/contact-shadow';
+export type {
+  ContactTraceUniforms,
+  ContactBlurUniforms,
+  ContactShadowBindings,
+  ContactShadowProps
+} from './modules/lighting/contact-shadow/contact-shadow';
+
+export {pbrContactShadow} from './modules/lighting/pbr-contact-shadow/pbr-contact-shadow';
+export type {PBRContactShadowProps} from './modules/lighting/pbr-contact-shadow/pbr-contact-shadow';
+
+export {clusteredLightGrid} from './modules/lighting/clustered-light-grid/clustered-light-grid';
+export {pbrAmbientOcclusion} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';
+export type {PBRAmbientOcclusionProps} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';
+
+export {lightmapBake} from './modules/lighting/lightmap/lightmap';
+export type {LightmapBakeUniforms} from './modules/lighting/lightmap/lightmap';
+export {lightmapFilter} from './modules/lighting/lightmap/lightmap-filter';

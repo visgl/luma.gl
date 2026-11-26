@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray3} from '@math.gl/core/types';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
 type DeferredAmbientLightingUniforms = {

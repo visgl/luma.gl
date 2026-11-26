@@ -14,7 +14,7 @@ import './disable-example-startup';
 import helloTriangle from '../../examples/tutorials/hello-triangle/app';
 import helloInstancing from '../../examples/tutorials/hello-instancing/app';
 import shaderModules from '../../examples/tutorials/shader-modules/app';
-import shaderHooks from '../../examples/tutorials/shader-hooks/app';
+import shaderInjection from '../../examples/tutorials/shader-injection/app';
 // import transformFeedback from '../../examples/tutorials/transform-feedback/app';
 
 // API
@@ -36,7 +36,7 @@ const examples = {
   helloTriangle,
   helloInstancing,
   shaderModules,
-  shaderHooks
+  shaderInjection
   // transformFeedback,
 
   // API

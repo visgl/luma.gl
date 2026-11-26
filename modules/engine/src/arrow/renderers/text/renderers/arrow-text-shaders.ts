@@ -47,11 +47,18 @@ export function configureArrowTextShaderAssembler<ShaderAssemblerType extends Sh
     return shaderAssembler;
   }
 
-  shaderAssembler.addShaderHook(
-    shaderLanguage === 'wgsl'
-      ? 'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM(outputs: ptr<function, FragmentInputs>, worldPosition: vec2<f32>, glyphFrame: vec4<f32>, corner: vec2<f32>, glyphSize: vec2<f32>, atlasSize: vec2<f32>)'
-      : 'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM(inout vec4 position, inout vec2 textureCoordinate, inout vec4 textColor, vec2 worldPosition, vec4 glyphFrame, vec2 corner, vec2 glyphSize, vec2 atlasSize)'
-  );
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'TEXT_ATTRIBUTE_VERTEX_TRANSFORM',
+    stage: 'vertex',
+    glsl: {
+      parameters:
+        'inout vec4 position, inout vec2 textureCoordinate, inout vec4 textColor, vec2 worldPosition, vec4 glyphFrame, vec2 corner, vec2 glyphSize, vec2 atlasSize'
+    },
+    wgsl: {
+      parameters:
+        'outputs: ptr<function, FragmentInputs>, worldPosition: vec2<f32>, glyphFrame: vec4<f32>, corner: vec2<f32>, glyphSize: vec2<f32>, atlasSize: vec2<f32>'
+    }
+  });
   configuredLanguages.add(shaderLanguage);
   return shaderAssembler;
 }

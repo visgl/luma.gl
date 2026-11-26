@@ -133,7 +133,7 @@ fn getVoxelCoordinates(panel: u32, coordinates: vec2f) -> vec3u {
 }
 `;
 
-/** Example-local tri-planar renderer that samples LuCIM's resident buffers directly. */
+/** Example-local tri-planar renderer that samples GPU Volume Algorithms's resident buffers directly. */
 export class VolumeLabRenderer {
   readonly device: Device;
   readonly uniformBuffer: Buffer;

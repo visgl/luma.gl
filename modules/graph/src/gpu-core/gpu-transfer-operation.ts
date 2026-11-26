@@ -93,7 +93,11 @@ export class GPUCopyOperation implements GPUOperation {
     return {
       outputs: ({getValue}) => {
         const input = getValue(this.input);
-        // Copy is a vector transfer, not a scalar assignment or conversion.
+        if (input.type === 'texture') {
+          // Explicit mutable targets are declared vector state.
+          assert(this.target === undefined);
+          return {[this.output]: gpuGraph.texture({...input, extent: {like: this.input}})};
+        }
         assert(input.type === 'vector');
         if (this.target !== undefined) {
           const target = getValue(this.target);
@@ -109,8 +113,13 @@ export class GPUCopyOperation implements GPUOperation {
         };
       },
       values: [
-        {value: this.input, access: 'read'},
-        {value: this.output, access: 'write', shape: {like: this.input}}
+        {value: this.input, access: 'read', textureUsage: 'copy-source'},
+        {
+          value: this.output,
+          access: 'write',
+          shape: {like: this.input},
+          textureUsage: 'copy-destination'
+        }
       ]
     };
   }

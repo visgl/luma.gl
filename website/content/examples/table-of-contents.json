@@ -11,6 +11,8 @@
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
       "showcase/instancing",
+      "showcase/the-river-remembers",
+      "showcase/canyon-echo",
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -76,9 +78,9 @@
       "experimental/wrecking-ball",
       "experimental/physics-stress",
       "experimental/physics-batch",
-      "experimental/space-salvage",
       "gltf/physics",
-      "gltf/authored-scene-stress"
+      "gltf/authored-scene-stress",
+      "gltf/marionette-theater"
     ]
   },
   {
@@ -207,6 +209,10 @@
       },
       "api/multi-canvas",
       "api/cubemap",
+      "api/prefiltered-environment",
+      "api/pbr-shadows",
+      "api/lightmap-baking",
+      "api/baked-cornell-box",
       "api/texture-3d",
       {
         "type": "doc",
@@ -227,6 +233,7 @@
     "label": "Three.js",
     "items": [
       "three/galactic-vortex",
+      "experimental/offroad-buggy",
       "three/deck-layers",
       "experimental/three"
     ]
@@ -251,7 +258,7 @@
       "tutorials/instanced-cubes",
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
-      "tutorials/shader-hooks",
+      "tutorials/shader-injection",
       "tutorials/shader-plugins",
       "tutorials/slang-shaders",
       "tutorials/slang-particles",
@@ -313,34 +320,12 @@
   },
   {
     "type": "category",
-    "label": "Visual Effects - deck.gl v10",
-    "items": [
-      "deck/weather",
-      "deck/soft-shadows",
-      "deck/globe-clouds",
-      "deck/city-scene",
-      "deck/flow-particles",
-      "deck/wind",
-      "deck/point-glow",
-      "deck/hdr-night-lighting",
-      "deck/global-illumination",
-      "deck/light-shafts",
-      "deck/ambient-occlusion",
-      "deck/depth-of-field",
-      "deck/sketch-edges",
-      "deck/scene-buffers",
-      "deck/pattern-fills",
-      "deck/styled-paths"
-    ]
-  },
-  {
-    "type": "category",
     "label": "GPU Graph Layers - deck.gl v10",
     "items": [
       {
         "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
+        "id": "deck/gpu-spatial-taxi",
+        "label": "GPU Project + GPU Spatial: Taxi Explorer"
       },
       {
         "type": "doc",

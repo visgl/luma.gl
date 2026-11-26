@@ -187,6 +187,15 @@ If those conditions are not met, `evaluateSync()` throws.
 Reads evaluator contents back to the CPU. This is intended for debugging or
 inspection and may be slower than staying on the GPU.
 
+#### `invalidate(): void`
+
+Clears cached computation/readback state without changing the evaluator's fixed layout.
+CPU-backed leaves retain their original array; GPU-backed leaves retain their borrowed
+source buffer. Deferred outputs retain explicit borrowed targets for the next evaluation.
+This method does not propagate to consumers; an owning graph must invalidate dependent
+results and collected vector views. Do not call during evaluation, readback, or a pending
+scope. Existing evaluation behavior is unchanged unless invalidation is requested.
+
 #### `destroy(): void`
 
 Releases cached GPU storage owned by this evaluator and prevents future
@@ -228,6 +237,11 @@ chunk order and boundaries.
 Synchronously materializes every chunk evaluator and returns one `GPUVector`
 with preserved chunk order and boundaries. This has the same synchronous
 requirements as `GPUDataEvaluator.evaluateSync()`.
+
+#### `invalidate(): void`
+
+Clears the collected vector view only. Changed child evaluators must be invalidated
+separately by their owner. No child storage is destroyed or transferred.
 
 #### `destroy(): void`
 

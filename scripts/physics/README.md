@@ -8,9 +8,9 @@ that all its physics features work.
 Generate Vitest JSON reports using the repository test projects, for example:
 
 ```sh
-yarn exec vitest run --project node modules/engine/test/gltf/physics --reporter=json --outputFile=/tmp/physics-import.json
+yarn exec vitest run --project node modules/engine/test/gltf/physics modules/engine/test/interactivity/physics.node.spec.ts --reporter=json --outputFile=/tmp/physics-import.json
 yarn exec vitest run --project node modules/graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-node.json
-yarn exec vitest run --project headless modules/graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-gpu.json
+yarn exec vitest run --project headless modules/graph/test/gpu-physics modules/engine/test/gltf/physics --reporter=json --outputFile=/tmp/physics-gpu.json
 node --test scripts/physics/qualification-report.test.mjs
 ```
 
@@ -127,3 +127,40 @@ measures and verifies the GPU body-node matrix/AABB publisher. Start the
 separate fallback evidence. Feed the JSON report to `qualification-report.mjs`
 alongside node/headless JSON reports. The G6 publication selector requires hardware.
 See `dev-docs/benchmarks/gpu-physics-publication.md` for timing boundaries.
+
+## Rendered authored-scene qualification
+
+Serve `examples/gltf/authored-scene-stress` with Vite. From the repository root, run:
+
+```sh
+node scripts/physics/benchmark-authored-scenes.mjs --url http://127.0.0.1:5241/ --fixture AuthoredGrid > /tmp/authored-grid.json
+node scripts/physics/benchmark-authored-scenes.mjs --url http://127.0.0.1:5241/ --fixture AnimatedScale > /tmp/authored-scale.json
+```
+
+This measures browser frame intervals with the normal PBR presentation path and live GPU
+physics. It checks that simulation ticks advance, rendered pixels change, and draw
+bindings continue across capture, recook and restore. Explicit native export and canvas
+verification run outside the timing window. The recorded desktop gate is 50 ms p95
+at 960 × 640. Pass both reports to `qualification-report.mjs`. The hardware selector
+records software fallback evidence separately when `--software-gpu` is specified.
+
+## G7 qualification report
+
+From the repository root, serve the Rigid Body Lab, then run the two qualification
+scripts in another terminal. Run the timed benchmark with the GPU otherwise idle.
+The external asset check downloads the four pinned sample GLBs and records their SHA-256
+hashes. It runs independently of CI, which uses local fixtures.
+
+```sh
+yarn workspace luma.gl-examples-experimental-gpu-rigid-body-world start --host 127.0.0.1 --port 5254
+node scripts/physics/qualify-external-assets.mjs --url http://127.0.0.1:5254/ --output /tmp/external.json
+node scripts/physics/run-rigid-body-qualification.mjs --url http://127.0.0.1:5254/ --output /tmp/rigid.json
+node scripts/physics/qualification-report.mjs --tranches=G1,G2,G3,G4,G5,G6,G7 \
+  /tmp/physics-import.json /tmp/physics-node.json /tmp/physics-gpu.json \
+  /tmp/external.json /tmp/rigid.json /tmp/authored-grid.json /tmp/authored-scale.json \
+  dev-docs/benchmarks/gpu-physics-authored-broad-phase.json \
+  dev-docs/benchmarks/gpu-physics-publication-hardware.json
+```
+
+See the [G7 report](../../dev-docs/benchmarks/gltf-physics-g7.md) for the recorded
+results, the measured device envelope and remaining release qualification work.

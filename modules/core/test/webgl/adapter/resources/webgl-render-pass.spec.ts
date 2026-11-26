@@ -33,6 +33,23 @@ it('WEBGLRenderPass#drawBuffers for framebuffer attachments', async () => {
   device.destroy();
 });
 
+it('WEBGLRenderPass only masks stencil writes for stencilReadOnly', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  gl.stencilMask(0x0f);
+
+  let renderPass = new WEBGLRenderPass(device, {});
+  expect(gl.getParameter(GL.STENCIL_WRITEMASK)).toBe(0x0f);
+  expect(gl.getParameter(GL.STENCIL_BACK_WRITEMASK)).toBe(0x0f);
+  renderPass.end();
+
+  renderPass = new WEBGLRenderPass(device, {stencilReadOnly: true});
+  expect(gl.getParameter(GL.STENCIL_WRITEMASK)).toBe(0);
+  renderPass.end();
+
+  device.destroy();
+});
+
 it('WEBGLRenderPass#drawBuffers for default framebuffer', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;

@@ -124,6 +124,22 @@ test('Lantern PBR/shadows and native deck courtyard share depth with upstream pa
         shadows: false,
         phase: 0
       },
+      {
+        context: false,
+        reverse: false,
+        lighting: false,
+        environment: true,
+        shadows: false,
+        phase: 1
+      },
+      {
+        context: false,
+        reverse: false,
+        lighting: true,
+        environment: false,
+        shadows: false,
+        phase: 1
+      },
       {context: true, reverse: false, lighting: true, environment: true, shadows: true, phase: 1},
       {context: true, reverse: true, lighting: true, environment: true, shadows: true, phase: 1}
     ]) {
@@ -169,6 +185,8 @@ test('Lantern PBR/shadows and native deck courtyard share depth with upstream pa
         deck!.getViewports()[0],
         WebGPUCoordinateSystem
       );
+      // Match the preparation render and caller-pass render performed by the adapter.
+      reference.render(referenceScene.scene, referenceScene.camera);
       reference.render(referenceScene.scene, referenceScene.camera);
       const expected = await reference.readRenderTargetPixelsAsync(
         comparisonTarget,

@@ -39,6 +39,7 @@ export type SimpleOperation =
 export class SimpleGraphLowering {
   readonly owned = new Set<GPUDataEvaluator | GPUVectorEvaluator>();
   readonly outputs = new Map<string, GPUSimpleGraphOperation>();
+  readonly inputs = new Map<string, GPUDataEvaluator | GPUVectorEvaluator>();
   private readonly graphValues = new Map<GPUSimpleGraphValue, GPUDataEvaluator>();
   private readonly scalars = new Map<object, GPUDataEvaluator>();
   private readonly vectors = new Map<object, GPUVectorEvaluator>();
@@ -188,6 +189,15 @@ export class SimpleGraphLowering {
     // Semantic output IDs and explicitly wrapped evaluator IDs share one namespace.
     assert(!this.outputs.has(id));
     this.outputs.set(id, new GPUSimpleGraphOperation({id, evaluator}));
+    const chunks =
+      evaluator instanceof GPUVectorEvaluator ? evaluator.gpuDataEvaluators : [evaluator];
+    if (chunks.every(chunk => !chunk.source)) this.registerInput(id, evaluator);
+  }
+
+  private registerInput(id: string, evaluator: GPUDataEvaluator | GPUVectorEvaluator): void {
+    // An invalidation name must identify exactly one input, including semantic vector bindings.
+    assert(!this.inputs.has(id) || this.inputs.get(id) === evaluator);
+    this.inputs.set(id, evaluator);
   }
 
   private resolveVector(vector: GPUGraphVector<'float32'>): GPUVectorEvaluator {
@@ -215,6 +225,7 @@ export class SimpleGraphLowering {
     );
     this.owned.add(evaluator);
     this.vectors.set(vector, evaluator);
+    this.registerInput(vector.id, evaluator);
     return evaluator;
   }
 }

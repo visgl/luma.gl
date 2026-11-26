@@ -12,11 +12,22 @@ import type {
 import type {VertexFormat, VertexFormatInfo} from './vertex-formats';
 import {dataTypeDecoder} from '../data-types/data-type-decoder';
 
+const vertexFormatInfoCache = new Map<VertexFormat, VertexFormatInfo>();
+
 export class VertexFormatDecoder {
   /**
    * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
    */
   getVertexFormatInfo<T extends VertexFormat = VertexFormat>(format: T): VertexFormatInfo<T> {
+    let decoded = vertexFormatInfoCache.get(format);
+    if (!decoded) {
+      decoded = Object.freeze(this._decodeVertexFormatInfo(format));
+      vertexFormatInfoCache.set(format, decoded);
+    }
+    return decoded as VertexFormatInfo<T>;
+  }
+
+  private _decodeVertexFormatInfo<T extends VertexFormat>(format: T): VertexFormatInfo<T> {
     if (format === 'unorm10-10-10-2') {
       return {
         type: 'unorm8',
@@ -54,7 +65,7 @@ export class VertexFormatDecoder {
     if (expectedFormat !== (webglOnly ? format : normalizedFormat)) {
       throw new Error(`Unsupported vertex format: ${format}`);
     }
-    const result: VertexFormatInfo = {
+    const result: {-readonly [Key in keyof VertexFormatInfo]: VertexFormatInfo[Key]} = {
       type,
       components,
       byteLength: decodedType.byteLength * components,

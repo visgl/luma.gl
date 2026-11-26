@@ -47,16 +47,12 @@ export class NullTexture extends Texture {
       arrayLayerCount: 1
     });
 
+    this.sampler.transferOwnershipTo(this);
+    this.view.transferOwnershipTo(this);
+
     this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
 
     Object.seal(this);
-  }
-
-  override destroy(): void {
-    if (!this.destroyed) {
-      super.destroy();
-      this.trackDeallocatedMemory('Texture');
-    }
   }
 
   createView(props: TextureViewProps): NullTextureView {

@@ -3,7 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import {expect, test as it, vi} from 'vitest';
 import {
+  consumeArrowGPURecordBatches,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,
   planArrowTableGPUConversion
@@ -17,7 +19,7 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/graph/arrow';
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -317,6 +319,173 @@ test('Arrow GPU streaming conversion preserves batch identity and one temporal o
   t.deepEqual(sourceOffsets, [0, 2], 'retains global source row offsets without combining batches');
   device.destroy();
   t.end();
+});
+
+it('bounds planned Arrow payloads before allocating and serializes borrowed batch lifetimes', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n]);
+  const schema = {columns: [{name: 'time'}]};
+  const budget = planArrowTableGPUConversion(device, new arrow.Table([batch]), schema).cost
+    .targetByteLength;
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const consume = vi.fn();
+  try {
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, consume, {
+        maxBatchPayloadBytes: budget - 1
+      })
+    ).rejects.toThrow(/batch 0 needs.*exceeding/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(consume).not.toHaveBeenCalled();
+
+    const events: string[] = [];
+    async function* source() {
+      for (const index of [0, 1]) {
+        events.push('read ' + index);
+        yield batch;
+      }
+    }
+    await consumeArrowGPURecordBatches(
+      device,
+      source(),
+      schema,
+      async prepared => {
+        const index = prepared.batch.sourceInfo?.sourceBatchIndex;
+        const buffer = prepared.vectors.time.data[0].buffer;
+        const destroy = buffer && vi.spyOn(buffer, 'destroy');
+        destroy?.mockImplementationOnce(function () {
+          events.push('release ' + index);
+          destroy.mockRestore();
+          buffer.destroy();
+        });
+        await Promise.resolve();
+        events.push('consume ' + index);
+      },
+      {maxBatchPayloadBytes: budget}
+    );
+    expect(events).toEqual([
+      'read 0',
+      'consume 0',
+      'release 0',
+      'read 1',
+      'consume 1',
+      'release 1'
+    ]);
+
+    const controller = new AbortController();
+    const abort = vi.fn(() => controller.abort());
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch, batch], schema, abort, {
+        signal: controller.signal
+      })
+    ).rejects.toMatchObject({name: 'AbortError'});
+    expect(abort).toHaveBeenCalledTimes(1);
+  } finally {
+    createBuffer.mockRestore();
+    device.destroy();
+  }
+});
+
+it('splits oversized Arrow batches into budgeted source-aligned slices', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n, 1020n, 1030n, 1040n]);
+  const schema = {columns: [{name: 'time'}]};
+  const peak = planArrowTableGPUConversion(
+    device,
+    new arrow.Table([batch.slice(0, 2)]),
+    schema
+  ).estimatedPeakGPUBytes;
+  const readback: number[] = [];
+  const offsets: number[] = [];
+  const indices: number[] = [];
+  try {
+    await consumeArrowGPURecordBatches(
+      device,
+      [batch, makeTimestampBatch([1050n])],
+      schema,
+      async prepared => {
+        offsets.push(prepared.batch.sourceInfo!.sourceRowIndexOffset!);
+        indices.push(prepared.batch.sourceInfo!.sourceBatchIndex!);
+        expect(prepared.plan.estimatedPeakGPUBytes).toBeLessThanOrEqual(peak);
+        readback.push(...Array.from(await readArrowGPUVectorAsync(prepared.vectors.time), Number));
+      },
+      {maxBatchGPUBytes: peak, maxBatchPayloadBytes: 8, splitOversizedBatches: true}
+    );
+    expect(readback).toEqual([0, 10, 20, 30, 40, 50]);
+    expect(offsets).toEqual([0, 2, 3, 5]);
+    expect(indices).toEqual([0, 0, 0, 1]);
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, vi.fn(), {
+        maxBatchPayloadBytes: 0,
+        splitOversizedBatches: true
+      })
+    ).rejects.toThrow(/batch 0 at row 0 needs/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    createBuffer.mockRestore();
+  } finally {
+    device.destroy();
+  }
+});
+
+it('estimates a temporal list slice using its referenced values on WebGPU', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  try {
+    const child = makeTimestampBatch([1000n, 1001n, 1002n, 1003n, 1004n, 1005n, 1006n, 1007n]).data
+      .children[0];
+    const type = new arrow.List(new arrow.Field('values', child.type, false));
+    const vector = arrow.makeVector(
+      arrow.makeData({
+        type,
+        length: 4,
+        valueOffsets: Int32Array.of(0, 2, 4, 6, 8),
+        child
+      })
+    );
+    const table = new arrow.Table({times: vector});
+    const schema = {columns: [{name: 'times'}]};
+    const full = planArrowTableGPUConversion(device, table, schema);
+    const sliced = planArrowTableGPUConversion(
+      device,
+      new arrow.Table([table.batches[0].slice(2, 3)]),
+      schema
+    );
+    expect(full.estimatedPeakGPUBytes).toBeGreaterThan(64);
+    expect(sliced.estimatedPeakGPUBytes).toBeLessThanOrEqual(64);
+    expect(sliced.cost.temporaryGPUByteLength).toBe(28);
+  } finally {
+    device.destroy();
+  }
+});
+
+it('rejects a peak budget that fits output but omits temporary GPU conversion storage', async () => {
+  const device = new NullDevice({});
+  const batch = makeTimestampBatch([1000n, 1010n]);
+  const schema = {columns: [{name: 'time'}]};
+  const table = new arrow.Table([batch]);
+  const cpu = planArrowTableGPUConversion(device, table, schema);
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const gpu = planArrowTableGPUConversion(device, table, schema);
+  expect(gpu.columns[0].plan.backend).toBe('webgpu');
+  expect(gpu.cost.targetByteLength).toBe(cpu.cost.targetByteLength);
+  expect(gpu.cost.temporaryGPUByteLength).toBeGreaterThanOrEqual(28);
+  expect(gpu.estimatedPeakGPUBytes).toBeGreaterThan(cpu.estimatedPeakGPUBytes);
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const consume = vi.fn();
+  try {
+    await expect(
+      consumeArrowGPURecordBatches(device, [batch], schema, consume, {
+        maxBatchPayloadBytes: gpu.cost.targetByteLength,
+        maxBatchGPUBytes: cpu.estimatedPeakGPUBytes
+      })
+    ).rejects.toThrow(/peak GPU bytes/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(consume).not.toHaveBeenCalled();
+  } finally {
+    createBuffer.mockRestore();
+    device.destroy();
+  }
 });
 
 test('Arrow GPU conversion rejects unsupported plans before allocating', t => {

@@ -1,7 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
-import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
+import {getBrowserTestGroup, getReleaseQualificationExcludes, RENDER_CONFORMANCE_TEST_PATTERNS, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -9,6 +9,9 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
+  // Deck integration packages are scheduled for removal; omit their module suites.
+  'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -27,6 +30,11 @@ const excludePatterns = [
 // These specs exercise pure data transforms, layouts, shader assembly, and validation. Running
 // them in Node preserves the assertions while avoiding one isolated browser page per file.
 const nodeOnlyTestPatterns = [
+  'test/examples/poisson-problem.spec.{ts,js}',
+  'modules/core/test/webgl/constants/webgl-constant-utils.spec.{ts,js}',
+  'modules/core/test/webgl/adapter/helpers/get-shader-layout-from-glsl.spec.{ts,js}',
+  'modules/engine/test/gltf/parsers/post-process-gltf-legacy.spec.{ts,js}',
+  'modules/shaders/test/modules/volume/volume-raymarch.spec.{ts,js}',
   'test/devtools/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-adjust-filters/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
@@ -118,6 +126,7 @@ const nodeCoverageIncludePatterns = [
 const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/engine/test/scenegraph/node-paths.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/physics-controller.node.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
   'modules/{graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
@@ -127,7 +136,7 @@ const nodeCoverageNativePatterns = [
   'modules/graph/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
-  'modules/graph/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+  'modules/graph/test/gpu-sql/gpu-sql.node.spec.{ts,js}'
 ];
 const nodeCoveragePatterns = [
   ...nodeCoverageIncludePatterns,
@@ -136,6 +145,9 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
+  'modules/engine/test/lighting/indirect-convergence.spec.ts',
+
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
@@ -152,7 +164,9 @@ const browserBenchmarkTestPatterns = [
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
 const browserTestGroup = getBrowserTestGroup(process.env.LUMA_TEST_BROWSER_GROUP);
-const browserIncludePatterns = browserTestGroup === 'physics-endurance'
+const browserIncludePatterns = browserTestGroup === 'render-conformance'
+  ? RENDER_CONFORMANCE_TEST_PATTERNS
+  : browserTestGroup === 'physics-endurance'
   ? PHYSICS_ENDURANCE_TEST_PATTERNS
   : browserTestGroup === 'physics'
   ? PHYSICS_TEST_PATTERNS
@@ -162,6 +176,8 @@ const browserIncludePatterns = browserTestGroup === 'physics-endurance'
 const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
+  ...getReleaseQualificationExcludes(browserTestGroup),
+  ...(browserTestGroup === 'general' ? RENDER_CONFORMANCE_TEST_PATTERNS : []),
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
   ...browserBenchmarkTestPatterns,
@@ -194,7 +210,7 @@ const vitestConfig = getVitestConfig({
     optimizeDeps: {
       exclude: ['@deck.gl/core', '@deck.gl/layers', '@luma.gl/shadertools'],
       // Keep source packages visible while bundling their CommonJS dependencies.
-      include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code'],
+      include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code', '@math.gl/geospatial > cdt2d'],
       noDiscovery: true
     }
   },
@@ -210,8 +226,15 @@ const vitestConfig = getVitestConfig({
         // Istanbul transforms use substantial memory. Bound the focused coverage pass so it is
         // stable on GitHub's two-core runners without changing the fast default Node command.
         ...(runNodeCoverage ? {maxWorkers: 2} : {}),
+        ...(process.env.LUMA_TEST_NODE_MAX_WORKERS
+          ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
+          : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
-        exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
+        exclude: [
+          ...excludePatterns,
+          ...nodeWrapperSourcePatterns,
+          ...(process.env.LUMA_TEST_NODE_SKIP_COVERED === 'true' ? nodeCoveragePatterns : [])
+        ]
       }
     },
     browser: {

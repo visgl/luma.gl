@@ -6,7 +6,7 @@ import type {Device} from '../device';
 import {PrimitiveTopology} from '../types/parameters';
 import {ShaderLayout} from '../types/shader-layout';
 import type {Buffer} from './buffer';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** For bindRange */
 export type BufferRange = {
@@ -16,7 +16,7 @@ export type BufferRange = {
 };
 
 /** Configures a set of output buffers for pipeline (WebGL only) */
-export type TransformFeedbackProps = ResourceProps & {
+export type TransformFeedbackProps = DeviceResourceProps & {
   /** Layout of shader (for varyings) */
   layout: ShaderLayout;
   /** Buffer bindings (for varyings) */
@@ -24,9 +24,9 @@ export type TransformFeedbackProps = ResourceProps & {
 };
 
 /** Holds a set of output buffers for pipeline (WebGL only) */
-export abstract class TransformFeedback extends Resource<TransformFeedbackProps> {
+export abstract class TransformFeedback extends DeviceResource<TransformFeedbackProps> {
   static override defaultProps: Required<TransformFeedbackProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     layout: undefined!,
     buffers: {}
   };

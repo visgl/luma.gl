@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {encodeTextureCopy} from './gpu-texture-copy';
 import {assert, Buffer} from '@luma.gl/core';
 import type {GPUOperationLoweringContext} from './gpu-graph-lowering';
 import {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
@@ -78,4 +79,24 @@ export function lowerGPUCopy<Parameters>(
       })
     });
   }
+}
+
+/** Texture copies use the same operation and preserve selected mip/layer ranges. @internal */
+export function lowerGPUTextureCopy<Parameters>(
+  operation: GPUCopyOperation,
+  context: GPUOperationLoweringContext<Parameters>
+): void {
+  const input = context.resolveTextureView(operation.input);
+  const output = context.resolveTextureView(operation.output);
+  context.graph.addCopyPass({
+    id: operation.id,
+    resources: [
+      {texture: input, usage: 'copy-source'},
+      {texture: output, usage: 'copy-destination'}
+    ],
+    compile: () => ({
+      encode: ({commandEncoder, getTextureView}) =>
+        encodeTextureCopy(commandEncoder, getTextureView(input), getTextureView(output))
+    })
+  });
 }

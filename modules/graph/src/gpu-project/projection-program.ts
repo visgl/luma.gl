@@ -4,6 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {nextFloat32} from '../utils/float32';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
   getClassicFP64Defines
@@ -461,13 +462,4 @@ fn PROGRAM_project(position: ${inputType}, inputValidity: u32) -> PROGRAM_Result
   }
 }`;
   return {source, parameters: Uint32Array.from(words)};
-}
-
-function nextFloat32(value: number, increase: boolean): number {
-  if (value === 0) {
-    return increase ? 2 ** -149 : -(2 ** -149);
-  }
-  const words = new Uint32Array(Float32Array.of(value).buffer);
-  words[0] += value > 0 === increase ? 1 : -1;
-  return new Float32Array(words.buffer)[0];
 }

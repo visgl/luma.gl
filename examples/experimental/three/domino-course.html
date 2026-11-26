@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Domino Junction</title>
+    <link rel="stylesheet" href="./domino-course.css" />
+  </head>
+  <body>
+    <canvas id="course" aria-label="An overhead view of two domino paths that split and rejoin"></canvas>
+    <div id="info"></div>
+    <section id="course-controls">
+      <div class="controls">
+        <button id="start" disabled>Tip first tile</button>
+        <button id="reset" disabled>Reset</button>
+      </div>
+      <output id="status" aria-live="polite">Loading WebGPU…</output>
+    </section>
+    <script type="module" src="./domino-course.ts"></script>
+  </body>
+</html>

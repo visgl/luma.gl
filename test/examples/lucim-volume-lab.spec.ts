@@ -8,7 +8,7 @@ import {describe, expect, test, vi} from 'vitest';
 import VolumeLabAnimationLoopTemplate from '../../examples/experimental/lucim-volume-lab/app';
 import {makeVolumeLabDataset} from '../../examples/experimental/lucim-volume-lab/volume-lab-data';
 
-describe('LuCIM Volume Lab', () => {
+describe('GPU Volume Algorithms Volume Lab', () => {
   test('segments a synthetic volume and renders resident tri-planar overlays', async () => {
     const device = await getWebGPUTestDevice();
     if (!device) return;

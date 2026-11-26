@@ -1179,11 +1179,11 @@ test('PipelineFactory#hooks', (t) => {
 
   const preHookPipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
-  pipelineFactory.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
-  pipelineFactory.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
+  pipelineFactory.addShaderInjectionTarget({name: 'LUMAGL_pickColor', stage: 'vertex', glsl: {parameters: 'inout vec4 color'}});
+  pipelineFactory.addShaderInjectionTarget({name: 'LUMAGL_fragmentColor', stage: 'fragment', glsl: {parameters: 'inout vec4 color',
     header: 'if (color.a == 0.0) discard;\n',
     footer: 'color.a *= 1.2;\n'
-  });
+  }});
 
   const postHookPipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 

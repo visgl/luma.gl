@@ -136,6 +136,7 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
       ...this.getShaders({modules: [project32, picking], source: GPU_POINT_CLOUD_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
+      inferDrawCount: 'instance',
       isInstanced: true,
       vertexCount: 6,
       instanceCount: 0,

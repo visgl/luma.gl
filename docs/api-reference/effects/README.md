@@ -67,7 +67,7 @@ Check the compatibility section on the individual pass page.
 
 - [`@luma.gl/shaders`](/docs/api-reference/shaders)
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer)
-- [Experimental deferred rendering](/docs/api-reference/scene/deferred-scene-renderer)
+- [Experimental deferred rendering](/docs/api-reference/anari/deferred-scene-renderer)
 
 ## Selection outlines
 

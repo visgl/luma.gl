@@ -22,3 +22,15 @@ export {ScenegraphPhysicsPublication} from './scenegraph-publication';
 export type {ScenegraphPhysicsRenderBinding} from './scenegraph-publication';
 export {ScenegraphPhysicsSession} from './scenegraph-session';
 export type {ScenegraphPhysicsScene, ScenegraphPhysicsSessionCapture} from './scenegraph-session';
+export {PhysicsController} from './physics-controller';
+export type {
+  PhysicsNodeReference,
+  PhysicsVehicleOptions,
+  PhysicsJointOptions,
+  PhysicsBodyOptions,
+  PhysicsControllerProps,
+  PhysicsBody,
+  PhysicsBodyPose,
+  PhysicsUpdateResult
+} from './physics-controller';
+export {ScenegraphRagdoll} from './scenegraph-ragdoll';

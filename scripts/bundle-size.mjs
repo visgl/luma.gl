@@ -1,8 +1,10 @@
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {brotliCompressSync, constants, gzipSync} from 'node:zlib';
 
 import esbuild from 'esbuild';
+import typescript from 'typescript';
+import inlineWebGLConstants from '../dev-modules/ts-transform-inline-webgl-constants/index.cjs';
 
 import {BUNDLE_SIZE_FIXTURES} from '../test/size/bundle-size.config.mjs';
 
@@ -41,6 +43,30 @@ const externalCorePlugin = {
   }
 };
 
+const constantsSource = await readFile('modules/core/src/webgl-constants/webgl-constants.ts', 'utf8');
+const {code: constantsModule} = await esbuild.transform(constantsSource, {loader: 'ts', format: 'esm'});
+const {GL} = await import(`data:text/javascript;base64,${Buffer.from(constantsModule).toString('base64')}`);
+const inlineConstants = inlineWebGLConstants(undefined, {constants: GL}, {ts: typescript});
+const printer = typescript.createPrinter();
+
+/** Applies the same WebGL constant transform used by the package build before esbuild bundles sources. */
+const inlineWebGLConstantsPlugin = {
+  name: 'inline-webgl-constants',
+  setup(build) {
+    build.onLoad({filter: /[/\\]modules[/\\]core[/\\]src[/\\].*\.ts$/}, async ({path}) => {
+      const source = await readFile(path, 'utf8');
+      if (!/\b(?:GL|gl)\s*[.[]/.test(source)) return undefined;
+      const sourceFile = typescript.createSourceFile(path, source, typescript.ScriptTarget.Latest, true);
+      const result = typescript.transform(sourceFile, [inlineConstants]);
+      try {
+        return {contents: printer.printFile(result.transformed[0]), loader: 'ts'};
+      } finally {
+        result.dispose();
+      }
+    });
+  }
+};
+
 const measuredResults = [];
 for (const fixture of BUNDLE_SIZE_FIXTURES.filter(fixture => fixture.entry)) {
   measuredResults.push(await measureFixture(fixture));
@@ -59,7 +85,7 @@ const markdownReport = formatMarkdownReport(results, failures);
 const jsonReport = `${JSON.stringify(
   {
     version: 1,
-    bundler: {name: 'esbuild', version: esbuild.version},
+    bundler: {name: 'esbuild', version: esbuild.version, webglConstantsInlined: true},
     results,
     failures
   },
@@ -91,6 +117,7 @@ async function measureFixture(fixture) {
     minify: true,
     platform: 'browser',
     plugins: [
+      inlineWebGLConstantsPlugin,
       ...(fixture.sourceAliases ? [sourceAliasesPlugin] : []),
       ...(fixture.external.includes('@luma.gl/core') ? [externalCorePlugin] : [])
     ],
@@ -174,7 +201,7 @@ function formatMarkdownReport(results, failures) {
     );
   }
 
-  lines.push('', `Bundled with esbuild ${esbuild.version}; gzip level 9; Brotli quality 11.`, '');
+  lines.push('', `Bundled with esbuild ${esbuild.version} after WebGL constant inlining; gzip level 9; Brotli quality 11.`, '');
 
   if (failures.length > 0) {
     lines.push('## Budget failures', '');

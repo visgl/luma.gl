@@ -30,15 +30,11 @@ export class NullBuffer extends Buffer {
     this.trackAllocatedMemory(byteLength);
   }
 
-  override destroy(): void {
-    if (!this.destroyed) {
-      super.destroy();
-      this.trackDeallocatedMemory();
-      // @ts-expect-error
-      this.handle = null;
-      // Clear internal storage
-      this._storage = new ArrayBuffer(0);
-    }
+  protected override destroyHandle(): void {
+    // @ts-expect-error
+    this.handle = null;
+    // Clear internal storage
+    this._storage = new ArrayBuffer(0);
   }
 
   write(data: ArrayBufferLike | ArrayBufferView, byteOffset: number = 0): void {

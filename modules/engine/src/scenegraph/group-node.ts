@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4, Vector3} from '@math.gl/core';
-import type {NumericArray} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
+import type {NumericArray} from '@math.gl/core/types';
 import {assert, log} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 import {
@@ -12,9 +12,11 @@ import {
   makeEmptyScenegraphBounds
 } from './scenegraph-bounds';
 import type {ScenegraphBounds} from './scenegraph-bounds';
+import type {ScenegraphTransformSource} from './transform-source';
 
 export type GroupNodeProps = ScenegraphNodeProps & {
   children?: ScenegraphNode[];
+  transformSource?: ScenegraphTransformSource;
 };
 
 /** Camera-relative ordering options for a flattened scenegraph traversal. */
@@ -33,6 +35,8 @@ export type DepthSortedTraversalContext = {
 
 export class GroupNode extends ScenegraphNode {
   children: ScenegraphNode[];
+  /** Optional evaluated GPU poses; authored matrices remain unchanged. */
+  transformSource: ScenegraphTransformSource | null;
 
   constructor(children: ScenegraphNode[]);
   constructor(props?: GroupNodeProps);
@@ -46,6 +50,7 @@ export class GroupNode extends ScenegraphNode {
     );
     super(props);
     this.children = children;
+    this.transformSource = props.transformSource ?? null;
   }
 
   override getBounds(): ScenegraphBounds | null {

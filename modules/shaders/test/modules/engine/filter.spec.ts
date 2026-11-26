@@ -11,7 +11,11 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils'
 it('filterShaderPlugin#WebGL2 model binds, updates, and draws', async () => {
   const device = await getWebGLTestDevice();
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'FILTER_POSITION',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position'}
+  });
   const filterValues = device.createBuffer({
     data: new Float32Array([0.5]),
     usage: Buffer.VERTEX | Buffer.COPY_DST
@@ -59,7 +63,11 @@ it('filterShaderPlugin#WebGPU model binds, updates, and draws', async () => {
   }
 
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'FILTER_POSITION',
+    stage: 'vertex',
+    wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+  });
   const filterValues = device.createBuffer({
     data: new Float32Array([0.5]),
     usage: Buffer.VERTEX | Buffer.COPY_DST

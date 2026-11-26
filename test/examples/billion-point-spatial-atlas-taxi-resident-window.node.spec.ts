@@ -6,9 +6,9 @@ import {describe, expect, test} from 'vitest';
 import {
   assertLongitudeLatitudeTaxiMetadata,
   getTaxiPoint,
-  makeLuSpatialTaxiData,
-  makeLuSpatialTaxiDataFromResidentWindow
-} from '../../examples/deck/luspatial-taxi/taxi-data';
+  makeGPUSpatialTaxiData,
+  makeGPUSpatialTaxiDataFromResidentWindow
+} from '../../examples/deck/gpu-spatial-taxi/taxi-data';
 import {
   loadTaxiPointResidentWindow,
   type TaxiPointResidentWindow
@@ -169,7 +169,7 @@ describe('loadTaxiPointResidentWindow', () => {
   });
 });
 
-describe('luSpatial taxi resident-window adapter', () => {
+describe('GPU Spatial taxi resident-window adapter', () => {
   test('accepts explicitly declared longitude/latitude data and preserves source rows', () => {
     const residentWindow = makeResidentWindow({
       positions: new Float32Array([-73.99, 40.73, Number.NaN, Number.NaN]),
@@ -178,7 +178,7 @@ describe('luSpatial taxi resident-window adapter', () => {
       sourceRowCount: 168_898_952
     });
 
-    const taxiData = makeLuSpatialTaxiDataFromResidentWindow(residentWindow);
+    const taxiData = makeGPUSpatialTaxiDataFromResidentWindow(residentWindow);
 
     expect(taxiData).toMatchObject({
       pointCount: 2,
@@ -209,19 +209,19 @@ describe('luSpatial taxi resident-window adapter', () => {
 
   test('rejects impossible or entirely non-finite geographic windows', () => {
     expect(() =>
-      makeLuSpatialTaxiDataFromResidentWindow(
+      makeGPUSpatialTaxiDataFromResidentWindow(
         makeResidentWindow({positions: new Float32Array([181, 40])})
       )
     ).toThrow('outside longitude/latitude bounds');
     expect(() =>
-      makeLuSpatialTaxiDataFromResidentWindow(
+      makeGPUSpatialTaxiDataFromResidentWindow(
         makeResidentWindow({positions: new Float32Array([Number.NaN, Number.NaN])})
       )
     ).toThrow('does not contain a finite longitude/latitude row');
   });
 
   test('keeps the deterministic synthetic source as the default', () => {
-    const taxiData = makeLuSpatialTaxiData(2);
+    const taxiData = makeGPUSpatialTaxiData(2);
     expect(taxiData).toMatchObject({
       pointCount: 2,
       corpusPointCount: 168_898_952,

@@ -123,9 +123,29 @@ export class GPUCommandGraphExecutionBudgetController {
     /** Budget used to create the immutable execution that produced this step. */
     executionBudget: Readonly<GPUCommandGraphExecutionBudget> = this.currentBudget
   ): GPUCommandGraphExecutionBudgetObservation {
-    validatePositiveNumber(durationMilliseconds, 'durationMilliseconds');
     validateExecutionBudget(executionBudget);
-    const saturation = getBudgetSaturation(step, executionBudget);
+    return this.observeSaturation(getBudgetSaturation(step, executionBudget), durationMilliseconds);
+  }
+
+  /** Calibrates an application-sized dispatch using GPU time and its observed invocation count. */
+  observeInvocations(
+    invocationCount: number,
+    durationMilliseconds: number,
+    executionBudget: Readonly<GPUCommandGraphExecutionBudget> = this.currentBudget
+  ): GPUCommandGraphExecutionBudgetObservation {
+    validateExecutionBudget(executionBudget);
+    return this.observeSaturation(
+      invocationCount / executionBudget.maximumInvocationCount,
+      durationMilliseconds
+    );
+  }
+
+  /** Updates the next execution budget from one completed workload observation. */
+  private observeSaturation(
+    saturation: number,
+    durationMilliseconds: number
+  ): GPUCommandGraphExecutionBudgetObservation {
+    validatePositiveNumber(durationMilliseconds, 'durationMilliseconds');
     if (saturation > 0) {
       const desiredAdjustment =
         (this.targetStepMilliseconds * Math.min(saturation, 1)) / durationMilliseconds;

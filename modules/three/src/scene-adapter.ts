@@ -37,7 +37,7 @@ import {LumaBackend} from './luma-backend';
 export type ThreePickingColor = readonly [number, number, number, number];
 export type ThreePickingColorAccessor = (object: Object3D) => ThreePickingColor | null;
 
-// Three r185 normally converts color in a separate framebuffer/output pass.
+// Three r187 normally converts color in a separate framebuffer/output pass.
 // Caller-pass rendering instead uses its upstream TSL renderOutput node inline.
 class SceneRenderer extends LumaRenderer {
   _getFrameBufferTarget(): null {

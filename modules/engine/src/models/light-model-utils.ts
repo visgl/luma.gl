@@ -3,9 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, type RenderPass, type RenderPipelineParameters} from '@luma.gl/core';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import type {DirectionalLight, Light, PointLight, ShaderModule, SpotLight} from '@luma.gl/shaders';
 import {Model, type ModelProps} from '../model/model';
+import type {ModelDrawOptions} from '../model/gpu-vector-model';
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 
@@ -154,11 +156,11 @@ export abstract class BaseLightModel<PropsT extends BaseLightModelProps> extends
     this._managedBuffers = {} as ManagedInstanceBuffers;
   }
 
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     if (this.instanceCount === 0) {
       return true;
     }
-    return super.draw(renderPass);
+    return super.draw(renderPass, options);
   }
 
   setProps(props: Partial<PropsT>): void {

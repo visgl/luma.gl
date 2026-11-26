@@ -120,6 +120,7 @@ describe('standards-native glTF extension runtime', () => {
 
       const channel = scenegraphs.animations[0].channels[0];
       const hiddenKeyframe = channel.sampler.output.findIndex(value => value[0] === 0);
+      source.nodes.length = 0;
       expect(hiddenKeyframe).toBeGreaterThanOrEqual(0);
       scenegraphs.animator.setTime(channel.sampler.input[hiddenKeyframe] * 1000);
 
@@ -151,11 +152,74 @@ describe('standards-native glTF extension runtime', () => {
 
       const channel = scenegraphs.animations[0].channels[0];
       const hiddenKeyframe = channel.sampler.output.findIndex(value => value[0] === 0);
+      source.nodes.length = 0;
       scenegraphs.animator.setTime(channel.sampler.input[hiddenKeyframe] * 1000);
 
       expect(scenegraphs.lights).toBe(originalLights);
       expect(scenegraphs.lights).toHaveLength(1);
       expect(scenegraphs.gltfNodeIndexToNodeMap.get(5)?.display).toBe(false);
+    } finally {
+      destroyScenegraphs(device, scenegraphs);
+    }
+  });
+
+  test('refreshes imported punctual lights after programmatic and animated transforms', () => {
+    const source = postProcessGLTF({
+      json: {
+        asset: {version: '2.0'},
+        extensions: {KHR_lights_punctual: {lights: [{type: 'point'}]}},
+        nodes: [
+          {children: [1], translation: [1, 0, 0]},
+          {translation: [0, 2, 0], extensions: {KHR_lights_punctual: {light: 0}}}
+        ],
+        scenes: [{nodes: [0]}]
+      }
+    });
+    const times = new Float32Array([0, 1]);
+    const positions = new Float32Array([1, 0, 0, 5, 0, 0]);
+    source.accessors = [
+      {
+        id: 'times',
+        componentType: 5126,
+        type: 'SCALAR',
+        count: 2,
+        components: 1,
+        value: times,
+        bufferView: {data: {buffer: times.buffer}}
+      },
+      {
+        id: 'positions',
+        componentType: 5126,
+        type: 'VEC3',
+        count: 2,
+        components: 3,
+        value: positions,
+        bufferView: {data: {buffer: positions.buffer}}
+      }
+    ] as GLTFPostprocessed['accessors'];
+    source.animations = [
+      {
+        id: 'move-light-parent',
+        channels: [{sampler: 0, target: {node: 0, path: 'translation'}}],
+        samplers: [{input: 0, output: 1}]
+      }
+    ] as GLTFPostprocessed['animations'];
+
+    const device = new NullDevice({});
+    const scenegraphs = createScenegraphsFromGLTF(device, source);
+
+    try {
+      const lights = scenegraphs.lights;
+      expect(lights[0]).toMatchObject({type: 'point', position: [1, 2, 0]});
+
+      const parent = scenegraphs.gltfNodeIndexToNodeMap.get(0)!;
+      parent.setProps({position: [3, 0, 0]});
+      scenegraphs.punctualLights.update();
+      expect(scenegraphs.lights).toBe(lights);
+      expect(lights[0]).toMatchObject({type: 'point', position: [3, 2, 0]});
+
+      scenegraphs.animator.setTime(750);
+      expect(lights[0]).toMatchObject({type: 'point', position: [4, 2, 0]});
     } finally {
       destroyScenegraphs(device, scenegraphs);
     }

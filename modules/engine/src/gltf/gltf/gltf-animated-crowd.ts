@@ -12,7 +12,8 @@ import {
   ModelNode,
   updateSkinJointMatrices
 } from '@luma.gl/engine';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import type {ParseGLTFOptions} from '../parsers/parse-gltf';
 import type {GLTFCrowdModelConfiguration, GLTFCrowdModelResources} from './create-gltf-model';
 import {createScenegraphsFromGLTF, type GLTFScenegraphs} from './create-scenegraph-from-gltf';

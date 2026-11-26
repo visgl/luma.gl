@@ -41,7 +41,12 @@ export function parseGLTFBillboards(props: ParseGLTFBillboardsProps): BillboardC
     );
     bindings.push({
       node,
-      definition: {...definition, rotationAxis: definition.rotationAxis === 'y' ? 'y' : 'all'},
+      definition: {
+        ...definition,
+        ...(definition.viewDirection ? {viewDirection: [...definition.viewDirection]} : {}),
+        ...(definition.up ? {up: [...definition.up]} : {}),
+        rotationAxis: definition.rotationAxis === 'y' ? 'y' : 'all'
+      },
       matrixAuthored: Boolean(source.matrix)
     });
   });

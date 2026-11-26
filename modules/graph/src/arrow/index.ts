@@ -4,6 +4,8 @@
 
 export {
   convertArrowColumnToGPUVector,
+  getArrowConversionFormat,
+  type ArrowColumnFormatOptions,
   type ArrowColumnGPUVectorOptions,
   type PreparedArrowColumnGPUVector
 } from './gpu/arrow-column-gpu-vector';
@@ -26,11 +28,13 @@ export {
   type ArrowTableFromGPUAnalyticsTableProps
 } from './gpu/arrow-gpu-analytics-readback';
 export {
+  consumeArrowGPURecordBatches,
   convertArrowRecordBatchToGPURecordBatch,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,
   planArrowTableGPUConversion,
   type ArrowRecordBatchConversionSource,
+  type ArrowRecordBatchConversionOptions,
   type ArrowGPUTableConversionColumn,
   type ArrowGPUTableConversionPlan,
   type ArrowGPUTableConversionSchema,
@@ -201,3 +205,14 @@ export {
   type ArrowVertexFormatOptions,
   type ArrowBufferLayoutOptions
 } from './gpu/arrow-shader-layout';
+
+export {
+  makeCPUVectorFromArrow,
+  makeArrowVectorFromCPUVector
+} from './cpu/arrow-cpu-vector-adapters';
+export {
+  projectCPUVector,
+  tessellateCPUVectorPolygons,
+  tessellateGeoArrowColumnToCPUVectors
+} from './cpu/arrow-cpu-pipelines';
+export {projectArrowCoordinates} from './cpu/arrow-coordinate-projection';

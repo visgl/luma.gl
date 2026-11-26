@@ -6,9 +6,9 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 `@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 
-The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry`.
+The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry/primitives`.
 They retain legacy size defaults, plane axis options, and cube face identifiers. New code can
-import primitives directly from `@math.gl/geometry` and pass them to `Model`; use explicit
+import primitives directly from `@math.gl/geometry/primitives` and pass them to `Model`; use explicit
 sizes and radii because math.gl defaults follow glTF shape conventions. GPU buffer layouts and
 interleaving remain engine responsibilities.
 
@@ -81,7 +81,7 @@ const geometry = new SphereGeometry({radius: 2});
 
 ### `TorusGeometry`
 
-`TorusGeometry` wraps the shared `@math.gl/geometry` tessellator with
+`TorusGeometry` wraps the shared `@math.gl/geometry/primitives` tessellator with
 luma.gl's CPU `Geometry` container. It preserves indexed `POSITION`, `NORMAL`,
 and `TEXCOORD_0` semantics and caller-provided attribute overrides.
 
@@ -110,3 +110,15 @@ assembling shared math.gl lathe/plane meshes. Props are `innerRadius` (`0.5`),
 `angle` (`2 * Math.PI`). Zero inner radius creates a disk. Partial sweeps include
 both radial caps; cap/wall corners have hard normals. The source mesh retains
 indexed glTF attribute semantics and caller-provided attribute overrides.
+
+## Uploading geometry for GPUVectorModel
+
+`makeGPUVectorGeometry(device, geometry)` converts a CPU `Geometry` into a
+`GPUVectorGeometry`. It interleaves vertex attributes before upload and preserves
+attribute layouts, indices, topology, and draw count. Pass the result to
+`new GPUVectorModel(device, {geometry: gpuGeometry, ...shaderProps})`.
+
+The returned geometry owns its uploaded buffers. Call `gpuGeometry.destroy()`
+after all models using it have been destroyed or switched to other geometry.
+`GPUVectorModel` borrows the geometry and does not destroy it. Geometry constructed
+with `new GPUVectorGeometry(...)` continues to borrow its input vectors.

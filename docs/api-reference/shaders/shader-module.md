@@ -8,13 +8,12 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 `ShaderModule` is the reusable shader feature descriptor used by
 `@luma.gl/shaders`. A module may contribute WGSL and/or GLSL source,
-shader-facing uniform descriptors, resource bindings, dependencies, defines,
-and ordered injections.
+shader-facing uniform descriptors, resource bindings, dependencies, and defines.
 
 `ShaderModule`s are used by [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler)
 and engine classes such as [`Model`](/docs/api-reference/engine/model) and
 [`Computation`](/docs/api-reference/engine/compute/computation). The assembler
-resolves dependencies, prepends module source, applies injections, and returns
+resolves dependencies, prepends module source, and returns
 assembled source plus a combined uniform getter.
 
 For the composition model, see
@@ -23,7 +22,6 @@ For the composition model, see
 <DocumentationContract title="ShaderModule" rows={[
   {label: 'Languages', value: 'WGSL source, GLSL vertex/fragment source, or both'},
   {label: 'Dependencies', value: 'Resolved transitively and de-duplicated in deterministic order'},
-  {label: 'Hooks and injections', value: 'Named extension contracts and ordered source contributions'},
   {label: 'Props and bindings', value: 'Typed descriptors mapped through getUniforms()'},
   {label: 'Assembly output', value: 'Combined source, uniforms, bindings, and dependency metadata'},
   {label: 'Cost', value: 'Assemble before pipeline creation and reuse the result'}
@@ -47,7 +45,7 @@ const model = new Model(device, {
 Or pass modules directly to `ShaderAssembler`.
 
 To define a new shader module, create a descriptor that brings together the
-source, uniforms, injections, and dependencies that belong to one reusable
+source, uniforms, and dependencies that belong to one reusable
 shader feature:
 
 ```typescript
@@ -65,7 +63,6 @@ export const myShaderModule = {
   uniformTypes: {
     intensity: 'f32'
   },
-  inject: {},
   dependencies: [],
   getUniforms: props => ({intensity: props.intensity})
 } as const satisfies ShaderModule<MyShaderModuleProps>;
@@ -74,9 +71,7 @@ export const myShaderModule = {
 Use `source` for WGSL, `vs` and `fs` for GLSL stage source, or all three when
 the module supports both backends. `uniformTypes` declares shader-facing
 layouts; `getUniforms` maps application props to the uniforms and bindings
-consumed by the shader; `dependencies` brings in other modules first; and
-`inject` targets hooks or named injection points when the module needs to
-modify base shader flow.
+consumed by the shader; `dependencies` brings in other modules first.
 
 ## Fields
 
@@ -139,11 +134,6 @@ Each entry has `name` and `group`. For current bind-group guidance, see
 This affects module-owned WGSL `@binding(auto)` relocation.
 
 #### `defines` (_Object_) - Constant defines to be injected into shader
-
-#### `inject` (_Object_) - Injections the module will make into shader hooks or anchors
-
-See [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler#hooks-and-injections)
-for hook and standard injection target syntax.
 
 #### `implements` (string, optional)
 
@@ -219,29 +209,11 @@ user's module props to uniforms. This can be achieved using `getUniforms()`:
 }
 ```
 
-## Defining Injections
+## Adding Injections
 
-A map from hook or standard anchor target to either the injection code string,
-or an object containing the injection code and an `order` option indicating
-ordering within the hook function. See
-[`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) for more
-information on shader hooks and standard anchors.
-
-For example:
-
-```typescript
-const picking = {
-  name: 'picking',
-  inject: {
-    'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
-    'fs:FRAGMENT_HOOK_FUNCTION': {
-      injection: 'color = picking_filterColor(color);',
-      order: Number.POSITIVE_INFINITY
-    },
-    'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
-  }
-};
-```
+Use a named [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) for target or
+anchor injections. A plugin can attach this module through its `module` field and
+select GLSL or WGSL source for each injection.
 
 ## Functions
 
@@ -251,9 +223,8 @@ const picking = {
 initializeShaderModule(module: ShaderModule): void
 ```
 
-Initializes one module's dependencies, normalized injections, parsed
-deprecations, prop validators, and default uniforms. Assembly calls this as
-needed.
+Initializes one module's dependencies, parsed deprecations, prop validators,
+and default uniforms. Assembly calls this as needed.
 
 #### `initializeShaderModules()`
 

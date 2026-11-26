@@ -6,7 +6,8 @@ import {Texture, type Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, OrbitControls} from '@luma.gl/engine';
 import {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
-import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {
   DEFAULT_VOLUMETRIC_FIRE_FORGE_SETTINGS,
   VOLUMETRIC_FIRE_FORGE_INFO_HTML,

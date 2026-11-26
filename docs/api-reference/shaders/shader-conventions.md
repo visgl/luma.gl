@@ -4,11 +4,6 @@ import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 
 <ShadersDocsTabs active="shader-conventions" />
 
-:::caution
-These are luma.gl conventions rather than WebGPU or WebGL requirements. Existing built-in modules
-follow them, but applications must still declare and bind every group required by their shaders.
-:::
-
 ## Uniform Blocks
 
 Shader modules are increasingly organized around a logical bind-group

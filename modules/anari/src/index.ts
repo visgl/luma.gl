@@ -27,6 +27,7 @@ export type {
   ANARIFrameParameters,
   ANARIFrameStatistics,
   ANARIFrameChannels,
+  ANARIFrameRadiance,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,
@@ -44,6 +45,7 @@ export type {
   ANARIRayTracingGraphStageStatistics,
   ANARIRayTracingGraphStatistics,
   ANARIRendererParameters,
+  ANARIRayTracingEnvironmentMap,
   ANARIRendererSubtype,
   ANARISamplerParameters,
   ANARISamplerSubtype,
@@ -86,6 +88,7 @@ export {
   type SceneMaterial,
   type SceneRenderOptions,
   type SceneRenderStatistics,
+  type ScenegraphRenderOptions,
   type SceneSurface,
   getSceneAlphaMode,
   SceneRenderer,
@@ -214,3 +217,11 @@ export {
   type RayTracingImageTile,
   type RayTracingImageTileRegion
 } from './renderers';
+
+export {SceneMeshNode, type SceneMeshNodeProps} from './engine/scene-mesh-node';
+
+export {ScenegraphSurfaces} from './engine/scenegraph-surfaces';
+export {makeANARIWorldFromScenegraph, makeScenegraphFromANARIWorld} from './scenegraph-conversion';
+export type {ANARIScenegraphSnapshot} from './scenegraph-conversion';
+
+export type {RayTracingScenegraphRenderOptions} from './engine/ray-tracing-scene-renderer';

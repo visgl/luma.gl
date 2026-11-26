@@ -53,7 +53,7 @@ and releases its resources when unmounted.
   description="GPU initialization begins only after activation. Page scrolling remains with the documentation until then."
   height={420}
 >
-  <HelloTriangleGeometryExample />
+  <HelloTriangleGeometryExample embedded />
 </ClientOnlyLiveExample>
 
 ## Core concepts

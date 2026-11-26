@@ -21,7 +21,7 @@ import {
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/graph/gpu-data';
-import type {TypedArray, TypedArrayConstructor} from '@math.gl/core';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/core/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 import type {GPUEvaluationScope} from './gpu-evaluation-scope';
@@ -721,6 +721,28 @@ export class GPUDataEvaluator {
     return this._id ?? this.source?.toString() ?? this.constructor.name;
   }
 
+  /**
+   * Clears cached results after an input changes, without changing its fixed layout.
+   * Does not propagate to consumers. Caller-owned input/target buffers remain borrowed.
+   * Call only when no evaluation or readback is in flight.
+   */
+  invalidate(): void {
+    this.assertScopeAccess();
+    if (this._destroyed) throw new Error('Cannot invalidate a destroyed evaluator');
+    if (this.source || this._bufferOwnership === 'borrowed') this._value = undefined;
+    // A buffer-backed leaf keeps its source buffer. Only its readback cache is stale.
+    if (!this.source && this._bufferOwnership === 'borrowed') return;
+    if (this._gpuVector) {
+      const buffer = getBufferFromGPUVector(this._gpuVector);
+      if (this._bufferOwnership === 'owned') bufferPool.recycle(buffer);
+      else if (!(this.source instanceof GPUDataEvaluator)) {
+        // Preserve the explicit borrowed destination and its layout on the next evaluation.
+        this._targetBuffer = {buffer, byteOffset: this.offset, byteStride: this.stride};
+      }
+      this._gpuVector = undefined;
+    }
+  }
+
   /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
   destroy(): void {
     this.assertScopeAccess();
@@ -907,6 +929,8 @@ function getVertexFormat(
   if (size < 1 || size > 4) {
     throw new Error(`Cannot synthesize a GPUVector vertex format with ${size} components`);
   }
+  // Binary16 RGB has no vertex format; retain byte-identical packed storage for compute readers.
+  if (type === 'float16' && size === 3 && !normalized) return 'uint16x3-webgl';
   let baseFormat: string = type;
   if (normalized) {
     switch (type) {

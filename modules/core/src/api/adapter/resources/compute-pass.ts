@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {ComputePipeline} from './compute-pipeline';
 import type {Device} from '../device';
 import {Buffer} from './buffer';
 import {QuerySet} from './query-set';
 import type {Bindings, BindingsByGroup} from '../types/shader-layout';
 
-export type ComputePassProps = ResourceProps & {
+export type ComputePassProps = DeviceResourceProps & {
   /** QuerySet to write beging/end timestamps to */
   timestampQuerySet?: QuerySet;
   /** QuerySet index to write begin timestamp to. No timestamp is written if not provided. */
@@ -18,12 +18,10 @@ export type ComputePassProps = ResourceProps & {
   endTimestampIndex?: number;
 };
 
-export abstract class ComputePass extends Resource<ComputePassProps> {
+export abstract class ComputePass extends DeviceResource<ComputePassProps> {
   constructor(device: Device, props: ComputePassProps) {
     super(device, props, ComputePass.defaultProps);
   }
-
-  abstract override destroy(): void;
 
   abstract end(): void;
 
@@ -55,7 +53,7 @@ export abstract class ComputePass extends Resource<ComputePassProps> {
   abstract insertDebugMarker(markerLabel: string): void;
 
   static override defaultProps: Required<ComputePassProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     timestampQuerySet: undefined!,
     beginTimestampIndex: undefined!,
     endTimestampIndex: undefined!

@@ -240,6 +240,7 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
         shaderInputs: this.shaderInputs,
         bindings: getTemporalStarfieldStorageBindings(firstBatch),
         topology: 'triangle-list',
+        inferDrawCount: 'instance',
         isInstanced: true,
         vertexCount: 6,
         instanceCount: firstBatch.numRows,

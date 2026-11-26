@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Callback for Buffer.mapAndReadAsync */
 export type BufferMapCallback<T> = (arrayBuffer: ArrayBuffer, lifetime: 'mapped' | 'copied') => T;
 
-export type BufferProps = ResourceProps & {
+export type BufferProps = DeviceResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
   handle?: unknown;
   /** Specifies how this buffer can be used */
@@ -26,7 +26,7 @@ export type BufferProps = ResourceProps & {
 };
 
 /** Abstract GPU buffer */
-export abstract class Buffer extends Resource<BufferProps> {
+export abstract class Buffer extends DeviceResource<BufferProps> {
   /** Index buffer */
   static INDEX = 0x0010;
   /** Vertex buffer */
@@ -157,7 +157,7 @@ export abstract class Buffer extends Resource<BufferProps> {
   }
 
   static override defaultProps: Required<BufferProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     handle: undefined!,
     usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
     byteLength: 0,

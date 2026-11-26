@@ -84,3 +84,5 @@ export type {
   GPUProjectionProps,
   GPUProjectionValidity
 } from './gpu-projection';
+
+export {CPUProjectionOperation, type CPUProjectionOperationProps} from './cpu-projection-operation';

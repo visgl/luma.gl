@@ -16,6 +16,7 @@ import type {
   GPUCommandGraphComputeExecutable
 } from '../gpu-core/gpu-command-graph';
 
+/** Schedule only enabled, awake instances that have no latched local failure. */
 export function getEnsembleShader(
   bodyCount: number,
   bodiesPerInstance?: number,
@@ -54,7 +55,7 @@ fn scheduledCollider(index:u32)->u32{return atomicLoad(&ensemble[INSTANCE_QUEUE+
  let instance=invocation.x;if(instance>=INSTANCE_COUNT){return;}let offset=16u+instance*8u;
  // Controls must remain pending across disabled steps after the shared wake flag is consumed.
  if(atomicLoad(&ensemble[1])!=0u){atomicStore(&ensemble[offset+6u],1u);}
- if(atomicLoad(&ensemble[offset])==0u){return;}
+ if(atomicLoad(&ensemble[offset])==0u||atomicLoad(&ensemble[offset+7u])!=0u){return;}
  if(atomicLoad(&ensemble[offset+5u])!=0u||atomicLoad(&ensemble[offset+6u])!=0u||atomicLoad(&ensemble[1])!=0u){
   atomicStore(&ensemble[offset+1u],1u);atomicStore(&ensemble[offset+6u],0u);
  }
@@ -94,21 +95,26 @@ export function addEnsembleStatus<Parameters>(
   bodies: {buffer: Buffer; resource: GraphBufferHandle},
   sleepStates: {buffer: Buffer; resource: GraphBufferHandle},
   ensemble: {buffer: Buffer; resource: GraphBufferHandle},
-  statistics: {buffer: Buffer; resource: GraphBufferHandle}
+  statistics: {buffer: Buffer; resource: GraphBufferHandle},
+  failureSource?: {buffer: Buffer; resource: GraphBufferHandle; wordOffset: number}
 ) {
   const properties = {
     id: `${id}-ensemble-status`,
     source: `
 @group(0) @binding(0) var<storage,read_write> ensemble:array<u32>;
 @group(0) @binding(1) var<storage,read> statistics:array<u32>;
+${failureSource ? '@group(0) @binding(4) var<storage,read> targets:array<u32>;' : ''}
 struct Body {inertia:vec4f,inertiaOrientation:vec4f,motion:vec4f}
 @group(0) @binding(2) var<storage,read> bodies:array<Body>;
 @group(0) @binding(3) var<storage,read> sleepStates:array<vec4f>;
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
  let instance=invocation.x;if(instance>=${instances}u){return;}
- let offset=16u+instance*8u;let failed=statistics[1]!=0u||statistics[15]!=0u;
- ensemble[offset+4u]=select(0u,1u,failed);
+ let offset=16u+instance*8u;let sharedFault=statistics[1]!=0u||statistics[15]!=0u;
+ ensemble[offset+4u]=select(0u,1u,sharedFault);
  if(ensemble[offset+1u]==0u){return;}
+ ${failureSource ? `let localFailure=targets[${failureSource.wordOffset}u+instance];` : 'let localFailure=0u;'}
+ if(localFailure!=0u&&!sharedFault){ensemble[offset+7u]=localFailure;}
+ let failed=sharedFault||localFailure!=0u;
  var awake=failed;
  for(var local=0u;local<${bodiesPerInstance}u;local++){
   let body=instance*${bodiesPerInstance}u+local;let motion=bodies[body].motion.x;
@@ -123,14 +129,18 @@ struct Body {inertia:vec4f,inertiaOrientation:vec4f,motion:vec4f}
         {name: 'ensemble', group: 0, location: 0, type: 'storage' as const},
         {name: 'statistics', group: 0, location: 1, type: 'read-only-storage' as const},
         {name: 'bodies', group: 0, location: 2, type: 'read-only-storage' as const},
-        {name: 'sleepStates', group: 0, location: 3, type: 'read-only-storage' as const}
+        {name: 'sleepStates', group: 0, location: 3, type: 'read-only-storage' as const},
+        ...(failureSource
+          ? [{name: 'targets', group: 0, location: 4, type: 'read-only-storage' as const}]
+          : [])
       ]
     },
     bindings: {
       ensemble: ensemble.buffer,
       statistics: statistics.buffer,
       bodies: bodies.buffer,
-      sleepStates: sleepStates.buffer
+      sleepStates: sleepStates.buffer,
+      ...(failureSource ? {targets: failureSource.buffer} : {})
     }
   };
   const executable = (computation: BoundKernel): GPUCommandGraphComputeExecutable<Parameters> => ({
@@ -149,7 +159,8 @@ struct Body {inertia:vec4f,inertiaOrientation:vec4f,motion:vec4f}
       {buffer: ensemble.resource, usage: 'storage-read-write'},
       {buffer: statistics.resource, usage: 'storage-read'},
       {buffer: bodies.resource, usage: 'storage-read'},
-      {buffer: sleepStates.resource, usage: 'storage-read'}
+      {buffer: sleepStates.resource, usage: 'storage-read'},
+      ...(failureSource ? [{buffer: failureSource.resource, usage: 'storage-read' as const}] : [])
     ],
     compile: ({device}) => executable(createBoundKernel(device, properties)),
     compileAsync: async ({device}) => executable(await createBoundKernelAsync(device, properties))

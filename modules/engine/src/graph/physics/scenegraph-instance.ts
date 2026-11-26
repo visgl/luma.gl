@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, CommandEncoder} from '@luma.gl/core';
-import {Vector3} from '@math.gl/core';
+import {assert, type Device, type CommandEncoder} from '@luma.gl/core';
+import {Vector3} from '@math.gl/core/matrix';
 import type {ScenegraphNode} from '../../index';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
@@ -129,6 +129,17 @@ export class ScenegraphPhysicsInstance {
     });
   }
 
+  /** Encode fixed steps into a caller-owned encoder without submission or readback. */
+  encode(encoder: CommandEncoder, steps = 1): void {
+    // Encoding cannot race an asynchronous edit or outlive the owned execution.
+    assert(!this.pending && !this.destroying && !this.destroyed);
+    // A batch contains a positive integral number of fixed simulation steps.
+    assert(Number.isSafeInteger(steps) && steps > 0);
+    for (let index = 0; index < steps; index++) {
+      this.graph.encode(encoder, {parameters: undefined});
+    }
+  }
+
   /** Advance one fixed step; state remains on GPU and only submission completion is awaited. */
   async advance(
     beforeStep?: (world: GPURigidBodyWorld) => void,
@@ -216,6 +227,32 @@ export class ScenegraphPhysicsInstance {
       }
       const replacement = await compile(this.device, props);
       try {
+        if (preserveState) {
+          const previousProps = this.definition.world;
+          const previousVehicles =
+            previousProps.vehicles ?? (previousProps.vehicle ? [previousProps.vehicle] : []);
+          const vehicles = props.vehicles ?? (props.vehicle ? [props.vehicle] : []);
+          const previousVehicleIndices = new Map(
+            previousVehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          const vehicleIndices = new Map(
+            vehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          for (const [node, bodyIndex] of authored.bodies) {
+            const previousBodyIndex = this.definition.bodies.get(node);
+            const vehicleIndex = vehicleIndices.get(bodyIndex);
+            const previousVehicleIndex =
+              previousBodyIndex === undefined
+                ? undefined
+                : previousVehicleIndices.get(previousBodyIndex);
+            if (vehicleIndex !== undefined && previousVehicleIndex !== undefined)
+              replacement.world.copyVehicleMotionFrom(
+                this.world,
+                vehicleIndex,
+                previousVehicleIndex
+              );
+          }
+        }
         prepare?.(replacement.world);
         replacement.world.publishPoses();
         await this.finishSubmission();

@@ -8,7 +8,7 @@ import {
   planCRSProjection,
   planProjectionPipeline,
   ProjectionPlanningError
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {evaluateProjectionProgram, invertProjectionProgram} from '@luma.gl/graph/gpu-project';
 import {geographicCRS, makeConicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 

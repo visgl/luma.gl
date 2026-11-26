@@ -41,7 +41,7 @@ export class WebGPUTextureView extends TextureView {
 
     this.device.pushErrorScope('validation');
     this.handle = this.texture.handle.createView({
-      format: (this.props.format || this.texture.format) as GPUTextureFormat,
+      format: this.props.format as GPUTextureFormat | undefined,
       dimension: this.props.dimension || this.texture.dimension,
       aspect: this.props.aspect,
       baseMipLevel: this.props.baseMipLevel,
@@ -57,12 +57,7 @@ export class WebGPUTextureView extends TextureView {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
-    this.destroyResource();
+  protected override destroyHandle(): void {
     // GPUTextureView does not have a destroy method
     // this.handle.destroy();
     // @ts-expect-error readonly

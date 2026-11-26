@@ -1,3 +1,6 @@
+import {RayBatchBudget} from './ray-batch-budget';
+import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
+import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
   ANARIDevice,
   type ANARIRendererParameters,
@@ -10,6 +13,7 @@ import {
   getRayTracingQualityPreset,
   getRayTracingSceneCapabilities
 } from '@luma.gl/anari';
+import {timeCaptureFrame} from './ray-capture-timing';
 import {ChartLabels} from './chart-labels';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
@@ -26,7 +30,12 @@ import {
   makePlaygroundRenderer
 } from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
-import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
+import {
+  loadAntiqueCameraRayStudy,
+  loadSceneFile,
+  loadSceneSample,
+  SCENE_SAMPLES
+} from './usd-samples';
 
 export default class ANARIPlayground extends AnimationLoopTemplate {
   static info = '';
@@ -52,6 +61,14 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly chartLabels?: ChartLabels;
   private renderedFrameCount = 0;
   private captureFrameLimit = 0;
+  private staticRadianceCapture = false;
+  /** Whether the capture harness requested optional GPU timestamps. */
+  private captureGpuTiming = false;
+  /** GPU durations recorded for each encoded frame of the current capture. */
+  private captureGpuTimes: Promise<number | null>[] = [];
+  /** Suspends rendering until the requested capture asset has loaded. */
+
+  private captureSceneLoading = false;
   private selectedPlacementId: string | null = null;
   private pointerStart: {x: number; y: number} | null = null;
   private animationScrubbing = false;
@@ -61,6 +78,11 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private refinementChangedTime = 0;
   private refinementRenderTime = 0;
   private refinementSamples = 0;
+  /** Limits the rate of live ray submissions without changing history or capture settings. */
+  private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
+  /** Calibrates the ray trace dispatch independently of queue pacing. */
+  private readonly rayBatchBudget = new RayBatchBudget();
+  private refinementGeneration = 0;
 
   constructor({device}: AnimationProps) {
     super();
@@ -109,99 +131,173 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
                 ? 7
                 : preset === 'chart-lighting'
                   ? 8
-                  : 0
+                  : preset === 'small-emitter' || preset === 'mixed-emitters'
+                    ? 9
+                    : 0
     );
-    if (
+    if (preset === 'antique-camera') {
+      this.captureSceneLoading = true;
+      void loadAntiqueCameraRayStudy()
+        .then(scene => this.applyCaptureSettings(scene, parameters))
+        .catch(error => setElementText('scene-error', String(error)))
+        .finally(() => {
+          this.captureSceneLoading = false;
+        });
+    } else if (
       preset === 'chart' ||
       preset === 'chart-motion' ||
       preset === 'chart-diffuse' ||
       preset === 'chart-materials' ||
       preset === 'chart-shapes' ||
-      preset === 'chart-lighting'
+      preset === 'chart-lighting' ||
+      preset === 'small-emitter' ||
+      preset === 'mixed-emitters'
     ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
       );
-      const renderer =
-        (['default', 'deferred', 'raytrace', 'debugNormals', 'debugDepth'] as const).find(
-          subtype => subtype === parameters.get('renderer')
-        ) ?? 'raytrace';
-      sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
-      if (renderer === 'raytrace') {
-        const emitterSelection = parameters.get('emitterSelection');
-        if (emitterSelection === 'uniform' || emitterSelection === 'power')
-          sceneDescription.renderer.emitterSelection = emitterSelection;
-        const transportMode = parameters.get('transport');
-        if (transportMode === 'diffuse' || transportMode === 'pbr')
-          sceneDescription.renderer.transportMode = transportMode;
-        const maxBounces = Number(parameters.get('bounces'));
-        if (
-          parameters.has('bounces') &&
-          Number.isInteger(maxBounces) &&
-          maxBounces >= 0 &&
-          maxBounces <= 8
-        )
-          sceneDescription.renderer.maxBounces = maxBounces;
-        const debugView = parameters.get('view');
-        if (
-          debugView === 'color' ||
-          debugView === 'normal' ||
-          debugView === 'cameraDistance' ||
-          debugView === 'identity' ||
-          debugView === 'history'
-        )
-          sceneDescription.renderer.debugView = debugView;
-        const emitterOverride = parameters.get('emitters');
-        if (emitterOverride === 'on' || emitterOverride === 'off')
-          sceneDescription.renderer.emitterSampling = emitterOverride === 'on';
-        const denoiseRadius = Number(
-          parameters.get('denoise') ?? sceneDescription.renderer.denoiseRadius ?? 0
-        );
-        if (denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2)
-          sceneDescription.renderer.denoiseRadius = denoiseRadius;
-        const historySampleLimit = Number(
-          parameters.get('history') ?? sceneDescription.renderer.historySampleLimit ?? 64
-        );
-        if (
-          Number.isInteger(historySampleLimit) &&
-          historySampleLimit >= 1 &&
-          historySampleLimit <= 256
-        )
-          sceneDescription.renderer.historySampleLimit = historySampleLimit;
-        const seed = Number(parameters.get('seed') ?? sceneDescription.renderer.samplingSeed ?? 0);
-        if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
-          sceneDescription.renderer.samplingSeed = seed;
-        if (parameters.get('quality') === 'still')
-          Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
-        const resolutionScale = Number(parameters.get('resolution'));
-        if ([0.25, 0.5, 0.75, 1].includes(resolutionScale)) {
-          Object.assign(sceneDescription.renderer, {
-            resolutionScale,
-            minimumResolutionScale: resolutionScale,
-            adaptiveResolution: false
-          });
-        }
-      }
-      const frameLimit = Number(parameters.get('captureFrames') ?? 0);
-      if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
-        this.captureFrameLimit = frameLimit;
-      this.editor.value = formatSceneJSON(sceneDescription);
-      this.applyEditorScene();
+      this.applyCaptureSettings(sceneDescription, parameters);
     }
 
     const dynamicRange = device.preferredColorFormat === 'rgba16float' ? 'HDR · DISPLAY P3' : 'SDR';
     setElementText('backend-label', `${device.type.toUpperCase()} · ${dynamicRange}`);
   }
 
+  /** Applies capture overrides to the scene and installs it in the playground. */
+
+  private applyCaptureSettings(
+    sceneDescription: ANARIJSONScene,
+    parameters: URLSearchParams
+  ): void {
+    const preset = parameters.get('preset');
+    if (preset === 'small-emitter' || preset === 'mixed-emitters') {
+      const emitter = sceneDescription.instances?.find(instance => instance['@@id'] === 'emitter');
+      if (emitter) emitter.scale = [0.2, 0.2, 0.2];
+    }
+    if (preset === 'mixed-emitters' && sceneDescription.materials && sceneDescription.surfaces) {
+      sceneDescription.materials['dim-emitter'] = {
+        '@@type': 'physicallyBased',
+        baseColor: [0, 0, 0],
+        emissive: [0.45, 0.65, 1],
+        emissiveStrength: 0.08
+      };
+      sceneDescription.surfaces['dim-emitter'] = {geometry: 'sphere', material: 'dim-emitter'};
+      sceneDescription.instances = [
+        ...(sceneDescription.instances ?? []),
+        {
+          '@@id': 'dim-emitter',
+          surface: 'dim-emitter',
+          position: [-2.5, 3, -1.5],
+          scale: [0.7, 0.7, 0.7]
+        }
+      ];
+    }
+    const renderer =
+      (['default', 'deferred', 'raytrace', 'debugNormals', 'debugDepth'] as const).find(
+        subtype => subtype === parameters.get('renderer')
+      ) ?? 'raytrace';
+    sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
+    if (renderer === 'raytrace') {
+      const emitterSelection = parameters.get('emitterSelection');
+      if (emitterSelection === 'uniform' || emitterSelection === 'power')
+        sceneDescription.renderer.emitterSelection = emitterSelection;
+      const transportMode = parameters.get('transport');
+      if (transportMode === 'diffuse' || transportMode === 'pbr')
+        sceneDescription.renderer.transportMode = transportMode;
+      const maxBounces = Number(parameters.get('bounces'));
+      if (
+        parameters.has('bounces') &&
+        Number.isInteger(maxBounces) &&
+        maxBounces >= 0 &&
+        maxBounces <= 8
+      )
+        sceneDescription.renderer.maxBounces = maxBounces;
+      const varianceGuidance = parameters.get('varianceGuidance');
+      if (varianceGuidance === '0' || varianceGuidance === '1')
+        sceneDescription.renderer.varianceGuidance = varianceGuidance === '1';
+      const debugView = parameters.get('view');
+      if (
+        debugView === 'color' ||
+        debugView === 'normal' ||
+        debugView === 'cameraDistance' ||
+        debugView === 'identity' ||
+        debugView === 'history' ||
+        debugView === 'variance'
+      )
+        sceneDescription.renderer.debugView = debugView;
+      const emitterOverride = parameters.get('emitters');
+      if (emitterOverride === 'on' || emitterOverride === 'off')
+        sceneDescription.renderer.emitterSampling = emitterOverride === 'on';
+      const denoiseRadius = Number(
+        parameters.get('denoise') ?? sceneDescription.renderer.denoiseRadius ?? 0
+      );
+      if (denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2)
+        sceneDescription.renderer.denoiseRadius = denoiseRadius;
+      const historySampleLimit = Number(
+        parameters.get('history') ?? sceneDescription.renderer.historySampleLimit ?? 64
+      );
+      if (
+        Number.isInteger(historySampleLimit) &&
+        historySampleLimit >= 1 &&
+        historySampleLimit <= 256
+      )
+        sceneDescription.renderer.historySampleLimit = historySampleLimit;
+      const seed = Number(parameters.get('seed') ?? sceneDescription.renderer.samplingSeed ?? 0);
+      if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
+        sceneDescription.renderer.samplingSeed = seed;
+      if (parameters.get('quality') === 'still')
+        Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
+      const temporal = parameters.get('temporal');
+      if (temporal === 'on' || temporal === 'off')
+        sceneDescription.renderer.temporalReprojection = temporal === 'on';
+      const resolutionScale = Number(parameters.get('resolution'));
+      if ([0.25, 0.5, 0.75, 1].includes(resolutionScale)) {
+        Object.assign(sceneDescription.renderer, {
+          resolutionScale,
+          minimumResolutionScale: resolutionScale,
+          adaptiveResolution: false
+        });
+      }
+    }
+    const frameLimit = Number(parameters.get('captureFrames') ?? 0);
+    if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
+      this.captureFrameLimit = frameLimit;
+    this.captureGpuTiming = parameters.has('captureGpuTiming') && Boolean(this.captureFrameLimit);
+    if (this.captureGpuTiming) {
+      Object.assign(this.canvas, {
+        readCaptureGpuTimes: () => Promise.all(this.captureGpuTimes)
+      });
+    }
+    if (parameters.has('captureRadiance') && this.captureFrameLimit) {
+      this.staticRadianceCapture = parameters.get('preset') !== 'chart-motion';
+      Object.assign(this.canvas, {
+        readCaptureRadiance: async () => {
+          const radiance = await this.scene?.frame.readRadiance();
+          if (!radiance) return null;
+          const chunks: string[] = [];
+          const chunkSize = 16384;
+          for (let offset = 0; offset < radiance.data.length; offset += chunkSize) {
+            chunks.push(String.fromCharCode(...radiance.data.subarray(offset, offset + chunkSize)));
+          }
+          return {width: radiance.width, height: radiance.height, base64: btoa(chunks.join(''))};
+        }
+      });
+    }
+    this.editor.value = formatSceneJSON(sceneDescription);
+    this.applyEditorScene();
+  }
+
   override onRender({device, width, height, time}: AnimationProps): void {
     const scene = this.scene;
+    if (this.captureSceneLoading) return;
     if (this.captureFrameLimit && this.renderedFrameCount >= this.captureFrameLimit) return;
     if (!scene) {
       return;
     }
 
     const elapsedSeconds = this.captureFrameLimit ? this.renderedFrameCount / 60 : time * 0.001;
-    scene.update(elapsedSeconds);
+    const updateScene = !this.staticRadianceCapture || this.renderedFrameCount === 0;
+    if (updateScene) scene.update(elapsedSeconds);
     this.updateAnimationTime(scene);
 
     const currentSize = scene.frame.getParameter('size');
@@ -209,7 +305,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       scene.frame.setParameter('size', [width, height]).commitParameters();
     }
 
-    this.orbitControls.update(time);
+    if (updateScene) this.orbitControls.update(time);
     const target = scene.cameraTarget;
     const position: ANARIVector3 = this.orbitControls.getEyePosition();
     const direction: ANARIVector3 = [
@@ -217,11 +313,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       target[1] - position[1],
       target[2] - position[2]
     ];
-    scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
+    if (updateScene) {
+      scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
+    }
 
     // Bound stationary refinement in the static lighting demonstration.
     if (
-      scene.name === 'CHART LIGHTING' &&
+      this.isStaticRefinementScene(scene.name) &&
       this.rendererSubtype === 'raytrace' &&
       !this.captureFrameLimit
     ) {
@@ -239,7 +337,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.refinementSignature = signature;
         this.refinementChangedTime = time;
         this.refinementSamples = 0;
+        this.updateRefinementProgress(
+          0,
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64
+        );
       }
+      // Update camera/scene state even while the previous batch is still executing.
       const renderer = scene.frame.getParameter('renderer');
       const historyLimit = renderer?.getParameter('historySampleLimit') ?? 64;
       const stationary = time - this.refinementChangedTime > 250;
@@ -248,13 +351,34 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         (this.refinementSamples >= historyLimit || time - this.refinementRenderTime < 250)
       )
         return;
-      this.refinementRenderTime = time;
       // Resolution oscillation discards history; fixed resolution lets noise settle.
       if (renderer?.getParameter('adaptiveResolution')) {
         renderer.setParameters({adaptiveResolution: false}).commitParameters();
       }
     }
-    const statistics = scene.frame.render();
+    const paceRayFrame = this.rendererSubtype === 'raytrace' && !this.captureFrameLimit;
+    if (paceRayFrame && !this.raySubmissionPacer.isReady()) return;
+    if (paceRayFrame) {
+      scene.frame
+        .getParameter('renderer')
+        ?.setParameters({
+          previousFrameExecutionMilliseconds: this.raySubmissionPacer.lastSubmissionMilliseconds,
+          rayBatchPhaseCount: this.rayBatchBudget.phaseCount
+        })
+        .commitParameters();
+    }
+    if (paceRayFrame) this.refinementRenderTime = time;
+    /** Enable live feedback only for paced submissions with timestamp support. */
+    const measureLiveBudget = paceRayFrame && this.rayBatchBudget.canMeasure(device);
+    /** Scene render and optional asynchronous GPU pass timing. */
+    const timedFrame =
+      (this.captureGpuTiming && this.rendererSubtype === 'raytrace') || measureLiveBudget
+        ? timeCaptureFrame(device, () => scene.frame.render())
+        : undefined;
+    if (timedFrame && this.captureGpuTiming) this.captureGpuTimes.push(timedFrame.gpuTime);
+    const statistics = timedFrame?.result ?? scene.frame.render();
+    if (timedFrame && measureLiveBudget)
+      this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
     this.refinementSamples = statistics.rayTracing?.accumulatedSamples ?? 0;
     const showChartLabels = scene.name === 'CHART MOTION' && Boolean(this.chartLabels);
     if (
@@ -292,6 +416,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
     this.renderedFrameCount++;
     this.canvas.dataset['renderedFrames'] = String(this.renderedFrameCount);
+    if (this.captureFrameLimit)
+      this.canvas.dataset['animationTimeSeconds'] = String(elapsedSeconds);
     if (
       elapsedSeconds - this.lastStatisticsUpdate > 0.25 ||
       this.renderedFrameCount === this.captureFrameLimit ||
@@ -310,6 +436,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (frameTelemetry) {
         frameTelemetry.hidden = !rayTracing;
       }
+      const refinementTelemetry = document.getElementById('scene-refinement-statistic');
+      const progressive = scene.frame.getParameter('renderer')?.getParameter('progressive') ?? true;
+      if (refinementTelemetry) refinementTelemetry.hidden = !rayTracing || !progressive;
+      if (rayTracing && progressive) {
+        const targetSamples =
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+        if (!this.isStaticRefinementScene(scene.name) || this.captureFrameLimit) {
+          this.updateRefinementProgress(rayTracing.accumulatedSamples, targetSamples);
+        }
+      }
       const memoryTelemetry = document.getElementById('scene-ray-memory-statistic');
       if (memoryTelemetry) memoryTelemetry.hidden = !rayTracing?.memory;
       if (rayTracing?.memory)
@@ -318,6 +454,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           `${(rayTracing.memory.totalBytes / 1048576).toFixed(2)} MiB`
         );
       if (rayTracing) {
+        this.canvas.dataset.accumulatedSamples = String(rayTracing.accumulatedSamples);
         setElementText(
           'scene-ray-tracing-resolution',
           `${rayTracing.internalWidth} × ${rayTracing.internalHeight} · ${Math.round(rayTracing.resolutionScale * 100)}%`
@@ -329,9 +466,50 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.lastStatisticsUpdate = elapsedSeconds;
     }
+    if (paceRayFrame) {
+      const generation = this.refinementGeneration;
+      const signature = this.refinementSignature;
+      const samples = statistics.rayTracing?.accumulatedSamples ?? 0;
+      const target = scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+      const reportsProgress = this.isStaticRefinementScene(scene.name);
+      void submitPacedRayFrame(device, this.raySubmissionPacer).then(
+        () => {
+          if (
+            reportsProgress &&
+            this.scene === scene &&
+            generation === this.refinementGeneration &&
+            signature === this.refinementSignature
+          ) {
+            this.updateRefinementProgress(samples, target);
+          }
+        },
+        () => {
+          if (reportsProgress && this.scene === scene && generation === this.refinementGeneration) {
+            setElementText('scene-refinement-value', 'GPU work interrupted');
+          }
+        }
+      );
+    }
+  }
+
+  private isStaticRefinementScene(name: string): boolean {
+    return ['CHART LIGHTING', 'INDIRECT LIGHT STUDY', 'ANTIQUE CAMERA · RAY STUDY'].includes(name);
+  }
+
+  private updateRefinementProgress(accumulatedSamples: number, targetSamples: number): void {
+    const samples = Math.min(accumulatedSamples, targetSamples);
+    const percentage = Math.min(100, Math.floor((samples / Math.max(targetSamples, 1)) * 100));
+    const progress = getRequiredElement('scene-refinement-progress', HTMLProgressElement);
+    progress.value = percentage;
+    progress.setAttribute(
+      'aria-valuetext',
+      `${percentage}% — ${samples} of ${targetSamples} samples per pixel`
+    );
+    setElementText('scene-refinement-value', `${percentage}% · ${samples} / ${targetSamples} spp`);
   }
 
   override onFinalize(): void {
+    this.refinementGeneration++;
     if (this.pendingApply !== null) {
       window.clearTimeout(this.pendingApply);
     }
@@ -432,7 +610,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             debugView === 'normal' ||
             debugView === 'cameraDistance' ||
             debugView === 'identity' ||
-            debugView === 'history'
+            debugView === 'history' ||
+            debugView === 'variance'
           )
         )
           return;
@@ -493,6 +672,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       button.addEventListener('click', () => this.selectPreset(presetIndex));
       presetList.appendChild(button);
     }
+
+    const cameraStudyButton = document.createElement('button');
+    cameraStudyButton.type = 'button';
+    cameraStudyButton.className = 'preset-button';
+    cameraStudyButton.textContent = 'Antique Camera · Ray Study';
+    cameraStudyButton.addEventListener('click', () => {
+      void this.importScene(loadAntiqueCameraRayStudy());
+    });
+    presetList.appendChild(cameraStudyButton);
 
     const usdSelector = getRequiredElement('usd-scene-selector', HTMLSelectElement);
     for (const sample of SCENE_SAMPLES) {
@@ -695,7 +883,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       getRequiredElement('resolution-selector', HTMLSelectElement).value = String(
         getRayTracingQualityPreset(preset).resolutionScale
       );
-      if (this.captureFrameLimit) this.renderedFrameCount = 0;
+      if (this.captureFrameLimit) {
+        this.renderedFrameCount = 0;
+        this.captureGpuTimes = [];
+      }
     } catch {
       this.applyEditorScene();
     }
@@ -837,6 +1028,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         renderer?.setParameters(this.getTemporalAntialiasingParameters()).commitParameters();
       }
       const previousScene = this.scene;
+      this.refinementGeneration++;
+      this.raySubmissionPacer.resetCooldown();
+      this.rayBatchBudget.reset();
       this.scene = nextScene;
       this.renderedFrameCount = 0;
       this.selectedPlacementId = null;

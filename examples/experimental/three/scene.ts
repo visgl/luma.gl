@@ -3,10 +3,12 @@
 
 import {
   Scene,
+  AmbientLight,
+  DirectionalLight,
   PerspectiveCamera,
   Mesh,
   BoxGeometry,
-  MeshBasicNodeMaterial,
+  MeshStandardNodeMaterial,
   DataTexture,
   RGBAFormat,
   UnsignedByteType,
@@ -44,7 +46,11 @@ export function createScene() {
   image.magFilter = LinearFilter;
   image.needsUpdate = true;
   const phase = uniform(0);
-  const material = new MeshBasicNodeMaterial();
+  const material = new MeshStandardNodeMaterial({
+    metalness: 0.05,
+    roughness: 0.55,
+    flatShading: true
+  });
   material.colorNode = texture(image).rgb.mul(phase.sin().mul(0.25).add(0.75));
   material.positionNode = positionLocal.add(
     vec3(0, sin(positionLocal.x.mul(3).add(phase)).mul(0.15), 0)
@@ -52,7 +58,9 @@ export function createScene() {
   const geometry = new BoxGeometry(1.5, 1.5, 1.5, 8, 8, 8);
   const mesh = new Mesh(geometry, material);
   mesh.rotation.set(0.3, 0.5, 0);
-  scene.add(mesh);
+  const keyLight = new DirectionalLight(0xffeddb, 3);
+  keyLight.position.set(3, 5, 4);
+  scene.add(mesh, new AmbientLight(0xffffff, 0.55), keyLight);
   const attribute = new StorageBufferAttribute(new Float32Array(16), 1);
   const values = storage(attribute, 'float', 16);
   const compute = Fn(() => {

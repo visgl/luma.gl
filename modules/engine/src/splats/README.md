@@ -18,6 +18,16 @@ and in-place row updates. Both rendering paths evaluate view-dependent radiance 
 classes. `SplatPicker` and `GPUSplatGraphPicker` resolve original source rows; their corresponding
 mixed-scene helpers compose splats with caller-owned depth-tested meshes.
 
+For WebGPU scenes with transparent meshes, construct `SplatRenderer` with
+`depthIntervalSamples` equal to the render target's sample count. Before each
+draw, call `setDepthInterval({bound, compare})`, where `bound` is a caller-owned
+depth texture or view with the same sample count and dimensions. `greater` keeps
+samples whose splat depth is strictly greater than the bound; `less-equal` keeps
+the complement, including equality. Draw the two sides in the order needed for
+the scene's `depthConvention` (`standard` or `reverse`). The renderer never owns
+or clears the bound. Without `depthIntervalSamples`, it uses the existing shader
+and bindings, with no depth-texture lookup.
+
 `SplatHierarchyManager` traverses frustum-culled, foveated source hierarchies while preserving
 coarse parent fallback and bounded asynchronous loading. `SplatRADHierarchyManager` follows
 Spark's authored per-row global child links, retaining mixed source-page leaves and parent
@@ -41,3 +51,49 @@ Renderers borrow source batches, preserve HDR colors, and must be destroyed befo
 This package is public with experimental APIs. Install it with `yarn add @luma.gl/engine`.
 
 See [luma.gl](https://luma.gl/docs/api-reference/splats) for documentation.
+
+## Preparing glTF Gaussian primitives
+
+When using loaders.gl, provide `SPZLoader` alongside `GLTFLoader` and request Arrow output. Pass
+its result through `postProcessGLTF`, then use the optional Arrow entry to prepare both decoded SPZ
+and uncompressed Gaussian primitives:
+
+```typescript
+import {load} from '@loaders.gl/core';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {SPZLoader} from '@loaders.gl/splats';
+import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/engine/gltf';
+import type {GLTFWithBuffers} from '@luma.gl/engine/gltf';
+import {getGLTFSplatSceneInstances, makeGPUSplatDataFromGLTFScene} from '@luma.gl/engine/arrow';
+
+const loaded = await load('scene.glb', [GLTFLoader, SPZLoader], {
+  splats: {shape: 'arrow', targetCoordinateSystem: 'LUF'}
+});
+const gltf = postProcessGLTF(loaded as GLTFWithBuffers);
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
+  excludeGaussianSplatPrimitives: true
+});
+const splatGroups = await makeGPUSplatDataFromGLTFScene(device, gltf);
+const instances = getGLTFSplatSceneInstances(scenegraphs, splatGroups);
+// Apply each instance's worldMatrix when drawing its batches in the host render pass.
+// Recalculate instances after animation or visibility changes.
+// Destroy the borrowing renderer first, then each batch and scenegraphs.destroy().
+```
+
+The bridge preserves the Arrow record-batch boundaries and source mesh/primitive indices.
+Instance discovery expands `EXT_mesh_gpu_instancing` matrices and reports each source instance index. The
+splat upload is caller-owned, and decoded loader data remains borrowed. Quaternion conversion and
+SH layout adaptation occur in the existing upload adapters; no coordinate-system conversion is
+performed by the bridge. If decoding or preparation fails, previously prepared batches are
+released. Cancellation is checked before each primitive and after preparation.
+
+`excludeGaussianSplatPrimitives` leaves those primitives out of the mesh scenegraph; it does not
+create or draw splat renderers. Applications must resolve scene-node instances, transforms,
+visibility, and mixed-scene draw ordering. Decoded splats retain glTF feature-ID attributes when their row counts match the decoded table.
+The decoded Arrow path currently accepts linear Rec. 709 display colors; sRGB display colors require
+a separate conversion and are rejected. Strict required-extension
+support remains unchanged until ordinary scene creation can render the extension end to end.
+
+The Gaussian splat showcase includes a synthetic embedded-GLB scene. Select **Embedded glTF
+Gaussian splats** in the scene control. The showcase currently accepts one visible Gaussian instance with an invertible node transform;
+applications needing mixed meshes or multiple instances must compose their own render passes.

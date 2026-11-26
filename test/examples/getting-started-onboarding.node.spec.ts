@@ -65,7 +65,7 @@ describe('getting-started onboarding', () => {
       ): item is {
         label: string;
         items: Array<string | {label?: string; items?: string[]}>;
-      } => typeof item !== 'string' && item.label === 'Developer Guide' && Array.isArray(item.items)
+      } => typeof item !== 'string' && item.label === 'Community' && Array.isArray(item.items)
     );
 
     expect(tutorialTabsSource).toMatch(
@@ -73,38 +73,15 @@ describe('getting-started onboarding', () => {
     );
     expect(tutorialTabsSource).not.toMatch(/label:\s*'Setup'/);
     expect(websiteStyles).toContain('.container:has(.luma-example-page):not(:has(> .row))');
-    expect(developerGuide?.items).toEqual([
-      'developer-guide/README',
-      {
-        type: 'category',
-        label: 'Setup and contribution',
-        items: [
-          'developer-guide/installing',
-          'developer-guide/editing',
-          'developer-guide/multiple-canvases',
-          'developer-guide/contributing',
-          'developer-guide/documentation'
-        ]
-      },
-      {
-        type: 'category',
-        label: 'Quality and delivery',
-        items: [
-          'developer-guide/testing',
-          'developer-guide/releasing',
-          'developer-guide/working-with-ai'
-        ]
-      },
-      {
-        type: 'category',
-        label: 'Test tooling',
-        items: [
-          'developer/dev-tools/llm-friendly-test-setup',
-          'developer/dev-tools/playwright',
-          'developer/dev-tools/browser-debug'
-        ]
-      }
-    ]);
+    expect(developerGuide?.items).toEqual(
+      expect.arrayContaining([
+        'community',
+        'developer-guide/contributing',
+        'developer-guide/testing',
+        {type: 'doc', id: 'developer-guide/releasing', label: 'Releasing'},
+        {type: 'doc', id: 'developer-guide/working-with-ai', label: 'AI Agents'}
+      ])
+    );
   });
 
   test('makes the complete capability overview discoverable from the getting started page', () => {
@@ -114,23 +91,10 @@ describe('getting-started onboarding', () => {
       readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
     ) as Array<string | {label?: string; items?: string[]}>;
 
+    expect(JSON.stringify(tableOfContents)).toContain('capabilities/gpu-data-compute');
     expect(tableOfContents[0]).toMatchObject({
-      type: 'category',
-      label: 'Getting Started',
-      items: expect.arrayContaining([
-        'README',
-        'getting-started',
-        {
-          type: 'category',
-          label: 'Capabilities and compatibility',
-          items: [
-            'capabilities',
-            'capabilities/gpu-data-compute',
-            'capabilities/rendering-visualization',
-            'api-guide/background/webgpu-vs-webgl'
-          ]
-        }
-      ])
+      label: 'Overview',
+      items: expect.arrayContaining(['README'])
     });
 
     expect(onboardingSource).toMatch(

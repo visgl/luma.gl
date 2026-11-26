@@ -23,6 +23,9 @@ export class GPUVectorGeometry {
   readonly vertexCount?: number;
   readonly bufferLayout?: BufferLayout[];
 
+  /** Releases resources owned by uploaded geometry; borrowed vectors remain caller-owned. */
+  destroy(): void {}
+
   constructor(props: GPUVectorGeometryProps) {
     this.attributes = props.attributes;
     this.indices = props.indices ?? null;

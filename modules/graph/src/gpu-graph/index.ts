@@ -16,7 +16,61 @@ export {
   GraphTextureView,
   GraphVectorView
 } from '../gpu-core/gpu-command-graph';
-export type * from '../gpu-core/gpu-command-graph';
+export type {
+  GPUCommandGraphCompileContext,
+  GPUCommandGraphCapabilities,
+  GPUCommandGraphCPUCondition,
+  GPUCommandGraphComputeExecutable,
+  GPUCommandGraphComputeNode,
+  GPUCommandGraphCopyExecutable,
+  GPUCommandGraphCopyNode,
+  GPUCommandGraphEncodeContext,
+  GPUCommandGraphEncodeOptions,
+  GPUCommandGraphGPUIndirectCondition,
+  GPUCommandGraphNode,
+  GPUCommandGraphNodeCondition,
+  GPUCommandGraphNodeConditionPreflight,
+  GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNodePreflight,
+  GPUCommandGraphCompileOptions,
+  GPUCommandGraphKernelMetadata,
+  GPUCommandGraphResourceSummary,
+  GPUCommandGraphNodePublication,
+  GPUCommandGraphNodeTiming,
+  GPUCommandGraphNodeType,
+  GPUCommandGraphNodeWorkloadEstimate,
+  GPUCommandGraphPreflightReport,
+  GPUCommandGraphRenderExecutable,
+  GPUCommandGraphRenderNode,
+  GPUCommandGraphStats,
+  GPUCommandGraphEncodingStats,
+  GPUCommandGraphTimingReport,
+  GraphBufferDescriptor,
+  GraphBufferUsage,
+  GraphBufferUse,
+  GraphExternalTextureBinding,
+  GraphExternalTextureDescriptor,
+  GraphExternalTextureUse,
+  GraphFrameTextureBinding,
+  GraphImportedBuffer,
+  GraphImportedTexture,
+  GraphRenderPassAttachments,
+  GraphResourceUse,
+  GraphTextureAspect,
+  GraphTextureDescriptor,
+  GraphTextureDimension,
+  GraphTextureUsage,
+  GraphTextureUse,
+  GraphTextureViewProps,
+  GPUCommandGraphExecutionBudget,
+  GPUCommandGraphExecutionLatencyPriority,
+  GPUCommandGraphExecutionPublicationPolicy,
+  GPUCommandGraphExecutionOptions,
+  GPUCommandGraphExecutionPlanStep,
+  GPUCommandGraphExecutionPlan,
+  GPUCommandGraphExecutionStep,
+  GPUCommandGraphBuilder
+} from '../gpu-core/gpu-command-graph';
 
 export {composite, GPUGraph} from '../gpu-core/gpu-graph';
 export {
@@ -74,3 +128,20 @@ export type {
 } from '../gpu-core/gpu-operation-contract';
 
 export {CompiledGPUGraph, PreparedGPUGraphExecution} from '../gpu-core/compiled-gpu-graph';
+
+export {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from '../gpu-core/gpu-cpu-operation';
+
+export {
+  GPUGraphGroupAggregation,
+  GPUGraphReduction
+} from '../gpu-core/gpu-semantic-aggregation-operation';
+export type {
+  GPUGraphGroupAggregationProps,
+  GPUGraphReductionProps
+} from '../gpu-core/gpu-semantic-aggregation-operation';

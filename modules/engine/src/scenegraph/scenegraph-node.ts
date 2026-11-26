@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
+import {Vector3, Matrix4} from '@math.gl/core/matrix';
+import {NumericArray} from '@math.gl/core/types';
 import {uid} from '../utils/uid';
 
 function assert(condition: boolean, message?: string): asserts condition {
@@ -14,6 +15,10 @@ function assert(condition: boolean, message?: string): asserts condition {
 /** Properties for creating a new Scenegraph */
 export type ScenegraphNodeProps = {
   id?: string;
+  /** Local selection eligibility; ancestors can disable their entire subtree. */
+  selectable?: boolean;
+  /** Local hover eligibility; ancestors can disable their entire subtree. */
+  hoverable?: boolean;
   /** whether to display the object at all */
   display?: boolean;
   matrix?: NumericArray;
@@ -28,9 +33,15 @@ export class ScenegraphNode {
   matrix: Matrix4 = new Matrix4();
 
   display = true;
+  /** Local selection eligibility, independent of visibility. */
+  selectable = true;
+  /** Local hover eligibility, independent of visibility. */
+  hoverable = true;
   position = new Vector3();
   rotation = new Vector3();
   scale = new Vector3(1, 1, 1);
+  /** Structured metadata associated with this scene node. */
+  metadata: Record<string, unknown> = {};
   userData: Record<string, unknown> = {};
 
   props: ScenegraphNodeProps = {};
@@ -193,6 +204,8 @@ export class ScenegraphNode {
   */
 
   _setScenegraphNodeProps(props: ScenegraphNodeProps): void {
+    if (props.selectable !== undefined) this.selectable = props.selectable;
+    if (props.hoverable !== undefined) this.hoverable = props.hoverable;
     if (props.display !== undefined) {
       this.display = props.display;
     }

@@ -5,6 +5,8 @@
 import {log, type TextureFormat} from '@luma.gl/core';
 import {parsePBRMaterial} from '@luma.gl/engine/gltf/parsers/parse-pbr-material';
 import {NullDevice} from '@luma.gl/core/test-utils';
+import type {PBREnvironment} from '@luma.gl/engine/gltf';
+import type {PBRLightingEnvironment} from '@luma.gl/engine/lighting';
 import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
@@ -650,4 +652,131 @@ it('gltf#parsePBRMaterial binds linear lightmap irradiance with UV1 and authored
   expect(parsed.bindings.pbr_lightmapSampler?.format).toBe('bc7-rgba-unorm');
   expect(() => parsePBRMaterial(device, material as any, {TEXCOORD_0: {}}, {})).toThrow();
   destroyParsedTextures(parsed);
+});
+
+it('gltf#parsePBRMaterial preserves default, zero and HDR emissive strengths', () => {
+  for (const [value, expected] of [
+    [undefined, undefined],
+    [0, 0],
+    [5, 5]
+  ] as const) {
+    const parsed = parsePBRMaterial(
+      device,
+      {
+        emissiveFactor: [0.2, 0.4, 0.6],
+        emissiveTexture: makeCompressedTextureInfo('emissive'),
+        extensions: {KHR_materials_emissive_strength: {emissiveStrength: value}}
+      },
+      {NORMAL: {}, TEXCOORD_0: {}},
+      {}
+    );
+    expect(parsed.uniforms.emissiveStrength).toBe(expected);
+    expect(parsed.uniforms.emissiveFactor).toEqual([0.2, 0.4, 0.6]);
+    expect(parsed.uniforms.emissiveMapEnabled).toBe(true);
+    destroyParsedTextures(parsed);
+  }
+});
+
+function makeEnvironmentTextures() {
+  const diffuseTexture = device.createTexture({dimension: 'cube', width: 1, height: 1});
+  const specularTexture = device.createTexture({
+    dimension: 'cube',
+    width: 16,
+    height: 16,
+    mipLevels: 5
+  });
+  const brdfLUTTexture = device.createTexture({width: 1, height: 1});
+  const destroy = () => {
+    diffuseTexture.destroy();
+    specularTexture.destroy();
+    brdfLUTTexture.destroy();
+  };
+  return {diffuseTexture, specularTexture, brdfLUTTexture, destroy};
+}
+
+const ENVIRONMENT_UNIFORM_NAMES = [
+  'environmentIntensity',
+  'environmentRotation',
+  'environmentMipCount'
+] as const;
+
+it('gltf#parsePBRMaterial leaves image-based lighting off without an environment', () => {
+  const parsed = parsePBRMaterial(device, {}, {NORMAL: {}}, {});
+
+  expect('USE_IBL' in parsed.defines, 'USE_IBL is unset').toBe(false);
+  expect('USE_SCENE_ENVIRONMENT' in parsed.defines, 'USE_SCENE_ENVIRONMENT is unset').toBe(false);
+  expect(parsed.uniforms.IBLenabled, 'IBL uniform is unset').toBe(undefined);
+  expect(parsed.bindings.pbr_specularEnvSampler, 'no environment binding').toBe(undefined);
+  for (const uniformName of ENVIRONMENT_UNIFORM_NAMES) {
+    expect(uniformName in parsed.uniforms, `${uniformName} is unset`).toBe(false);
+  }
+});
+
+it('gltf#parsePBRMaterial keeps the legacy PBREnvironment contract', () => {
+  const {diffuseTexture, specularTexture, brdfLUTTexture, destroy} = makeEnvironmentTextures();
+  const imageBasedLightingEnvironment = {
+    diffuseEnvSampler: {texture: diffuseTexture},
+    specularEnvSampler: {texture: specularTexture},
+    brdfLutTexture: {texture: brdfLUTTexture}
+  } as unknown as PBREnvironment;
+
+  const parsed = parsePBRMaterial(device, {}, {NORMAL: {}}, {imageBasedLightingEnvironment});
+
+  expect(parsed.defines['USE_IBL'], 'USE_IBL is set').toBe(true);
+  expect('USE_SCENE_ENVIRONMENT' in parsed.defines, 'USE_SCENE_ENVIRONMENT is unset').toBe(false);
+  expect(parsed.bindings.pbr_diffuseEnvSampler, 'diffuse binding').toBe(diffuseTexture);
+  expect(parsed.bindings.pbr_specularEnvSampler, 'specular binding').toBe(specularTexture);
+  expect(parsed.bindings.pbr_brdfLUT, 'BRDF lookup binding').toBe(brdfLUTTexture);
+  expect(parsed.uniforms.IBLenabled, 'IBL uniform').toBe(true);
+  expect(parsed.uniforms.scaleIBLAmbient, 'IBL scale').toEqual([1, 1]);
+  for (const uniformName of ENVIRONMENT_UNIFORM_NAMES) {
+    expect(uniformName in parsed.uniforms, `${uniformName} is unset`).toBe(false);
+  }
+  destroy();
+});
+
+it('gltf#parsePBRMaterial accepts a PBRLightingEnvironment', () => {
+  const {diffuseTexture, specularTexture, brdfLUTTexture, destroy} = makeEnvironmentTextures();
+  const imageBasedLightingEnvironment: PBRLightingEnvironment = {
+    diffuseTexture,
+    specularTexture,
+    brdfLUTTexture,
+    intensity: 2.5,
+    rotation: 0.75
+  };
+
+  const parsed = parsePBRMaterial(device, {}, {NORMAL: {}}, {imageBasedLightingEnvironment});
+
+  expect(parsed.defines['USE_IBL'], 'USE_IBL is set').toBe(true);
+  expect(parsed.defines['USE_SCENE_ENVIRONMENT'], 'USE_SCENE_ENVIRONMENT is set').toBe(true);
+  expect(parsed.bindings.pbr_diffuseEnvSampler, 'diffuse binding').toBe(diffuseTexture);
+  expect(parsed.bindings.pbr_specularEnvSampler, 'specular binding').toBe(specularTexture);
+  expect(parsed.bindings.pbr_brdfLUT, 'BRDF lookup binding').toBe(brdfLUTTexture);
+  expect(parsed.uniforms.IBLenabled, 'IBL uniform').toBe(true);
+  expect(parsed.uniforms.scaleIBLAmbient, 'IBL scale').toEqual([1, 1]);
+  expect(parsed.uniforms.environmentIntensity, 'intensity').toBe(2.5);
+  expect(parsed.uniforms.environmentRotation, 'rotation').toBe(0.75);
+  expect(parsed.uniforms.environmentMipCount, 'mip count').toBe(5);
+  expect(parsed.generatedTextures, 'environment textures stay borrowed').toEqual([]);
+  destroy();
+});
+
+it('gltf#parsePBRMaterial applies PBRLightingEnvironment control defaults', () => {
+  const {destroy, ...imageBasedLightingEnvironment} = makeEnvironmentTextures();
+
+  const parsed = parsePBRMaterial(device, {}, {NORMAL: {}}, {imageBasedLightingEnvironment});
+
+  expect(parsed.uniforms.environmentIntensity, 'default intensity').toBe(1);
+  expect(parsed.uniforms.environmentRotation, 'default rotation').toBe(0);
+  destroy();
+});
+
+it('gltf#parsePBRMaterial rejects an incomplete PBRLightingEnvironment', () => {
+  const {destroy, ...imageBasedLightingEnvironment} = makeEnvironmentTextures();
+  imageBasedLightingEnvironment.brdfLUTTexture.destroy();
+
+  expect(() =>
+    parsePBRMaterial(device, {}, {NORMAL: {}}, {imageBasedLightingEnvironment})
+  ).toThrow();
+  destroy();
 });

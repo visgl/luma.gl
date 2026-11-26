@@ -93,3 +93,31 @@ also needs semantic color normalization helpers.
 - `storageColors` is WGSL-only because it reads read-only storage buffers.
 - Packed vertex colors still work well with normalized vertex formats such as `unorm8x4`.
 - Phase 1 compatibility defaults are preserved on the APIs that adopt `useByteColors`.
+
+
+## JavaScript color helpers
+
+`normalizeByteColor3(color, useByteColors = true)` and
+`normalizeByteColor4(color, useByteColors = true)` decode CPU color values:
+
+| Input | Interpretation |
+| --- | --- |
+| JavaScript array | Bytes by default; normalized when `useByteColors` is false |
+| `Uint8Array`, `Uint8ClampedArray` | Bytes, regardless of the flag |
+| Native `Float16Array`, `Float32Array`, `Float64Array` | Normalized, regardless of the flag |
+
+The RGB helper returns three components; the RGBA helper returns four. Missing or non-finite
+alpha becomes opaque (255 for byte input, 1 for normalized input). Explicit zero remains zero.
+Neither helper clamps values, changes color space, nor premultiplies alpha.
+
+Exactly sized floating-point inputs are returned by reference, with no allocation, unless
+RGBA alpha needs repair. Treat these results as borrowed storage. Other inputs produce a new
+JavaScript array, without mutating the original. Raw half-float bits in `Uint16Array` are not
+supported; accepting native Float16 values here does not guarantee that a particular GPU upload
+API accepts Float16 arrays.
+
+```ts
+const bytes = normalizeByteColor4(new Uint8Array([255, 128, 0])); // [1, 128/255, 0, 1]
+const floats = new Float32Array([1, 0.5, 0, 0]);
+normalizeByteColor4(floats) === floats; // true: transparent alpha is preserved
+```

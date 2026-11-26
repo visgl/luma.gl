@@ -9,7 +9,7 @@ import {
   type SceneSurface
 } from '@luma.gl/anari';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {updateRayTracingAdaptiveBudget} from '../../src/engine/ray-tracing-scene-renderer';
 
@@ -134,11 +134,23 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     },
     indices: new Uint16Array([0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4])
   });
+  const materialTexture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    data: new Uint8Array([255, 128, 64, 255])
+  });
   const sphereSurface: SceneSurface = {
     id: 'ray-tracing-analytic-sphere',
     geometry,
     material: {
       id: 'ray-tracing-sphere-material',
+      bindings: {
+        pbr_baseColorSampler: materialTexture,
+        pbr_emissiveSampler: materialTexture,
+        pbr_metallicRoughnessSampler: materialTexture,
+        pbr_transmissionSampler: materialTexture
+      },
       uniforms: {
         baseColorFactor: [0.9, 0.45, 0.2, 1],
         metallicRoughnessValues: [0.65, 0.3]
@@ -371,8 +383,8 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     ).toBe(9);
     expect(
       frameResources.traceGraph.stats.importedTextureCount,
-      'the trace graph borrows two rotating color textures and two rotating metadata textures'
-    ).toBe(4);
+      'the trace graph borrows four history textures and one shared material texture'
+    ).toBe(5);
     expect(
       frameResources.traceGraph.stats.logicalTransientTextureCount,
       'retained ping-pong history avoids hidden transient presentation or metadata textures'
@@ -471,8 +483,12 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     if (supportsRawValidationErrorScopes) {
       device.handle.pushErrorScope('validation');
     }
-    const accumulatedStatistics = renderer.render(options);
+    const accumulatedStatistics = renderer.render({
+      ...options,
+      previousFrameExecutionMilliseconds: 12
+    });
     device.submit();
+    expect(accumulatedStatistics.rayTracing?.frameTimeMilliseconds).toBe(12);
     expect(
       accumulatedStatistics.instanceCount,
       'unchanged instances reuse the compiled graph and progressive history'
@@ -528,6 +544,29 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     ).toBe(0.25);
     frameResources.phaseCount = 1;
     frameResources.phaseIndex = 0;
+
+    const budgetedHalf = renderer.render({...options, rayBatchPhaseCount: 2});
+    device.submit();
+    expect(budgetedHalf.rayTracing?.sampledPixelCoverage).toBe(0.5);
+    const pendingQuarter = renderer.render({...options, rayBatchPhaseCount: 4});
+    device.submit();
+    expect(pendingQuarter.rayTracing?.sampledPixelCoverage).toBe(0.5);
+    expect(pendingQuarter.rayTracing?.accumulatedSamples).toBe(6);
+    const budgetedQuarter = renderer.render({...options, rayBatchPhaseCount: 4});
+    device.submit();
+    expect(budgetedQuarter.rayTracing?.sampledPixelCoverage).toBe(0.25);
+    expect(budgetedQuarter.rayTracing?.accumulatedSamples).toBe(6);
+    expect([initialColorHistory, initialColorOutput]).toContain(
+      frameResources.colorHistory.previousTexture
+    );
+
+    const restoredFullCoverage = renderer.render(options);
+    device.submit();
+    expect(restoredFullCoverage.rayTracing?.sampledPixelCoverage).toBe(1);
+    expect(restoredFullCoverage.rayTracing?.accumulatedSamples).toBe(8);
+    expect([initialColorHistory, initialColorOutput]).toContain(
+      frameResources.colorHistory.previousTexture
+    );
 
     const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
@@ -670,10 +709,37 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
       ).toBe(null);
     }
 
+    const replacementTexture = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      data: new Uint8Array([64, 128, 255, 255])
+    });
+    try {
+      const previousTraceGraph = getRayTracingFrameResources(renderer, options.id).traceGraph;
+      sphereSurface.material.bindings = {
+        ...sphereSurface.material.bindings,
+        pbr_baseColorSampler: replacementTexture
+      };
+      renderer.render(options);
+      device.submit();
+      expect(getRayTracingFrameResources(renderer, options.id).traceGraph).not.toBe(
+        previousTraceGraph
+      );
+      expect(
+        getRayTracingFrameResources(renderer, options.id).traceGraph.stats.importedTextureCount
+      ).toBe(6);
+      expect(materialTexture.destroyed).toBe(false);
+      expect(replacementTexture.destroyed).toBe(false);
+    } finally {
+      replacementTexture.destroy();
+    }
+
     renderer.destroyFrame(options.id);
     renderer.destroyFrame(options.id);
   } finally {
     renderer.destroy();
+    materialTexture.destroy();
   }
 
   void 0;
@@ -901,8 +967,8 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
       writes.map(write => [write.byteOffset, write.values.byteLength]),
       'one committed placement writes only its current/inverse matrices and previous motion matrix'
     ).toEqual([
-      [3 * 72 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
-      [(3 * 72 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+      [3 * 104 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
+      [(3 * 104 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
     ]);
     expect(writes[0].values[12], 'the current sparse transform is packed').toBe(Math.fround(0.9));
     expect(
@@ -928,7 +994,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
       writes.map(write => [write.byteOffset, write.values.byteLength]),
       'the following unchanged frame commits only the pending previous-motion matrix'
     ).toEqual([
-      [(5 * 72 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+      [(5 * 104 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
     ]);
     expect(
       Boolean(resources.previousTransformsNeedCommit),
@@ -946,7 +1012,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
     expect(
       writes.map(write => write.values.byteLength),
       'fresh scene descriptor arrays conservatively fall back to a complete primitive upload'
-    ).toEqual([8 * 72 * Float32Array.BYTES_PER_ELEMENT]);
+    ).toEqual([8 * 104 * Float32Array.BYTES_PER_ELEMENT]);
 
     writes.length = 0;
     const replacementSurface = {
@@ -963,7 +1029,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
     expect(
       writes.map(write => write.values.byteLength),
       'in-place descriptor replacement never reuses a stale retained placement reference'
-    ).toEqual([8 * 72 * Float32Array.BYTES_PER_ELEMENT]);
+    ).toEqual([8 * 104 * Float32Array.BYTES_PER_ELEMENT]);
   } finally {
     renderer.destroy();
   }

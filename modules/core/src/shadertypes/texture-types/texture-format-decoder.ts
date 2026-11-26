@@ -77,8 +77,11 @@ export class TextureFormatDecoder {
   }
 
   /** Computes the memory layout for a texture, in particular including row byte alignment */
-  computeMemoryLayout(opts: TextureMemoryLayoutOptions): TextureMemoryLayout {
-    return computeTextureMemoryLayout(opts);
+  computeMemoryLayout(
+    opts: TextureMemoryLayoutOptions,
+    result?: TextureMemoryLayout
+  ): TextureMemoryLayout {
+    return computeTextureMemoryLayout(opts, result);
   }
 }
 
@@ -88,37 +91,38 @@ export const textureFormatDecoder = new TextureFormatDecoder();
 // HELPERS - MEMORY LAYOUT
 
 /** Get the memory layout of a texture */
-function computeTextureMemoryLayout({
-  format,
-  width,
-  height,
-  depth,
-  byteAlignment
-}: TextureMemoryLayoutOptions): TextureMemoryLayout {
+function computeTextureMemoryLayout(
+  {format, width, height, depth, byteAlignment}: TextureMemoryLayoutOptions,
+  result = {} as TextureMemoryLayout
+): TextureMemoryLayout {
   const formatInfo = textureFormatDecoder.getInfo(format);
+  const {bytesPerPixel, blockHeight = 1, compressed = false} = formatInfo;
+  const bytesPerRow = getTextureBytesPerRow(formatInfo, width, byteAlignment);
+  const rowsPerImage = compressed ? Math.ceil(height / blockHeight) : height;
+  result.bytesPerPixel = bytesPerPixel;
+  result.bytesPerRow = bytesPerRow;
+  result.rowsPerImage = rowsPerImage;
+  result.depthOrArrayLayers = depth;
+  result.bytesPerImage = bytesPerRow * rowsPerImage;
+  result.byteLength = result.bytesPerImage * depth;
+  return result;
+}
+
+/** Internal row-stride calculation shared by full layouts and upload normalization. */
+export function getTextureBytesPerRow(
+  formatInfo: TextureFormatInfo,
+  width: number,
+  byteAlignment: number
+): number {
   const {
     bytesPerPixel,
     bytesPerBlock = bytesPerPixel,
     blockWidth = 1,
-    blockHeight = 1,
     compressed = false
   } = formatInfo;
   const blockColumns = compressed ? Math.ceil(width / blockWidth) : width;
-  const blockRows = compressed ? Math.ceil(height / blockHeight) : height;
-  // byteAlignment comes from the backend/call site. WebGPU buffer copies use 256, queue.writeTexture uses 1.
-  const unpaddedBytesPerRow = blockColumns * bytesPerBlock;
-  const bytesPerRow = Math.ceil(unpaddedBytesPerRow / byteAlignment) * byteAlignment;
-  const rowsPerImage = blockRows;
-  const byteLength = bytesPerRow * rowsPerImage * depth;
-
-  return {
-    bytesPerPixel,
-    bytesPerRow,
-    rowsPerImage,
-    depthOrArrayLayers: depth,
-    bytesPerImage: bytesPerRow * rowsPerImage,
-    byteLength
-  };
+  // WebGPU buffer copies use 256; CPU writes use 1.
+  return Math.ceil((blockColumns * bytesPerBlock) / byteAlignment) * byteAlignment;
 }
 
 // HELPERS - CAPABILITIES
@@ -152,11 +156,25 @@ function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapab
 
 // HELPER - FORMAT INFO
 
-/**
- * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
- */
+const textureFormatInfoCache = new Map<TextureFormat, TextureFormatInfo>();
+type MutableTextureFormatInfo = {
+  -readonly [Key in keyof TextureFormatInfo]: TextureFormatInfo[Key];
+};
+
+/** Returns shared, immutable metadata for a texture format. */
 export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
-  let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
+  let formatInfo = textureFormatInfoCache.get(format);
+  if (!formatInfo) {
+    const decoded = decodeTextureFormatInfo(format);
+    decoded.bitsPerChannel = Object.freeze([...decoded.bitsPerChannel]);
+    formatInfo = Object.freeze(decoded);
+    textureFormatInfoCache.set(format, formatInfo);
+  }
+  return formatInfo;
+}
+
+function decodeTextureFormatInfo(format: TextureFormat): MutableTextureFormatInfo {
+  let formatInfo: MutableTextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
   if (textureFormatDecoder.isCompressed(format)) {
     formatInfo.channels = 'rgb';

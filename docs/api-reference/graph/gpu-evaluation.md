@@ -124,10 +124,14 @@ it throws immediately instead of waiting.
 ## BackendRegistry
 
 The `backendRegistry` dispatches lazy operations to the backend module for the
-evaluation device. The CPU backend is available by default. If no backend has
-been registered for a `webgl` or `webgpu` device, `@luma.gl/graph/gpu-simple-graph`
-automatically loads the matching backend with a dynamic import, so built-in
-backend registration is not required.
+evaluation device. The CPU backend is available by default. When a requested
+handler has not been registered for a `webgl` or `webgpu` device, asynchronous
+lookup loads the matching built-in backend with a dynamic import. Registered
+handlers take precedence over these defaults, so registering a subset does not
+disable other built-in operations. A handler registered as `undefined` does not
+hide the built-in one. Concurrent lookups share a single built-in import for
+each device type. Once it succeeds, synchronous evaluation can use those handlers
+too. A later lookup can retry a failed import.
 
 ```ts
 const outputVector = await output.evaluate(device);
@@ -139,8 +143,8 @@ handlers:
 
 ```ts
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as webglBackend from '@luma.gl/graph/gpu-simple-graph/webgl';
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webglBackend from '@luma.gl/graph/gpu-simple-graph-webgl';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
@@ -151,7 +155,7 @@ registration is recommended so backend lookup is already resolved:
 
 ```ts
 import {backendRegistry, cleanEvaluateSync, interleave} from '@luma.gl/graph/gpu-simple-graph';
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 backendRegistry.add('webgpu', webgpuBackend);
 
@@ -161,12 +165,13 @@ cleanEvaluateSync(device, packed);
 
 The same endpoints export individual backend operation handlers. Applications
 can combine those handlers with their own custom operation handlers, or register
-only the handlers they need. When registering a subset, only those operations can
-be evaluated for that device type:
+only the handlers they need. Synchronous evaluation requires the requested
+handler to be registered or already loaded; asynchronous evaluation can load
+missing built-in handlers:
 
 ```ts
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph/webgl';
+import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph-webgl';
 import {customOpWebGL} from './custom-operation';
 
 backendRegistry.add('webgl', {
@@ -182,7 +187,7 @@ backendRegistry.add('webgl', {
 See [`Custom Operations`](/docs/api-reference/graph/custom-operation) for a full
 operation and backend handler example.
 
-The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph/cpu` when explicitly
+The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph-cpu` when explicitly
 registering CPU handlers for another device type.
 
 ## Concepts

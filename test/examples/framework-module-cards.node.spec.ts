@@ -62,9 +62,13 @@ const EXPECTED_FRAMEWORK_MODULES = [
     id: 'anari',
     title: 'ANARI',
     packageName: '@luma.gl/anari',
-    documentationPath: 'docs/api-reference/scene',
-    capabilities: ['glTF', 'OpenUSD', 'Renderers'],
-    descriptions: [/declarative 3D scenes/i, /glTF and OpenUSD/i, /switch renderers/i]
+    documentationPath: 'docs/api-reference/anari',
+    capabilities: ['glTF', 'OpenUSD', 'Ray tracing'],
+    descriptions: [
+      /retained 3D scenes/i,
+      /glTF and supported OpenUSD/i,
+      /progressive WebGPU ray tracing/i
+    ]
   },
   {
     id: 'splats',

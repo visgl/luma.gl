@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUPathStorageInputProps} from '@luma.gl/graph/experimental/models';
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
+import type {GPUPathStorageInputProps} from '@luma.gl/graph/experimental-models';
 
 import {
   Buffer,
@@ -22,11 +23,11 @@ import {
   createGpuPathGeneratedState,
   createGpuPathRangeState,
   dispatchGpuPathExpansionCompute
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import {
   resolvePathStorageInputs,
   type PathStorageBatchInputs
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
@@ -432,7 +433,15 @@ export class PathStorageModel extends Model {
   }
 
   /** Draws each generated storage path render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
+          this.drawPathStorageModelBatches(renderPass)
+        )
+      : this.drawPathStorageModelBatches(renderPass);
+  }
+
+  private drawPathStorageModelBatches(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const renderBatch of this.storageState.renderBatches) {
       if (renderBatch.segmentCount === 0) {

@@ -302,8 +302,7 @@ restore already-lost contact impulses. There is no automatic resize/retry mechan
 
 Enable contact events with `eventCapacity` and queries with `enableQueries` before
 attaching the world. These optional allocations appear in `getCapacityInfo()`.
-The [Space Salvage example](https://github.com/visgl/luma.gl/tree/master/examples/experimental/space-salvage)
-uses these public APIs for targeting, docking and impact damage.
+The off-road buggy uses contact events to trigger impact audio at perimeter rails.
 
 ```ts
 const world = new GPURigidBodyWorld({bodies, eventCapacity: 1024, enableQueries: true});
@@ -547,7 +546,7 @@ members. Non-sphere targets use discrete per-step overlap. Pair state is bounded
 simulation. Ring overwrite and saturation are explicit; concurrent reads share a
 snapshot/cursor. Resetting/reconstructing the world resets trigger state.
 
-Space Salvage uses these step-based events for docking. General sensor shapes,
+Applications can use these step-based events for docking. General sensor shapes,
 spatially batched queries, scalable event compaction and glTF behavior bindings remain
 separate qualification work.
 
@@ -683,8 +682,7 @@ the same wrapped coordinate as limits; multi-turn control remains unsupported.
 
 `enabled: false` creates a dormant joint. `world.setJointEnabled(index, enabled)`
 submits an ordered GPU command between steps, invalidates cached impulses and wakes
-bodies. Disabling a joint restores its connected-body collision policy. Space Salvage
-uses this API for its spring tow attachment. Topology, coefficients and endpoints are
+bodies. Disabling a joint restores its connected-body collision policy. Topology, coefficients and endpoints are
 construction-time properties; rebuild the world to change them.
 
 ## Scenegraph geometry and GPU pose publication

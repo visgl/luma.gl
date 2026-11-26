@@ -26,7 +26,7 @@ import {
   ShaderAssembler
 } from '@luma.gl/shaders';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
-import type {TypedArray} from '@math.gl/core';
+import type {TypedArray} from '@math.gl/core/types';
 import {isUniformValue} from '../model/split-uniforms-and-bindings';
 import {ShaderInputs} from '../shader-inputs';
 import {
@@ -185,7 +185,7 @@ export class Computation {
 
     const platformInfo = getPlatformInfo(device);
     const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
-    if (resolvedPlugins.hooks.length > 0) {
+    if (resolvedPlugins.injectionTargets.length > 0) {
       throw new Error('Computation does not support ShaderPlugin render hooks');
     }
     if (

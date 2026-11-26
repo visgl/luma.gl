@@ -595,3 +595,57 @@ it('gltf#GLTFAnimator normalizes cubic quaternion animation tracks', () => {
 
   void 0;
 });
+
+it('gltf#GLTFAnimator applies emissive strength pointer to all material instances', () => {
+  const material = makeMockMaterial({emissiveStrength: 0});
+  const instance = makeMockMaterial({emissiveStrength: 0});
+  const gltf = {
+    materials: [{extensions: {KHR_materials_emissive_strength: {emissiveStrength: 0}}}],
+    nodes: [],
+    accessors: [
+      {value: new Float32Array([0, 1]), components: 1},
+      {value: new Float32Array([0, 8]), components: 1}
+    ],
+    animations: [
+      {
+        name: 'Emission',
+        channels: [
+          {
+            sampler: 0,
+            target: {
+              path: 'pointer',
+              extensions: {
+                KHR_animation_pointer: {
+                  pointer:
+                    '/materials/0/extensions/KHR_materials_emissive_strength/emissiveStrength'
+                }
+              }
+            }
+          }
+        ],
+        samplers: [
+          {
+            input: 0,
+            output: 1,
+            interpolation: 'LINEAR'
+          }
+        ]
+      }
+    ]
+  };
+  const animations = parseGLTFAnimations(gltf as any);
+  expect(animations[0].channels[0]).toMatchObject({
+    type: 'material',
+    property: 'emissiveStrength',
+    targetMaterialIndex: 0
+  });
+  const animator = new GLTFAnimator({
+    animations,
+    gltfNodeIdToNodeMap: new Map(),
+    materials: [material as any],
+    materialInstances: new Map([[0, [instance as any]]])
+  });
+  animator.setTime(500);
+  expect(material.shaderInputs.getUniformValues().pbrMaterial.emissiveStrength).toBe(4);
+  expect(instance.shaderInputs.getUniformValues().pbrMaterial.emissiveStrength).toBe(4);
+});

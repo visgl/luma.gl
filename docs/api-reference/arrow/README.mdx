@@ -83,7 +83,7 @@ The optional Arrow adapters convert Apache Arrow objects into primitive
 - `makeArrowTableFromGPUAnalyticsTable()` explicitly reads a GPU analytical result back into Arrow,
   reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or
   explicitly requested global ordering. Combined with
-  [`LuSQLContext`](/docs/api-reference/experimental/gpu-sql) from the separate
+  [`GPUSQLContext`](/docs/api-reference/experimental/gpu-sql) from the separate
   `@luma.gl/graph/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
   Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 - `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for

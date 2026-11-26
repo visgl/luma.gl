@@ -150,9 +150,6 @@ export class LumaBackend extends Backend {
         'LumaBackend: expected an idle backend and a compatible single-sample caller pass'
       );
     // Keep slots distinct across all passes queued on the default encoder before submission.
-    const uniformScope = this.device.commandEncoder || pass;
-    this.borrowedRenderIndex = this.borrowedRenderCounts.get(uniformScope) || 0;
-    this.borrowedRenderCounts.set(uniformScope, this.borrowedRenderIndex + 1);
     this.borrowedRenderVersion++;
     this.borrowedPass = pass;
     this.borrowedParameters = parameters;
@@ -201,9 +198,19 @@ export class LumaBackend extends Backend {
     /* The renderer supplies scissor state in each render context. */
   }
   createNodeBuilder(object: ThreeInternal, renderer: Renderer): WGSLNodeBuilder | GLSLNodeBuilder {
-    return this.isWebGLBackend
+    const builder = this.isWebGLBackend
       ? new GLSLNodeBuilder(object, renderer)
       : new WGSLNodeBuilder(object, renderer);
+    const internalBuilder = builder as ThreeInternal;
+    const build = internalBuilder.build;
+    internalBuilder.build = function (this: ThreeInternal) {
+      const result = build.call(this);
+      // r187's observer does not detect dynamic getOutput context uniforms.
+      // Picking/highlighting must refresh even when source materials are unchanged.
+      if (this.context.getOutput && this.observer) this.observer.hasNode = true;
+      return result;
+    };
+    return builder;
   }
   createProgram(program: ThreeInternal): void {
     if (this.isWebGLBackend && program.stage === 'compute')
@@ -415,18 +422,21 @@ export class LumaBackend extends Backend {
   }
   createTexture(texture: ThreeInternal, options: ThreeInternal = {}): void {
     if (
-      texture.isCubeTexture ||
       texture.isData3DTexture ||
       (texture.isArrayTexture && !texture.isDataArrayTexture) ||
       texture.isStorageTexture ||
       texture.isCompressedTexture
     ) {
-      throw new Error('LumaBackend: only 2D and data-array textures are supported');
+      throw new Error('LumaBackend: unsupported texture dimension or storage');
     }
     const state = this.get(texture);
     const width = options.width || texture.image?.width || 1;
     const height = options.height || texture.image?.height || 1;
-    const depth = texture.isDataArrayTexture ? options.depth || texture.image?.depth || 1 : 1;
+    const depth = texture.isCubeTexture
+      ? 6
+      : texture.isDataArrayTexture
+        ? options.depth || texture.image?.depth || 1
+        : 1;
     const format = texture.isDepthTexture ? 'depth24plus' : this.getTextureFormat(texture);
     if (
       state.texture?.width === width &&
@@ -441,7 +451,7 @@ export class LumaBackend extends Backend {
         width,
         height,
         depth,
-        dimension: texture.isDataArrayTexture ? '2d-array' : '2d',
+        dimension: texture.isCubeTexture ? 'cube' : texture.isDataArrayTexture ? '2d-array' : '2d',
         format,
         mipLevels: options.levels || 1,
         usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_SRC | Texture.COPY_DST
@@ -550,13 +560,7 @@ export class LumaBackend extends Backend {
         );
       return this.borrowedPass.props.framebuffer;
     }
-    if (
-      context.sampleCount > 1 ||
-      context.stencil ||
-      context.activeMipmapLevel ||
-      context.activeCubeFace ||
-      context.occlusionQueryCount
-    )
+    if (context.sampleCount > 1 || context.stencil || context.occlusionQueryCount)
       throw new Error('LumaBackend: unsupported render target configuration');
     if (!context.textures)
       return this.device
@@ -568,14 +572,35 @@ export class LumaBackend extends Backend {
     if (
       !state.framebuffer ||
       state.colors.some((texture: Texture, index: number) => texture !== colors[index]) ||
-      state.depth !== depth
+      state.depth !== depth ||
+      state.mipLevel !== context.activeMipmapLevel ||
+      state.cubeFace !== context.activeCubeFace
     ) {
       this.release(state.framebuffer);
+      for (const view of state.colorViews || []) this.release(view);
+      state.colorViews = colors.map((texture: Texture) =>
+        this.own(
+          texture.createView({
+            dimension: '2d',
+            baseArrayLayer: context.activeCubeFace || 0,
+            arrayLayerCount: 1,
+            baseMipLevel: context.activeMipmapLevel || 0,
+            mipLevelCount: 1
+          })
+        )
+      );
       state.framebuffer = this.own(
-        this.device.createFramebuffer({colorAttachments: colors, depthStencilAttachment: depth})
+        this.device.createFramebuffer({
+          width: Math.max(1, colors[0].width >> (context.activeMipmapLevel || 0)),
+          height: Math.max(1, colors[0].height >> (context.activeMipmapLevel || 0)),
+          colorAttachments: state.colorViews,
+          depthStencilAttachment: depth
+        })
       );
       state.colors = colors;
       state.depth = depth;
+      state.mipLevel = context.activeMipmapLevel;
+      state.cubeFace = context.activeCubeFace;
     }
     return state.framebuffer;
   }
@@ -637,6 +662,9 @@ export class LumaBackend extends Backend {
     }
     this.renderPass?.end();
     this.renderPass = null;
+    for (const texture of this.renderContext?.textures || []) {
+      if (texture.generateMipmaps && texture.mipmapsAutoUpdate) this.generateMipmaps(texture);
+    }
     this.renderContext = this.renderContextStack.pop() || null;
     this.device.submit();
   }
@@ -742,12 +770,14 @@ export class LumaBackend extends Backend {
       const bytes = source.array.BYTES_PER_ELEMENT;
       const layout = bufferLayout[bufferIndex];
       layout.stepMode =
-        attribute.isInstancedBufferAttribute || source.isInstancedInterleavedBuffer
+        attribute.isInstancedBufferAttribute ||
+        source.isInstancedBufferAttribute ||
+        source.isInstancedInterleavedBuffer
           ? 'instance'
           : 'vertex';
       if (source.meshPerAttribute > 1)
         throw new Error('LumaBackend: instance attribute divisors are not supported');
-      layout.byteStride = (source.stride || attribute.itemSize) * bytes;
+      layout.byteStride = (source.stride || source.itemSize || attribute.itemSize) * bytes;
       layout.attributes!.push({
         attribute: node.name,
         format: translateVertexFormat(source.array, attribute.itemSize, attribute.normalized),
@@ -791,6 +821,12 @@ export class LumaBackend extends Backend {
     else setPipeline(this.device.createRenderPipeline(properties));
   }
   draw(renderObject: ThreeInternal, info: ThreeInternal): void {
+    if (this.borrowedPass) {
+      // r187 shares uniform bindings across objects. Snapshot each draw independently.
+      const uniformScope = this.device.commandEncoder || this.borrowedPass;
+      this.borrowedRenderIndex = this.borrowedRenderCounts.get(uniformScope) || 0;
+      this.borrowedRenderCounts.set(uniformScope, this.borrowedRenderIndex + 1);
+    }
     if (!this.renderPass) this.openRenderPass(false);
     if (renderObject.object.isBatchedMesh || renderObject.camera.isArrayCamera)
       throw new Error('LumaBackend: batched meshes and array cameras are not supported');

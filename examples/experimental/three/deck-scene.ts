@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {ScatterplotLayer} from '@deck.gl/layers';
 import {ThreeMeshLayer} from '@luma.gl/three/deck';
 import {
@@ -50,7 +49,7 @@ export function createDeckLayers(scene: ReturnType<typeof createDeckScene>, reve
   const disks = new ScatterplotLayer({
     id: 'deck-disks',
     data: [scene.circle.position.toArray()],
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     getPosition: position => position,
     getRadius: 0.9,
     radiusUnits: 'common',

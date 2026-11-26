@@ -255,6 +255,7 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, 
 
   // WEBGL_compressed_texture_etc1
 
+  'etc1-rgb-unorm-webgl': {f: texture_compression_etc1_webgl},
   'etc1-rbg-unorm-webgl': {f: texture_compression_etc1_webgl},
 
   // WEBGL_compressed_texture_atc

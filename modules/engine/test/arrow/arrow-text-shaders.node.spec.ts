@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getArrowTextRenderModules} from '@luma.gl/engine/arrow';
-import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shaders';
+import {WGSLShaderAssembler, resolveShaderPlugins, type PlatformInfo} from '@luma.gl/shaders';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   configureArrowTextShaderAssembler,
@@ -53,15 +53,22 @@ it('Arrow attribute text WGSL exposes a vertex transform hook before returning',
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WEBGPU_PLATFORM_INFO,
     source: WGSL_SHADER,
-    modules: [
-      ...getArrowTextRenderModules(new NullDevice({})),
-      {
-        name: 'textTransformTest',
-        inject: {
-          'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM': '(*outputs).Position.x += 1.0;'
+    modules: getArrowTextRenderModules(new NullDevice({})),
+    pluginInjections: resolveShaderPlugins(
+      [
+        {
+          name: 'text-transform-test',
+          injections: [
+            {
+              stage: 'vertex',
+              target: 'TEXT_ATTRIBUTE_VERTEX_TRANSFORM',
+              wgsl: '(*outputs).Position.x += 1.0;'
+            }
+          ]
         }
-      }
-    ]
+      ],
+      'wgsl'
+    ).injections
   });
   const injectionIndex = assembledShader.source.indexOf('(*outputs).Position.x += 1.0;');
   const returnIndex = assembledShader.source.indexOf('return outputs;', injectionIndex);

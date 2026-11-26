@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4, Quaternion} from '@math.gl/core/matrix';
 import {GroupNode, decomposePhysicsTransform, type ScenegraphNode} from '../../index';
 import {scaleRigidBodyShape} from '@luma.gl/graph/gpu-physics';
 import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
@@ -43,14 +43,25 @@ export class ScenegraphPhysicsMotion {
    * Paused actions should remain in this set; stopped actions should be removed. On release,
    * physics retains the last accepted pose and kinematic velocity rather than snapping to authoring.
    */
-  setAnimatedNodes(nodes: ReadonlySet<ScenegraphNode>): void {
+  setAnimatedNodes(
+    nodes: ReadonlySet<ScenegraphNode>,
+    {
+      excludedNodes = new Set<ScenegraphNode>(),
+      targetNodes = new Set<ScenegraphNode>()
+    }: {
+      excludedNodes?: ReadonlySet<ScenegraphNode>;
+      /** Direct scene-following targets; unlike animation roots, these do not own descendants. */
+      targetNodes?: ReadonlySet<ScenegraphNode>;
+    } = {}
+  ): void {
     const active = new Set<ScenegraphNode>();
     const visit = (node: ScenegraphNode, inherited: boolean) => {
       const animated = inherited || nodes.has(node);
-      if (animated && this.targets.has(node)) active.add(node);
+      if ((animated || targetNodes.has(node)) && !excludedNodes.has(node) && this.targets.has(node))
+        active.add(node);
       if (node instanceof GroupNode) for (const child of node.children) visit(child, animated);
     };
-    if (nodes.size) for (const root of this.roots) visit(root, false);
+    if (nodes.size || targetNodes.size) for (const root of this.roots) visit(root, false);
     for (const [node, body] of this.targets) {
       if (active.has(node)) {
         if (!this.releasedModes.has(body) || this.world.getBodyMode(body) !== 'kinematic')
@@ -100,8 +111,35 @@ export class ScenegraphPhysicsMotion {
   }
 
   /** Call after sampling animation, before submitting the corresponding fixed physics step. */
-  update(): void {
+  update(angularDriveRows: readonly number[] = []): void {
     const currentMatrices = this.collectWorldMatrices();
+    if (angularDriveRows.length) {
+      /** Sample the authored orientations in the same body and attachment frames as the solver. */
+      const rotations = new Map<number, Quaternion>();
+      for (const [node, body] of this.targets) {
+        rotations.set(
+          body,
+          new Quaternion(decomposePhysicsTransform(currentMatrices.get(node)!).rotation)
+        );
+      }
+      const targets = new Map<number, number>();
+      for (const index of angularDriveRows) {
+        const joint = this.world.getJointParameters(index);
+        if (joint.type !== 'general' || !joint.angular || !joint.drive)
+          throw new Error('Expected angular drive');
+        const attachment = (body: number, frame?: readonly [number, number, number, number]) => {
+          const rotation = rotations.get(body);
+          if (!rotation) throw new Error('Missing angular drive body node');
+          return rotation.clone().multiplyRight(new Quaternion(frame ?? [0, 0, 0, 1]));
+        };
+        const relative = attachment(joint.first, joint.firstFrame?.orientation)
+          .invert()
+          .multiplyRight(attachment(joint.second, joint.secondFrame?.orientation));
+        const sign = relative[3] < 0 ? -1 : 1;
+        targets.set(index, 2 * Math.atan2(sign * relative[joint.axes[0]], sign * relative[3]));
+      }
+      this.world.setAngularDriveTargets(targets);
+    }
     const scaleChanges = this.colliders.flatMap(collider => {
       const matrix = currentMatrices.get(collider.node);
       if (!matrix) throw new Error('Detached collider animation target');

@@ -1,21 +1,29 @@
-# Releasing luma.gl
+# Releasing
 
-This guide describes publishing luma.gl packages to npm through the `release` GitHub Actions workflow.
+This guide is for maintainers preparing a luma.gl release. Releases are published
+from an eligible branch by the GitHub Actions [release workflow](https://github.com/visgl/luma.gl/blob/master/.github/workflows/release.yml).
+A pushed version tag starts the workflow; after its tests and build pass, it checks
+the changelog, creates the GitHub release, and publishes packages to npm.
 
-## Routine releases do not need npm setup
+For an ordinary release:
 
-As of `v10.0.0-alpha.6` (October 30, 2026), trusted publishing has been validated for all eight
-public packages: `@luma.gl/anari`, `@luma.gl/core`, `@luma.gl/engine`, `@luma.gl/gpgpu`,
-`@luma.gl/graph`, `@luma.gl/shaders`, `@luma.gl/slang`, and `@luma.gl/three`.
+1. Choose an eligible branch and release version.
+2. Write and commit the matching changelog entry.
+3. Version the packages, review the changes, and run the checks.
+4. Commit and tag the release, then push the branch and tag.
+5. Monitor the workflow and verify every public package on npm.
 
-The next alpha can use those existing connections. It does not require `npm login`, a publishing
-token, manual `npm publish`, or recreating trusted publishers. Determine the current package set
-from `modules/*/package.json` and each package's `private` flag; packages can move or be renamed.
-Since alpha.6, `@luma.gl/gpgpu` has been consolidated into `@luma.gl/graph`; alpha.7 publishes
-the seven remaining public packages. A new npm package name needs the one-time setup described below, even when it replaces an existing
-package in this repository.
+The examples below use `v10.0.0-alpha.7` to illustrate the commands. Substitute
+the version and branch for the release you are preparing. Alpha releases use the
+`beta` npm dist-tag; check the expected dist-tag for other release types before
+publishing.
 
-## Release source
+Existing packages use npm trusted publishing in the release workflow, so routine
+releases do not require a local npm login or a publishing token. A new package
+name needs the one-time setup described below. Determine the current public
+package set from `modules/*/package.json` and each package’s `private` flag.
+
+## 1. Choose the release source
 
 Publish only from `master` or a release branch whose name ends in `-release`, such as `9.4-release`.
 The workflow checks that the tagged commit is contained in one of those remote branches. Use the
@@ -26,7 +34,7 @@ Use a clean checkout of the release branch. If the development checkout contains
 use a separate clean checkout rather than stashing, committing, or publishing those changes. Do not
 publish from a feature branch or a detached commit outside the permitted release branches.
 
-## Prepare the changelog and version
+## 2. Prepare the changelog and version
 
 Check `lerna.json`, remote Git tags, and npm before choosing a version:
 
@@ -69,7 +77,7 @@ Review compatibility ranges deliberately; do not replace unrelated dependency ve
 tag, and immediately push. Use them only when no intermediate manifest corrections are needed.
 Do not run them after the controlled versioning sequence, which would bump the version again.
 
-## Validate before tagging
+## 3. Validate and tag the release
 
 After the final manifest and formatting changes, run:
 
@@ -127,11 +135,18 @@ git push origin master
 git push origin refs/tags/v10.0.0-alpha.7
 ```
 
-Substitute the release branch for `master` when appropriate. The workflow runs node tests and all
-six headless shards, then builds packages, checks the changelog, creates the GitHub release, and
-publishes missing package versions through OIDC. Monitor the whole workflow through completion.
+Substitute the release branch for `master` when appropriate. The workflow runs Node tests and six headless release-suite shards. After those
+pass, it builds packages, checks the changelog, creates the GitHub release, and
+publishes through OIDC. Monitor the whole workflow through completion.
 
-## Verify the registry, not just the workflow
+The release suite uses `LUMA_TEST_BROWSER_GROUP=release`. It keeps rendering, data processing,
+and ordinary physics correctness checks, while application-scale domino and endurance
+qualification stays in physics CI. Their assertions and thresholds are unchanged. Default local
+tests and PR physics coverage still exercise the domino scenario; the full endurance matrix also
+runs through the scheduled/manual physics workflow. The qualification list lives in
+`test/utils/browser-test-groups.ts`.
+
+## 4. Verify the published release
 
 For **every public package**, verify the exact version, expected dist-tag, and provenance:
 
@@ -145,12 +160,21 @@ Repeat for the package set printed by the preflight above. Confirm `beta` points
 provenance attestation. Initial authenticated bootstrap versions may lack OIDC provenance; the
 subsequent workflow-published version must have it.
 
-Registry metadata can lag a successful publish, including returning `E404` or the previous
-`beta` tag. Allow propagation time and recheck before deciding publication failed. Retain the
-successful publish log and verify each package independently. A green workflow alone is not proof
-that every version is publicly installable.
+Capture every public package's dist-tags before publishing so verification can compare all
+previous non-beta tags, including `latest`, rather than just the new `beta` value.
 
-## One-time setup for a new package name
+Registry metadata can lag a successful publish, including returning `E404` or the previous
+`beta` tag. During alpha.9, ordinary npm queries initially returned 404 after the workflow
+succeeded; packages appeared at different times, and all seven were verified several minutes
+later. Allow at least five minutes for propagation and recheck each package independently.
+This is a diagnostic interval, not a guarantee that registry caches have refreshed.
+
+Retain the successful publish log. Fresh cache-busted registry metadata can help diagnose stale
+responses, but finish with ordinary `npm view --prefer-online` verification of exact versions,
+dist-tags, and provenance. Do not republish or move the tag just because an early query returns
+404. A green workflow alone is not proof that every version is publicly installable.
+
+## New package names: one-time setup
 
 ### Bootstrap before the target release
 
@@ -206,14 +230,31 @@ Plan the bootstrap and next OIDC publication together; saving the connection is 
 step. See [npm's configuration expiry documentation](https://docs.npmjs.com/trusted-publishers/#trusted-publisher-configuration-expiry)
 and the [`npm trust` reference](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
 
-## Recovery after a failed publication
+## Recover from a failed publication
 
 Keep the same version while completing a failed or partial release. First inspect the failed job
 and query npm for every public package to establish which versions actually reached the registry.
 Do not unpublish or attempt to overwrite successful versions.
 
-### Retry unchanged source
+### Allow automatic publishing recovery to finish
 
+The current `@vis.gl/dev-tools` publisher makes up to three publishing attempts with a
+120-second delay between attempts. The release workflow invokes this publisher directly;
+inspect the installed publisher and logs if its behavior changes after a dev-tools upgrade.
+
+Alpha.9 encountered `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 because equivalent provenance entries
+already existed in the transparency log. The built-in second attempt recovered: it skipped the
+already published graph package and published the remaining six packages. The successful log
+therefore listed six newly published packages while the complete release contained seven.
+Verify the full public package set, including packages skipped on a retry.
+
+While the publisher is still running its bounded retries, monitor it rather than starting a
+competing job or deleting the GitHub release. Keep OIDC and provenance enabled. A transparency
+error in an earlier attempt does not establish that the final publication failed.
+
+### Retry unchanged source after automatic recovery is exhausted
+
+Only after the job has failed and registry state has been inspected, use manual recovery.
 For a transient publishing failure, retain successful test jobs and rerun only the publishing job.
 If the workflow already created its GitHub release, delete that incomplete release entry first;
 this does not delete the Git tag or npm packages. The current publisher creates the GitHub release
@@ -259,6 +300,6 @@ not claim skipped packages were rebuilt from a later recovery commit.
 | --- | --- |
 | npm `E422` says `repository.url` does not match provenance | Correct the package manifest to identify `https://github.com/visgl/luma.gl`, verify the packed manifest, and merge before retrying. |
 | A prepublish bundle cannot resolve an internal workspace path | Check the bundle alias against the package export map. Run actual prepublish hooks; a TypeScript build alone does not cover this. |
-| `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 says an equivalent transparency-log entry exists | Inspect which packages published, allow a short backoff, and retry the publishing job. Keep OIDC and provenance enabled. |
+| `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 says an equivalent transparency-log entry exists | Let the built-in bounded retry finish; inspect the final job result and registry. Retry the publisher manually only if automatic recovery is exhausted. Keep OIDC and provenance enabled. |
 | `ERR_INVALID_ARG_TYPE` says the timeout is a string | Remove `npm_config_timeout`. Lerna forwards that untyped environment value as a string, while its HTTP client requires a number. Do not use this variable as a Sigstore workaround. Test any future override through the actual HTTP client, not just a configuration snapshot. |
 | A newly published version returns `E404` or an old dist-tag | Allow registry propagation, compare with publish logs, and recheck exact versions and tags before retrying. |

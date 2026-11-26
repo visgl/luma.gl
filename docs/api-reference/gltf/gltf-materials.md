@@ -268,10 +268,11 @@ prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {load} from '@loaders.gl/core';
+import {ImageLoader} from '@loaders.gl/images';
 
 const environment = loadPBREnvironment(device, {
-  loadImage: loadImageTexture,
+  loadImage: url => load(url, ImageLoader),
   brdfLutUrl: '/environment/brdf-lut.png',
   getTexUrl: (kind, face, level) => `/environment/${kind}/${face}/${level}.png`,
   specularMipLevels: 6
@@ -283,9 +284,63 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 ```
 
 This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered
-lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
-lookup from an existing equirectangular texture, use the separate
-[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
+lighting environments. The loaded `PBREnvironment` keeps its legacy shader path: the PBR shader
+decodes the three textures from sRGB and maps roughness to a fixed maximum specular mip level
+of 9.
+
+### Generated and linear-light environments
+
+`imageBasedLightingEnvironment` also accepts a
+[`PBRLightingEnvironment`](/docs/api-reference/engine/lighting/pbr-environment): borrowed
+diffuse, specular, and BRDF lookup textures in linear light, with optional `intensity` and
+`rotation` controls. The textures of
+[`createPrefilteredEnvironment()`](/docs/api-reference/engine/lighting/prefiltered-environment)
+have this shape, so no wrapper object is necessary:
+
+```ts
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+import {createPrefilteredEnvironment} from '@luma.gl/engine/lighting';
+
+const prefilteredEnvironment = createPrefilteredEnvironment(device, {source});
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
+  imageBasedLightingEnvironment: {
+    ...prefilteredEnvironment.textures,
+    intensity: 1,
+    rotation: 0
+  }
+});
+
+// After the generated models are destroyed:
+prefilteredEnvironment.destroy();
+```
+
+For this input the glTF parser:
+
+- binds the three textures directly through `getPBREnvironmentBindings()`, which also checks
+  that they are live, on one device, and have cube, cube, and 2D dimensions;
+- sets the `USE_SCENE_ENVIRONMENT` shader define, so the PBR shader samples the textures as
+  linear light without an sRGB decode;
+- writes `environmentIntensity`, `environmentRotation`, and `environmentMipCount` to the
+  `pbrScene` uniforms of each generated model, from `getPBREnvironmentUniforms()`.
+
+The values are a snapshot taken when the scenegraph is created. To change the intensity or the
+rotation later, or after a specular texture with a different mip count is supplied, update the
+models:
+
+```ts
+import {getPBREnvironmentUniforms} from '@luma.gl/engine/lighting';
+
+model.shaderInputs.setProps({pbrScene: getPBREnvironmentUniforms(environment)});
+```
+
+The environment textures stay application-owned. The parser does not add them to the generated
+textures that the scenegraph destroys. To use a `loadPBREnvironment()` result on this path,
+convert it with `resolveLoadedPBREnvironment()`; its images must then contain linear-light data.
+
+To generate irradiance, roughness-prefiltered reflection mips, and a BRDF lookup inside the
+retained scene renderer instead, use the separate
+[`PBREnvironmentGenerator`](/docs/api-reference/anari/pbr-environment) owned by
 `@luma.gl/anari`.
 
 ## Transmission and rendering-path differences
@@ -293,7 +348,7 @@ lookup from an existing equirectangular texture, use the separate
 Transmission and volume factors/textures are preserved across rendering paths, but physical
 refraction depends on the renderer:
 
-- The shared [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) and
+- The shared [experimental SceneRenderer](/docs/api-reference/anari/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
   thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
   roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment

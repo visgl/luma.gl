@@ -13,7 +13,14 @@ export type GLTFAnimation = {
 };
 
 /** Supported glTF animation target paths. */
-export type GLTFAnimationPath = 'translation' | 'rotation' | 'scale' | 'weights' | 'visibility';
+export type GLTFAnimationPath =
+  | 'translation'
+  | 'rotation'
+  | 'scale'
+  | 'weights'
+  | 'visibility'
+  | 'selectable'
+  | 'hoverable';
 
 /** Parsed glTF animation channel that targets a scenegraph node. */
 export type GLTFNodeAnimationChannel = {

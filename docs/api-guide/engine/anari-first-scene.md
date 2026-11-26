@@ -74,7 +74,7 @@ import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const canvas = document.querySelector('canvas');
 
@@ -392,7 +392,7 @@ The runtime groups placements by **surface object identity**. One shared surface
 
 Avoid constructing a new `ANARISurface` for every placement when geometry and material can be shared. Distinct surface identities produce distinct compiled models and draw calls.
 
-Transforms are 16-element column-major matrices. `@math.gl/core`'s `Matrix4` can compose translation, rotation, and scale:
+Transforms are 16-element column-major matrices. `@math.gl/core/matrix`'s `Matrix4` can compose translation, rotation, and scale:
 
 ```ts
 const transform = new Matrix4()
@@ -456,7 +456,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 
 The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
 resolved. Renderer parameters can also receive the caller-owned
-[prepared PBR lighting environment](/docs/api-reference/scene/pbr-environment) for
+[prepared PBR lighting environment](/docs/api-reference/anari/pbr-environment) for
 roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
@@ -732,5 +732,5 @@ anariDevice.extensions;
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

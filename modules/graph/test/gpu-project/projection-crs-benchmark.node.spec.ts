@@ -4,8 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project/crs';
-import {measureProjectionProgramCPU} from '@luma.gl/graph/gpu-project/benchmarks';
+import {createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project-crs';
+import {measureProjectionProgramCPU} from '@luma.gl/graph/gpu-project-benchmarks';
 import {makePerformanceOptions, performanceFixtures} from './projection-performance-fixtures';
 
 it.each(

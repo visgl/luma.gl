@@ -13,6 +13,14 @@ The **UnlitTest** sample demonstrates this capability. Drag to orbit and scroll 
 
 <GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/UnlitTest/glTF/UnlitTest.gltf" title="UnlitTest" embedded showStats={false} />
 
+## Always-unlit shaders
+
+For raster imagery and custom shaders that never need lighting, use
+[`unlitMaterial`](/docs/api-reference/shaders/shader-modules/unlit-material) from
+`@luma.gl/shaders`. It preserves RGBA without lighting dependencies or material
+uniforms. Texture sampling remains application-owned. The existing PBR unlit path
+below retains its material schema and texture processing for imported assets.
+
 ## PBRMaterial reference
 
 `PBRMaterial` from `@luma.gl/anari` is a typed engine `Material` backed by the shared

@@ -13,23 +13,29 @@ export default defineConfig(({mode}) => ({
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        streamed: fileURLToPath(new URL('./streamed.html', import.meta.url)),
+        embed: fileURLToPath(new URL('./embed.html', import.meta.url)),
         'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
+        'domino-course': fileURLToPath(new URL('./domino-course.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }
     }
   },
   resolve: {
     alias: {
-      '@luma.gl/graph/gpu-simple-graph/cpu': fileURLToPath(
+      '@luma.gl/graph/gpu-simple-graph-cpu': fileURLToPath(
         new URL('../../../modules/graph/src/gpu-simple-graph/operations/cpu', import.meta.url)
       ),
-      '@luma.gl/graph/gpu-simple-graph/webgl': fileURLToPath(
+      '@luma.gl/graph/gpu-simple-graph-webgl': fileURLToPath(
         new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgl', import.meta.url)
       ),
-      '@luma.gl/graph/gpu-simple-graph/webgpu': fileURLToPath(
+      '@luma.gl/graph/gpu-simple-graph-webgpu': fileURLToPath(
         new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgpu', import.meta.url)
       ),
 
+      '@luma.gl/graph/_internal/arrow': fileURLToPath(
+        new URL('../../../modules/graph/src/arrow/internal.ts', import.meta.url)
+      ),
       '@luma.gl/graph/_internal': fileURLToPath(
         new URL('../../../modules/graph/src/execution', import.meta.url)
       ),
@@ -59,6 +65,8 @@ export default defineConfig(({mode}) => ({
       '@deck.gl-community/panels',
       'preact',
       'preact/hooks',
+      'react',
+      'react-dom/client',
       '@luma.gl/core',
       '@luma.gl/core/webgl',
       '@luma.gl/core/webgpu',

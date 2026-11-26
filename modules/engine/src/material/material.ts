@@ -87,6 +87,8 @@ export class Material<
 > {
   /** Application-provided identifier. */
   readonly id: string;
+  /** Structured metadata associated with this material. */
+  metadata: Record<string, unknown> = {};
   /** Device that owns the material resources. */
   readonly device: Device;
   /** Factory that defines the material schema. */
@@ -156,6 +158,7 @@ export class Material<
     if (props.moduleProps) {
       material.setProps(props.moduleProps);
     }
+    material.metadata = {...this.metadata};
     material.updateShaderInputs();
     return material;
   }

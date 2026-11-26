@@ -296,9 +296,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Metadata payloads remain in the loaded glTF, but luma.gl does not interpret them.'
   },
   KHR_xmp_json_ld: {
-    supportLevel: 'none',
+    supportLevel: 'parsed-and-wired',
     standardStatus: 'ratified',
-    comment: 'Metadata is preserved in the glTF, but luma.gl does not interpret it.'
+    comment: 'XMP packet references are available through scene metadata.'
   },
   EXT_lights_image_based: {
     supportLevel: 'none',

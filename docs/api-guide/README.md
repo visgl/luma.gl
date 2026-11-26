@@ -31,10 +31,10 @@ mixing, crossfades, and portable morph-target deformation. Scenegraphs are inclu
 [glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
 live in the format-specific `@luma.gl/engine/gltf` module.
 
-The experimental [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) and
-[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) consume
+The experimental [`SceneRenderer`](/docs/api-reference/anari/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer) consume
 format-independent scene descriptions instead of introducing a second glTF renderer. Their
-[physical lighting environments](/docs/api-reference/scene/pbr-environment) can be prepared
+[physical lighting environments](/docs/api-reference/anari/pbr-environment) can be prepared
 from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
@@ -42,6 +42,10 @@ For an experimental retained, renderer-independent scene contract, see
 the experimental `@luma.gl/anari` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
+
+The [Materials guide](/docs/api-guide/engine/materials) compares Unlit, Lambert,
+Phong, Gouraud, and PBR shading and explains when to use a dedicated unlit shader
+versus a material's runtime `unlit` flag.
 
 ## Core
 

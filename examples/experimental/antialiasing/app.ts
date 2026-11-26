@@ -14,7 +14,7 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
-import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
 import type {ShaderModule} from '@luma.gl/shaders';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {

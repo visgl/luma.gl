@@ -51,9 +51,17 @@ export class GPUVectorBindings {
   setInputs(
     columns: GPUVectorModelAttributes,
     explicitLayouts: BufferLayout[] | undefined,
-    stepMode: 'vertex' | 'instance'
+    stepMode: 'vertex' | 'instance',
+    enforceMatchingVectorLengths = true
   ): void {
-    validateGPUVectorBatchStructure(columns);
+    if (enforceMatchingVectorLengths) {
+      validateGPUVectorBatchStructure(columns);
+    } else {
+      // Independent attributes currently require contiguous storage.
+      for (const column of Object.values(columns)) {
+        if (column && !isConstant(column)) assert(column.data.length === 1);
+      }
+    }
     this.claimedNames.clear();
     this.inputs = columns;
     this.sourceLayouts = explicitLayouts;
@@ -87,7 +95,7 @@ export class GPUVectorBindings {
       // Inputs must describe a typed vector or a typed constant, never raw buffers or arrays.
       if (!isConstant(column) && !Array.isArray(column.data))
         throw new TypeError(`Expected a GPU vector or constant for ${name}`);
-      if (!isConstant(column)) {
+      if (!isConstant(column) && enforceMatchingVectorLengths) {
         const layout = layouts.find(
           layout =>
             layout.name === name ||

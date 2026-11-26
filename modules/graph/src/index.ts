@@ -53,6 +53,8 @@ export {
   type GPUCommandGraphNodeConditionPreflight,
   type GPUCommandGraphNodeEncodingStats,
   type GPUCommandGraphNodePreflight,
+  type GPUCommandGraphCompileOptions,
+  type GPUCommandGraphKernelMetadata,
   type GPUCommandGraphResourceSummary,
   type GPUCommandGraphNodePublication,
   type GPUCommandGraphNodeTiming,
@@ -193,6 +195,8 @@ export type {
 } from './gpu-core/gpu-operation-contract';
 
 export {GPUUploadOperation, GPUCopyOperation} from './gpu-core/gpu-transfer-operation';
+export {GPUShaderPassOperation} from './gpu-core/gpu-shader-pass-operation';
+export type {GPUShaderPassOperationProps} from './gpu-core/gpu-shader-pass-operation';
 export type {
   GPUUploadOperationProps,
   GPUCopyOperationProps
@@ -202,3 +206,27 @@ export type {GPUCompactionOperationProps} from './gpu-core/gpu-compaction-operat
 
 export {GPUGraphState} from './gpu-core/gpu-graph-state';
 export type {GPUGraphStateBindings, GPUGraphStateOptions} from './gpu-core/gpu-graph-state';
+
+export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-core/gpu-graph-value';
+export type {
+  GPUGraphTextureBinding,
+  GPUGraphOutput,
+  GPUGraphOutputs
+} from './gpu-core/gpu-texture-plan';
+
+export {GPUCPUOperation} from './gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from './gpu-core/gpu-cpu-operation';
+
+export {
+  GPUGraphGroupAggregation,
+  GPUGraphReduction
+} from './gpu-core/gpu-semantic-aggregation-operation';
+export type {
+  GPUGraphGroupAggregationProps,
+  GPUGraphReductionProps
+} from './gpu-core/gpu-semantic-aggregation-operation';

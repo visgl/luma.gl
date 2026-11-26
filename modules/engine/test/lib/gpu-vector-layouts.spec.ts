@@ -93,6 +93,7 @@ for (const backend of ['webgl', 'webgpu'] as const) {
       )
     });
     const model = new GPUVectorModel(device, {
+      inferDrawCount: 'vertex',
       vs: `#version 300 es
 in vec2 positions;
 in float intensity;

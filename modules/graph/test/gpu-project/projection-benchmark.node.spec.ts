@@ -6,11 +6,11 @@ import {readFileSync} from 'node:fs';
 
 import * as graphRootModule from '@luma.gl/graph';
 import * as projectionModule from '@luma.gl/graph/gpu-project';
-import * as benchmarkModule from '@luma.gl/graph/gpu-project/benchmarks';
+import * as benchmarkModule from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   runProjectionBenchmark,
   type ProjectionBenchmarkOptions
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 import {describe, expect, test} from 'vitest';
 
 const BENCHMARK_OPTIONS: ProjectionBenchmarkOptions = {
@@ -108,7 +108,7 @@ describe('CPU projection benchmarks', () => {
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     ) as {exports?: Record<string, Record<string, string>>};
 
-    expect(packageJson.exports?.['./gpu-project/benchmarks']).toEqual({
+    expect(packageJson.exports?.['./gpu-project-benchmarks']).toEqual({
       import: './dist/gpu-project/benchmarks.js',
       require: './dist/gpu-project/benchmarks.cjs',
       types: './dist/gpu-project/benchmarks.d.ts'

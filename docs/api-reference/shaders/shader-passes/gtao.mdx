@@ -75,3 +75,11 @@ lighting and before diffuse global illumination or reflective postprocessing.
 - [SSAO](./ssao) provides a four-pass, non-temporal ambient-occlusion path.
 - [Screen-Space Global Illumination](./screen-space-global-illumination) adds diffuse bounced light instead of removing ambient energy.
 - [Screen-Space Reflections](./screen-space-reflections) resolves directional specular response.
+
+## Shared visibility and PBR workflow
+
+For a visibility texture rather than whole-color postprocessing, use
+[`AmbientOcclusionPass`](../../engine/lighting/ambient-occlusion.md). It reuses this evaluator
+with depth-aware filtering and no temporal history. The
+[lighting effects guide](../../../api-guide/engine/lighting-effects.md) explains none/cheap/good
+choices, input conventions, and composition with direct shadows and environment lighting.

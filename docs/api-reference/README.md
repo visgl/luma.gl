@@ -60,7 +60,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu
 [core]: /docs/api-reference/core
-[anari]: /docs/api-reference/scene
+[anari]: /docs/api-reference/anari
 [shaders]: /docs/api-reference/shaders
 [slang]: /docs/api-reference/slang
 [engine/effects]: /docs/api-guide/shaders/shader-passes

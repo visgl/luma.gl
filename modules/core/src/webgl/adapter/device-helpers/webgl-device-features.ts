@@ -22,7 +22,10 @@ type WebGLFeatureDefinition = boolean | string | ((gl: WebGL2RenderingContext) =
 
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
   // optional WebGPU features
-  'depth-clip-control': 'EXT_depth_clamp', // TODO these seem subtly different
+  // WebGPU `depth-clip-control` enables `unclippedDepth`. Both it and EXT_depth_clamp turn off
+  // near/far clipping and clamp the fragment depth to the depth range. The name is from WebGPU.
+  // It does not mean EXT_clip_control. See 'clip-control-webgl' for that extension.
+  'depth-clip-control': 'EXT_depth_clamp',
   'timestamp-query': 'EXT_disjoint_timer_query_webgl2',
   // "indirect-first-instance"
   // Textures are handled by getTextureFeatures()
@@ -30,6 +33,8 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
 
   // optional WebGL features
   'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
+  'stencil-texturing-webgl': 'WEBGL_stencil_texturing',
+  'clip-control-webgl': 'EXT_clip_control',
   'html-in-canvas': gl =>
     isHTMLInCanvasSupported() &&
     typeof (
@@ -38,6 +43,7 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
       }
     ).texElementImage2D === 'function',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
+  'polygon-offset-clamp-webgl': 'EXT_polygon_offset_clamp',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
   'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
   'shader-noperspective-interpolation-webgl': 'NV_shader_noperspective_interpolation',

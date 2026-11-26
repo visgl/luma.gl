@@ -5,6 +5,9 @@
 import {isBrowser} from 'probe.gl/env';
 import {Device, DeviceProps} from './device';
 
+/** Identifies a null initial WebGPU adapter across bundles so best-available can use WebGL2. */
+export const WEBGPU_ADAPTER_UNAVAILABLE = 'LUMA_WEBGPU_ADAPTER_UNAVAILABLE';
+
 /**
  * Create and attach devices for a specific backend.
  */

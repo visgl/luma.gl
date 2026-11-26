@@ -59,9 +59,9 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
     packageName: '@luma.gl/anari',
     label: 'Declarative 3D',
     description:
-      'Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.',
-    capabilities: ['glTF', 'OpenUSD', 'Renderers'],
-    documentationPath: 'docs/api-reference/scene'
+      'Build retained 3D scenes, import glTF and supported OpenUSD assets, and switch between raster rendering and progressive WebGPU ray tracing.',
+    capabilities: ['glTF', 'OpenUSD', 'Ray tracing'],
+    documentationPath: 'docs/api-reference/anari'
   },
   {
     id: 'splats',

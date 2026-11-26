@@ -3,6 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {
+  makeGPUSplatDataFromGLTFScene,
+  getGLTFSplatSceneInstances,
+  type GLTFSplatInstance,
+  type GLTFSplatBatchGroup
+} from './renderers/splats/conversion/make-gpu-splat-data-from-gltf';
+export {
   makeGPUSplatDataFromArrow,
   makeGPUSplatDataFromArrowStream,
   type GPUSplatArrowRecordBatchLike,

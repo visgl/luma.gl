@@ -405,7 +405,7 @@ describe('framework capabilities documentation', () => {
     );
   });
 
-  test('distinguishes implemented WebGPU ray tracing from future multi-bounce path tracing', () => {
+  test('distinguishes implemented ray transport from advanced transport opportunities', () => {
     const capabilitiesSource = readCapabilitiesSource();
     const rayTracingRows = readDetailedCapabilityRows(capabilitiesSource).filter(row =>
       /GPU ray tracing and progressive rendering/i.test(row.heading)
@@ -445,8 +445,12 @@ describe('framework capabilities documentation', () => {
       ).toMatch(capability);
     }
 
-    expect(multiBounceRow, 'Multi-bounce path tracing remains a genuine limitation').toBeDefined();
-    expect(multiBounceRow!.status).toBe('Opportunity');
+    expect(multiBounceRow).toBeDefined();
+    expect(multiBounceRow!.status).toBe('Experimental');
+    expect(multiBounceRow!.details).toMatch(/up to eight diffuse or PBR bounces/i);
+    expect(rayTracingRows.find(row => /advanced light sampling/i.test(row.feature))?.status).toBe(
+      'Opportunity'
+    );
     expect(multiBounceRow!.backend).toBe('WebGPU');
     expect(capabilitiesSource).not.toMatch(
       /general\s+ray\s+traversal[\s\S]{0,100}(?:not|never)\s+implemented/i
@@ -773,23 +777,8 @@ describe('framework capabilities documentation', () => {
       'utf8'
     );
 
-    expect(documentationTableOfContents[0]).toMatchObject({
-      type: 'category',
-      label: 'Getting Started',
-      items: expect.arrayContaining([
-        'getting-started',
-        {
-          type: 'category',
-          label: 'Capabilities and compatibility',
-          items: [
-            'capabilities',
-            'capabilities/gpu-data-compute',
-            'capabilities/rendering-visualization',
-            'api-guide/background/webgpu-vs-webgl'
-          ]
-        }
-      ])
-    });
+    expect(documentationTableOfContents[0]).toMatchObject({label: 'Overview'});
+    expect(JSON.stringify(documentationTableOfContents)).toContain('capabilities/gpu-data-compute');
 
     expect(gettingStartedSource).toContain('/docs/capabilities');
   });

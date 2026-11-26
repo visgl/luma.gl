@@ -15,6 +15,22 @@ specific compatibility profile and preserve upright Y-axis rotation. Current dra
 configurations remain rejected. The source model requires CC BY 4.0 and Apache 2.0 attribution and
 contains a 67.9 MB geometry buffer.
 
+Pass `billboards: {}` when creating a glTF scenegraph to resolve the attachments once and get the
+engine controller on `scenegraphs.billboards`. Pass `billboards: {allowLegacyYAxis: true}` for the
+legacy profile described above. The controller uses the resolved scenegraph nodes and does not read
+the original glTF nodes during traversal. `scenegraphs.destroy()` disposes the controller. For
+programmatically created scenes, construct `BillboardController` directly with scene roots and node
+bindings; no glTF document is needed.
+
+```ts
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {billboards: {}});
+const billboards = scenegraphs.billboards!;
+```
+
+Alternatively, construct a controller separately using `parseGLTFBillboards`:
+
 ```ts
 import {BillboardController} from '@luma.gl/engine';
 import {parseGLTFBillboards} from '@luma.gl/engine/gltf';

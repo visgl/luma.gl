@@ -4,20 +4,21 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
-import * as experimentalRoot from '@luma.gl/graph/experimental/simulation';
+import * as experimentalRoot from '@luma.gl/graph/experimental-simulation';
 import * as simpleGraphRoot from '@luma.gl/graph/gpu-simple-graph';
 import * as executionGraph from '@luma.gl/graph/gpu-graph';
 import * as gpuCore from '@luma.gl/graph/gpu-core';
 import * as gpuData from '@luma.gl/graph/gpu-data';
 import * as gpuCrossfilter from '@luma.gl/graph/gpu-crossfilter';
 import * as gpuDataframe from '@luma.gl/graph/gpu-dataframe';
+import * as gpuSQL from '@luma.gl/graph/gpu-sql';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import * as gpuVectorSearch from '@luma.gl/graph/gpu-vector-search';
 import * as gpuProject from '@luma.gl/graph/gpu-project';
 import * as gpuRaster from '@luma.gl/graph/gpu-raster';
 import * as gpuTables from '@luma.gl/graph/gpu-tables';
 import * as models from '@luma.gl/engine/models';
-import * as gpuModels from '@luma.gl/graph/experimental/models';
+import * as gpuModels from '@luma.gl/graph/experimental-models';
 import * as gpuTrace from '@luma.gl/graph/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
@@ -60,6 +61,12 @@ const UNPUBLISHED_WORKING_NAMES = [
 ] as const;
 
 describe('experimental GPU module naming', () => {
+  test('exports canonical GPU SQL names without Lu compatibility aliases', () => {
+    expect(gpuSQL.GPUSQLContext.name).toBe('GPUSQLContext');
+    expect(gpuSQL.GPUSQLQuery.name).toBe('GPUSQLQuery');
+    expect(Object.keys(gpuSQL).filter(name => /^Lu/.test(name))).toEqual([]);
+    expect(Object.keys(gpuDataframe).filter(name => /^Lu/.test(name))).toEqual([]);
+  });
   test('distinguishes semantic graphs, command graphs, and graph analytics', () => {
     expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
     expect(gpuCore.GPUGraph).not.toBe(gpuCore.GPUCommandGraph);
@@ -82,9 +89,9 @@ describe('experimental GPU module naming', () => {
     for (const moduleName of DATA_MODULES) {
       expect(graphPackage.exports[`./${moduleName}`], moduleName).toBeDefined();
     }
-    expect(graphPackage.exports['./gpu-graph-algorithms/benchmarks']).toBeDefined();
+    expect(graphPackage.exports['./gpu-graph-algorithms-benchmarks']).toBeDefined();
     for (const moduleName of EXPERIMENTAL_MODULES) {
-      expect(graphPackage.exports[`./experimental/${moduleName}`], moduleName).toBeDefined();
+      expect(graphPackage.exports[`./experimental-${moduleName}`], moduleName).toBeDefined();
     }
     for (const moduleName of UNPUBLISHED_WORKING_NAMES) {
       expect(graphPackage.exports[`./${moduleName}`]).toBeUndefined();
@@ -127,11 +134,11 @@ describe('experimental GPU module naming', () => {
       '@luma.gl/graph/gpu-core',
       '@luma.gl/graph/gpu-graph-algorithms',
       '@luma.gl/graph/gpu-physics',
-      '@luma.gl/graph/gpu-graph-algorithms/benchmarks',
+      '@luma.gl/graph/gpu-graph-algorithms-benchmarks',
       '@luma.gl/graph/gpu-vector-search',
       '@luma.gl/graph/gpu-tables',
-      '@luma.gl/graph/experimental/models',
-      '@luma.gl/graph/experimental/simulation'
+      '@luma.gl/graph/experimental-models',
+      '@luma.gl/graph/experimental-simulation'
     ]) {
       expect(() => import.meta.resolve(packagePath), packagePath).not.toThrow();
     }
@@ -180,32 +187,36 @@ describe('experimental GPU module naming', () => {
   });
 
   test('groups shared data, kernels, and evaluator APIs under the graph reference', () => {
-    type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
+    type DocumentationCategory = {
+      label: string;
+      items: Array<string | DocumentationCategory>;
+      id?: string;
+    };
     const documentation = JSON.parse(
       readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
     ) as DocumentationCategory[];
-    const reference = documentation.find(category => category.label === 'API Reference');
+    const reference = documentation.find(category => category.label === 'Packages');
     const packageReference = reference?.items.find(
       (category): category is DocumentationCategory =>
         typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
-    const moduleGroups: Record<string, string> = {'gpu-data': 'GPU Data'};
+    const moduleGroups: Record<string, string> = {'gpu-data': '@luma.gl/graph/gpu-data'};
     const graphReference = reference?.items.find(
       (category): category is DocumentationCategory =>
         typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
     for (const label of [
-      'GPU Core',
+      '@luma.gl/graph/gpu-core',
       'Command graphs',
       'Kernels',
       'Evaluator APIs',
-      'GPU Graph Algorithms',
-      'GPU Tables',
-      'GPU Raster',
-      'GPU Project',
-      'GPU Trace',
-      'GPU Dataframe',
-      'GPU Crossfilter'
+      '@luma.gl/graph/gpu-graph-algorithms',
+      '@luma.gl/graph/gpu-tables',
+      '@luma.gl/graph/gpu-raster',
+      '@luma.gl/graph/gpu-project',
+      '@luma.gl/graph/gpu-trace',
+      '@luma.gl/graph/gpu-dataframe',
+      '@luma.gl/graph/gpu-crossfilter'
     ]) {
       expect(
         graphReference?.items.some(
@@ -227,7 +238,7 @@ describe('experimental GPU module naming', () => {
           typeof category !== 'string' && category.label === label
       );
       expect(group, label).toBeDefined();
-      expect(group?.items.length, label).toBeGreaterThan(0);
+      expect(group?.id, label).toBe('api-reference/graph/entry-points/gpu-data');
     }
   });
 

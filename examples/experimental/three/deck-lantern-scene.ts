@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {PolygonLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {ThreeSceneLayer} from '@luma.gl/three/deck';
 import type {ThreeSceneAdapter} from '@luma.gl/three/objects';
@@ -196,7 +195,7 @@ export function createDeckLanternLayers(
         new PolygonLayer<CourtyardPolygon>({
           id: 'courtyard-tiles-and-rings',
           data: fixture.polygons,
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           getPolygon: polygon => polygon.rings,
           getFillColor: polygon => polygon.color,
           stroked: false,
@@ -207,7 +206,7 @@ export function createDeckLanternLayers(
         new PolygonLayer<Station>({
           id: 'courtyard-data-stations',
           data: fixture.stations.map(station => ({...station})),
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           getPolygon: station =>
             Array.from({length: 6}, (_, index): Position => {
               const angle = (index / 6) * Math.PI * 2;
@@ -230,7 +229,7 @@ export function createDeckLanternLayers(
         new ScatterplotLayer<Station>({
           id: 'courtyard-beacons',
           data: fixture.stations,
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           getPosition: station => [station.position[0], station.position[1], FLOOR_HEIGHT + 0.035],
           getRadius: 0.045,
           radiusUnits: 'common',

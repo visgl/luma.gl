@@ -7,13 +7,13 @@ import {
   mergeGeoArrowDimensions,
   interleaveGeoArrowCoordinates,
   isGeoArrowValueValid,
-  sliceGeoArrowColumn,
+  getGeoArrowColumnView,
   type GeoArrowColumn,
   type GeoArrowDimension,
   type GeoArrowEncoding,
   type GeoArrowSerialized
-} from '@math.gl/geospatial/geoarrow';
-import {decodeGeoArrowWKB, decodeGeoArrowWKT} from '@math.gl/geospatial/geoarrow';
+} from '@math.gl/core/arrow';
+import {decodeGeoArrowWKB, decodeGeoArrowWKT} from '@math.gl/core/arrow';
 import {
   Data,
   DataType,
@@ -43,6 +43,8 @@ export type GeoArrowNativeEncoding =
 export type GeoArrowSerializedEncoding = 'geoarrow.wkb' | 'geoarrow.wkt';
 
 export type GeoArrowInterleaveOptions = {
+  /** Encoding for explicitly selected columns without GeoArrow extension metadata. */
+  encoding?: GeoArrowNativeEncoding;
   /** Optional single geometry column to convert. Defaults to native GeoArrow metadata columns. */
   geometryColumn?: string;
   /** Optional geometry columns to convert. Defaults to native GeoArrow metadata columns. */
@@ -110,7 +112,7 @@ export function convertGeoArrowTableToInterleaved<T extends TypeMap>(
     }
     const encoding = getFieldEncoding(field) as GeoArrowNativeEncoding | null;
     const column = makeGeoArrowColumnFromArrowVector(vector, {
-      encoding: encoding ?? undefined,
+      encoding: encoding ?? options.encoding,
       metadata: getFieldExtensionMetadata(field)
     });
     const interleavedColumn = interleaveGeoArrowCoordinates(column);
@@ -317,7 +319,7 @@ function splitGeoArrowColumn(column: GeoArrowColumn, chunkLengths: number[]): Ge
   const chunks = [];
   let rowOffset = 0;
   for (const chunkLength of chunkLengths) {
-    const slicedColumn = sliceGeoArrowColumn(column, rowOffset, rowOffset + chunkLength);
+    const slicedColumn = getGeoArrowColumnView(column, rowOffset, rowOffset + chunkLength);
     if (slicedColumn.chunks.length !== 1) {
       throw new Error('GeoArrow conversion could not preserve Arrow chunk boundaries');
     }

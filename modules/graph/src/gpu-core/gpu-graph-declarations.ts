@@ -5,6 +5,7 @@
 import type {GPUGraph} from './gpu-graph';
 import {
   GPUGraphScalar,
+  GPUGraphTexture,
   GPUGraphVector,
   gpuGraph,
   type GPUGraphValueDescriptor
@@ -15,7 +16,9 @@ import {getGPUOperationValueName, validateGPUOperationContract} from './gpu-oper
 /** Resolve operation-owned logical results without modifying the authored graph. @internal */
 export function resolveGPUGraphDeclarations(source: GPUGraph): GPUGraph {
   const program = source.clone();
-  const values = new Map([...program.scalars, ...program.vectors].map(value => [value.id, value]));
+  const values = new Map(
+    [...program.scalars, ...program.vectors, ...program.textures].map(value => [value.id, value])
+  );
   const written = new Set<string>();
   const visit = (operation: GPUGraphOperation, conditional = false): void => {
     if (operation instanceof GPUCompositeOperation) {
@@ -33,6 +36,17 @@ export function resolveGPUGraphDeclarations(source: GPUGraph): GPUGraph {
               getValue(name): GPUGraphValueDescriptor {
                 const value = values.get(name);
                 if (!value) throw new Error(`Undeclared operation value ${name}`);
+                if (value instanceof GPUGraphTexture)
+                  return (
+                    value.descriptor ??
+                    gpuGraph.texture({
+                      format: value.format,
+                      dimension: value.dimension,
+                      extent: {width: value.width!, height: value.height!, depth: value.depth},
+                      mipLevels: value.mipLevels,
+                      samples: value.samples
+                    })
+                  );
                 return value instanceof GPUGraphScalar
                   ? gpuGraph.scalar(value.format)
                   : gpuGraph.vector(value.format, {
@@ -49,6 +63,16 @@ export function resolveGPUGraphDeclarations(source: GPUGraph): GPUGraph {
           )
         )
           throw new Error(`Operation result ${name} requires a write`);
+        if (descriptor.type === 'texture' && descriptor.extent && 'like' in descriptor.extent) {
+          const sourceName = descriptor.extent.like;
+          if (
+            !(values.get(sourceName) instanceof GPUGraphTexture) ||
+            !contract.values.some(
+              use => use.access !== 'write' && getGPUOperationValueName(use.value) === sourceName
+            )
+          )
+            throw new Error(`Texture extent source ${sourceName} must be a declared texture read`);
+        }
         const existing = values.get(name);
         if (existing?.role === 'input' || existing?.role === 'state')
           throw new Error(`Operation result conflicts with ${existing.role} ${name}`);
@@ -75,7 +99,8 @@ export function resolveGPUGraphDeclarations(source: GPUGraph): GPUGraph {
           values.set(name, declaration);
         } else if (
           existing.format !== descriptor.format ||
-          existing instanceof GPUGraphVector !== (descriptor.type === 'vector')
+          existing instanceof GPUGraphVector !== (descriptor.type === 'vector') ||
+          existing instanceof GPUGraphTexture !== (descriptor.type === 'texture')
         )
           throw new Error(`Incompatible operation result ${name}`);
         else if (existing instanceof GPUGraphVector && descriptor.type === 'vector')

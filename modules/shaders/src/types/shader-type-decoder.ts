@@ -12,22 +12,22 @@ import {
 
 /** Information extracted from a VariableShaderType constant */
 export type VariableShaderTypeInfo = {
-  type: PrimitiveDataType;
-  components: number;
+  readonly type: PrimitiveDataType;
+  readonly components: number;
 };
 
 /** Information extracted from a AttributeShaderType constant */
 export type AttributeShaderTypeInfo = {
   /** WGSL-style primitive data type, f32, i32, u32 */
-  primitiveType: PrimitiveDataType;
+  readonly primitiveType: PrimitiveDataType;
   /** Whether this is a normalized integer (that must be used as float) */
-  components: 1 | 2 | 3 | 4;
+  readonly components: 1 | 2 | 3 | 4;
   /** Length in bytes of the data for one vertex */
-  byteLength?: number;
+  readonly byteLength?: number;
   /** Whether this is for integer or float vert */
-  integer: boolean;
+  readonly integer: boolean;
   /** Whether this data type is signed */
-  signed: boolean;
+  readonly signed: boolean;
 };
 
 /** Split a uniform type string into type and components */
@@ -42,11 +42,17 @@ export function getVariableShaderTypeInfo(
   return decoded;
 }
 
+const attributeShaderTypeInfoCache = new Map<AttributeShaderType, AttributeShaderTypeInfo>();
+
 /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
 export function getAttributeShaderTypeInfo(
   attributeType: AttributeShaderType | AttributeShaderTypeAlias
 ): AttributeShaderTypeInfo {
   const resolvedAttributeType = resolveAttributeShaderTypeAlias(attributeType);
+  const cached = attributeShaderTypeInfoCache.get(resolvedAttributeType);
+  if (cached) {
+    return cached;
+  }
   const decoded = TYPE_INFO[resolvedAttributeType];
   if (!decoded) {
     throw new Error(`Unsupported attribute shader type: ${attributeType}`);
@@ -56,13 +62,15 @@ export function getAttributeShaderTypeInfo(
   const signed: boolean = primitiveType !== 'u32';
 
   const byteLength = PRIMITIVE_TYPE_SIZES[primitiveType] * components;
-  return {
+  const result = Object.freeze({
     primitiveType,
     components,
     byteLength,
     integer,
     signed
-  };
+  });
+  attributeShaderTypeInfoCache.set(resolvedAttributeType, result);
+  return result;
 }
 
 export class ShaderTypeDecoder {
@@ -210,6 +218,11 @@ const UNIFORM_FORMATS: Record<VariableShaderType, {type: PrimitiveDataType; comp
   'mat4x3<u32>': {type: 'u32', components: 12},
   'mat4x4<u32>': {type: 'u32', components: 16}
 };
+
+// Variable metadata is already allocated in the table; freeze it once, without another cache.
+for (const info of Object.values(UNIFORM_FORMATS)) {
+  Object.freeze(info);
+}
 
 /**  Predeclared aliases @see https://www.w3.org/TR/WGSL/#vector-types */
 export const WGSL_ATTRIBUTE_TYPE_ALIAS_MAP: Record<AttributeShaderTypeAlias, AttributeShaderType> =
