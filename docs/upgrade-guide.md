@@ -34,6 +34,7 @@ Use hyphenated projection subpaths such as
 
 - Create a `GLSLShaderAssembler` or `WGSLShaderAssembler` and pass it as
   `shaderAssembler` when an application needs shared hooks or modules.
+- Import `GL` from `@luma.gl/core/webgl-constants`. The `@luma.gl/core/webgl` adapter entry no longer exports it.
 - On WebGL, indexed draws take `firstIndex` in index elements. Divide an old byte
   offset by the index element size. Use `firstVertex` for non-indexed draws.
 - If application code draws a model’s retained pipeline directly, pass the model’s

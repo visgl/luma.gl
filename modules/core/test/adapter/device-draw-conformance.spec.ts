@@ -518,3 +518,86 @@ it('Device render passes apply initial viewport and scissorRect parameters', asy
     }
   }
 });
+
+it('loads unsigned stencil values through a stencil-only texture view', async () => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const texture = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'depth24plus-stencil8',
+      usage: Texture.RENDER | Texture.SAMPLE
+    });
+    if (device.type === 'webgl' && !device.features.has('stencil-texturing-webgl')) {
+      expect(() => texture.createView({aspect: 'stencil-only'})).toThrow();
+      texture.destroy();
+      continue;
+    }
+
+    const stencilView = texture.createView({aspect: 'stencil-only'});
+    const color = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const source = device.createFramebuffer({depthStencilAttachment: texture});
+    const target = device.createFramebuffer({colorAttachments: [color]});
+    const {vertexShader, fragmentShader} = await createIndexedRenderShaders(device);
+    const sampledFragment = device.createShader(
+      device.type === 'webgpu'
+        ? {
+            source: `
+          @group(0) @binding(0) var stencilValues: texture_2d<u32>;
+          @fragment fn fragmentMain() -> @location(0) vec4f {
+            return vec4f(f32(textureLoad(stencilValues, vec2i(0), 0).r) / 255.0, 0, 0, 1);
+          }`
+          }
+        : {
+            stage: 'fragment',
+            source: `#version 300 es
+          precision highp float;
+          uniform highp usampler2D stencilValues;
+          out vec4 color;
+          void main() { color = vec4(float(texelFetch(stencilValues, ivec2(0), 0).r) / 255.0, 0, 0, 1); }`
+          }
+    );
+    await sampledFragment.asyncCompilationStatus;
+    const pipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: sampledFragment,
+      colorAttachmentFormats: ['rgba8unorm'],
+      shaderLayout: {
+        attributes: [],
+        bindings: [
+          {
+            name: 'stencilValues',
+            type: 'texture',
+            group: 0,
+            location: 0,
+            sampleType: 'uint',
+            viewDimension: '2d'
+          }
+        ]
+      }
+    });
+    try {
+      device.beginRenderPass({framebuffer: source, clearStencil: 128}).end();
+      const pass = device.beginRenderPass({framebuffer: target});
+      pass.setPipeline(pipeline);
+      pass.setBindings({stencilValues: stencilView});
+      pass.draw({vertexCount: 3});
+      pass.end();
+      device.submit();
+      expect(await readTexturePixels(device, color)).toEqual([128, 0, 0, 255]);
+    } finally {
+      pipeline.destroy();
+      sampledFragment.destroy();
+      for (const shader of new Set([vertexShader, fragmentShader])) shader.destroy();
+      target.destroy();
+      source.destroy();
+      color.destroy();
+      stencilView.destroy();
+      texture.destroy();
+    }
+  }
+});
