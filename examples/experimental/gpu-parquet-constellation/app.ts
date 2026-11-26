@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {createParquetSource} from '@loaders.gl/tables/parquet';
+import {ParquetSource} from '@loaders.gl/tables/parquet/bundled';
 import {Buffer, type Device, type Framebuffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model} from '@luma.gl/engine';
 import {
@@ -378,7 +378,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     signal: AbortSignal
   ): Promise<PreparedScene> {
     const decodeStartedAt = performance.now();
-    const source = createParquetSource(new Blob([parquetBytes]), {
+    const source = new ParquetSource(new Blob([parquetBytes]), {
       core: {worker: false}
     });
     try {
@@ -429,7 +429,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     parquetBytes: ArrayBuffer,
     signal: AbortSignal
   ): Promise<PreparedScene> {
-    const source = createParquetSource(new Blob([parquetBytes]), {});
+    const source = new ParquetSource(new Blob([parquetBytes]), {});
     try {
       for await (const batch of source.readPages({
         columns: PARQUET_CONSTELLATION_COLUMNS,

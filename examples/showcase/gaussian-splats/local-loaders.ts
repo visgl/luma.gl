@@ -1172,7 +1172,7 @@ async function loadLocalGaussianSplatLoaderModules(
   ) {
     const [coreModule, {SPZLoader}] = await Promise.all([
       import('@loaders.gl/core'),
-      import('@loaders.gl/splats')
+      import('@loaders.gl/splats/spz/bundled')
     ]);
     return {coreModule, loader: SPZLoader, loaderName};
   }
