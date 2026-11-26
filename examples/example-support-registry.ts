@@ -13,8 +13,6 @@ import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
 import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
 import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile-support';
-import windSupport from './deck/wind/mobile-support';
-import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
 import dominoJunctionSupport from './three/domino-junction/mobile-support';
 import galacticVortexSupport from './three/galactic-vortex/mobile-support';
@@ -31,22 +29,7 @@ import physicsBatchSupport from './experimental/physics-batch/mobile-support';
 import offroadBuggySupport from './experimental/offroad-buggy/mobile-support';
 import physicsStressSupport from './experimental/physics-stress/mobile-support';
 import rigidBodyWorldSupport from './experimental/gpu-rigid-body-world/mobile-support';
-import sketchSupport from './deck/sketch-edges/mobile-support';
-import globeCloudsSupport from './deck/globe-clouds/mobile-support';
-import weatherSupport from './deck/weather/mobile-support';
-import patternSupport from './deck/pattern-fills/mobile-support';
-import firefliesSupport from './deck/fireflies/mobile-support';
-import hdrNightLightingSupport from './deck/hdr-night-lighting/mobile-support';
-import globalIlluminationSupport from './deck/global-illumination/mobile-support';
-import lightShaftsSupport from './deck/light-shafts/mobile-support';
-import pointGlowSupport from './deck/point-glow/mobile-support';
-import styledPathsSupport from './deck/styled-paths/mobile-support';
-import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
-import ambientOcclusionSupport from './deck/ambient-occlusion/mobile-support';
-import softShadowsSupport from './deck/soft-shadows/mobile-support';
-import depthOfFieldSupport from './deck/depth-of-field/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
-import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
 import standaloneSupport1 from './integrations/hello-react/mobile-support';
 import standaloneSupport2 from './showcase/algebraic-varieties/mobile-support';
@@ -148,14 +131,6 @@ import support85 from './showcase/spectral-wave-lab/mobile-support';
  * Metadata-only support registry. Importing this file never imports an example application.
  */
 export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDefinition>> = {
-  'deck/fireflies': firefliesSupport,
-  'deck/hdr-night-lighting': hdrNightLightingSupport,
-  'deck/global-illumination': globalIlluminationSupport,
-  'deck/light-shafts': lightShaftsSupport,
-  'deck/scene-buffers': sceneBuffersSupport,
-  'deck/ambient-occlusion': ambientOcclusionSupport,
-  'deck/soft-shadows': softShadowsSupport,
-  'deck/depth-of-field': depthOfFieldSupport,
   'showcase/gaussian-splat-viewer': support0,
   'showcase/gaussian-splats': support1,
   'showcase/instancing': support2,
@@ -286,10 +261,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
   'deck/gltf-interactivity': gltfInteractivitySupport,
-  'deck/flow-particles': flowParticlesSupport,
-  'deck/wind': windSupport,
   'deck/arrow-path-layer': support79,
-  'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,
   'deck/gpu-spatial-taxi': support82,
@@ -305,12 +277,6 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,
-  'deck/sketch-edges': sketchSupport,
-  'deck/weather': weatherSupport,
-  'deck/globe-clouds': globeCloudsSupport,
-  'deck/pattern-fills': patternSupport,
-  'deck/point-glow': pointGlowSupport,
-  'deck/styled-paths': styledPathsSupport,
   'homepage/instancing': support2
 };
 
