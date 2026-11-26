@@ -78,6 +78,16 @@ describe('BackendRegistry', () => {
     expect(registry.getSync('webgpu', 'interleave')).toBe(interleave);
   });
 
+  test('a later failed registration leaves an earlier handler lookup usable', async () => {
+    const registry = new BackendRegistry();
+    const handler = vi.fn();
+    await registry.add('custom', {handler});
+    const lookup = registry.get('custom', 'handler');
+    const registration = registry.add('custom', Promise.reject(new Error('registration failed')));
+    await expect(registration).rejects.toThrow('registration failed');
+    expect(await lookup).toBe(handler);
+  });
+
   test('keeps later registrations pending when an earlier promise resolves', async () => {
     const registry = new BackendRegistry();
     const firstHandler = vi.fn();

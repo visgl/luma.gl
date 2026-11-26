@@ -102,8 +102,12 @@ export class BackendRegistry {
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
     const entry = this._getEntry(deviceType);
     const registered = await entry.registered;
+    const registeredHandler = registered?.[operationName];
+    if (typeof registeredHandler === 'function') {
+      return registeredHandler as OperationHandler;
+    }
     const load = this._defaultModuleLoaders[deviceType];
-    if (typeof registered?.[operationName] !== 'function' && load && !entry.builtIn) {
+    if (load && !entry.builtIn) {
       entry.loadingBuiltIn ??= load()
         .then(module => {
           entry.builtIn = module;
