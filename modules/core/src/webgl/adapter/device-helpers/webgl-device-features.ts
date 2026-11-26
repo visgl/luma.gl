@@ -33,7 +33,7 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
 
   // optional WebGL features
   'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
-  'stencil-texturing': 'WEBGL_stencil_texturing',
+  'stencil-texturing-webgl': 'WEBGL_stencil_texturing',
   'clip-control-webgl': 'EXT_clip_control',
   'html-in-canvas': gl =>
     isHTMLInCanvasSupported() &&

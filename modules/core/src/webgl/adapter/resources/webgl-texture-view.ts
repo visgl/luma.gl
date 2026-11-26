@@ -26,7 +26,8 @@ export class WEBGLTextureView extends TextureView {
     if (props.aspect === 'stencil-only') {
       // WebGL can select stencil for sampling only on packed textures with the extension enabled.
       assert(
-        this.texture.format.endsWith('-stencil8') && this.device.features.has('stencil-texturing')
+        this.texture.format.endsWith('-stencil8') &&
+          this.device.features.has('stencil-texturing-webgl')
       );
     }
   }

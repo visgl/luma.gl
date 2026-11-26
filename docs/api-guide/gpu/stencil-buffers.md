@@ -185,7 +185,7 @@ See also [GPU parameters](/docs/api-guide/gpu/gpu-parameters), the
 
 ## Read stencil in a shader
 
-Check `device.features.has('stencil-texturing')`. Create a stencil-only texture view with
+On WebGL2, check `device.features.has('stencil-texturing-webgl')`. Create a stencil-only texture view with
 `texture.createView({aspect: 'stencil-only'})` from an attachment created with sampling
 usage. Bind it as `texture_2d<u32>` in WGSL or `usampler2D` in GLSL and use integer texel
 loads. WebGPU provides stencil aspect views in core. WebGL2 requires

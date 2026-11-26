@@ -527,7 +527,7 @@ it('loads unsigned stencil values through a stencil-only texture view', async ()
       format: 'depth24plus-stencil8',
       usage: Texture.RENDER | Texture.SAMPLE
     });
-    if (!device.features.has('stencil-texturing')) {
+    if (device.type === 'webgl' && !device.features.has('stencil-texturing-webgl')) {
       expect(() => texture.createView({aspect: 'stencil-only'})).toThrow();
       texture.destroy();
       continue;
