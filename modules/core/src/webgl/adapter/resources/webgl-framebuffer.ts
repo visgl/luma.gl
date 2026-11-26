@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {FramebufferProps} from '../../../index';
+import type {FramebufferProps, Texture, TextureFormat} from '../../../index';
 import {Framebuffer} from '../../../index';
 import {GL} from '../../../webgl-constants/index';
 import {assert} from '../../../api/utils/assert';
@@ -30,9 +30,9 @@ export class WEBGLFramebuffer extends Framebuffer {
     return this.stencilRenderbuffer !== null;
   }
 
-  /** Selects native stencil-only storage for the framebuffer format string. */
-  protected override getNonTextureDepthStencilAttachment(): 'stencil8' | null {
-    return this.props.depthStencilAttachment === 'stencil8' ? 'stencil8' : null;
+  /** Leaves stencil8 allocation to the renderbuffer attachment path. */
+  protected override createDepthStencilTexture(format: TextureFormat): Texture | null {
+    return format === 'stencil8' ? null : super.createDepthStencilTexture(format);
   }
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
@@ -99,7 +99,7 @@ export class WEBGLFramebuffer extends Framebuffer {
         this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
       }
 
-      if (this.getNonTextureDepthStencilAttachment()) this.attachStencilRenderbuffer();
+      if (this.props.depthStencilAttachment === 'stencil8') this.attachStencilRenderbuffer();
 
       if (this.hasStencilRenderbuffer || this.device.props.debug) {
         const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
@@ -131,18 +131,6 @@ export class WEBGLFramebuffer extends Framebuffer {
   }
 
   // PRIVATE
-
-  /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
-  // protected override createDepthStencilTexture(format: TextureFormat): Texture {
-  //   // return new WEBGLRenderbuffer(this.device, {
-  //   return new WEBGLTexture(this.device, {
-  //     id: `${this.id}-depth-stencil`,
-  //     format,
-  //     width: this.width,
-  //     height: this.height,
-  //     mipmaps: false
-  //   });
-  // }
 
   /**
    * @param attachment
