@@ -202,6 +202,8 @@ report `stencil8` as unsupported because they describe texture storage.
 
 ## Use multisampled stencil
 
+Start with [the offscreen multisampling workflow](/docs/api-guide/gpu/gpu-antialiasing#explicit-multisampling).
+
 For offscreen rendering, create a framebuffer with `samples: 4` and a packed
 `depthStencilAttachment: 'depth24plus-stencil8'`. Set `sampleCount: 4` on each pipeline
 drawing into it. The pass resolves color into the public single-sample color attachments.

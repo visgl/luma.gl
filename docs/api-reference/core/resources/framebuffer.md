@@ -41,6 +41,7 @@ device's default canvas. The canvas context owns those framebuffers.
 | `width?` | `number` | `1` | Width of attachments created from format strings. |
 | `height?` | `number` | `1` | Height of attachments created from format strings. |
 | `colorAttachments?` | `(TextureView \| Texture \| TextureFormatColor)[]` | `[]` | Color targets; format strings create owned textures. |
+| `samples?` | `1 \| 4` | `1` | Render sample count for managed offscreen MSAA. Four-sample passes resolve into the single-sample color attachments when the pass ends. See [Explicit Multisampling](/docs/api-guide/gpu/gpu-antialiasing#explicit-multisampling). |
 | `depthStencilAttachment?` | `TextureView \| Texture \| TextureFormatDepthStencil \| null` | `null` | Optional depth/stencil target. |
 
 At least one attachment is required. Supplied textures must support render-attachment usage.
