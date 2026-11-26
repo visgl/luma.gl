@@ -74,6 +74,33 @@ Removes one child.
 
 Clears all children.
 
+### `findNode(path: string): ScenegraphNode | undefined`
+
+Resolves an exact node ID or hierarchy path to its existing node object. Returns
+`undefined` when no node matches; throws if the path is ambiguous.
+
+```ts
+scene.findNode('hinge');                // ID anywhere in the subtree, including scene.
+scene.findNode('door/hinge');           // Contiguous suffix of a node's path.
+scene.findNode('/room/door/hinge');     // Anchored below scene; omit scene's own ID.
+scene.findNode('/');                   // scene itself.
+```
+
+Segments match complete, case-sensitive IDs. Leading ancestors may be omitted in an
+unanchored path; intermediate ancestors may not. Encode `/` inside an ID as `~1`, and
+`~` as `~0`. Empty paths, empty segments and invalid escapes throw. Other characters,
+including dots and asterisks, are literal IDs rather than navigation or wildcard syntax.
+
+### `findNodes(path: string): ScenegraphNode[]`
+
+Returns all matches in structural preorder, or an empty array. Uses the same path syntax
+as `findNode`, includes hidden branches, and can return groups as well as leaves. IDs may
+be duplicated; use this method when multiple results are intentional.
+
+Both lookup methods inspect the current hierarchy without computing transforms or keeping
+a cache. They require a tree and reject cycles and repeated node objects. Resolve paths at
+application setup and retain node references for controllers or repeated frame work.
+
 ### `traverse(visitor, {worldMatrix} = {})`
 
 Traverses descendants depth-first and calls the visitor for non-group leaf nodes.

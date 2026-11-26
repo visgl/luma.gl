@@ -87,6 +87,9 @@ describe('WebGPU device creation lifecycle', () => {
     const device = await adapter.create({} as DeviceProps);
 
     expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({});
+    expect(device.features.has('clip-control-webgl')).toBe(true);
+    expect(device.features.has('polygon-offset-clamp-webgl')).toBe(true);
+    expect(device.features.has('depth-clip-control')).toBe(false);
     device.destroy();
   });
 
@@ -182,6 +185,23 @@ describe('WebGPU device creation lifecycle', () => {
     expect(destroyedDevice.device.destroy).toHaveBeenCalledTimes(1);
   });
 
+  test.each([
+    [{}, 'navigator.gpu is unavailable'],
+    [{gpu: {}}, 'navigator.gpu.requestAdapter is unavailable']
+  ] as const)('identifies a missing WebGPU entry point', async (environment, message) => {
+    vi.stubGlobal('navigator', environment);
+    await expect(new WebGPUAdapter().create({})).rejects.toThrow(message);
+  });
+
+  test('identifies a rejected adapter request and preserves its cause', async () => {
+    const cause = new Error('Adapter access denied');
+    vi.mocked(navigator.gpu.requestAdapter).mockRejectedValue(cause);
+    await expect(new WebGPUAdapter().create({})).rejects.toMatchObject({
+      message: 'navigator.gpu.requestAdapter() failed',
+      cause
+    });
+  });
+
   test('preserves native request failures as causes of ordinary errors', async () => {
     const nativeError = new Error('Invalid required limit');
     const nativeAdapter = {
@@ -195,9 +215,29 @@ describe('WebGPU device creation lifecycle', () => {
     const adapter = new MockWebGPUAdapter([nativeAdapter]);
 
     await expect(adapter.create({} as DeviceProps)).rejects.toMatchObject({
-      message: 'WebGPU device request failed',
+      message: 'GPUAdapter.requestDevice() failed',
       cause: nativeError
     });
+  });
+
+  test('cleans up the native device if preparing wrapper props fails', async () => {
+    const loss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(loss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    const cause = new Error('Could not read device ID');
+    const props: DeviceProps = {
+      get id(): string {
+        throw cause;
+      }
+    };
+
+    await expect(
+      new MockWebGPUAdapter([nativeAdapter.adapter]).create(props)
+    ).rejects.toMatchObject({
+      message: 'WebGPU wrapper initialization failed',
+      cause
+    });
+    expect(nativeDevice.device.destroy).toHaveBeenCalledTimes(1);
   });
 
   test('cleans up native devices after wrapper and canvas initialization failures', async () => {
@@ -237,6 +277,15 @@ describe('WebGPU device creation lifecycle', () => {
     await expect(device.lost).resolves.toEqual({reason: 'unknown', message: 'Driver reset'});
 
     await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
+  });
+
+  test('attach can take ownership of a native device', async () => {
+    const native = makeNativeDevice(makeDeferred<GPUDeviceLostInfo>().promise);
+    const device = await new MockWebGPUAdapter([]).attach(native.device, {ownsHandle: true});
+    expect(device.ownsHandle).toBe(true);
+    device.destroy();
+    device.destroy();
+    expect(native.device.destroy).toHaveBeenCalledTimes(1);
   });
 
   test('attach does not destroy an application-owned device', async () => {

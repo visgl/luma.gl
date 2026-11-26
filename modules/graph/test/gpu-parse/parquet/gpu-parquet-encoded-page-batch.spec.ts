@@ -3,7 +3,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ParquetEncodedPageBatch} from '@loaders.gl/parquet';
+import type {ParquetEncodedPageBatch} from '@loaders.gl/tables/parquet';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {
@@ -12,7 +12,7 @@ import {
   planGPUParquetEncodedPageBatch,
   type GPUParquetDecodedPage
 } from '@luma.gl/graph/gpu-parse';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('loaders.gl encoded pages batch Snappy, levels, and values in one graph', async () => {
   const device = await getWebGPUTestDevice();

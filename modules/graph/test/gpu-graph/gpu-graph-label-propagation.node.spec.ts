@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import * as graphRootModule from '@luma.gl/graph';
 import {
   GPUGraphAlgorithmsData,
@@ -12,8 +12,8 @@ import {
   type GPUGraphAlgorithmsAdjacency,
   type GPUGraphAlgorithmsLabelPropagationProps
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 
 type ScalarFormat = 'uint32' | 'float32';

@@ -354,7 +354,6 @@ try {
   const temporaryPackageScope = path.join(temporaryDirectory, 'node_modules', '@luma.gl');
   mkdirSync(temporaryPackageScope, {recursive: true});
   symlinkSync(packageRoot, path.join(temporaryPackageScope, 'graph'));
-  symlinkSync(path.join(repositoryRoot, 'modules/gpgpu'), path.join(temporaryPackageScope, 'gpgpu'));
   const typeTestPath = path.join(temporaryDirectory, 'index.mts');
   writeFileSync(
     typeTestPath,

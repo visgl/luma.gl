@@ -11,7 +11,7 @@ import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs'
 </DocumentationBadges>
 
 `GPURecordBatch` represents one immutable preserved GPU batch. It owns one
-batch-local [`GPUData`](/docs/api-reference/gpgpu/gpu-data) chunk per selected column,
+batch-local [`GPUData`](/docs/api-reference/graph/gpu-data) chunk per selected column,
 [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gpu-schema) metadata, and buffer-layout
 metadata.
 
@@ -30,7 +30,7 @@ const batch = new GPURecordBatch({
 
 When the source is an Arrow `RecordBatch`, prefer
 [`makeGPURecordBatchFromArrowRecordBatch()`](/docs/api-reference/arrow/supported-arrow-types) from
-`@luma.gl/arrow`.
+`@luma.gl/graph/arrow`.
 
 ## Constructor
 

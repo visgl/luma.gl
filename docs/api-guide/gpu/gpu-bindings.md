@@ -20,7 +20,7 @@ them to pipelines and models.
 
 ## Quick Rule
 
-For WGSL that goes through `Model` or shadertools assembly, prefer
+For WGSL that goes through `Model` or shaders assembly, prefer
 `@binding(auto)` and pass bindings by name.
 
 ```wgsl
@@ -310,7 +310,7 @@ API.
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {lighting, pbrMaterial} from '@luma.gl/shadertools';
+import {lighting, pbrMaterial} from '@luma.gl/shaders';
 
 const shaderInputs = new ShaderInputs({lighting, pbrMaterial});
 
@@ -356,4 +356,4 @@ logical grouping internally.
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [RenderPipeline](/docs/api-reference/core/resources/render-pipeline)
 - [ComputePipeline](/docs/api-reference/core/resources/compute-pipeline)
-- [Shader Module Conventions](/docs/api-reference/shadertools/shader-conventions)
+- [Shader Module Conventions](/docs/api-reference/shaders/shader-conventions)

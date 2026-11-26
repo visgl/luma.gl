@@ -5,7 +5,9 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {createShaderViewer} from '../../examples/tutorials/slang-shaders/shader-viewer';
+import {WGSL_EXAMPLES} from '../../examples/tutorials/slang-shaders/wgsl-examples';
 import SlangShadersExample from '../../examples/tutorials/slang-shaders/app';
 
 it.each([
@@ -97,5 +99,44 @@ it.each([
     application.onFinalize();
     framebuffer.destroy();
     texture.destroy();
+  }
+});
+
+it('Slang shader viewer compiles and runs each WGSL source sample as GLSL', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const viewer = createShaderViewer(host, WGSL_EXAMPLES, [], true);
+  try {
+    const selector = host.querySelector<HTMLSelectElement>('[aria-label="Shader source"]')!;
+    const canvas = host.querySelector<HTMLCanvasElement>(
+      '[aria-label="WGSL sample rendered as GLSL"]'
+    )!;
+    const generated = host.querySelector<HTMLSelectElement>('[aria-label="Generated shader"]')!;
+    for (let index = 0; index < WGSL_EXAMPLES.length; index++) {
+      selector.selectedIndex = index;
+      selector.dispatchEvent(new Event('change'));
+      expect(canvas.hidden).toBe(false);
+      expect(generated.options[0].text).toContain('GLSL ES 300');
+      expect(host.querySelector('[aria-label="Generated shader code"]')!.textContent).toContain(
+        '#version 300 es'
+      );
+      const context = canvas.getContext('webgl2')!;
+      const pixel = new Uint8Array(4);
+      context.readPixels(
+        canvas.width / 2,
+        canvas.height / 2,
+        1,
+        1,
+        context.RGBA,
+        context.UNSIGNED_BYTE,
+        pixel
+      );
+      expect(pixel[0] + pixel[1] + pixel[2]).toBeGreaterThan(70);
+      expect(pixel[3]).toBe(255);
+      expect(context.getError()).toBe(context.NO_ERROR);
+    }
+  } finally {
+    viewer.destroy();
+    host.remove();
   }
 });

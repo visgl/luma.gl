@@ -4,7 +4,7 @@
 
 import {expect, test, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPUSphereWorld} from '../../src/gpu-physics';
 

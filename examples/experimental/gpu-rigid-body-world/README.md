@@ -114,3 +114,70 @@ The frame is authored as a CPU scenegraph of geometry nodes before GPU allocatio
 
 Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The two-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
 
+
+### Spiral dominoes
+
+The default scene lays free box rigid bodies along a three-turn spiral with a wider inner radius with approximately
+equal arc-length spacing. Only the first domino is released leaning with a consistent pivot velocity; GPU contact
+solving propagates the wave. Reset restores the starting arrangement and preserves the camera.
+Use Pause to inspect the wave and drag to orbit.
+
+Enable **Domino sound** to unlock recorded hard-surface clacks. Sounds follow GPU contact
+impulses, with one clack per domino per replay and bounded voices. Three small OGG recordings
+from [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) are bundled under CC0;
+the original license is retained in `audio/License.txt`. Playback high-passes the low thump
+and fades the tail. No oscillators or pitch shifting are used.
+
+Dominoes and the base use procedural surface grain and shared PBR materials, lit by a warm
+overhead spotlight, ambient fill and a shared generated IBL environment. Short clacks retain only an 18 ms recording
+transient, with a fast decay and reduced gain.
+
+All general lab scenes use the shared `SpotLight`, `createPBRMaterial`, `createPBRModel`
+and `ShadowMapRenderer` support with a 2048-pixel map. The same geometry and GPU-pose
+shader drives visible and shadow passes, including mesh scenes. Spotlight cone falloff,
+PBR response and tone mapping come from the shared modules; per-body roughness and metallic
+values are a material texture rather than another lighting implementation. The camera orbits gently until
+OrbitControls receives user input. The domino scene uses 60 Hz physics with 32 solver
+iterations and 4096 contact slots; both 60 and 120 Hz propagation are regression-tested.
+The status reports simulation time relative to wall time to expose playback slowdown.
+
+## Wrecking Ball
+
+Open `wrecking-ball.html` for the dedicated demolition example: an eight-level square pyramid
+of 204 individually simulated blocks and an 400-unit ball on a ten-unit suspension. The scene
+starts paused. **Release ball** starts gravity-driven motion, **Pause** freezes it, and **Reset**
+rebuilds the pyramid and raises the ball without moving the camera. Settings, GPU Graph and
+GPU Graph Timeline use the shared luma.gl panel.
+
+The pendulum uses a static-anchored distance joint. Its small joint sweep alternates with
+parallel block-contact iterations entirely on the GPU. The shared renderer reads GPU poses
+directly and casts shadows from both boxes and the sphere. The dedicated page and the lab
+share simulation, rendering and UI code.
+
+The wrecking-ball scene uses a fixed 60 Hz step, qualified alongside 120 Hz for pre-impact
+stack stability, demolition and suspension error. Box and sphere triangles are packed into
+one draw for each pass: 8,676 visible vertices and 8,640 shadow vertices instead of
+241,920 vertices per pass. The base receives shadows and is excluded from the caster draw.
+This changes rendering work without changing collision geometry.
+
+## Selecting an initial scenario
+
+The website wrapper accepts a typed `scene` prop and an optional accessible iframe title:
+
+```tsx
+<GPURigidBodyWorldExample scene="cradle" title="Newton's Cradle" />
+<GPURigidBodyWorldExample scene="dominoSpiral" title="Spiral Dominoes" />
+```
+
+The wrapper forwards the scene through the standalone lab's existing `?scene=` parameter.
+Without the prop, the lab keeps its default scenario. The scene remains selectable in the
+lab controls, and Reset rebuilds the selected scenario without changing the camera.
+Newton's Cradle and Spiral Dominoes have separate entries in the Physics examples sidebar
+while sharing the same lab runtime and assets.
+
+## Engine alignment review
+
+The [physics example audit](../../../dev-docs/roadmaps/physics-example-engine-alignment.md)
+covers the full Physics catalog and separates application behavior from remaining engine
+rendering gaps. The next shared engine pieces are a GPU transform-source adapter,
+geometry/material batches with reusable shadow casters, and a sphere-impostor model.

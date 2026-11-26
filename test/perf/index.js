@@ -2,7 +2,7 @@
 // hack: prevent example imports from starting their own animation loop
 window.website = true;
 
-const {PerformanceTestRunner} = require('@luma.gl/test-utils');
+const {PerformanceTestRunner} = require('../utils/legacy-test-runners/performance-test-runner');
 const {_enableDOMLogging} = require('@probe.gl/test-utils');
 const PERF_TEST_CASES = require('./performance-test-cases').default;
 

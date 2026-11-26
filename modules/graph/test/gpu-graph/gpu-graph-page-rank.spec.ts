@@ -10,8 +10,8 @@ import {
   GPUGraphAlgorithmsTopology,
   type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit,

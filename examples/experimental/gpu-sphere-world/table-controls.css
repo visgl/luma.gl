@@ -1,0 +1,153 @@
+.sphere-table-hud {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 142px;
+  padding: 10px 11px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.sphere-table-hud,
+.sphere-table-panel {
+  border-radius: 9px;
+  border: 1px solid #42546a;
+  background: #101b2bee;
+  color: #e2edf5;
+  font: 12px system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+.sphere-table-hud > small {
+  display: block;
+  color: #acc3d6;
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+.sphere-table-panel {
+  padding: 12px;
+  max-width: 335px;
+}
+
+.sphere-table-panel :is(label, p) {
+  color: #c4d5e4;
+}
+
+.sphere-table-panel :is(select, button) {
+  color: #eef5fa;
+  background: #1d2e44;
+  border: 1px solid #556b83;
+  border-radius: 6px;
+}
+
+.sphere-table-panel select {
+  margin-left: 8px;
+}
+
+.sphere-table-panel input[type='range'] {
+  accent-color: #63cce9;
+}
+
+.sphere-table-heading,
+.sphere-table-line,
+.sphere-table-axes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sphere-table-heading > span,
+.sphere-table-attitude > span,
+.sphere-table-axes > span {
+  color: #acc3d6;
+}
+
+.sphere-table-heading strong,
+.sphere-table-attitude b,
+.sphere-table-axes b {
+  color: #f0f7fb;
+}
+
+.sphere-table-line {
+  margin-top: 8px;
+}
+
+.sphere-table-attitude {
+  display: grid;
+  gap: 5px;
+}
+
+.sphere-table-attitude span {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.sphere-table-bubble-dial {
+  position: relative;
+  flex: 0 0 38px;
+  height: 38px;
+  border: 1px solid #6b849e;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle, transparent 0 7px, #7793ad80 7px 8px, transparent 8px),
+    linear-gradient(0deg, transparent 49%, #627d98aa 49% 51%, transparent 51%),
+    linear-gradient(90deg, transparent 49%, #627d98aa 49% 51%, transparent 51%);
+}
+
+.sphere-table-bubble {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #83e4c2;
+  box-shadow: 0 0 0 1px #fff8, 0 0 6px #73edb5aa;
+}
+
+.sphere-table-hud[data-level='false'] .sphere-table-bubble {
+  background: #ffc180;
+  box-shadow: 0 0 0 1px #fff8, 0 0 6px #ffc18099;
+}
+
+.sphere-table-horizon {
+  position: relative;
+  height: 76px;
+  margin-bottom: 10px;
+  border: 1px solid #536e88;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sphere-table-sky {
+  position: absolute;
+  inset: -105px;
+  background: linear-gradient(#153452, #377891 50%, #c8e6ec 50% 50.4%, #735442 50.4%, #422e31);
+}
+
+.sphere-table-reference {
+  position: absolute;
+  inset: calc(50% - 1px) 35%;
+  height: 2px;
+  background: #f9d394;
+  border-radius: 2px;
+}
+
+#spheres[data-table-dragging] {
+  cursor: grabbing;
+}
+
+@media (max-width: 550px) {
+  .sphere-table-hud {
+    top: 59px;
+    right: 12px;
+    width: 125px;
+    padding: 8px;
+    font-size: 11px;
+  }
+}

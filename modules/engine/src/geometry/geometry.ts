@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Geometry as MathGeometry, type GeometryProps as MathGeometryProps} from '@math.gl/geometry';
+import {
+  Geometry as MathGeometry,
+  type GeometryProps as MathGeometryProps
+} from '@math.gl/geometry/primitives';
 import type {BufferLayout} from '@luma.gl/core';
 import {vertexFormatDecoder} from '@luma.gl/core';
-import type {GeometryAttribute} from '@math.gl/geometry';
+import type {GeometryAttribute} from '@math.gl/geometry/primitives';
 
-export type {
-  GeometryAttribute,
-  GeometryAttributeInput,
-  GeometryAttributes
-} from '@math.gl/geometry';
+export type {GeometryAttribute} from '@math.gl/geometry/primitives';
+export type {GeometryAttributeInput, GeometryAttributes} from '@math.gl/geometry/primitives';
 
 /** Legacy engine geometry properties, including caller-owned shader layout metadata. */
 export type GeometryProps = MathGeometryProps & {bufferLayout?: BufferLayout[]};

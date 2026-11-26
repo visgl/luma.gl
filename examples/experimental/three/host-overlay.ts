@@ -4,7 +4,6 @@
 import * as THREE from 'three';
 import {WebGPURenderer} from 'three/webgpu';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {ThreeDeckOverlay} from '@luma.gl/three/overlay';
 import {ThreeDeckInterleaved} from '@luma.gl/three/interleaved';
@@ -67,7 +66,7 @@ function createLayers() {
     ? [
         new PathLayer({
           id: 'three-route',
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           data: [{path: points}],
           getPath: record => record.path,
           getColor: [255, 191, 89],
@@ -77,7 +76,7 @@ function createLayers() {
         }),
         new ScatterplotLayer({
           id: 'three-observations',
-          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          coordinateSystem: 'cartesian',
           data: points,
           getPosition: point => point,
           getFillColor: [255, 219, 145],

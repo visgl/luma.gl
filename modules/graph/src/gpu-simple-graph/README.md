@@ -89,7 +89,7 @@ expressions, use the existing `cleanEvaluate` helper after the **final** graph r
 intermediate buffers while preserving every result still in use:
 
 ```typescript
-import {cleanEvaluate} from '@luma.gl/gpgpu';
+import {cleanEvaluate} from '@luma.gl/graph/gpu-simple-graph';
 
 // All retained roots must be listed, including roots used outside this graph.
 // These roots are already materialized by the final run.

@@ -18,14 +18,14 @@ import {
   type GPUDataFrameHistogramOptions,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
   type GPUField,
   type GPURecordBatchSourceInfo
 } from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 
 type AnalyticSourceColumns = {

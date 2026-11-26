@@ -4,8 +4,8 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GPUGroupAggregation} from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {getGPUGroupSumPlan} from '../../src/gpu-core/gpu-group-aggregation';
 

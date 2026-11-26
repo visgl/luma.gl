@@ -92,14 +92,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       : this.introspectedLayout;
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     if (this.sharedRenderPipeline && !this.props._sharedRenderPipeline) {
       this.sharedRenderPipeline.destroy();
     }
-    this.destroyResource();
   }
 
   /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
@@ -271,8 +267,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             throw new Error('texture');
           }
           let texture: WEBGLTexture;
+          let stencilOnly = false;
           if (value instanceof WEBGLTextureView) {
             texture = value.texture;
+            stencilOnly = value.props.aspect === 'stencil-only';
           } else if (value instanceof WEBGLTexture) {
             texture = value;
           } else if (
@@ -289,6 +287,15 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
           gl.activeTexture(GL.TEXTURE0 + textureUnit);
           gl.bindTexture(texture.glTarget, texture.handle);
+          if (stencilOnly !== texture._stencilSampling) {
+            // WebGL stores the aspect on the texture. A draw can only use one aspect per texture.
+            gl.texParameteri(
+              texture.glTarget,
+              GL.DEPTH_STENCIL_TEXTURE_MODE_WEBGL,
+              stencilOnly ? GL.STENCIL_INDEX : GL.DEPTH_COMPONENT
+            );
+            texture._stencilSampling = stencilOnly;
+          }
           // gl.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;

@@ -1,8 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {VEHICLE_STRIDE} from './rigid-body-vehicle';
 
 /** One template-sized GPU reset image; no per-instance snapshots or pose readback. */
 export function makeEnsembleReset(
@@ -12,10 +14,28 @@ export function makeEnsembleReset(
   bodyCount: number,
   bodiesPerInstance: number,
   collidersPerInstance: number,
-  maximumPairs: number
+  maximumPairs: number,
+  vehiclesPerInstance: number,
+  terrainSlots: ReadonlySet<number>,
+  pairsPerInstance?: number
 ) {
   const find = (name: string) => buffers.find(buffer => buffer.id === `${id}-${name}`)!;
-  const plans = [
+  // A streamed collider row contains a private atlas address, revision and placement.
+  // Snapshot only the template rows that reset with the body state.
+  const colliderRanges: {name: string; offset: number; size: number; stride: number}[] = [];
+  let first = 0;
+  for (let collider = 0; collider <= collidersPerInstance; collider++) {
+    if (collider < collidersPerInstance && !terrainSlots.has(collider)) continue;
+    if (first < collider)
+      colliderRanges.push({
+        name: 'bodies',
+        offset: bodyCount * 48 + first * 96,
+        size: (collider - first) * 96,
+        stride: collidersPerInstance * 96
+      });
+    first = collider + 1;
+  }
+  const plans: {name: string; offset: number; size: number; stride?: number}[] = [
     ...['positions', 'orientations', 'velocities', 'angular-velocities', 'sleep'].map(name => ({
       name,
       offset: 0,
@@ -23,13 +43,16 @@ export function makeEnsembleReset(
     })),
     {name: 'targets', offset: 0, size: bodiesPerInstance * 32},
     {name: 'bodies', offset: 0, size: bodiesPerInstance * 48},
-    {name: 'bodies', offset: bodyCount * 48, size: collidersPerInstance * 96},
+    ...colliderRanges,
     {name: 'object-attributes', offset: 0, size: collidersPerInstance * 4},
-    {name: 'pose-metadata', offset: 0, size: bodiesPerInstance * 48}
+    {name: 'pose-metadata', offset: 0, size: bodiesPerInstance * 48},
+    ...(vehiclesPerInstance
+      ? [{name: 'vehicle', offset: 0, size: vehiclesPerInstance * VEHICLE_STRIDE}]
+      : [])
   ].filter(plan => find(plan.name));
   const snapshots: Buffer[] = [];
   const settings = device.createBuffer({byteLength: 32, usage: Buffer.UNIFORM | Buffer.COPY_DST});
-  let computation: Computation | undefined;
+  let computation: BoundKernel | undefined;
   try {
     const encoder = device.createCommandEncoder();
     for (const plan of plans) {
@@ -47,7 +70,8 @@ export function makeEnsembleReset(
     }
     device.submit(encoder.finish());
     const history = find('contact-history');
-    computation = new Computation(device, {
+    const vehicle = vehiclesPerInstance ? find('vehicle') : null;
+    computation = createBoundKernel(device, {
       source: /* wgsl */ `
 @group(0) @binding(0) var<uniform> settings:Settings;
 struct Settings {selection:vec4u, shift:vec4f}
@@ -57,8 +81,9 @@ struct Settings {selection:vec4u, shift:vec4f}
 @group(0) @binding(3) var<storage,read_write> manifolds:array<u32>;
 @group(0) @binding(4) var<storage,read_write> targets:array<u32>;
 ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' : ''}
+${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' : ''}
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- let index=invocation.x;let selection=settings.selection;
+ let index=invocation.x+invocation.y*4194240u;let selection=settings.selection;
  if(index==0u){targets[${bodyCount * 8 + 8 + maximumPairs * 2}u+selection.x/${bodiesPerInstance}u]=0u;}
  if(index<${bodiesPerInstance}u){
   let body=selection.x+index;positions[body]=vec4f(positions[body].xyz-settings.shift.xyz,positions[body].w);
@@ -66,23 +91,41 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
  }
  if(index<${collidersPerInstance}u){
   let collider=selection.y+index;let address=${bodyCount * 12}u+collider*24u+7u;
+  ${terrainSlots.size ? 'if(!(bitcast<f32>(metadata[address+14u])<0.0&&metadata[address+15u]!=0u)){' : ''}
   metadata[address]=bitcast<u32>(bitcast<f32>(metadata[address])+f32(selection.x));
+  ${terrainSlots.size ? '}' : ''}
   attributes[collider]=(attributes[collider]&0xffff0000u)|((attributes[collider]&0xffffu)+selection.x);
  }
- if(index>=${maximumPairs}u){return;}
- let key=targets[${bodyCount * 8 + 8}u+index*2u];
+ ${
+   vehicle
+     ? `if(index<${vehiclesPerInstance}u){
+  let address=(selection.x/${bodiesPerInstance}u*${vehiclesPerInstance}u+index)*${VEHICLE_STRIDE / 4}u;
+  vehicle[address+12u]+=selection.x;
+  vehicle[address+13u]+=selection.y;
+ }`
+     : ''
+ }
+ if(index>=${pairsPerInstance ?? maximumPairs}u){return;}
+ ${
+   pairsPerInstance
+     ? `let pair=(selection.x/${bodiesPerInstance}u)*${pairsPerInstance}u+index;`
+     : `let pair=index;
+ let key=targets[${bodyCount * 8 + 8}u+pair*2u];
  if(key==0u||key==0xffffffffu){return;}
- let address=index*104u;let collider=manifolds[address+97u];
- if(collider<selection.y||collider>=selection.y+${collidersPerInstance}u){return;}
+ let collider=manifolds[pair*104u+97u];
+ if(collider<selection.y||collider>=selection.y+${collidersPerInstance}u){return;}`
+ }
+ let address=pair*104u;
  for(var word=0u;word<104u;word++){manifolds[address+word]=0u;}
- targets[${bodyCount * 8 + 8}u+index*2u]=0xffffffffu;
- targets[${bodyCount * 8 + 9}u+index*2u]=0u;
- ${history ? 'for(var word=0u;word<4u;word++){history[index*4u+word]=0u;}' : ''}
+ targets[${bodyCount * 8 + 8}u+pair*2u]=${pairsPerInstance ? '0u' : '0xffffffffu'};
+ targets[${bodyCount * 8 + 9}u+pair*2u]=0u;
+ ${history ? 'for(var word=0u;word<4u;word++){history[pair*4u+word]=0u;}' : ''}
 }`,
       shaderLayout: {
         bindings: [
           {name: 'settings', group: 0, location: 0, type: 'uniform'},
           {name: 'positions', group: 0, location: 6, type: 'storage'},
+          ...(vehicle ? [{name: 'vehicle', group: 0, location: 7, type: 'storage' as const}] : []),
           ...[
             'metadata',
             'attributes',
@@ -99,13 +142,14 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
         attributes: find('object-attributes'),
         manifolds: find('manifolds'),
         targets: find('targets'),
-        ...(history ? {history} : {})
+        ...(history ? {history} : {}),
+        ...(vehicle ? {vehicle} : {})
       }
     });
   } catch (error) {
     for (const snapshot of snapshots) snapshot.destroy();
     settings.destroy();
-    computation?.destroy();
+    computation?.kernel.destroy();
     throw error;
   }
   return {
@@ -120,19 +164,28 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
         encoder.copyBufferToBuffer({
           sourceBuffer: snapshots[index],
           destinationBuffer: find(plan.name),
-          destinationOffset: plan.offset + instance * plan.size,
+          destinationOffset: plan.offset + instance * (plan.stride ?? plan.size),
           size: plan.size
         });
       const pass = encoder.beginComputePass();
-      computation!.dispatch(
-        pass,
-        Math.ceil(Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance) / 64)
+      const groups = Math.ceil(
+        Math.max(
+          pairsPerInstance ?? maximumPairs,
+          collidersPerInstance,
+          bodiesPerInstance,
+          vehiclesPerInstance
+        ) / 64
       );
+      computation!.kernel.dispatch(pass, {
+        bindings: computation!.bindings,
+        x: Math.min(65535, groups),
+        y: Math.ceil(groups / 65535)
+      });
       pass.end();
       device.submit(encoder.finish());
     },
     destroy() {
-      computation!.destroy();
+      computation!.kernel.destroy();
       settings.destroy();
       for (const snapshot of snapshots) snapshot.destroy();
     }

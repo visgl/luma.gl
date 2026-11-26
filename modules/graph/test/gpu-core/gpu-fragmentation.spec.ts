@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GPUAdaptiveSpMV} from '../../src/gpu-core/gpu-adaptive-spmv';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {GPUAdaptiveSpMV} from '@luma.gl/graph/gpu-core';
 import {createGPUScalar} from '../../src/gpu-core/gpu-scalar';
 import {GPUScalarLiteral} from '../../src/gpu-core/gpu-scalar-literal';
 import {gateGPUCommandNodes} from '../../src/gpu-core/gpu-scalar-dispatch-gate';

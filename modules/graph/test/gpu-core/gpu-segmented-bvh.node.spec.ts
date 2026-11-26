@@ -5,7 +5,7 @@
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {
   getGPUSegmentedBVHCommandNodesWithDispatchLimit,

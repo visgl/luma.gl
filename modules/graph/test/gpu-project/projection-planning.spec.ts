@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planProjection, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 
 it('executes a caller-prepared math.gl provider inline and in a graph with double-single precision', async context => {
   const device = await getWebGPUTestDevice();

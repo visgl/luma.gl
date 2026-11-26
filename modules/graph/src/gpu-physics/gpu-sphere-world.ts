@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer, type Binding, type ShaderLayout, type BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   GPUCommandGraph,
   type GraphDataView,
@@ -216,7 +222,7 @@ export class GPUSphereWorld {
   private eventRead?: Promise<GPUSphereEventBatch>;
   private settings?: Buffer;
   private commandSettings?: Buffer;
-  private bodyControl?: Computation;
+  private bodyControl?: BoundKernel;
   private ownedBuffers: Buffer[] = [];
   private added = false;
   private wakeRevision = 1;
@@ -697,25 +703,30 @@ export class GPUSphereWorld {
         shaderLayout
       };
       const createExecutable = (
-        computation: Computation
+        computation: BoundKernel
       ): GPUCommandGraphComputeExecutable<Parameters> => ({
         encode: ({computePass, getBuffer}) => {
           const resolved: Record<string, Binding> = {};
           for (const binding of allBindings)
             resolved[binding.name] = getViewBinding(binding.view, getBuffer);
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, workgroups, 1, 1);
+          Object.assign(computation.bindings, resolved);
+          computation.kernel.dispatch(computePass, {
+            bindings: computation.bindings,
+            x: workgroups,
+            y: 1,
+            z: 1
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => computation.kernel.destroy()
       });
       graph.addComputePass({
         id: props.id,
         description:
           passDescriptions[name.replace(/^step-\d+-(?:impact-\d+-)?/, '').replace(/-\d+$/, '')],
         resources,
-        compile: ({device}) => createExecutable(new Computation(device, props)),
+        compile: ({device}) => createExecutable(createBoundKernel(device, props)),
         compileAsync: async ({device}) =>
-          createExecutable(await Computation.createAsync(device, props))
+          createExecutable(await createBoundKernelAsync(device, props))
       });
     };
     for (let substep = 0; substep < this.substeps; substep++) {
@@ -981,7 +992,7 @@ ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atom
         );
     }
     this.commandSettings = allocate('body-command', 80, true);
-    this.bodyControl = new Computation(graph.device, {
+    this.bodyControl = createBoundKernel(graph.device, {
       id: `${this.id}-body-control`,
       source: CONTROL_SPHERE,
       bindings: {
@@ -1115,7 +1126,7 @@ ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atom
     const device = this.positions.device;
     const encoder = device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.bodyControl.dispatch(pass, 1, 1, 1);
+    this.bodyControl.kernel.dispatch(pass, {bindings: this.bodyControl.bindings, x: 1, y: 1, z: 1});
     pass.end();
     device.submit(encoder.finish());
   }
@@ -1141,7 +1152,7 @@ ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atom
 
   /** Destroy the compiled graph first. Never destroys caller-supplied state. */
   destroy(): void {
-    this.bodyControl?.destroy();
+    this.bodyControl?.kernel.destroy();
     this.bodyControl = undefined;
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers = [];

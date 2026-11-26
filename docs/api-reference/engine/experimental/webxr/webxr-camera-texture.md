@@ -7,12 +7,12 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-`WebXRCameraTexture` is the experimental `@luma.gl/engine/experimental/webxr` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](/docs/api-reference/core/resources/texture).
+`WebXRCameraTexture` is the experimental `@luma.gl/engine/experimental-webxr` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](/docs/api-reference/core/resources/texture).
 
 ## Usage
 
 ```typescript
-import {WebXRCameraTexture} from '@luma.gl/engine/experimental/webxr';
+import {WebXRCameraTexture} from '@luma.gl/engine/experimental-webxr';
 
 const cameraTexture = new WebXRCameraTexture(device, xrWebGLBinding);
 

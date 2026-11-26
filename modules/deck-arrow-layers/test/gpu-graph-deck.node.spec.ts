@@ -11,7 +11,7 @@ import {
   GPUGraphEdgeLayer,
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
-import * as experimentalModule from '@luma.gl/graph/experimental/simulation';
+import * as experimentalModule from '@luma.gl/graph/experimental-simulation';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 
@@ -66,9 +66,8 @@ describe('optional GPU Graph deck.gl integration package isolation', () => {
     ) as {private?: boolean; version?: string; dependencies?: Record<string, string>};
 
     expect(packageJson.private).toBe(true);
-    expect(packageJson.dependencies?.['@deck.gl/core']).toContain('9.4.0');
+    expect(packageJson.dependencies?.['@deck.gl/core']).toBe('10.0.0-alpha.2');
     expect(packageJson.dependencies?.['@luma.gl/graph']).toBe(packageJson.version);
-    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe(packageJson.version);
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
   });
 

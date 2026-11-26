@@ -4,7 +4,7 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 export const title = 'Two Cubes';
 export const description = 'Shows usage of multiple uniform buffers.';

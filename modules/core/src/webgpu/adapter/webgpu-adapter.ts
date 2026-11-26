@@ -12,6 +12,7 @@ import {
   type WebGPUDeviceFeature,
   log
 } from '../../index';
+import {WEBGPU_ADAPTER_UNAVAILABLE} from '../../api/adapter/adapter';
 import type {WebGPUDevice} from './webgpu-device';
 
 type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
@@ -215,7 +216,12 @@ export class WebGPUAdapter extends Adapter {
     allowImmediateLossRetry: boolean
   ): Promise<WebGPUDevice> {
     if (typeof navigator === 'undefined' || !navigator.gpu) {
-      throw new Error('WebGPU is not available');
+      throw new Error(
+        'navigator.gpu is unavailable. WebGPU requires a supported browser and a secure context.'
+      );
+    }
+    if (typeof navigator.gpu.requestAdapter !== 'function') {
+      throw new Error('navigator.gpu.requestAdapter is unavailable.');
     }
 
     const requestedFeatureLevel = getWebGPUFeatureLevel(props);
@@ -224,11 +230,20 @@ export class WebGPUAdapter extends Adapter {
     try {
       adapter = await this.requestGPUAdapter(requestAdapterOptions);
     } catch (error) {
-      throw new Error('WebGPU adapter request failed', {cause: error});
+      throw new Error('navigator.gpu.requestAdapter() failed', {cause: error});
     }
 
     if (!adapter) {
-      throw new Error('Failed to request WebGPU adapter');
+      // Browsers can expose navigator.gpu with acceleration disabled or a blocklisted GPU.
+      // No device or canvas context has been created, so another backend can use the canvas.
+      throw Object.assign(
+        new Error(
+          'navigator.gpu.requestAdapter() returned null. No matching WebGPU adapter is available.'
+        ),
+        {
+          code: allowImmediateLossRetry ? WEBGPU_ADAPTER_UNAVAILABLE : undefined
+        }
+      );
     }
 
     const adapterInfo = await getWebGPUAdapterInfo(adapter);
@@ -258,7 +273,7 @@ export class WebGPUAdapter extends Adapter {
     try {
       gpuDevice = await adapter.requestDevice(deviceDescriptor);
     } catch (error) {
-      throw new Error('WebGPU device request failed', {cause: error});
+      throw new Error('GPUAdapter.requestDevice() failed', {cause: error});
     }
 
     const immediateLoss = await getImmediateDeviceLoss(gpuDevice);
@@ -276,28 +291,28 @@ export class WebGPUAdapter extends Adapter {
 
     // log.probe(1, 'GPUDevice available')();
 
-    const {WebGPUDevice} = await import('./webgpu-device');
-    const featureLevel = getEffectiveWebGPUFeatureLevel(requestedFeatureLevel, gpuDevice.features);
-    const deviceProps = {...props, featureLevel};
-
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
-      let device: WebGPUDevice;
+      let device: WebGPUDevice | undefined;
       try {
+        const {WebGPUDevice} = await import('./webgpu-device');
+        const featureLevel = getEffectiveWebGPUFeatureLevel(
+          requestedFeatureLevel,
+          gpuDevice.features
+        );
+        const deviceProps = {...props, featureLevel};
         device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
-      } catch (error) {
-        gpuDevice.destroy();
-        throw new Error('WebGPU wrapper initialization failed', {cause: error});
-      }
-
-      const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
-      if (canvasContextProps) {
-        try {
+        const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+        if (canvasContextProps) {
           device.initializeCanvasContext(canvasContextProps);
-        } catch (error) {
+        }
+      } catch (error) {
+        if (device) {
           device.destroy();
           throw new Error('WebGPU canvas initialization failed', {cause: error});
         }
+        gpuDevice.destroy();
+        throw new Error('WebGPU wrapper initialization failed', {cause: error});
       }
       log.probe(
         1,
@@ -312,7 +327,7 @@ export class WebGPUAdapter extends Adapter {
 
   /**
    * Wraps an application-created GPUDevice, keeping its requested limits and features.
-   * @note `device.destroy()` leaves the GPUDevice alive. Call `GPUDevice.destroy()` to release it.
+   * @note Set ownsHandle to true to transfer destruction of a newly attached GPUDevice to luma.gl.
    * @note Returns the existing wrapper if the GPUDevice is already attached or luma-created.
    */
   async attach(handle: GPUDevice | WebGPUDevice, props: DeviceProps = {}): Promise<WebGPUDevice> {

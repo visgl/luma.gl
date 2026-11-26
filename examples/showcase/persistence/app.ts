@@ -3,52 +3,52 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumericArray} from '@math.gl/core/types';
-import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
-import {persistenceEffect} from '@luma.gl/effects';
+import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
+import {persistenceEffect} from '@luma.gl/engine/effects';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   SphereGeometry,
-  Model,
+  GroupNode,
   makeRandomGenerator,
   loadImageBitmap,
-  DynamicTexture,
   BackgroundTextureModel,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {Matrix4, Vector3, radians} from '@math.gl/core';
+import {Matrix4, Vector3, radians} from '@math.gl/core/matrix';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
-import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-
-const {sphere, SPHERE_WGSL, SPHERE_VS, SPHERE_FS} = getShaderSources();
+import type {LightingProps} from '@luma.gl/shaders';
+import {createPBRMesh, drawPBRScene} from '../../pbr-scene';
 
 const random = makeRandomGenerator();
 const OFFSCREEN_COLOR_FORMAT = 'rgba8unorm';
 
 const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;
-const electronPosition: NumericArray[] = [];
-const electronRotation: Matrix4[] = [];
-const nucleonPosition: NumericArray[] = [];
+const camera: [number, number, number] = [0, 0, 4];
+const lighting: LightingProps = {
+  useByteColors: false,
+  lights: [
+    {type: 'ambient', color: [1, 1, 1], intensity: 0.15},
+    {type: 'directional', color: [1, 1, 1], direction: [-1, -1, -2], intensity: 2}
+  ]
+};
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = PERSISTENCE_INFO_HTML;
 
-  // A single uniform store that manages uniforms for our sphere shader
-  uniformStore: UniformStore<{
-    sphere: SphereUniforms;
-  }>;
-
   /** Background texture used for final screen compositing */
   backgroundTexture: DynamicTexture;
   backgroundTextureModel: BackgroundTextureModel;
-  /** Electron model, will be drawn multiple times */
-  electron: Model;
-  /** Nucleon model, will be drawn multiple times */
-  nucleon: Model;
-  electronUniformBuffers: Buffer[];
-  nucleonUniformBuffers: Buffer[];
+  readonly scene: GroupNode;
+  readonly nucleus: GroupNode;
+  readonly electronInstances: Buffer;
+  readonly nucleonInstances: Buffer;
+  readonly electronPosition: NumericArray[] = [];
+  readonly electronRotation: Matrix4[] = [];
+  readonly electronInstanceData = new Float32Array(ELECTRON_COUNT * 16);
 
   mainFramebuffer: Framebuffer;
   clearedPersistenceFramebuffer: Framebuffer;
@@ -62,50 +62,41 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device, width, height}: AnimationProps) {
     super();
 
-    this.uniformStore = new UniformStore(device, {
-      sphere
-    });
-    this.electronUniformBuffers = this.createSphereUniformBuffers(device, ELECTRON_COUNT);
-    this.nucleonUniformBuffers = this.createSphereUniformBuffers(device, CORE_COUNT);
-
     this.backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('background.png')});
     this.backgroundTextureModel = new BackgroundTextureModel(device, {
       backgroundTexture: this.backgroundTexture
     });
 
-    this.electron = new Model(device, {
-      id: 'electron',
-      source: SPHERE_WGSL,
-      vs: SPHERE_VS,
-      fs: SPHERE_FS,
-      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
-      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
-      bindings: {
-        sphere: this.electronUniformBuffers[0]
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        cullMode: 'back'
-      }
+    this.electronInstances = device.createBuffer({
+      usage: Buffer.VERTEX | Buffer.COPY_DST,
+      byteLength: this.electronInstanceData.byteLength
     });
-
-    this.nucleon = new Model(device, {
-      id: 'nucleon',
-      source: SPHERE_WGSL,
-      vs: SPHERE_VS,
-      fs: SPHERE_FS,
-      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
-      geometry: new SphereGeometry({nlat: 20, nlong: 30}),
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back'
-      },
-      bindings: {
-        sphere: this.nucleonUniformBuffers[0]
-      }
+    const nucleonInstanceData = new Float32Array(CORE_COUNT * 16);
+    this.nucleonInstances = device.createBuffer({
+      usage: Buffer.VERTEX | Buffer.COPY_DST,
+      byteLength: nucleonInstanceData.byteLength
     });
+    const geometry = new SphereGeometry({nlat: 20, nlong: 30});
+    const electrons = createPBRMesh(
+      device,
+      geometry,
+      {unlit: true, baseColorFactor: [0, 0.214, 1, 1]},
+      {
+        instances: {buffer: this.electronInstances, count: ELECTRON_COUNT},
+        colorAttachmentFormat: OFFSCREEN_COLOR_FORMAT
+      }
+    );
+    const nucleons = createPBRMesh(
+      device,
+      geometry,
+      {baseColorFactor: [1, 0.065, 0.065, 1], metallicRoughnessValues: [0, 0.45]},
+      {
+        instances: {buffer: this.nucleonInstances, count: CORE_COUNT},
+        colorAttachmentFormat: OFFSCREEN_COLOR_FORMAT
+      }
+    );
+    this.nucleus = new GroupNode({children: [nucleons]});
+    this.scene = new GroupNode({children: [electrons, this.nucleus]});
 
     this.mainFramebuffer = device.createFramebuffer({
       width,
@@ -147,7 +138,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pos.normalize().scale(distanceFromCenter);
       const scale = 1.25;
       pos.scale(scale);
-      electronPosition.push(pos);
+      this.electronPosition.push(pos);
 
       // Get a random vector and cross
       const randomVector = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
@@ -155,28 +146,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
-      electronRotation.push(rot);
+      this.electronRotation.push(rot);
+      this.electronInstanceData.set(new Matrix4().scale(0.06125), i * 16);
     }
 
-    for (let i = 0; i < ELECTRON_COUNT; i++) {
-      let pos = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
-      pos = pos.normalize().scale(0.5);
-      nucleonPosition.push(pos);
+    for (let index = 0; index < CORE_COUNT; index++) {
+      const position = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5)
+        .normalize()
+        .scale(0.5);
+      nucleonInstanceData.set(new Matrix4().translate(position).scale(0.25), index * 16);
     }
+    this.nucleonInstances.write(nucleonInstanceData);
   }
 
-  onFinalize(animationProps: AnimationProps): void {
-    this.uniformStore.destroy();
-    this.backgroundTexture.destroy();
+  onFinalize(): void {
     this.backgroundTextureModel.destroy();
-    this.electron.destroy();
-    this.nucleon.destroy();
-    for (const uniformBuffer of this.electronUniformBuffers) {
-      uniformBuffer.destroy();
-    }
-    for (const uniformBuffer of this.nucleonUniformBuffers) {
-      uniformBuffer.destroy();
-    }
+    this.backgroundTexture.destroy();
+    this.scene.destroy();
+    this.electronInstances.destroy();
+    this.nucleonInstances.destroy();
 
     this.mainFramebuffer.destroy();
     this.clearedPersistenceFramebuffer.destroy();
@@ -208,8 +196,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.persistenceFramebufferSize = [width, height];
     }
 
-    const projectionMatrix = new Matrix4().perspective({fovy: radians(75), aspect});
-    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 4]});
+    const viewMatrix = new Matrix4().lookAt({eye: camera});
+    const viewProjectionMatrix = new Matrix4()
+      .perspective({fovy: radians(75), aspect})
+      .multiplyRight(viewMatrix);
+
+    for (let index = 0; index < ELECTRON_COUNT; index++) {
+      const position = this.electronRotation[index].transformAsVector(this.electronPosition[index]);
+      this.electronPosition[index] = position;
+      this.electronInstanceData.set(position, index * 16 + 12);
+    }
+    this.electronInstances.write(this.electronInstanceData);
+    this.nucleus.setMatrixComponents({rotation: [tick * 0.013, tick * 0.021, 0]});
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
@@ -218,53 +216,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearStencil: false
     });
 
-    // Render electrons to framebuffer
-    this.uniformStore.setUniforms({sphere: {colorAndLighting: [0.0, 0.5, 1.0, 0.0]}});
-
-    for (let i = 0; i < ELECTRON_COUNT; i++) {
-      electronPosition[i] = electronRotation[i].transformAsVector(electronPosition[i]);
-      const modelMatrix = new Matrix4()
-        .translate(electronPosition[i])
-        .scale([0.06125, 0.06125, 0.06125]);
-
-      this.uniformStore.setUniforms({
-        sphere: {
-          modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
-          projectionMatrix
-        }
-      });
-      this.electronUniformBuffers[i].write(this.uniformStore.getUniformBufferData('sphere'));
-      this.electron.setBindings({sphere: this.electronUniformBuffers[i]});
-      this.electron.draw(mainRenderPass);
-    }
-
-    // Render core to framebuffer
-    this.uniformStore.setUniforms({
-      sphere: {
-        colorAndLighting: [1.0, 0.25, 0.25, 1.0]
-      }
-    });
-
-    for (let i = 0; i < CORE_COUNT; i++) {
-      const modelMatrix = new Matrix4()
-        .rotateXYZ([tick * 0.013, 0, 0])
-        .rotateXYZ([0, tick * 0.021, 0])
-        .translate(nucleonPosition[i]);
-
-      const translation = [modelMatrix[12], modelMatrix[13], modelMatrix[14]];
-      modelMatrix.identity().translate(translation).scale([0.25, 0.25, 0.25]);
-
-      this.uniformStore.setUniforms({
-        sphere: {
-          modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
-          projectionMatrix
-        }
-      });
-      this.nucleonUniformBuffers[i].write(this.uniformStore.getUniformBufferData('sphere'));
-      this.nucleon.setBindings({sphere: this.nucleonUniformBuffers[i]});
-      this.nucleon.draw(mainRenderPass);
-    }
-
+    drawPBRScene(this.scene, mainRenderPass, viewProjectionMatrix, camera, lighting);
     mainRenderPass.end();
 
     const currentPersistenceRenderer = this.persistenceRenderers[this.persistenceRendererIndex];
@@ -321,16 +273,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 
-  createSphereUniformBuffers(device: AnimationProps['device'], count: number): Buffer[] {
-    const byteLength = this.uniformStore.getUniformBufferByteLength('sphere');
-    return Array.from({length: count}, () =>
-      device.createBuffer({
-        usage: Buffer.UNIFORM | Buffer.COPY_DST,
-        byteLength
-      })
-    );
-  }
-
   /** Creates the alpha-blended fullscreen model used for persistence and live-scene overlays. */
   createCompositeTextureModel(device: AnimationProps['device'], backgroundTexture: Texture) {
     return new BackgroundTextureModel(device, {
@@ -370,116 +312,4 @@ function createOffscreenColorAttachment(
       mipmapFilter: 'none'
     }
   });
-}
-
-type SphereUniforms = {
-  colorAndLighting: NumberArray;
-  modelViewMatrix: NumberArray;
-  projectionMatrix: NumberArray;
-};
-
-function getShaderSources() {
-  // SPHERE SHADER
-
-  const sphere: {uniformTypes: Record<keyof SphereUniforms, VariableShaderType>} = {
-    uniformTypes: {
-      // TODO make sure order doesn't matter
-      colorAndLighting: 'vec4<f32>',
-      modelViewMatrix: 'mat4x4<f32>',
-      projectionMatrix: 'mat4x4<f32>'
-    }
-  };
-
-  const SPHERE_WGSL = /* WGSL */ `\
-  struct SphereUniforms {
-    colorAndLighting: vec4<f32>,
-    modelViewMatrix: mat4x4<f32>,
-    projectionMatrix: mat4x4<f32>,
-  };
-
-  @group(0) @binding(auto) var<uniform> sphere : SphereUniforms;
-
-  struct VertexInputs {
-    @location(0) positions: vec3<f32>,
-    @location(1) normals: vec3<f32>,
-  };
-
-  struct VertexOutputs {
-    @builtin(position) position: vec4<f32>,
-    @location(0) normal: vec3<f32>,
-  };
-
-  @vertex
-  fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
-    var outputs: VertexOutputs;
-    outputs.position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
-    outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)).xyz);
-    return outputs;
-  }
-
-  @fragment
-  fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-    var attenuation = 1.0;
-    if (sphere.colorAndLighting.a > 0.5) {
-      let light = normalize(vec3(1.0, 1.0, 2.0));
-      attenuation = max(dot(inputs.normal, light), 0.0);
-    }
-    return vec4(sphere.colorAndLighting.rgb * attenuation, 1.0);
-  }
-  `;
-
-  const SPHERE_VS = /* glsl */ `\
-  #version 300 es
-
-  in vec3 positions;
-  in vec3 normals;
-
-  uniform sphereUniforms {
-    // fragment shader
-    vec4 colorAndLighting;
-    // vertex shader
-    mat4 modelViewMatrix;
-    mat4 projectionMatrix;
-  } sphere;
-
-  out vec3 normal;
-
-  void main(void) {
-    gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(positions, 1.0);
-    normal = vec3((sphere.modelViewMatrix * vec4(normals, 0.0)));
-  }
-  `;
-
-  const SPHERE_FS = /* glsl */ `\
-  #version 300 es
-
-  precision highp float;
-
-  uniform sphereUniforms {
-    // fragment
-    vec4 colorAndLighting;
-    // vertex
-    mat4 modelViewMatrix;
-    mat4 projectionMatrix;
-  } sphere;
-
-  in vec3 normal;
-  out vec4 fragColor;
-
-  void main(void) {
-    float attenuation = 1.0;
-    if (sphere.colorAndLighting.a > 0.5) {
-      vec3 light = normalize(vec3(1,1,2));
-      attenuation = max(dot(normal, light), 0.0);
-    }
-    fragColor = vec4(sphere.colorAndLighting.rgb * attenuation, 1);
-  }
-  `;
-
-  return {
-    sphere,
-    SPHERE_WGSL,
-    SPHERE_VS,
-    SPHERE_FS
-  } as const;
 }

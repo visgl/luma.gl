@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type ShaderLayout} from '@luma.gl/core';
-import {type ShaderModule} from '@luma.gl/shadertools';
+import {type ShaderModule} from '@luma.gl/shaders';
 import {DAY_COUNT, DAY_MILLISECONDS, SCHEDULE_SPAN_MILLISECONDS} from './arrow-time-columns-data';
 
 type TimeColumnsUniforms = {

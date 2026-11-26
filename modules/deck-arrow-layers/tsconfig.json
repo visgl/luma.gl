@@ -16,16 +16,10 @@
       "path": "../deck-gpu-layers"
     },
     {
-      "path": "../arrow"
-    },
-    {
       "path": "../core"
     },
     {
       "path": "../engine"
-    },
-    {
-      "path": "../gpgpu"
     },
     {
       "path": "../graph"

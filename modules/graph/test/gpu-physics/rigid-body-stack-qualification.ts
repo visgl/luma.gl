@@ -2,23 +2,39 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {Matrix4} from '@math.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {Matrix4} from '@math.gl/core/matrix';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld, type GPURigidBody, type GPURigidBodyState} from '../../src/gpu-physics';
 
-export function registerStackQualification(scenario: {
-  name: string;
-  levels: number;
-  load: number;
-  centerOffset: number;
-}): void {
+export function registerStackQualification(
+  scenario: {
+    name: string;
+    levels: number;
+    load: number;
+    centerOffset: number;
+  },
+  {
+    durationSeconds = 6,
+    contactSolver = 'scalar',
+    iterations = 64,
+    timeSteps = [1 / 120, 1 / 240]
+  }: {
+    durationSeconds?: number;
+    contactSolver?: 'scalar' | 'block';
+    iterations?: number;
+    timeSteps?: readonly number[];
+  } = {}
+): void {
   it.for(
-    (['ordered', 'parallel'] as const).flatMap(solver =>
-      [1 / 120, 1 / 240].map(timeStep => ({...scenario, solver, timeStep}))
+    (contactSolver === 'block'
+      ? (['parallel'] as const)
+      : (['ordered', 'parallel'] as const)
+    ).flatMap(solver =>
+      timeSteps.map(timeStep => ({...scenario, solver, timeStep, durationSeconds}))
     )
   )(
-    'bounds sustained penetration, drift and residual energy for $name with $solver at $timeStep s',
+    'bounds sustained penetration, drift and residual energy for $name with $solver at $timeStep s for $durationSeconds s',
     async (scenario, context) => {
       const device = await getWebGPUTestDevice();
       if (!device) return context.skip('WebGPU unavailable');
@@ -48,7 +64,8 @@ export function registerStackQualification(scenario: {
         solver: scenario.solver,
         broadPhase: 'hierarchical-grid',
         timeStep,
-        iterations: 64,
+        iterations,
+        parallelContactSolver: contactSolver,
         maximumPairs: 64,
         warmStartFactor: 0.8,
         penetrationRecoveryFraction: 0.1,
@@ -60,7 +77,7 @@ export function registerStackQualification(scenario: {
       const graph = await definition.compileAsync();
       let finalState: GPURigidBodyState[] = [];
       try {
-        const steps = Math.round(6 / timeStep);
+        const steps = Math.round(scenario.durationSeconds / timeStep);
         for (let start = 0; start < steps; start += 60) {
           const encoder = device.createCommandEncoder();
           for (let step = 0; step < Math.min(60, steps - start); step++)

@@ -28,20 +28,9 @@ export {
   type GPUTablePackBatchesOptions,
   type GPUTableProps
 } from './table/gpu-table';
-export {GPUTableGeometry, type GPUTableGeometryProps} from './engine/gpu-table-geometry';
-export {
-  GPUTableModel,
-  type GPUTableModelCount,
-  type GPUTableModelDrawBatchesOptions,
-  type GPUTableModelProps
-} from './engine/gpu-table-model';
+
 export {GPURenderable} from './engine/gpu-renderable';
-export {
-  TableTransform,
-  type TableTransformBatchOptions,
-  type TableTransformOutputCopyMap,
-  type TableTransformProps
-} from './engine/gpu-table-transform';
+
 export {
   GPUTableComputation,
   type GPUTableComputationBatch,

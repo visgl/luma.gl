@@ -93,7 +93,8 @@ Sum and mean use no float atomics. They run in two passes:
 2. One workgroup per group adds that group's column partials in index order and a fixed binary
    tree, then writes the sum or the mean.
 
-The addition order depends only on the input rows, their chunk boundaries, and the group count.
+The addition order depends on the input rows, their chunk boundaries, the group count, and the
+mean scratch budget.
 The same inputs give bitwise-identical results on every run on the same device. This is
 deterministic `float32` accumulation, not pairwise summation: tile totals and partials are also
 added sequentially, so the usual sequential-summation error bound applies and cancellation can
@@ -103,10 +104,10 @@ Each partial array holds at most about one million values, about 4 MB, regardles
 of chunks. Outputs with more than about one million groups use a single column of `groupCount`
 values. Row blocks grow beyond 4,096 rows until the largest chunk fits the available columns, but
 never grow beyond the largest chunk. Fragmented inputs with more row blocks than columns add later
-row blocks into earlier columns in row order. Accumulators live in workgroup memory while they fit
-in 8 KB: up to 2,048 sum groups or 1,024 mean groups. Larger outputs accumulate directly in the
-workgroup's scratch column, which no other workgroup in the same pass writes. Outputs are limited to
-16,777,215 groups, and the graph throws during planning when partial scratch would exceed
+row blocks into earlier columns in row order. Fresh accumulators can use up to 8 KB of workgroup
+memory: up to 2,048 sum groups or 1,024 mean groups. Larger outputs and later chunks accumulate
+directly in the workgroup's scratch column, which no other workgroup in the same pass writes. Each
+pass covers up to 16,777,215 groups. The graph throws during planning when partial scratch exceeds
 `maxStorageBufferBindingSize`.
 
 ## Usage
@@ -136,6 +137,7 @@ type GPUGroupAggregationProps = {
   id?: string;
   keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   mask?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  maxMeanScratchBytes?: number;
 } & (
   | {output: GraphDataView<'uint32'>; operation?: 'count'; values?: never}
   | {
@@ -154,9 +156,19 @@ The graph owns no persistent result buffer, performs no submission, and introduc
 Out-of-range keys are ignored so callers can use a sentinel such as `0xffffffff` for missing or
 unmapped values.
 
+For mean, `maxMeanScratchBytes` caps the partial count array in bytes. The partial sum array
+has the same size. When one column cannot cover the output within the budget, the operation
+processes successive key ranges using the same scratch buffers.
+
 ## Performance notes
 
 On subgroup-capable devices, count, minimum, and maximum aggregations with at most 16 groups
 combine lanes carrying the same key before issuing atomics. This targets compact dictionaries with
 high contention. Sum and mean do not use subgroups or global atomics, so their cost does not depend
 on how many rows share a group.
+
+## Semantic graph operation
+
+Use [`GPUGraphGroupAggregation`](./gpu-graph.md#grouped-aggregation-and-scalar-reduction)
+for named logical inputs and operation-defined results in `GPUGraph`. It lowers to
+this primitive and preserves its statistics, masks, chunking, and numerical behavior.

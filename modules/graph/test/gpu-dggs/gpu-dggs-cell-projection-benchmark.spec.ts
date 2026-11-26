@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs/benchmarks';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs-benchmarks';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 const H3_CELLS = [0x089283082803ffffn, 0x089754e64993ffffn];

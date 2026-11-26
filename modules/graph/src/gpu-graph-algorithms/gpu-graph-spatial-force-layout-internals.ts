@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
+import {GPU_GRID_COORDINATE_WGSL} from '../gpu-core/gpu-grid-coordinate';
 import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '../execution/compute/kernel';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -423,21 +424,7 @@ const CELL_CENTERS_OFFSET: u32 = ${getViewElementOffset(state.cellCenters)}u;
 const VALIDITY_OFFSET: u32 = ${getViewElementOffset(state.validity)}u;
 ${getBindingDeclarations(bindings)}
 
-fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
-  if (maximum == minimum || value == minimum) { return 0u; }
-  if (value == maximum) { return size - 1u; }
-  if (minimum < 0.0 && maximum > 0.0) {
-    let scale = max(abs(minimum), abs(maximum));
-    let scaledValue = value / scale;
-    let scaledMinimum = minimum / scale;
-    let scaledMaximum = maximum / scale;
-    return min(
-      u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
-      size - 1u
-    );
-  }
-  return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
-}
+${GPU_GRID_COORDINATE_WGSL}
 
 fn readPosition(vertex: u32) -> vec2<f32> {
   let positionOffset = POSITIONS_OFFSET + vertex * 2u;
@@ -676,7 +663,7 @@ function addSpatialPass<Parameters>(
     id: props.id,
     resources: Object.values(props.bindings).map(({view, usage}) => ({buffer: view, usage})),
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -694,15 +681,15 @@ function addSpatialPass<Parameters>(
           for (const [name, binding] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

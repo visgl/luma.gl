@@ -14,7 +14,11 @@ import {
   SPLATS_DOCS_TABS
 } from '../../website/src/components/docs/specialized-docs-catalog';
 
-type TocItem = string | {type: 'category'; label: string; items: TocItem[]};
+type TocItem =
+  | string
+  | {type: 'category'; label: string; items: TocItem[]; link?: {type: 'doc'; id: string}}
+  | {type: 'doc'; id: string; label?: string}
+  | {type: 'link'; href: string; label: string};
 
 const ROOT_DIRECTORY = process.cwd();
 const DOCS_DIRECTORY = join(ROOT_DIRECTORY, 'docs');
@@ -26,7 +30,13 @@ function collectTocRoutes(items: readonly TocItem[], routes = new Set<string>())
   for (const item of items) {
     if (typeof item === 'string') {
       routes.add(item.replace(/\/README$/, ''));
+    } else if (item.type === 'doc') {
+      routes.add(item.id.replace(/\/README$/, ''));
+    } else if (item.type === 'link') {
+      const route = resolveInternalRoute(item.href);
+      if (route) routes.add(route);
     } else {
+      if (item.link) routes.add(item.link.id.replace(/\/README$/, ''));
       collectTocRoutes(item.items, routes);
     }
   }
@@ -117,7 +127,13 @@ describe('documentation system contracts', () => {
   ]);
 
   it('keeps every curated document reachable from the table of contents', () => {
-    const allowedStandaloneRoutes = new Set(['developer/dev-tools/README']);
+    const allowedStandaloneRoutes = new Set([
+      'developer/dev-tools/README',
+      'api-reference/experimental',
+      'developer/dev-tools/browser-debug',
+      'developer/dev-tools/llm-friendly-test-setup',
+      'developer/dev-tools/playwright'
+    ]);
     const orphaned = [...curatedRoutes].filter(
       route => !tocRoutes.has(route) && !allowedStandaloneRoutes.has(route)
     );
@@ -129,7 +145,11 @@ describe('documentation system contracts', () => {
     const visit = (items: readonly TocItem[]): void => {
       for (const item of items) {
         if (typeof item === 'string') flattened.push(item.replace(/\/README$/, ''));
-        else visit(item.items);
+        else if (item.type === 'doc') flattened.push(item.id.replace(/\/README$/, ''));
+        else if (item.type === 'category') {
+          if (item.link) flattened.push(item.link.id.replace(/\/README$/, ''));
+          visit(item.items);
+        }
       }
     };
     visit(TABLE_OF_CONTENTS);
@@ -167,8 +187,8 @@ describe('documentation system contracts', () => {
       'developer-guide/README.md',
       'api-reference/core/README.md',
       'api-reference/engine/README.md',
-      'api-reference/shadertools/README.md',
-      'api-reference/gpgpu/README.md',
+      'api-reference/shaders/README.md',
+      'api-reference/graph/gpu-evaluation.md',
       'api-reference/experimental/gpu-tables/README.mdx',
       'api-reference/gltf/README.md',
       'api-reference/test-utils/README.md'
@@ -184,8 +204,22 @@ describe('documentation system contracts', () => {
     const errors: string[] = [];
     for (const path of markdownFiles) {
       const source = readFileSync(path, 'utf8');
-      const markdownHeadings = source.match(/^#\s+.+$/gm)?.length || 0;
-      const jsxHeadings = source.match(/<h1(?:\s|>)/g)?.length || 0;
+      let fence: string | undefined;
+      const prose = source
+        .split('\n')
+        .filter(line => {
+          const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+          if (fence) {
+            if (marker && marker[1].startsWith(fence) && !marker[2].trim()) fence = undefined;
+            return false;
+          }
+          if (!marker) return true;
+          fence = marker[1];
+          return false;
+        })
+        .join('\n');
+      const markdownHeadings = prose.match(/^#\s+.+$/gm)?.length || 0;
+      const jsxHeadings = prose.match(/<h1(?:\s|>)/g)?.length || 0;
       if (markdownHeadings + jsxHeadings !== 1) {
         errors.push(`${getRouteForFile(path)}: ${markdownHeadings + jsxHeadings} H1 headings`);
       }

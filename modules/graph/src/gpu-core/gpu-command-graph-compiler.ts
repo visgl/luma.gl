@@ -10,6 +10,7 @@ import type {
   GPUCommandGraphCopyExecutable,
   GPUCommandGraphNode,
   GPUCommandGraphPreflightReport,
+  GPUCommandGraphCompileOptions,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphStats,
   GPUCommandGraphResourceSummary,
@@ -113,6 +114,7 @@ type GPUCommandGraphCompilerProps<Parameters> = {
   textures: Map<string, GraphTextureHandle>;
   externalTextures: Map<string, GraphExternalTextureHandle>;
   nodes: GPUCommandGraphNode<Parameters>[];
+  kernelMetadata?: GPUCommandGraphCompileOptions['kernelMetadata'];
 };
 
 /**
@@ -363,7 +365,12 @@ function finishGPUCommandGraphCompilation<Parameters>(
       'physical transient resource estimates'
     )
   };
-  const preflight = getGPUCommandGraphPreflightReport(props.device, logicalBuffers, nodeOrder);
+  const preflight = getGPUCommandGraphPreflightReport(
+    props.device,
+    logicalBuffers,
+    nodeOrder,
+    props.kernelMetadata
+  );
 
   return {
     device: props.device,
@@ -421,14 +428,30 @@ function summarizeResource(resource: GraphResourceUse): GPUCommandGraphResourceS
 function getGPUCommandGraphPreflightReport<Parameters>(
   device: Device,
   buffers: GraphBufferHandle[],
-  nodes: GPUCommandGraphNode<Parameters>[]
+  nodes: GPUCommandGraphNode<Parameters>[],
+  kernelMetadata: GPUCommandGraphCompileOptions['kernelMetadata']
 ): GPUCommandGraphPreflightReport {
   const nodeReports = nodes.map(node => {
     const workload = node.workload ?? {};
+    const kernel = kernelMetadata && node.type === 'compute' ? node.kernel : undefined;
     return Object.freeze({
       id: node.id,
       ...(node.description === undefined ? {} : {description: node.description}),
       type: node.type,
+      ...(kernel && {
+        kernel: Object.freeze({
+          entryPoint: kernel.entryPoint,
+          workgroupSize: Object.freeze([...kernel.workgroupSize] as const),
+          bindings: Object.freeze(
+            kernel.bindings.map(({name, type, group, location}) =>
+              Object.freeze({name, type, group, location})
+            )
+          ),
+          ...(kernelMetadata === 'source' && kernel.source !== undefined
+            ? {source: kernel.source}
+            : {})
+        })
+      }),
       resources: Object.freeze((node.resources ?? []).map(summarizeResource)),
       ...(workload.operation ? {operation: workload.operation} : {}),
       ...(workload.variant ? {variant: workload.variant} : {}),
@@ -805,6 +828,27 @@ function getBufferTransientAllocationPlan<Parameters>(
   const lifetimes = getResourceLifetimes(nodes, resource =>
     isGraphBufferUse(resource) ? getBufferHandle(resource.buffer) : null
   );
+  // Each operation shares one retained-buffer list across all its command nodes. Find the
+  // scope once, rather than visiting every chunk on every node in a chunked operation.
+  const scopes = new Map<readonly GraphBufferHandle[], {firstUse: number; lastUse: number}>();
+  nodes.forEach((node, nodeIndex) => {
+    if (!node.retainedBuffers?.length) return;
+    const scope = scopes.get(node.retainedBuffers);
+    if (scope) scope.lastUse = nodeIndex;
+    else scopes.set(node.retainedBuffers, {firstUse: nodeIndex, lastUse: nodeIndex});
+  });
+  // Logical operation inputs/results overlap even for multi-pass lowerings. Private command
+  // scratch continues to use its precise command-level lifetime.
+  for (const [buffers, scope] of scopes) {
+    for (const buffer of buffers) {
+      if (!buffer.transient) continue;
+      const lifetime = lifetimes.get(buffer);
+      lifetimes.set(buffer, {
+        firstUse: Math.min(lifetime?.firstUse ?? scope.firstUse, scope.firstUse),
+        lastUse: Math.max(lifetime?.lastUse ?? scope.lastUse, scope.lastUse)
+      });
+    }
+  }
   const allocations: BufferTransientAllocation[] = [];
   const transientBuffers = Array.from(buffers)
     .filter(buffer => buffer.transient)
@@ -821,19 +865,30 @@ function getBufferTransientAllocationPlan<Parameters>(
   const active = new GPUPlanningHeap<Candidate>(
     (left, right) => left.allocation.lastUse - right.allocation.lastUse || left.index - right.index
   );
-  const available = new GPUPlanningHeap<Candidate>(
-    (left, right) =>
-      left.allocation.byteLength - right.allocation.byteLength || left.index - right.index
-  );
+  // Mappable staging buffers cannot combine their usages with storage/vertex buffers.
+  const available = new Map<number, GPUPlanningHeap<Candidate>>();
+  const getAvailable = (usage: number): GPUPlanningHeap<Candidate> => {
+    const key = usage & (Buffer.MAP_READ | Buffer.MAP_WRITE);
+    let pool = available.get(key);
+    if (!pool) {
+      pool = new GPUPlanningHeap<Candidate>(
+        (left, right) =>
+          left.allocation.byteLength - right.allocation.byteLength || left.index - right.index
+      );
+      available.set(key, pool);
+    }
+    return pool;
+  };
 
   for (const {buffer, lifetime} of transientBuffers) {
     if (!lifetime) {
       continue;
     }
     while (active.peek() && active.peek()!.allocation.lastUse < lifetime.firstUse) {
-      available.push(active.pop()!);
+      const completed = active.pop()!;
+      getAvailable(completed.allocation.usage).push(completed);
     }
-    let candidate = available.pop();
+    let candidate = getAvailable(buffer.usage).pop();
     if (!candidate) {
       candidate = {
         allocation: {byteLength: 0, usage: 0, lastUse: -1, handles: []},

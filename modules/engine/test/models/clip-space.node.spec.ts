@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import * as gpuGeometry from '../../src/geometry/gpu-geometry';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Geometry} from '../../src/geometry/geometry';
 import {ClipSpace} from '../../src/models/clip-space';
 

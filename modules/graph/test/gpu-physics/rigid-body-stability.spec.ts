@@ -3,39 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from '../../src/gpu-physics';
-
-async function runWorld(properties: GPURigidBodyWorldProps, steps: number) {
-  const device = await getWebGPUTestDevice();
-  if (!device) return null;
-  const world = new GPURigidBodyWorld(properties);
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    for (let start = 0; start < steps; start += 20) {
-      const encoder = device.createCommandEncoder();
-      for (let step = start; step < Math.min(start + 20, steps); step++)
-        graph.encode(encoder, {parameters: undefined});
-      device.submit(encoder.finish());
-      await world.readSimulationDiagnostics();
-    }
-    const diagnostics = await world.readSimulationDiagnostics();
-    expect(diagnostics).toMatchObject({steps, complete: true, incompleteSteps: 0});
-    return await world.readState();
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
-}
+import {registerStackStability} from './rigid-body-stack-stability';
+import {runRigidBodyWorld} from './rigid-body-stability-test-utils';
 
 it.for([
   'ordered',
   'parallel'
 ] as const)('solves coupled anisotropic tangential response in one %s iteration', async (solver, context) => {
-  const state = await runWorld(
+  const state = await runRigidBodyWorld(
     {
       solver,
       broadPhase: 'hierarchical-grid',
@@ -76,7 +51,7 @@ it.for(['ordered', 'parallel'] as const)(
   'keeps a body stationary inside the static friction cone with %s solving',
   async (solver, context) => {
     const material = {staticFriction: 0.8, dynamicFriction: 0.1, restitution: 0};
-    const state = await runWorld(
+    const state = await runRigidBodyWorld(
       {
         solver,
         broadPhase: 'hierarchical-grid',
@@ -108,7 +83,7 @@ it.for(['ordered', 'parallel'] as const)(
 it.for(['ordered', 'parallel'] as const)(
   'carries resting bodies on a kinematic support with %s solving',
   async (solver, context) => {
-    const state = await runWorld(
+    const state = await runRigidBodyWorld(
       {
         solver,
         broadPhase: 'hierarchical-grid',
@@ -143,49 +118,13 @@ it.for(['ordered', 'parallel'] as const)(
   120000
 );
 
-it.for(['ordered', 'parallel'] as const)(
-  'bounds eight-box stack drift and penetration with %s solving',
-  async (solver, context) => {
-    const state = await runWorld(
-      {
-        solver,
-        broadPhase: 'hierarchical-grid',
-        iterations: 64,
-        gravity: [0, 0, -9.81],
-        bodies: [
-          {
-            position: [0, 0, -0.5],
-            mass: 0,
-            shape: {type: 'box', halfExtents: [10, 10, 0.5]},
-            friction: 0.8,
-            restitution: 0
-          },
-          ...Array.from({length: 8}, (_, level) => ({
-            position: [0, 0, 0.5 + level] as [number, number, number],
-            mass: 1,
-            shape: {type: 'box' as const, halfExtents: [0.5, 0.5, 0.5] as const},
-            restitution: 0,
-            friction: 0.8
-          }))
-        ]
-      },
-      600
-    );
-    if (!state) return context.skip('WebGPU is unavailable');
-    for (let index = 1; index < state.length; index++) {
-      expect(Math.hypot(state[index].position[0], state[index].position[1])).toBeLessThan(0.1);
-      expect(Math.abs(state[index].position[2] - (index - 0.5))).toBeLessThan(0.12);
-      expect(Math.hypot(...state[index].velocity)).toBeLessThan(0.1);
-    }
-  },
-  120000
-);
+registerStackStability({steps: 120});
 
 it.for([
   'ordered',
   'parallel'
 ] as const)('does not double friction response with one free rotational axis in %s solving', async (solver, context) => {
-  const states = await runWorld(
+  const states = await runRigidBodyWorld(
     {
       solver,
       iterations: 1,

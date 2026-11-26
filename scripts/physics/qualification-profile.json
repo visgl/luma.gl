@@ -18,7 +18,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports a pinned, device-independent description"
           }
         ]
@@ -136,7 +136,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "honors primitive and authored-material schema defaults"
           }
         ],
@@ -161,7 +161,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "resolves compound ownership, transformed child colliders"
           }
         ],
@@ -186,7 +186,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -211,7 +211,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -235,7 +235,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports independent finite plane extents"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-plane.spec.ts",
+            "testPattern": "supports finite, unbounded, single-sided and double-sided plane contacts"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.convex-hull",
@@ -253,6 +266,12 @@
             "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "solves convex hull and tapered primitive contacts"
           }
+        ],
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves draft geometry.node subtrees"
+          }
         ]
       }
     },
@@ -266,7 +285,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves draft geometry.node subtrees"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies off-scene geometry node descendants"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.initial-deformation",
@@ -278,7 +310,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/mesh-snapshot.node.spec.ts",
+            "testPattern": "snapshots initial and live morphs before skinning"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies initial morph and skin deformation"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.moving-mesh-pairs",
@@ -289,7 +334,18 @@
       "requiredChecks": [
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "exchanges momentum between two moving mesh bodies"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "preserves a nonconvex mesh opening"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.holes-and-sidedness",
@@ -322,8 +378,14 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "preserves reflected static boxes"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported reflected nonuniform hierarchy"
           }
         ]
       }
@@ -338,7 +400,24 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "disables all-zero-scale colliders"
+          },
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "keeps disabled collider descendants"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported reflected nonuniform hierarchy"
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.modes",
@@ -353,7 +432,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "distinguishes static and kinematic bodies"
           }
         ],
@@ -384,7 +463,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "computes additive primitive mass and center"
           }
         ],
@@ -411,7 +490,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -442,12 +521,18 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "distinguishes static and kinematic bodies"
           },
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported initial linear angular velocity"
           }
         ]
       }
@@ -465,7 +550,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "resolves compound ownership, transformed child colliders"
           }
         ],
@@ -494,7 +579,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "honors primitive and authored-material schema defaults"
           }
         ],
@@ -526,7 +611,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "compiles symmetric filters without a 32-system bitmask limit"
           }
         ],
@@ -548,7 +633,36 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-parallel.spec.ts",
+            "testPattern": "conserves energy and momentum across 80"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "impact",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.manifold-persistence",
@@ -596,7 +710,40 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "massRatio",
+              "minimumObjectCount": 5,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.continuous-collision",
@@ -608,7 +755,32 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies swept impact position"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "detects a rotating gate"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects impact exhaustion"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.timestep-convergence",
@@ -638,7 +810,32 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies scene lifecycle, independent instances, pending work"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "constraints.frames",
@@ -656,7 +853,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports composed joints with forward attachment references"
           }
         ],
@@ -687,7 +884,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -716,7 +913,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -750,7 +947,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -790,7 +987,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports composed joints"
           }
         ],
@@ -825,11 +1022,11 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "imports nested trigger unions"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "preserves intermediate branch filters"
           }
         ],
@@ -984,7 +1181,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "qualifies imported ancestor ownership"
           }
         ],
@@ -1017,13 +1214,13 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-pointer.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-pointer.node.spec.ts",
             "testPattern": "qualifies declared motion"
           }
         ],
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "qualifies imported component pointers"
           },
           {
@@ -1031,11 +1228,11 @@
             "testPattern": "rejects a shared joint edit"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "binds authored motion and material pointers"
           },
           {
-            "file": "modules/gltf/test/physics/mesh-snapshot.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/mesh-snapshot.node.spec.ts",
             "testPattern": "snapshots initial and live morphs"
           }
         ]
@@ -1054,11 +1251,11 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "native export reimport"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "reimports automatically derived inertia"
           }
         ],
@@ -1112,6 +1309,59 @@
       }
     },
     {
+      "id": "binding.live-analytic-export",
+      "tranche": "G6",
+      "fields": [
+        "settled analytic collider scale and child frames",
+        "native export after rebasing"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
+            "testPattern": "exports a settled animated collider frame and shared analytic scale without recooking"
+          },
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
+            "testPattern": "exports absolute body poses after a physics origin shift"
+          }
+        ]
+      }
+    },
+    {
+      "id": "qualification.rendered-authored-lifecycle",
+      "tranche": "G7",
+      "fields": [
+        "Authored Scene Stress with GPU pose rendering, active simulation and native export outside timing"
+      ],
+      "requiredChecks": [
+        "performance"
+      ],
+      "checks": {
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "authored-render",
+              "fixture": "AuthoredGrid",
+              "minimumObjectCount": 18,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "authored-render",
+              "fixture": "AnimatedScale",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "qualification.external-assets",
       "tranche": "G7",
       "fields": [
@@ -1121,7 +1371,76 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "MotionProperties",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Materials_Restitution",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Materials_Friction",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Filtering",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          }
+        ],
+        "behavior": [
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "MotionProperties",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Materials_Restitution",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Materials_Friction",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Filtering",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          }
+        ]
+      }
     },
     {
       "id": "qualification.device-envelope",
@@ -1132,7 +1451,42 @@
       "requiredChecks": [
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "massRatio",
+              "minimumObjectCount": 5,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "impact",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "solver.coupled-friction-stability",
@@ -1978,7 +2332,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "imports nested trigger unions"
           }
         ],
@@ -2028,7 +2382,7 @@
             "testPattern": "changes restitution live"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "binds authored motion and material pointers"
           }
         ]
@@ -2068,7 +2422,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "binds animated child collider"
           },
           {
@@ -2091,13 +2445,13 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "routes analytic scale channels"
           }
         ],
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "animates shared implicit shape pointers"
           },
           {

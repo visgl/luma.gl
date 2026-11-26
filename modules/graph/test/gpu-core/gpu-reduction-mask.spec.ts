@@ -10,8 +10,8 @@ import {
   type GPUReductionOperation,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 type ScalarFormat = 'uint32' | 'sint32' | 'float32';
 type ScalarArray = Uint32Array | Int32Array | Float32Array;

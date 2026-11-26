@@ -16,7 +16,7 @@ import {
   type GPURasterPixelBounds,
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 type OutputRecord<Format extends 'float32' | 'uint32'> = {
@@ -89,7 +89,7 @@ const NO_DATA_VALUE = -999;
 const INTENSITY_SCALE = 0.5;
 const INTENSITY_OFFSET = 2;
 
-it('LuRaster tiled segmentation reproduces monolithic global-row-major labels and weighted region measurements', async () => {
+it('GPU Raster tiled segmentation reproduces monolithic global-row-major labels and weighted region measurements', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -176,7 +176,7 @@ it('LuRaster tiled segmentation reproduces monolithic global-row-major labels an
   void 0;
 });
 
-it('LuRaster four-way tile junctions reconcile diagonal corner contacts only for eight-connectivity', async () => {
+it('GPU Raster four-way tile junctions reconcile diagonal corner contacts only for eight-connectivity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -242,7 +242,7 @@ it('LuRaster four-way tile junctions reconcile diagonal corner contacts only for
   void 0;
 });
 
-it('LuRaster cross-tile global capacity publishes exact demand and fails closed on exhausted local convergence', async () => {
+it('GPU Raster cross-tile global capacity publishes exact demand and fails closed on exhausted local convergence', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;

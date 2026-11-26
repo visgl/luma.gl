@@ -16,7 +16,7 @@ Compare the original on the left with GPU-processed data on the right. Use the c
 processing and pause rotation. Both views draw directly from GPU buffers. The panel shows source and filtered point counts,
 reading back only the four-byte filtered total after processing changes.
 
-See the [API and limitations](/docs/api-reference/gpgpu/gpu-pointcloud).
+See the [API and limitations](/docs/api-reference/graph/gpu-pointcloud).
 
 Enable **Size by point count** to increase radius gently with the logarithm of the original voxel
 population: `1 + 0.2 × log2(count)`, capped at 2.5 times the base radius. Disable it to compare

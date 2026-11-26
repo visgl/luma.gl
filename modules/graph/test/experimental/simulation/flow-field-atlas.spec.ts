@@ -8,8 +8,8 @@ import {
   FlowFieldAtlas,
   FlowParticleSimulation,
   isFlowParticleSimulationSupported
-} from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/graph/experimental-simulation';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 
 const PROPS = {
   bounds: [0, 0, 3, 3],

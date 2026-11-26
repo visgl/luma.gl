@@ -33,21 +33,16 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'api/baked-cornell-box',
+
   'three/galactic-vortex',
+  'experimental/offroad-buggy',
   'gltf/physics',
   'gltf/authored-scene-stress',
   'api/render-bundles',
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
   'deck/gpu-culled-trace',
-  'deck/wind',
-  'deck/scene-buffers',
-  'deck/ambient-occlusion',
-  'deck/soft-shadows',
-  'deck/depth-of-field',
-  'deck/hdr-night-lighting',
-  'deck/global-illumination',
-  'deck/light-shafts',
   'tutorials/slang-particles'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
@@ -68,7 +63,12 @@ describe('live example catalog metadata', () => {
       LIVE_EXAMPLES.filter(example => example.categories.includes('Three.js')).map(
         example => example.id
       )
-    ).toEqual(['three/galactic-vortex', 'three/deck-layers', 'experimental/three']);
+    ).toEqual([
+      'three/galactic-vortex',
+      'experimental/offroad-buggy',
+      'three/deck-layers',
+      'experimental/three'
+    ]);
     expect(example?.metadata?.maturity).toBe('experimental');
     expect(example?.metadata?.backends).toEqual(['webgpu', 'webgl2']);
     const packageDefinition = JSON.parse(
@@ -135,12 +135,12 @@ describe('live example catalog metadata', () => {
     expect(websiteExamples).not.toContain('ArrowInstancingExample');
     expect(websiteExamples).not.toContain("from '../../examples/arrow/arrow-instancing/app'");
     expect(websiteConfiguration).toMatch(
-      /from:\s*\[['"]\/examples\/arrow\/arrow-instancing['"]\],\s*to:\s*['"]\/examples\/showcase\/instancing['"]/
+      /['"]from['"]:\s*\[\s*['"]\/examples\/arrow\/arrow-instancing['"]\s*\],\s*['"]to['"]:\s*['"]\/examples\/showcase\/instancing['"]/
     );
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(132);
+    expect(LIVE_EXAMPLES).toHaveLength(129);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -286,7 +286,7 @@ describe('live example catalog metadata', () => {
         ? ['webgl2']
         : id === 'v10/gpu-simple-graph'
           ? ['webgpu', 'webgl2']
-          : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
+          : ['WebGPU', 'GPGPU', 'Physics'].includes(categories[0]) ||
               categories[0].startsWith('GPU Graph Layers') ||
               WEBGPU_ONLY_EXAMPLES.has(id)
             ? ['webgpu']

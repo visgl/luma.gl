@@ -5,14 +5,14 @@ import {
 } from '../../examples/anari/scenes/playground-renderer';
 import {expect, it} from 'vitest';
 import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {PLAYGROUND_PRESETS} from '../../examples/anari/scenes/playground-presets';
 import {createANARIJSONScene} from '../../examples/anari/scenes/playground-scene';
 
 it('ANARI JSON presets reproduce the complete showcase scenes', () => {
   const device = new ANARIDevice(new NullDevice({}));
-  const expectedInstanceCounts = [312, 429, 318, 19, 19, 19, 19, 19, 21];
-  const expectedLightCounts = [3, 5, 5, 1, 1, 1, 1, 1, 1];
+  const expectedInstanceCounts = [312, 429, 318, 19, 19, 19, 19, 19, 21, 4];
+  const expectedLightCounts = [3, 5, 5, 1, 1, 1, 1, 1, 1, 0];
 
   for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
     const scene = createANARIJSONScene(device, preset.scene);
@@ -40,7 +40,12 @@ it('ANARI JSON presets reproduce the complete showcase scenes', () => {
       return Array.isArray(surfaces)
         ? surfaces.some(surface => {
             const subtype = surface.getParameter('geometry')?.subtype;
-            return subtype === 'triangle' || subtype === 'hexPrism' || subtype === 'torus';
+            return (
+              subtype === 'triangle' ||
+              subtype === 'hexPrism' ||
+              subtype === 'torus' ||
+              subtype === 'quad'
+            );
           })
         : false;
     });

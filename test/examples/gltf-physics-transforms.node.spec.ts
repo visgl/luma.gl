@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {Matrix4} from '@math.gl/core';
-import {parseGLTFPhysics} from '../../modules/gltf/src/physics';
+import {Matrix4} from '@math.gl/core/matrix';
+import {parseGLTFPhysics} from '../../modules/engine/src/gltf/physics';
 import {makePhysicsBodyDelta} from '../../examples/gltf/physics/body-transforms';
 
 describe('glTF physics example pose bridge', () => {

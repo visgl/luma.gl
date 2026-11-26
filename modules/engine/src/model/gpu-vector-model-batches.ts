@@ -8,7 +8,7 @@ import {
   type BufferLayout,
   type VertexFormat
 } from '@luma.gl/core';
-import type {DynamicBuffer} from '../dynamic-buffer/dynamic-buffer';
+import type {DynamicBuffer} from '@luma.gl/core/dynamic';
 
 /** Controls which draw count follows each physical vector batch row count. */
 export type GPUVectorModelCount = 'instance' | 'vertex' | 'none';
@@ -50,6 +50,11 @@ export type GPUVectorModelDrawBatchesOptions<
   Inputs extends GPUVectorModelInputs = GPUVectorModelInputs
 > = {
   vectors: Inputs;
+  /**
+   * Runs synchronously before each chunk draw. Managed uniforms use distinct aligned slots
+   * within this call; submit before reusing slots with different values in another call.
+   * External buffers remain caller-managed. Row offsets are cumulative.
+   */
   onBatch?: (batch: GPUVectorModelBatch<NonNullable<Inputs[keyof Inputs]>['data'][number]>) => void;
 };
 

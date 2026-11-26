@@ -15,7 +15,7 @@ import {SplatsDocsTabs} from '@site/src/components/docs/splats-docs-tabs';
 existing source batches, visibility state, and sorted GPU draw runs:
 
 ```ts
-import {SplatPicker} from '@luma.gl/splats';
+import {SplatPicker} from '@luma.gl/engine/splats';
 
 const picker = new SplatPicker(renderer, {
   mode: 'auto',
@@ -40,7 +40,7 @@ or its caller-owned source batches.
 For a WebGPU command graph, use `GPUSplatGraphPicker` instead:
 
 ```ts
-import {GPUSplatGraphPicker} from '@luma.gl/splats';
+import {GPUSplatGraphPicker} from '@luma.gl/engine/splats';
 
 const graphPicker = new GPUSplatGraphPicker(graphRenderer, {
   onPick: info => console.log(info.rowIndex, info.batchIndex, info.semanticId)

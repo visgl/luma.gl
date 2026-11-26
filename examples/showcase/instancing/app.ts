@@ -17,8 +17,8 @@ import {
   colorPicking,
   indexPicking
 } from '@luma.gl/engine';
-import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, radians} from '@math.gl/core';
+import {dirlight, ShaderModule} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {
   ColumnPanel,
   type Panel,

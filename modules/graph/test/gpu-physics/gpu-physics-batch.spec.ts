@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUPhysicsBatch, type GPURigidBodyWorldProps} from '../../src/gpu-physics';
 
 const fixture: GPURigidBodyWorldProps = {
@@ -149,6 +149,54 @@ it('evicts released templates, accounts resident storage, and rejects concurrent
     batch.destroy();
   }
 });
+
+it('includes private cast index scratch in residency admission and stats', async context => {
+  /** Exercise the same core limits as the standalone index. */
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  /** Begin with two identical templates apart from the optional index. */
+  const definition = {...fixture, enableQueries: true, queryBatchCapacity: 8};
+  /** Keep both worlds resident so their storage categories can be compared directly. */
+  const batch = new GPUPhysicsBatch({
+    device,
+    maximumResidentBytes: 32 * 1024 * 1024,
+    maximumResidentWorlds: 2
+  });
+  try {
+    batch.registerTemplate('direct', definition);
+    batch.registerTemplate('indexed', {...definition, queryBatchIndex: true});
+    await batch.acquire('direct', 'direct');
+    /** Direct world residency establishes a tight budget for a new batch. */
+    const direct = batch.getStats();
+    await batch.acquire('indexed', 'indexed');
+    /** Both templates have the same owned buffers, reset snapshots and solver scratch. */
+    const combined = batch.getStats();
+    /** Remaining bytes are the physical allocation of the private index. */
+    const indexBytes = combined.graphTransientBytes - direct.graphTransientBytes * 2;
+    expect(indexBytes).toBeGreaterThan(0);
+    expect(combined.residentBytes).toBe(direct.residentBytes * 2 + indexBytes);
+    expect(combined.worldBufferBytes).toBe(direct.worldBufferBytes * 2);
+    expect(combined.checkpointBytes).toBe(direct.checkpointBytes * 2);
+
+    /** A budget fitting an unindexed world must reject its indexed counterpart. */
+    const limited = new GPUPhysicsBatch({
+      device,
+      maximumResidentBytes: direct.residentBytes,
+      maximumResidentWorlds: 1
+    });
+    try {
+      limited.registerTemplate('direct', definition);
+      await limited.acquire('direct', 'world');
+      expect(() =>
+        limited.registerTemplate('indexed', {...definition, queryBatchIndex: true})
+      ).toThrow('residency budget');
+    } finally {
+      limited.destroy();
+    }
+  } finally {
+    batch.destroy();
+  }
+}, 120000);
 
 it('streams accepted state through eviction and preserves swept sensors, queries and local origins', async context => {
   const device = await getWebGPUTestDevice();

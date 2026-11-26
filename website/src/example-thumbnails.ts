@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const EXAMPLE_THUMBNAIL_ALIASES: Readonly<Record<string, string>> = {
+  'experimental/newtons-cradle': 'experimental/gpu-rigid-body-world',
   'three/galactic-vortex': 'experimental/three',
   'three/deck-layers': 'experimental/three',
   'v10/gpgpu': 'gpu-tables/gpu-vector-storage-particles',

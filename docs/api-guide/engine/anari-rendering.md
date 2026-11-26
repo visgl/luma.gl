@@ -18,9 +18,9 @@ import {AnariGuideDocsTabs} from '@site/src/components/docs/anari-guide-docs-tab
 
 `@luma.gl/anari` is an experimental retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
 
-This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/scene).
+This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/anari).
 
-For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/scene/anari-api-mapping).
+For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/anari/anari-api-mapping).
 
 :::caution
 This package is ANARI-inspired, not a JavaScript binding for the ANARI C API. It implements a useful subset of ANARI concepts but does not claim Khronos conformance.
@@ -33,7 +33,7 @@ This package is ANARI-inspired, not a JavaScript binding for the ANARI C API. It
 | Create, commit, render, resize, and animate a retained scene | [Build an ANARI scene](/docs/api-guide/engine/anari-first-scene) |
 | Understand forward, deferred, and graph-based ray-tracing renderers | [Renderer architecture](/docs/api-guide/engine/anari-architecture) |
 | Validate, author, generate, animate, and import scene descriptions | [JSON scenes](/docs/api-guide/engine/anari-json-scenes) |
-| Look up exact object, schema, and renderer contracts | [ANARI API reference](/docs/api-reference/scene) |
+| Look up exact object, schema, and renderer contracts | [ANARI API reference](/docs/api-reference/anari) |
 
 ## Run the showcase
 
@@ -60,7 +60,7 @@ Package-level tests demonstrate staged parameters, animated lights, shared-surfa
 zero-copy arrays, and rendering on available graphics backends.
 
 The JSON playground supports click-to-inspect selection with the WebGPU ray-tracing renderer.
-Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
+Applications can use [`frame.pick(x, y)`](/docs/api-reference/anari/anari-rendering#pickx-y)
 to retrieve retained surface/instance identities and world-space hit information. Selected
 marks also receive an inward outline that follows animation and camera movement.
 
@@ -71,11 +71,11 @@ full-output-resolution integer-ID, ray-distance, and world-normal textures, toge
 with a retained placement identity table. Captures are independent caller-owned
 snapshots and must be released with `channels.destroy()`. They perform an additional
 primary-ray traversal without CPU readback. See the
-[frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
+[frame channel reference](/docs/api-reference/anari/anari-rendering#capturechannels)
 for formats, ownership, and coordinate conventions. Ray distance is not projected
 device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
 for visible selection boundaries. `projectedDepthTexture` and
-[`DepthTextureCopy`](/docs/api-reference/scene/depth-texture-copy) support
+[`DepthTextureCopy`](/docs/api-reference/anari/depth-texture-copy) support
 depth-tested raster overlays with matching camera and viewport conventions.
 
 ## Current limitations
@@ -88,7 +88,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting, optional bounded diffuse or opaque GGX reflective bounces, opt-in emissive geometry sampling, scalar alpha masks, and guided spatial presentation filtering. Hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha blending/transmission, advanced PBR extensions, transmissive bounces, and advanced temporal denoising are unsupported.
+- The WebGPU-only [ray-tracing renderer](/docs/api-reference/anari/ray-tracing-renderer) builds Morton-sorted acceleration structures on the GPU. It supports progressive HDR rendering, retained material maps and alpha cutouts, up to eight diffuse or PBR bounces, smooth glass with absorption, and guided spatial denoising. The [material support table](/docs/api-reference/anari/ray-tracing-renderer#material-support) lists supported maps and transport limits.
 - Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
@@ -98,7 +98,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 
-For exact supported parameters and defaults, continue to the [`@luma.gl/anari` API reference](/docs/api-reference/scene).
+For exact supported parameters and defaults, continue to the [`@luma.gl/anari` API reference](/docs/api-reference/anari).
 
 ## Related pages
 
@@ -122,7 +122,7 @@ is hidden. **Interactive** enables adaptive resolution and temporal reprojection
 **Still / capture** chooses full resolution, four primary samples per frame, and fixed
 quality. Quality changes retain the inspected camera and selection; the disabled
 **Scene settings** entry reports custom JSON parameters. A moving scene will not converge as a still scene would. For application-owned
-controls, use [`getRayTracingQualityPreset`](/docs/api-reference/scene/ray-tracing-quality-presets).
+controls, use [`getRayTracingQualityPreset`](/docs/api-reference/anari/ray-tracing-quality-presets).
 
 For a repeatable baseline capture, start the scene example and run:
 
@@ -166,16 +166,69 @@ roughness, and emissive marks reflected in a glossy floor. `transportMode: 'pbr'
 enables the opaque reflective path; `diffuse` remains the default. The same
 `maxBounces` budget and `samplingSeed` control both modes. Use the Transport and
 Bounces controls for comparison, or pass `--materials --transport pbr --bounces 3`
-to the capture harness. See the [quality reference](/docs/api-reference/scene/ray-tracing-quality-presets)
+to the capture harness. See the [quality reference](/docs/api-reference/anari/ray-tracing-quality-presets)
 for probability weighting, roughness bounds, and remaining material limitations.
 
 ### Bounded ray image export
 
 The lower-level experimental scene renderer exposes
-[`exportRayTracingImage`](/docs/api-reference/scene/scene-renderer#tiled-ray-image-export)
+[`exportRayTracingImage`](/docs/api-reference/anari/scene-renderer#tiled-ray-image-export)
 for fixed-camera RGBA8 tile export. Tiles share global sample coordinates and
 include clipped spatial/history halos, so guided filtering and progressive
 clamping agree at tile seams. The API keeps readback bounded to one tile,
 preserves the authored exposure, and cleans up on completion or cancellation.
 Applications provide full-image camera matrices and their own image encoder.
 This export API is separate from JSON playground scene-file export.
+
+### Measure small-emitter convergence
+
+With the playground server running, capture a reference at a higher frame count and use a
+different seed for the sweep. Keep dimensions, lighting and transport settings the same.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 17 --frames 256 --history 256 --output /tmp/ray-reference
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 31 --frame-sweep 1,8,32,128 --history 256 --reference /tmp/ray-reference/chart.png --output /tmp/ray-sweep
+```
+
+Each checkpoint starts a fresh page and records accumulated samples, display RGB error,
+and wall time to capture readiness in `convergence.json`. Wall time includes page startup
+and presentation. A high-sample reference is an estimate whose noise contributes to the
+measured error.
+
+Use `--antique-camera` in place of `--small-emitter` in both commands to capture the textured
+Antique Camera glTF study. The capture waits for the model to load before counting frames.
+
+Use `--linear-hdr` on both commands and pass `radiance.rgba16f` as the reference to
+measure error before tone mapping, display conversion, denoising, and upscaling. The
+binary file starts with two little-endian uint32 dimensions followed by tightly packed
+RGBA16F rows at the internal ray-tracing resolution. RGB contains the authored exposure.
+The comparison ignores alpha and reports unnormalized linear RGB errors. Keep exposure
+and internal resolution fixed across the sweep.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 17 --frames 128 --history 256 --output /tmp/ray-hdr-reference
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-hdr-reference/radiance.rgba16f --output /tmp/ray-hdr-sweep
+```
+
+### Compare emitter selection at matched GPU cost
+
+Add `--gpu-timing` to request optional WebGPU timestamps. Each checkpoint reports
+the sum of the scene's recorded compute and render pass durations over its frames.
+Profiling records passes separately and can change their scheduling. A missing timing
+is reported as `null`. Browser startup, readback, and screenshots are outside the GPU
+measurements.
+
+Use `--compare-emitters` with a static linear HDR sweep to run both emitter selection
+modes with the same seed and rendering settings. Use a separate high-sample reference
+from the same scene with explicit emitter sampling enabled. The mixed-emitter fixture
+adds a large dim source alongside a small bright source.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --emitters on --seed 17 --frames 128 --history 256 --output /tmp/ray-emitter-reference
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --compare-emitters --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-emitter-reference/radiance.rgba16f --output /tmp/ray-emitter-sweep
+```
+
+The output contains each mode's measured checkpoints and `emitter-comparison.json`.
+The comparison interpolates linear RGB RMSE within the overlapping measured GPU-cost
+ranges. It reports unavailable when timing support or overlap is missing. It does not
+extrapolate beyond either measured curve.

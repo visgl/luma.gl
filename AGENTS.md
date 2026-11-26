@@ -6,8 +6,7 @@
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
 - Run tests: `yarn test`
-- Check website build `yarn website:build`
-- Check website package build: `(cd website && yarn build)`
+- Check the website once from the repository root with `yarn website:build`. This delegates to the website workspace’s `build` script.
 
 ## LLM-friendly test setup
 - Use the repo root scripts as the stable interface:
@@ -38,12 +37,13 @@
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
 - Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
-- In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, `yarn website:build`, and `(cd website && yarn build)`.
+- In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, and `yarn website:build`. Report the node and headless outcomes separately if they ran as separate commands.
 - Run `yarn build` after the final code and formatting changes, and treat it as a required pre-merge gate. It compiles every module with `tspc` and catches cross-package TypeScript API breakage that `yarn test-node` does not cover.
-- Run `yarn test` after the final code and formatting changes, and treat it as a required pre-merge gate. It runs both node and headless coverage; targeted `yarn test-node` runs are focused checks and are not sufficient on their own.
-- Do not rely on `yarn test-node` as a substitute for `yarn build` or `yarn test`; run all three when table or shared package APIs change.
+- Run both the full node and headless phases after final code and formatting changes. Use `yarn test` to run them together, or run `yarn test-node` and `yarn test-headless` separately. If the normal commit hook already passed the full node phase on the same source, run only `yarn test-headless` to complete local test validation.
+- For table or shared package API changes, require `yarn build` and both test phases. Targeted tests can diagnose failures but do not satisfy the full test gate.
  
 ## Code style
+- Add TSDoc comments to all source code declarations, including functions, classes, methods, types, interfaces, fields, and constants.
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
@@ -57,7 +57,7 @@
 - It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
 ## Geometry attribute naming
-- Built-in engine geometries and `@luma.gl/gltf` geometry use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
+- Built-in engine geometries and `@luma.gl/engine/gltf` geometry use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 - `Geometry.attributes` preserves source keys. Do not camelCase or alias those keys in the CPU geometry container.
 - `bufferLayout`, `GPUGeometry`, and `Model` bindings are shader-facing metadata. Convert source semantics only at adapter and model boundaries.
 - Explicit `bufferLayout` is caller-owned and must not be normalized by `Geometry`.
@@ -65,10 +65,11 @@
 - Preserve custom geometry names. When writing glTF custom semantics, follow the glTF `_NAME` convention.
 
 ## GPU table API boundaries
-- `@luma.gl/gpgpu/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
+- `@luma.gl/graph/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
 - `@luma.gl/graph/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
-- `@luma.gl/graph/experimental/models` owns specialized path and polygon rendering models and their GPU input helpers.
-- `@luma.gl/gpgpu` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
+- `@luma.gl/engine/models` owns specialized path and polygon rendering models. GPU path expansion and input preparation remain in `@luma.gl/graph/experimental-models`.
+- `@luma.gl/engine/tables` owns TableTransform, table rendering models, and geometry adapters; `@luma.gl/engine/physics` owns scenegraph physics integration.
+- `@luma.gl/graph/gpu-simple-graph` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/graph/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
 - Keep memory layout and shader value types separate. `GPUVectorFormat` describes stored bytes such as `float32x3`, `unorm8x4`, and `vertex-list<float32x3>`; `ShaderLayout` describes shader-facing values such as `vec3<f32>` and `vec4<f32>`.
 - Use compatibility checks at adapter and model boundaries instead of encoding shader semantics into vector formats.
@@ -100,10 +101,20 @@
 - Generic layout synthesis should reject `vertex-list<...>` unless a model or adapter explicitly handles expansion or storage consumption.
 
 ## Documentation
+- Describe current API behavior and usage in API documentation. Record changes in the release notes and migration guidance in the upgrade guide.
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
 
 ## GPU Graph package boundaries
+- `@luma.gl/graph` owns Kernel and RenderKernel. Engine does not re-export these execution helpers; graph operations use them directly without model dependencies.
 - `@luma.gl/graph` exposes `GPUGraph` authoring, `GPUGraphCompiler`, and `GPUCommandGraph` execution infrastructure.
 - Graph-based algorithms and table processing use explicit `@luma.gl/graph/*` subpaths.
-- `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.
+- `@luma.gl/graph/gpu-data` owns shared storage; `@luma.gl/graph/gpu-simple-graph` owns evaluators and immediate operations.
+
+- Package dependency direction is `engine → graph → core → shaders`. Graph must not import engine, including through public types or relative source paths.
+- Engine owns BufferTransform and TextureTransform; engine/tables owns TableTransform. SimpleGraph operations execute through RenderKernel without these adapters.
+- Engine owns GPUVectorModel, GPUVectorGeometry, and their vector binding and batching helpers. Engine also owns Computation, ShaderInputs, and their shader-module and uniform/binding helpers. Graph owns shared execution primitives. `@luma.gl/core/dynamic` owns DynamicBuffer, DynamicTexture, and their supporting resource types; core must not depend on graph or engine. Engine may provide compatibility exports but must not duplicate these implementations.
+- Shared graph effect execution must use graph execution primitives, not engine rendering models. Run `yarn test-package-layering` after building to verify this boundary.
+
+- Engine's `/splats` entry owns splat data, rendering, picking, residency, and existing graph-backed
+  renderer orchestration. Reusable splat graph operations will be extracted separately.

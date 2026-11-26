@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 const OPTICAL_LIGHTING_WGSL = /* wgsl */ `\
 fn opticalLighting_faceNormal(normal: vec3<f32>, viewDirection: vec3<f32>) -> vec3<f32> {

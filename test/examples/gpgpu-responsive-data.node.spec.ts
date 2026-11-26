@@ -7,18 +7,21 @@ import path from 'node:path';
 import {compileProjectionPlan, evaluateProjectionPlan} from '@luma.gl/graph/gpu-project';
 import {describe, expect, test} from 'vitest';
 import {
-  makeLuSpatialTaxiData,
-  makeLuSpatialTaxiDataAsync,
+  makeGPUSpatialTaxiData,
+  makeGPUSpatialTaxiDataAsync,
   projectTaxiLongitudeLatitude,
   TAXI_PROJECTION_ORIGIN
-} from '../../examples/deck/luspatial-taxi/taxi-data';
+} from '../../examples/deck/gpu-spatial-taxi/taxi-data';
 
 const GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH = path.join(
   process.cwd(),
-  'modules/deck-gpu-layers/src/query/luspatial-geographic-point-query-effect.ts'
+  'modules/deck-gpu-layers/src/query/gpu-spatial-geographic-point-query-effect.ts'
 );
-const TAXI_APP_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app.ts');
-const TAXI_APP_UI_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app-ui.ts');
+const TAXI_APP_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/gpu-spatial-taxi/app.ts');
+const TAXI_APP_UI_SOURCE_PATH = path.join(
+  process.cwd(),
+  'examples/deck/gpu-spatial-taxi/app-ui.ts'
+);
 const ATLAS_APP_SOURCE_PATH = path.join(
   process.cwd(),
   'examples/showcase/billion-point-spatial-atlas/app.ts'
@@ -32,8 +35,8 @@ describe('responsive GPU data examples', () => {
   test('progressively generates the exact deterministic taxi population and reports progress', async () => {
     const pointCount = 257;
     const progress: number[] = [];
-    const expected = makeLuSpatialTaxiData(pointCount);
-    const actual = await makeLuSpatialTaxiDataAsync(pointCount, {
+    const expected = makeGPUSpatialTaxiData(pointCount);
+    const actual = await makeGPUSpatialTaxiDataAsync(pointCount, {
       chunkSize: 31,
       onProgress: processedPointCount => progress.push(processedPointCount)
     });
@@ -51,7 +54,7 @@ describe('responsive GPU data examples', () => {
   test('cancels dataset generation before subsequent chunks when navigating away', async () => {
     const abortController = new AbortController();
     const progress: number[] = [];
-    const generation = makeLuSpatialTaxiDataAsync(512, {
+    const generation = makeGPUSpatialTaxiDataAsync(512, {
       chunkSize: 32,
       signal: abortController.signal,
       onProgress: processedPointCount => {
@@ -64,8 +67,8 @@ describe('responsive GPU data examples', () => {
     expect(progress).toEqual([0, 32]);
   });
 
-  test('compiles a real luProj plan that preserves local taxi-query projection semantics', () => {
-    const data = makeLuSpatialTaxiData(128);
+  test('compiles a real GPU Project plan that preserves local taxi-query projection semantics', () => {
+    const data = makeGPUSpatialTaxiData(128);
     const plan = compileProjectionPlan({
       projection: coordinates => {
         const projected = projectTaxiLongitudeLatitude([coordinates[0], coordinates[1]]);
@@ -106,7 +109,7 @@ describe('responsive GPU data examples', () => {
     );
   });
 
-  test('composes actual luProj projection with cancellable luSpatial graph execution', () => {
+  test('composes actual GPU Project projection with cancellable GPU Spatial graph execution', () => {
     const effectSource = readFileSync(GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH, 'utf8');
     const appSource = readFileSync(TAXI_APP_SOURCE_PATH, 'utf8');
     const appUiSource = readFileSync(TAXI_APP_UI_SOURCE_PATH, 'utf8');
@@ -116,7 +119,7 @@ describe('responsive GPU data examples', () => {
     expect(effectSource).toMatch(/compileProjectionPlan\s*\(/);
     expect(effectSource).toMatch(/this\.ownResource\(\s*new GPUProjection\s*\(/);
     expect(effectSource).toMatch(/if\s*\(!viewportBoundsChanged && !this\.queryInputsChanged\)/);
-    expect(appSource).toMatch(/makeLuSpatialTaxiDataAsync\s*\(/);
+    expect(appSource).toMatch(/makeGPUSpatialTaxiDataAsync\s*\(/);
     expect(appSource).toMatch(/generationController\.abort\(\)/);
     expect(appUiSource).toMatch(/role="progressbar"/);
     expect(appSource).toMatch(/map\.off\('error', handleBasemapError\)/);

@@ -12,7 +12,8 @@ import {
   Texture
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
-import type {Matrix4Like, NumberArray3} from '@math.gl/core';
+import type {Matrix4Like} from '@math.gl/core/matrix';
+import type {NumberArray3} from '@math.gl/core/types';
 import type {SpectralCausticsProps} from './spectral-caustics';
 import {
   SPECTRAL_CAUSTICS_SPLAT_BINDINGS,

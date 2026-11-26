@@ -1,6 +1,6 @@
 # glTF area-light mapping
 
-`parseGLTFAreaLights()` from `@luma.gl/gltf` converts source size/aspect values into width/height bindings for the engine `AreaLightController`. See [Scenegraph lights](/docs/api-guide/engine/scenegraph-lights) for the engine APIs.
+`parseGLTFAreaLights()` from `@luma.gl/engine/gltf` converts source size/aspect values into width/height bindings for the engine `AreaLightController`. See [Scenegraph lights](/docs/api-guide/engine/scenegraph-lights) for the engine APIs.
 
 `AreaLightController` extracts visible rectangle and disk lights from the
 [pinned draft](https://github.com/MiiBond/glTF/tree/e77b27a67d0ee19327f6104aca5d869433b3e367/extensions/2.0/Vendor/EXT_lights_area).
@@ -9,7 +9,7 @@ scene's animations:
 
 ```ts
 import {AreaLightController} from '@luma.gl/engine';
-import {parseGLTFAreaLights} from '@luma.gl/gltf';
+import {parseGLTFAreaLights} from '@luma.gl/engine/gltf';
 const controller = new AreaLightController(parseGLTFAreaLights({gltf, ...scenegraphs}));
 model.shaderInputs.setProps({areaLighting: {lights: controller.getLights()}});
 ```
@@ -43,4 +43,4 @@ Create caller-owned lookup textures with `createAreaLightLTCTextures(device)`, c
 
 The gallery now uses continuous LTC integration for diffuse, isotropic GGX and clearcoat, including the original living room. Rectangles use exact horizon clipping of the transformed polygon. Disks use an inscribed 32-gon (geometric area deficit below 0.65%; this does not bound BRDF fitting error). Anisotropy, sheen and diffuse transmission retain the numerical reference path and its documented artifacts. Shadows and indirect illumination remain unsupported.
 
-The GGX fit tables are from Heitz, Dupuy, Hill and Neubelt's *Real-Time Polygonal-Light Shading with Linearly Transformed Cosines* (SIGGRAPH 2016). Their complete upstream license is retained in `area-lighting/LTC-LICENSE.txt`. LTC approximates the BRDF; it is not a path-traced reference.
+The GGX fit tables are from Heitz, Dupuy, Hill and Neubelt's *Real-Time Polygonal-Light Shading with Linearly Transformed Cosines* (SIGGRAPH 2016). The [LTC credits](../../credits.md#area-lighting-ltc) link to the pinned upstream license. The engine package ships the complete terms alongside the tables in `src/lighting/LTC-LICENSE.txt`. LTC approximates the BRDF.

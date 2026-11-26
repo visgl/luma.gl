@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GraphBufferHandle,
@@ -82,18 +88,18 @@ export function addRigidBodyCheckpoint<Parameters>(
       };
     });
     const executable = (
-      computations: Computation[]
+      computations: BoundKernel[]
     ): GPUCommandGraphComputeExecutable<Parameters> => ({
       encode: ({computePass}) => {
         for (const [index, computation] of computations.entries())
-          computation.dispatch(
-            computePass,
-            properties[index].horizontal,
-            properties[index].vertical
-          );
+          computation.kernel.dispatch(computePass, {
+            bindings: computation.bindings,
+            x: properties[index].horizontal,
+            y: properties[index].vertical
+          });
       },
       destroy: () => {
-        for (const computation of computations) computation.destroy();
+        for (const computation of computations) computation.kernel.destroy();
       }
     });
     graph.addComputePass({
@@ -107,11 +113,11 @@ export function addRigidBodyCheckpoint<Parameters>(
         ])
       ],
       compile: () =>
-        executable(properties.map(properties => new Computation(graph.device, properties))),
+        executable(properties.map(properties => createBoundKernel(graph.device, properties))),
       compileAsync: async () =>
         executable(
           await Promise.all(
-            properties.map(properties => Computation.createAsync(graph.device, properties))
+            properties.map(properties => createBoundKernelAsync(graph.device, properties))
           )
         )
     });
@@ -155,12 +161,15 @@ fn finite(value:vec4f)->bool{return all(abs(value)<=vec4f(3.402823466e38));}
       }
     };
     const executable = (
-      computation: Computation
+      computation: BoundKernel
     ): GPUCommandGraphComputeExecutable<Parameters> => ({
       encode: ({computePass}) => {
-        computation.dispatch(computePass, Math.ceil(states[0].buffer.byteLength / 1024));
+        computation.kernel.dispatch(computePass, {
+          bindings: computation.bindings,
+          x: Math.ceil(states[0].buffer.byteLength / 1024)
+        });
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     });
     graph.addComputePass({
       id: properties.id,
@@ -171,8 +180,8 @@ fn finite(value:vec4f)->bool{return all(abs(value)<=vec4f(3.402823466e38));}
           .map(state => ({buffer: state.resource, usage: 'storage-read' as const})),
         {buffer: validityResource, usage: 'storage-read-write'}
       ],
-      compile: () => executable(new Computation(graph.device, properties)),
-      compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+      compile: () => executable(createBoundKernel(graph.device, properties)),
+      compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
     });
   };
   return {

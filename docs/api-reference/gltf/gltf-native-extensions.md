@@ -5,21 +5,21 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 <GltfDocsTabs active="native-extensions" />
 
 glTF extensions should describe what an asset actually does, not merely which JSON properties
-survived loading. `@luma.gl/gltf` connects authored material variants, GPU instance transforms,
+survived loading. `@luma.gl/engine/gltf` connects authored material variants, GPU instance transforms,
 recursive node visibility, typed animation pointers, and required-extension capabilities to the
 existing luma.gl scenegraph and animation runtime.
 
-Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
-`@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
+Source interpretation remains format-owned: `@loaders.gl/scene/gltf` reads and postprocesses the asset,
+`@luma.gl/engine/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
 model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/product.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -141,7 +141,7 @@ source primitive becomes one real instanced model on WebGL and WebGPU:
 Inspect resolved instance transforms and exact authored accessor metadata:
 
 ```ts
-import {getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 const instancing = getGLTFNodeInstancing(gltf, gltf.nodes[0]);
 
@@ -257,9 +257,10 @@ console.log(scenegraphs.gltfNodeIndexToNodeMap.get(3)?.display);
 console.log(scenegraphs.lights === originalLights); // true
 ```
 
-Changing `node.display` directly affects generic scenegraph traversal, but does not automatically
-refresh a previously parsed punctual-light array. The glTF animation controller handles that
-refresh for source-authored visibility channels.
+The importer resolves punctual lights to scenegraph node paths. The controller reads the live
+transforms and visibility on those paths. After changing a node programmatically, call
+`scenegraphs.punctualLights.update()` to refresh the same light array. A programmatically
+constructed scene can use `PunctualLightController` with its own node paths and light definitions.
 
 ## Typed animation pointers
 
@@ -294,7 +295,7 @@ import {
   parseGLTFAnimations,
   type GLTFCameraAnimationChannel,
   type GLTFLightAnimationChannel
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 for (const animation of parseGLTFAnimations(gltf)) {
   for (const channel of animation.channels) {
@@ -334,7 +335,7 @@ import {
   assertSupportedGLTFExtensions,
   getGLTFExtensionSupport,
   getUnsupportedRequiredGLTFExtensions
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 const support = getGLTFExtensionSupport(gltf);
 
@@ -418,16 +419,16 @@ tests derive material-variant and camera/light/dispersion-pointer cases from the
 documents instead of adding large synthetic assets.
 
 The fixture attribution and pinned source revision are recorded in
-`modules/gltf/test/data/README.md`.
+`modules/engine/test/gltf/data/README.md`.
 
 ## Architecture and ownership
 
 | Package | Responsibility |
 | --- | --- |
-| `@loaders.gl/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
-| `@luma.gl/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
+| `@loaders.gl/scene/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
+| `@luma.gl/engine/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
-| `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
+| `@luma.gl/shaders` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
 | `@luma.gl/anari` | Optional format-independent physical scene rendering and captured-scene transmission. |
 | `@luma.gl/anari` | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership. |
 
@@ -449,8 +450,55 @@ unsupported target families instead of creating an independent extension runtime
   shader.
 - Standalone glTF scenegraphs do not own an opaque-scene capture pass; true transmitted scene-color
   refraction is provided by the shared experimental renderer and ANARI facade.
-- Generic `extras`, unsupported vendor metadata, automatic image-based-light extension ingestion,
+- Generic `extras`, vendor metadata outside the explicitly exposed entries, automatic image-based-light extension ingestion,
   and video-texture extensions are not silently presented as supported required features.
 
 For the complete extension-by-extension capability matrix, see
 [glTF extension support](/docs/api-reference/gltf/gltf-extensions).
+
+### Node selection and hover flags
+
+The glTF importer populates the generic scenegraph node `selectable` and `hoverable` properties
+from `KHR_node_selectability` and `KHR_node_hoverability`, defaulting each to true. An ancestor's
+false value disables its entire subtree without modifying descendants' local values. Use
+`isScenegraphInteractionEnabled(path, kind)` to check a root-to-hit instance path or
+`getFirstScenegraphInteractionHit(hits, kind)` to skip ineligible hits in nearest-first order.
+Visibility does not affect these flags. STEP animation pointers can change them at runtime.
+`ScenegraphInteractionManager` also bubbles selection events and tracks per-controller hover
+entry and exit across ancestor paths. Call `updateHover` again after a pointer, camera, geometry,
+or flag changes so the host can supply updated hits.
+
+The caller supplies hit testing and instance paths. Interactivity graph event propagation and
+hover lifecycle are not yet integrated; strict required-extension support remains disabled.
+
+### XMP metadata
+
+`scenegraphs.metadata.get(category, index)` returns the authored `KHR_xmp_json_ld` packet for
+`asset`, `scene`, `node`, `mesh`, `material`, `image`, or `animation`. The asset index defaults to
+zero. Packets and their JSON-LD context are retained as supplied; no remote namespace URLs are fetched.
+Shared packet references return the same object. Scene and node objects and material instances also
+expose their packet in `metadata.xmp`; mesh group nodes do the same. Invalid packet indices fail
+before GPU allocation.
+
+### Scene geometry metadata
+
+`FB_geometry_metadata` is exposed on the corresponding scene root as
+`scene.metadata['fb:geometry']`. Its authored counts and bounds describe static source geometry.
+`scenegraphs.sceneBounds` is a load-time snapshot. Call `scene.getBounds()` for current bounds after
+changing scene transforms.
+
+```ts
+const result = createScenegraphsFromGLTF(device, gltf);
+const scene = result.scenes[0];
+const assetXMP = result.metadata.get('asset');
+const sceneXMP = scene.metadata.xmp;
+const geometrySummary = scene.metadata['fb:geometry'];
+// A source node or material can also have its own XMP packet.
+const nodeXMP = result.gltfNodeIndexToNodeMap.get(0)?.metadata.xmp;
+const materialXMP = result.materials[0]?.metadata.xmp;
+```
+
+The XMP packet is the authored JSON object, including namespace context and nested properties;
+no JSON-LD expansion or interpretation of arbitrary vocabularies is performed. `FB_geometry_metadata`
+is a vendor draft and this integration exposes its authored data, rather than computing or verifying
+its counts and bounds.

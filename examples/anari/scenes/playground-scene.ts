@@ -27,8 +27,8 @@ import {
 } from '@luma.gl/anari';
 import {type ANARIAnimationSceneHandle, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 import type {SamplerProps, Texture} from '@luma.gl/core';
-import {createGLTFTexture} from '@luma.gl/gltf';
-import {Matrix4} from '@math.gl/core';
+import {createGLTFTexture} from '@luma.gl/engine/gltf';
+import {Matrix4} from '@math.gl/core/matrix';
 
 type JSONTypedObject<Subtype extends string> = {'@@type': Subtype};
 

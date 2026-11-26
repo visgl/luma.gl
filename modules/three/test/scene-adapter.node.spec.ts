@@ -63,3 +63,12 @@ test('borrowed pass rejects auxiliary work before touching the caller encoder an
   expect(device.submit).not.toHaveBeenCalled();
   expect(pass.end).not.toHaveBeenCalled();
 });
+
+test('preparation cleanup submits safely without an active render context', () => {
+  const {backend, device} = createFixture();
+  expect(() => backend.finishRender()).not.toThrow();
+  expect(() => backend.finishRender()).not.toThrow();
+  expect(device.submit).toHaveBeenCalledTimes(2);
+  expect(device.beginRenderPass).not.toHaveBeenCalled();
+  backend.dispose();
+});

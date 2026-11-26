@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#020914" />
-    <title>LuCIM Volume Lab · GPU Volumetric Analysis</title>
+    <title>GPU Volume Algorithms Volume Lab · GPU Volumetric Analysis</title>
     <style>
       :root {
         color-scheme: dark;
@@ -65,7 +65,7 @@
     </style>
   </head>
   <body>
-    <aside id="volume-panel-shell" aria-label="LuCIM Volume Lab controls">
+    <aside id="volume-panel-shell" aria-label="GPU Volume Algorithms Volume Lab controls">
       <p id="volume-startup">Preparing a synthetic CT-like phantom and WebGPU graph…</p>
       <div id="example-panel-host" data-example-panel-host></div>
     </aside>
@@ -73,7 +73,7 @@
       const startup = document.querySelector('#volume-startup');
       try {
         if (!navigator.gpu) {
-          throw new Error('LuCIM Volume Lab requires a current WebGPU-capable browser.');
+          throw new Error('GPU Volume Algorithms Volume Lab requires a current WebGPU-capable browser.');
         }
         const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
           await Promise.all([

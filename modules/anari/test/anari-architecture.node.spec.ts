@@ -69,10 +69,8 @@ it('ANARI owns rendering implementations behind its declarative facade', () => {
   );
   const publicSource = readFileSync(new URL('index.ts', sourceDirectory), 'utf8');
   expect(
-    Boolean(
-      adapterSource.includes('pbrMaterial') && adapterSource.includes("'@luma.gl/shadertools'")
-    ),
-    'material translation uses the canonical shadertools PBR implementation'
+    Boolean(adapterSource.includes('pbrMaterial') && adapterSource.includes("'@luma.gl/shaders'")),
+    'material translation uses the canonical shaders PBR implementation'
   ).toBe(true);
   expect(
     Boolean(getNamedImports(runtimeSource, './renderers').includes('SceneRenderer')),
@@ -112,18 +110,18 @@ it('ANARI owns rendering implementations behind its declarative facade', () => {
     'the stable engine does not publicly own experimental scene or PBR rendering APIs'
   ).toBe(false);
 
-  const gltfSourceDirectory = new URL('../../gltf/src/', sourceDirectory);
+  const gltfSourceDirectory = new URL('../../engine/src/gltf/', sourceDirectory);
   expect(
     collectTypeScriptSources(gltfSourceDirectory).filter(source =>
       /['"]@luma\.gl\/experimental(?:\/[^'"]*)?['"]/.test(readFileSync(source, 'utf8'))
     ),
-    'the standalone glTF package does not depend on experimental rendering'
+    'the glTF engine subpath does not depend on experimental rendering'
   ).toEqual([]);
   expect(
     Boolean(
       '@luma.gl/engine' in packageManifest.peerDependencies &&
         !('@luma.gl/experimental' in packageManifest.peerDependencies) &&
-        '@luma.gl/shadertools' in packageManifest.peerDependencies
+        '@luma.gl/shaders' in packageManifest.peerDependencies
     ),
     'stable implementation owners remain explicit peer dependencies'
   ).toBe(true);

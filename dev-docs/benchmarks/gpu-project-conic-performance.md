@@ -79,7 +79,7 @@ components of a guaranteed cold-start time; inspect their raw fields separately.
 Run without concurrent builds/tests:
 
 ```sh
-VITE_LUPROJ_CONIC_ROWS=4096,65536 yarn test-browser-benchmarks --silent=false --reporter=verbose \
+VITE_GPU_PROJECT_CONIC_ROWS=4096,65536 yarn test-browser-benchmarks --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-conic-performance.spec.ts
 ```
 

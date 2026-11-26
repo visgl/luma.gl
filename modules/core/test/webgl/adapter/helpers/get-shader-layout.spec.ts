@@ -4,7 +4,7 @@
 
 /*
 import test from 'test/utils/vitest-tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {getWebGLTestDevices} from '@luma.gl/core/test-utils';
 import {GL} from '@luma.gl/core/webgl-constants';
 import {Program} from '@luma.gl/webgl-legacy';
 import ShaderLayout from '@luma.gl/webgl-legacy/classic/program-configuration';

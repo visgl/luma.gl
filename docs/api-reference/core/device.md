@@ -89,7 +89,7 @@ Specifies props to use when luma creates the device.
 | ------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `id?: string` | `null` | Optional string id, mainly intended for debugging. |
 | `createCanvasContext?: CanvasContextProps` \| `true` | [CanvasContexProps][canvas-context-props] | Create a default `CanvasContext` for the new `Device`. `true` creates a context with default props. |
-| `powerPreference?: string` | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'` (WebGL). |
+| `powerPreference?: string` | `'default'` | `'default' \| 'high-performance' \| 'low-power'` for WebGL and WebGPU. WebGPU omits the adapter hint for `default`. |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'` | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
 | `optionalFeatures?: WebGPUDeviceFeature[]` | `[]` | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile. |
 | `requiredLimits?: Partial<Record<keyof DeviceLimits, number>>` | `undefined` | WebGPU device limits to request, using the same names as `device.limits`. The device gets exactly the requested value when it is better than the WebGPU spec default (for example above the default 8 `maxStorageBuffersPerShaderStage`), which lets a high-end development GPU enforce the limits the application targets. Values worse than the spec default are raised to the default, so this cannot make a device stricter than the spec defaults. Values the adapter cannot provide, and limit names the browser does not support, make device creation fail. Applied on top of `featureLevel: 'max'` (requested values override). Ignored by `attach()`, which wraps an existing device, and by WebGL and null devices. |
@@ -523,11 +523,11 @@ See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for how compute work is rec
 loseDevice(): boolean
 ```
 
-Triggers device loss (see below). After this call, the `Device.lost` promise will be resolved with an error message and `Device.isLost` will be set to true.
+Triggers device loss (see below). After this call, the `Device.lost` promise resolves with a loss reason and `Device.isLost` is set to true. For WebGL, `isLost` is set synchronously and remains true for that device even if the native context is subsequently restored. Destroy the lost device and create a new device to recover.
 
-- Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. Note that even if device loss emulation is not supported by the platform this function will still update the `Device` instance to indicate that the device was lost, however the device can still be used.
+- Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. If WebGL context loss emulation is unavailable, this method returns `false` but still marks the device lost and resolves `lost`. The underlying context remains active and can still be used.
 
 :::note
 The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code.
-`loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension.
+`loseDevice()` can currently only emulate context loss on WebGL devices on platforms where the WebGL API provides the required `WEBGL_lose_context` WebGL debug extension.
 :::

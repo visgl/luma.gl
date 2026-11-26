@@ -10,6 +10,9 @@ import {
   type GPURigidBodyWorldProps
 } from '@luma.gl/graph/gpu-physics';
 
+/** Workloads available for matched independent-world throughput benchmarks. */
+export type BatchBenchmarkScene = 'sparse' | 'pile' | 'sleeping' | 'wake-storm' | 'vehicle-fleet';
+
 export type BatchBenchmarkOptions = {
   worlds: number;
   activeFraction?: number;
@@ -18,15 +21,16 @@ export type BatchBenchmarkOptions = {
   warmup: number;
   steps: number;
   pairsPerBody?: number;
-  scene: 'sparse' | 'pile' | 'sleeping' | 'wake-storm';
+  scene: BatchBenchmarkScene;
   submission: 'batched' | 'separate' | 'ensemble';
 };
 
 export function makeBatchFixture(
   count: number,
-  scene: 'sparse' | 'pile' | 'sleeping' | 'wake-storm',
+  scene: BatchBenchmarkScene,
   pairsPerBody = 16
 ): GPURigidBodyWorldProps {
+  if (scene === 'vehicle-fleet') return makeVehicleFixture(count, pairsPerBody);
   const width = Math.ceil(Math.sqrt(count));
   const spacing = scene === 'pile' ? 0.98 : 2;
   return {
@@ -69,6 +73,54 @@ export function makeBatchFixture(
   };
 }
 
+/** Identical four-wheel chassis straddle a seam in each independent world. */
+function makeVehicleFixture(count: number, pairsPerBody: number): GPURigidBodyWorldProps {
+  if (count < 3) throw new Error('Vehicle fleet requires at least three bodies per world');
+  const vehicles = count - 2;
+  const laneExtent = vehicles * 2;
+  return {
+    solver: 'parallel',
+    broadPhase: 'hierarchical-grid',
+    failurePolicy: 'rollback',
+    maximumPairs: 2 ** Math.ceil(Math.log2(Math.max(64, count * pairsPerBody))),
+    iterations: 8,
+    timeStep: 1 / 120,
+    gravity: [0, 0, -9.81],
+    bodies: [
+      ...[-100, 100].map(longitudinal => ({
+        mass: 0,
+        position: [longitudinal, 0, -0.5] as const,
+        shape: {type: 'box' as const, halfExtents: [100, laneExtent, 0.5] as const}
+      })),
+      ...Array.from({length: vehicles}, (_, vehicle) => ({
+        mass: 400,
+        position: [0, 4 * vehicle + 2 - laneExtent, 0.75] as const,
+        shape: {type: 'box' as const, halfExtents: [1.3, 0.65, 0.16] as const}
+      }))
+    ],
+    vehicles: Array.from({length: vehicles}, (_, vehicle) => ({
+      chassis: vehicle + 2,
+      terrainCollider: 0,
+      additionalTerrainColliders: [1],
+      radius: 0.4,
+      travel: 0.5,
+      springRate: 10000,
+      damping: 1500,
+      grip: 1,
+      motorTorque: 250,
+      brakeTorque: 600,
+      wheelInertia: 1.2,
+      wheels: [1, -1].flatMap(longitudinal =>
+        [0.8, -0.8].map(lateral => ({
+          mount: [longitudinal, lateral, 0] as const,
+          drive: true,
+          steer: longitudinal > 0
+        }))
+      )
+    }))
+  };
+}
+
 function percentile(values: number[], fraction: number): number {
   const sorted = [...values].sort((first, second) => first - second);
   return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)];
@@ -89,7 +141,7 @@ export async function runBatchBenchmark(
     (options.pairsPerBody ?? 16) < 1 ||
     (options.pairsPerBody ?? 16) > 64 ||
     !['ensemble', 'separate', 'batched'].includes(options.submission) ||
-    !['sparse', 'pile', 'sleeping', 'wake-storm'].includes(options.scene) ||
+    !['sparse', 'pile', 'sleeping', 'wake-storm', 'vehicle-fleet'].includes(options.scene) ||
     (options.submission !== 'ensemble' && options.worlds > 128) ||
     !Number.isInteger(options.worlds) ||
     options.worlds < 1 ||
@@ -135,6 +187,13 @@ export async function runBatchBenchmark(
       else batch.setActive(handles[instance], false);
     }
     const activeHandles = handles.slice(0, activeWorlds);
+    const vehiclesPerWorld = fixture.vehicles?.length ?? 0;
+    for (let instance = 0; instance < activeWorlds; instance++) {
+      for (let vehicle = 0; vehicle < vehiclesPerWorld; vehicle++) {
+        if (ensemble) ensemble.setVehicleControls(instance, vehicle, 0.7, 0, 0);
+        else batch.getWorld(activeHandles[instance]).setVehicleControls(0.7, 0, 0, vehicle);
+      }
+    }
     const setupMilliseconds = performance.now() - setupStart;
     const timings: number[] = [];
     const encoding: number[] = [];
@@ -197,6 +256,7 @@ export async function runBatchBenchmark(
       : await batch.getWorld(handles[0]).readState();
     let maximumBallisticError = 0;
     let maximumWorldDifference = 0;
+    let minimumVehicleProgress = vehiclesPerWorld ? Infinity : null;
     let finite = true;
     const duration = options.frames * options.steps * fixture.timeStep!;
     for (let instance = 0; instance < options.worlds; instance++) {
@@ -206,6 +266,12 @@ export async function runBatchBenchmark(
             (instance + 1) * fixture.bodies.length
           )
         : await batch.getWorld(handles[instance]).readState();
+      if (instance < activeWorlds && minimumVehicleProgress !== null)
+        for (const vehicle of fixture.vehicles!)
+          minimumVehicleProgress = Math.min(
+            minimumVehicleProgress,
+            sample[vehicle.chassis].position[0]
+          );
       for (const [index, state] of sample.entries()) {
         finite &&= [...state.position, ...state.velocity, ...state.orientation].every(
           Number.isFinite
@@ -230,17 +296,21 @@ export async function runBatchBenchmark(
       }
     }
     const quality = {
+      minimumVehicleProgress,
       finite,
       maximumWorldDifference,
       maximumBallisticError,
       passed:
         finite &&
         maximumWorldDifference < 0.01 &&
-        (options.scene !== 'sparse' || maximumBallisticError < 0.01),
+        (options.scene !== 'sparse' || maximumBallisticError < 0.01) &&
+        (minimumVehicleProgress === null || minimumVehicleProgress > 0),
       scope:
         options.scene === 'sparse'
           ? 'Finite states, world equivalence and analytic ballistic position within 0.01 units.'
-          : 'Finite states and world equivalence only; no dense-contact accuracy claim.'
+          : options.scene === 'vehicle-fleet'
+            ? 'Finite states, identical active world motion within 0.01 units, and forward travel for every active chassis.'
+            : 'Finite states and world equivalence only; no dense-contact accuracy claim.'
     };
     const profile = ensemble ? await profileEnsemble(device, ensemble, diagnostics) : undefined;
     const elapsed = timings.reduce((sum, value) => sum + value, 0);
@@ -261,6 +331,11 @@ export async function runBatchBenchmark(
       options,
       activeWorlds,
       profile,
+      vehiclesPerWorld,
+      vehicleStepsPerSecond:
+        complete && quality.passed && vehiclesPerWorld
+          ? (measuredWorldSteps * vehiclesPerWorld * 1000) / elapsed
+          : null,
       workSamples,
       scheduler: ensemble ? await ensemble.readStatus() : undefined,
       device: device.info,

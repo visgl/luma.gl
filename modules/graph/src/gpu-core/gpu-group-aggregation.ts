@@ -4,9 +4,10 @@
 
 import {alignGraphVectorViews} from './graph-vector-view-utils';
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '../execution/compute/kernel';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -75,6 +76,8 @@ type GPUGroupAggregationBaseProps = {
   keys: GPUGroupAggregationKeys;
   /** Optional nonzero/zero selection with the same logical length as `keys`; chunk boundaries may differ. */
   mask?: GPUGroupAggregationMask;
+  /** Upper bound on mean count scratch, in bytes. Partitions the output key domain. */
+  maxMeanScratchBytes?: number;
 };
 
 /** Properties for graph-native dense group aggregation. */
@@ -125,6 +128,9 @@ export class GPUGroupAggregation {
   readonly mask?: GPUGroupAggregationMask;
   /** Group statistic computed by this aggregation. */
   readonly operation: GPUGroupAggregationOperation;
+  /** Maximum number of groups using one shared count scratch buffer. */
+  readonly meanPartitionSize: number;
+  private readonly maxMeanScratchBytes?: number;
 
   /** Creates and validates a dense group-aggregation description. */
   constructor(props: GPUGroupAggregationProps) {
@@ -134,6 +140,12 @@ export class GPUGroupAggregation {
     this.output = props.output;
     this.mask = props.mask;
     this.operation = props.operation ?? 'count';
+    const budget = props.maxMeanScratchBytes;
+    this.maxMeanScratchBytes = budget;
+    if (budget !== undefined && (!Number.isSafeInteger(budget) || budget < 4)) {
+      throw new Error(`${this.id} mean scratch budget requires at least four bytes`);
+    }
+    this.meanPartitionSize = Math.min(this.output.length, Math.floor((budget ?? Infinity) / 4));
 
     for (const [chunkIndex, chunk] of getGroupChunks(this.keys).entries()) {
       validateScalarInputView(chunk, 'uint32', `${this.id} keys chunk ${chunkIndex}`);
@@ -251,7 +263,9 @@ export class GPUGroupAggregation {
           valueChunks: valueChunks!,
           maskChunks,
           output,
-          operation
+          operation,
+          maxMeanScratchBytes: this.maxMeanScratchBytes,
+          partitionSize: operation === 'mean' ? this.meanPartitionSize : output.length
         })
       );
       return nodes;
@@ -670,19 +684,26 @@ function addGroupSumNodes<Parameters>(
     maskChunks?: readonly GraphDataView<'uint32'>[];
     output: GraphDataView<'float32'>;
     operation: GPUGroupSumOperation;
+    maxMeanScratchBytes?: number;
+    partitionSize: number;
   }
 ): readonly GPUCommandNode<Parameters>[] {
   const {limits} = graph.device;
   const plan = getGPUGroupSumPlan(
     props.keyChunks.map(chunk => chunk.length),
-    props.output.length,
+    props.partitionSize,
     props.operation,
-    limits.maxComputeWorkgroupStorageSize || MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH
+    limits.maxComputeWorkgroupStorageSize || MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH,
+    props.operation === 'mean' ? props.maxMeanScratchBytes : undefined
   );
   // Sort keys pack the group above an 8-bit tile lane, and partials must fit one storage binding.
   if (
-    props.output.length > MAXIMUM_SUM_GROUP_COUNT ||
-    plan.partialCount * UINT32_BYTE_LENGTH > limits.maxStorageBufferBindingSize
+    props.partitionSize > MAXIMUM_SUM_GROUP_COUNT ||
+    plan.partialCount * UINT32_BYTE_LENGTH >
+      Math.min(
+        limits.maxStorageBufferBindingSize,
+        props.operation === 'mean' ? (props.maxMeanScratchBytes ?? Infinity) : Infinity
+      )
   ) {
     throw new Error(`${props.id} sum partials exceed device limits`);
   }
@@ -698,40 +719,54 @@ function addGroupSumNodes<Parameters>(
       : undefined;
 
   const nodes: GPUCommandNode<Parameters>[] = [];
-  let rowBlockOffset = 0;
-  for (let chunkIndex = 0; chunkIndex < props.keyChunks.length; chunkIndex++) {
-    const keys = props.keyChunks[chunkIndex];
-    if (keys.length === 0) continue;
-    const rowBlockCount = Math.ceil(keys.length / plan.rowsPerWorkgroup);
+  for (let firstGroup = 0; firstGroup < props.output.length; firstGroup += props.partitionSize) {
+    const groupCount = Math.min(props.partitionSize, props.output.length - firstGroup);
+    const output =
+      groupCount === props.output.length
+        ? props.output
+        : graph.createDataView(props.output.buffer, {
+            format: 'float32',
+            length: groupCount,
+            byteOffset: props.output.byteOffset + firstGroup * UINT32_BYTE_LENGTH
+          });
+    const id =
+      groupCount === props.output.length ? props.id : `${props.id}-partition-${firstGroup}`;
+    let rowBlockOffset = 0;
+    for (let chunkIndex = 0; chunkIndex < props.keyChunks.length; chunkIndex++) {
+      const keys = props.keyChunks[chunkIndex];
+      if (keys.length === 0) continue;
+      const rowBlockCount = Math.ceil(keys.length / plan.rowsPerWorkgroup);
+      nodes.push(
+        ...addGroupPartialSumPass(graph, {
+          id: props.vectorInput
+            ? `${id}-chunk-${chunkIndex}-${props.operation}`
+            : `${id}-${props.operation}`,
+          keys,
+          values: props.valueChunks[chunkIndex],
+          mask: props.maskChunks?.[chunkIndex],
+          partialSums,
+          partialCounts,
+          firstGroup,
+          groupCount,
+          accumulateInWorkgroup: plan.accumulateInWorkgroup && rowBlockOffset < plan.columnCount,
+          rowsPerWorkgroup: plan.rowsPerWorkgroup,
+          rowBlockCount,
+          rowBlockOffset,
+          columnCount: plan.columnCount
+        })
+      );
+      rowBlockOffset += rowBlockCount;
+    }
     nodes.push(
-      ...addGroupPartialSumPass(graph, {
-        id: props.vectorInput
-          ? `${props.id}-chunk-${chunkIndex}-${props.operation}`
-          : `${props.id}-${props.operation}`,
-        keys,
-        values: props.valueChunks[chunkIndex],
-        mask: props.maskChunks?.[chunkIndex],
+      ...addGroupCombineSumPass(graph, {
+        id: `${id}-finalize`,
         partialSums,
         partialCounts,
-        groupCount: props.output.length,
-        accumulateInWorkgroup: plan.accumulateInWorkgroup,
-        rowsPerWorkgroup: plan.rowsPerWorkgroup,
-        rowBlockCount,
-        rowBlockOffset,
+        output,
         columnCount: plan.columnCount
       })
     );
-    rowBlockOffset += rowBlockCount;
   }
-  nodes.push(
-    ...addGroupCombineSumPass(graph, {
-      id: `${props.id}-finalize`,
-      partialSums,
-      partialCounts,
-      output: props.output,
-      columnCount: plan.columnCount
-    })
-  );
   return nodes;
 }
 
@@ -764,9 +799,15 @@ export function getGPUGroupSumPlan(
   chunkLengths: readonly number[],
   groupCount: number,
   operation: GPUGroupSumOperation,
-  maxComputeWorkgroupStorageSize: number
+  maxComputeWorkgroupStorageSize: number,
+  maxScratchBytes = Infinity
 ): GPUGroupSumPlan {
-  const columnCapacity = Math.max(1, Math.floor(TARGET_SUM_PARTIAL_COUNT / groupCount));
+  const columnCapacity = Math.max(
+    1,
+    Math.floor(
+      Math.min(TARGET_SUM_PARTIAL_COUNT, maxScratchBytes / UINT32_BYTE_LENGTH) / groupCount
+    )
+  );
   const largestChunkLength = chunkLengths.reduce((largest, length) => Math.max(largest, length), 0);
   const largestChunkTileCount = Math.ceil(largestChunkLength / SUM_TILE_ROW_COUNT);
   const tilesPerWorkgroup = Math.max(
@@ -818,6 +859,7 @@ function addGroupPartialSumPass<Parameters>(
     mask?: GraphDataView<'uint32'>;
     partialSums: GraphDataView<'float32'>;
     partialCounts?: GraphDataView<'uint32'>;
+    firstGroup: number;
     groupCount: number;
     accumulateInWorkgroup: boolean;
     rowsPerWorkgroup: number;
@@ -847,6 +889,7 @@ function addGroupPartialSumPass<Parameters>(
 const ELEMENT_COUNT: u32 = ${props.keys.length}u;
 const GROUP_COUNT: u32 = ${props.groupCount}u;
 const ROWS_PER_WORKGROUP: u32 = ${props.rowsPerWorkgroup}u;
+const FIRST_GROUP: u32 = ${props.firstGroup}u;
 const ROW_BLOCK_COUNT: u32 = ${props.rowBlockCount}u;
 const ROW_BLOCK_OFFSET: u32 = ${props.rowBlockOffset}u;
 const COLUMN_COUNT: u32 = ${props.columnCount}u;
@@ -880,9 +923,20 @@ ${local && includesCounts ? `var<workgroup> localCounts: array<u32, ${props.grou
   let globalRowBlock = ROW_BLOCK_OFFSET + rowBlock;
   let columnStart = (globalRowBlock % COLUMN_COUNT) * GROUP_COUNT;
   let reusesColumn = globalRowBlock >= COLUMN_COUNT;
+  ${
+    local
+      ? `
   for (var group = lane; group < GROUP_COUNT; group += TILE_ROW_COUNT) {
-    ${sumAccumulator} = select(0.0, ${partialSum}, reusesColumn);
-    ${includesCounts ? `${countAccumulator} = select(0u, ${partialCount}, reusesColumn);` : ''}
+    localSums[group] = select(0.0, ${partialSum}, reusesColumn);
+    ${includesCounts ? `localCounts[group] = select(0u, ${partialCount}, reusesColumn);` : ''}
+  }`
+      : `
+  if (!reusesColumn) {
+    for (var group = lane; group < GROUP_COUNT; group += TILE_ROW_COUNT) {
+      ${partialSum} = 0.0;
+      ${includesCounts ? `${partialCount} = 0u;` : ''}
+    }
+  }`
   }
 
   let rowStart = rowBlock * ROWS_PER_WORKGROUP;
@@ -894,10 +948,11 @@ ${local && includesCounts ? `var<workgroup> localCounts: array<u32, ${props.grou
     var sortKey = INVALID_SORT_KEY;
     var value = 0.0;
     if (rowOffset < rowLength && ${maskCondition}) {
-      let groupIndex = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
+      let key = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
+      let groupIndex = key - FIRST_GROUP;
       value = inputValues[VALUES_OFFSET + index * VALUES_STRIDE];
       let finiteValue = value == value && abs(value) <= 3.402823466e+38;
-      if (finiteValue && groupIndex < GROUP_COUNT) {
+      if (finiteValue && key >= FIRST_GROUP && groupIndex < GROUP_COUNT) {
         sortKey = (groupIndex << 8u) | lane;
       }
     }
@@ -1095,56 +1150,43 @@ function addKernelPass<Parameters>(
     dispatchSize?: GPUGroupAggregationDispatchLayout;
   }
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const maximumWorkgroupCount = props.dispatchSize
-    ? props.dispatchSize.x * props.dispatchSize.y * props.dispatchSize.z
-    : (props.dispatchCount ?? 1);
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id: props.id,
-      resources: props.resources,
-      workload: {
-        operation: 'GPUGroupAggregation',
-        commandCount: 1,
-        maximumWorkgroupCount,
-        maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
-      },
-      compile: ({device}) => {
-        const kernel = new Kernel(device, {
-          id: props.id,
-          source: props.source,
-          shaderLayout: {
-            bindings: Object.keys(props.bindings).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
+  const {x, y, z} = props.dispatchSize ?? {x: props.dispatchCount ?? 1, y: 1, z: 1};
+  const maximumWorkgroupCount = x * y * z;
+  const node = createGPUComputeCommandNode<Parameters>({
+    id: props.id,
+    resources: props.resources,
+    workload: {
+      operation: 'GPUGroupAggregation',
+      commandCount: 1,
+      maximumWorkgroupCount,
+      maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
+    },
+    compile: ({device}) => {
+      const kernel = new Kernel(device, {
+        id: props.id,
+        source: props.source,
+        shaderLayout: {
+          bindings: Object.keys(props.bindings).map((name, location) => ({
+            name,
+            type: 'storage' as const,
+            group: 0,
+            location
+          }))
+        }
+      });
+      return {
+        encode: ({computePass, getBuffer}) => {
+          const bindings: Record<string, Binding> = {};
+          for (const [name, view] of Object.entries(props.bindings)) {
+            bindings[name] = getViewBinding(view, getBuffer);
           }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(props.bindings)) {
-              bindings[name] = getViewBinding(view, getBuffer);
-            }
 
-            if (props.dispatchSize) {
-              kernel.dispatch(computePass, {
-                bindings,
-                x: props.dispatchSize.x,
-                y: props.dispatchSize.y,
-                z: props.dispatchSize.z
-              });
-            } else {
-              kernel.dispatch(computePass, {bindings, x: props.dispatchCount!});
-            }
-          },
-          destroy: () => kernel.destroy()
-        };
-      }
-    })
-  );
+          kernel.dispatch(computePass, {bindings, x, y, z});
+        },
+        destroy: () => kernel.destroy()
+      };
+    }
+  });
 
-  return nodes;
+  return [setGPUComputeDispatchWorkgroups(node, [x, y, z])];
 }

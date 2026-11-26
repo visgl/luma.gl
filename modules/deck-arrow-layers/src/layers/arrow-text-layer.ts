@@ -14,10 +14,10 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowTextRenderer,
-  type ArrowColorType,
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {type ArrowColorType} from '@luma.gl/graph/arrow';
 import {
   Buffer,
   type BufferLayout,
@@ -26,13 +26,13 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import {ShaderInputs, type Model} from '@luma.gl/engine';
-import type {GPUTextData} from '@luma.gl/text';
+import type {GPUTextData} from '@luma.gl/engine/text';
 import {
   makeTextGlyphAlphaGlsl,
   supportsGpuTextExpansion,
   type TextGlyphAlphaShaderSettings
-} from '@luma.gl/text/experimental';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/engine/text-experimental';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {type GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
 import {Vector} from 'apache-arrow';
 import {
@@ -601,6 +601,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
             ? DECK_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
             : DECK_TEXT_STORAGE_SHADER_LAYOUT,
         modelProps: {
+          shaderAssembler: this.context.shaderAssembler,
           ...effectiveProps.modelProps,
           ...this.getShaders(
             this.context.device.type === 'webgpu'

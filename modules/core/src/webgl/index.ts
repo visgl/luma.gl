@@ -10,7 +10,6 @@
 
 // Types
 export type {WebGLDeviceLimits} from './adapter/device-helpers/webgl-device-limits';
-export {GL} from '../webgl-constants/webgl-constants';
 export type {
   GLTextureTarget,
   GLTextureCubeMapTarget,
@@ -56,7 +55,10 @@ export {WEBGLFence} from './adapter/resources/webgl-fence';
 export {WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
 // export {WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
 export {WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
-export {WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
+export {
+  WEBGLRenderPass,
+  type WebGLRenderPassParameters
+} from './adapter/resources/webgl-render-pass';
 // export {WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 

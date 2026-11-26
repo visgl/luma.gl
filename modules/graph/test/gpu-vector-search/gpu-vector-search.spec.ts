@@ -4,7 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
@@ -16,8 +16,8 @@ import {
   type GraphDataView,
   type GraphVectorView
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {
   importGPUEmbeddingTable,

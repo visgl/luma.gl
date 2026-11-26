@@ -9,12 +9,16 @@ import {
   DocumentationBadges,
 } from "@site/src/components/docs/documentation-badges";
 
-import {DocumentationModuleCards} from "@site/src/components/docs/module-cards";
-
 # Introduction
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
 It provides one application-facing API with pluggable WebGPU and WebGL2 backends,
 plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
+
+<p className="badges">
+  <a href="https://github.com/visgl/luma.gl" aria-label="luma.gl on GitHub"><img src="https://img.shields.io/github/stars/visgl/luma.gl.svg?style=flat-square&amp;label=%E2%98%85&amp;logo=github&amp;logoColor=white&amp;color=24292f&amp;labelColor=24292f" alt="GitHub stars" /></a>{' '}
+  <a href="https://github.com/visgl/luma.gl/graphs/contributors"><img src="https://img.shields.io/github/contributors/visgl/luma.gl.svg?style=flat-square&amp;logo=github&amp;logoColor=white&amp;color=24292f&amp;labelColor=24292f" alt="GitHub contributors" /></a>{' '}
+  <a href="https://github.com/visgl/luma.gl/pulls?q=is%3Apr"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Fsearch%2Fissues%3Fq%3Drepo%253Avisgl%252Fluma.gl%2520is%253Apr&amp;query=%24.total_count&amp;style=flat-square&amp;label=PRs&amp;logo=github&amp;logoColor=white&amp;color=24292f&amp;labelColor=24292f" alt="Total GitHub pull requests" /></a>
+</p>
 
 ## Explore the documentation
 
@@ -32,12 +36,12 @@ use the package reference when you need a specific class, method, or option.
 | Debugging and Performance | [Debug GPU applications](/docs/developer-guide/debugging), [inspect command graphs](/docs/api-reference/experimental/gpu-core/debugging), and [profile execution](/docs/developer-guide/profiling) |
 | API Reference | [Look up packages and APIs](/docs/api-reference) |
 
-## Modules
+## Packages
 
 Start with `@luma.gl/core` and `@luma.gl/engine`, then add the modules your application needs.
 WebGPU and WebGL2 adapters are included in core and imported through their own entry points.
 
-<DocumentationModuleCards />
+Browse the [packages](/docs/packages) to explore primary packages, smaller packages, and exploratory modules.
 
 ## Why luma.gl?
 
@@ -66,8 +70,13 @@ and GPU transformation helpers. It is the recommended starting point for applica
 
 ### 3. Shader API
 
-Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined
+Shaders assembles WGSL and GLSL from reusable shader modules and application-defined
 hooks. It is used by luma.gl, deck.gl, and custom renderers.
+
+## Contributors and credits
+
+See [Attributions and Credits](/docs/credits) for upstream implementation credits,
+research citations, and example asset notices.
 
 ## Next steps
 

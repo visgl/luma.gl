@@ -24,10 +24,10 @@ the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
 | GPU object | Role | Important state |
 | --- | --- | --- |
 | [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) | Logical table owner and mutation surface. | `schema`, `gpuColumns`, `gpuVectors`, `gpuConstants`, `batches[]` |
-| [`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) | One fixed-width value shared by every table row. | `format`, `value`, `byteLength` |
+| [`GPUConstant`](/docs/api-reference/graph/gpu-constant) | One fixed-width value shared by every table row. | `format`, `value`, `byteLength` |
 | [`GPURecordBatch`](/docs/api-reference/experimental/gpu-tables/gpu-record-batch) | One preserved GPU batch with one data chunk per column. | `schema`, `numRows`, `bufferLayout`, `gpuData` |
-| [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]` |
-| [`GPUData`](/docs/api-reference/gpgpu/gpu-data) | One GPU buffer plus typed row metadata. | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
+| [`GPUVector`](/docs/api-reference/graph/gpu-vector) | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]` |
+| [`GPUData`](/docs/api-reference/graph/gpu-data) | One GPU buffer plus typed row metadata. | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
 | [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gpu-schema) | Plain selected-column schema metadata. | `fields`, `metadata` |
 
 The table is intentionally batch-preserving. Constants live only at table level;

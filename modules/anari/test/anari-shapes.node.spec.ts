@@ -4,8 +4,8 @@
 import {TorusGeometry} from '@luma.gl/engine';
 import {ANARIDevice} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {NullDevice} from '@luma.gl/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {NullDevice} from '@luma.gl/core/test-utils';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';
 import {makeChartShapesScene} from '../../../examples/anari/scenes/chart-baseline';

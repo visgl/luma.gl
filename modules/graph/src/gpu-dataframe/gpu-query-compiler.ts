@@ -10,8 +10,14 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/gpgpu/gpu-data';
+import {
+  GPUData,
+  GPUVector,
+  getGPUVectorWGSLLayout,
+  type GPUConstant,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
+import {Kernel} from '../execution/compute/kernel';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   type CompiledGPUCommandGraph,
@@ -24,21 +30,43 @@ import {
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/graph/gpu-core';
 import {GPUVisibilityWorkflow} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
-import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
+import {
+  GPUDataFrame,
+  type GPUDataFrameDictionaries,
+  type GPUDataFrameValidity
+} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
   encodeGPUQueryExpressionControls,
-  getGPUQueryShaderType,
   makeGPUQueryExpressionShaderPlan,
   type GPUQueryExpressionColumn,
   type GPUQueryExpressionOutput,
-  type GPUQueryExpressionShaderPlan,
-  type GPUQueryScalarFormat
+  type GPUQueryExpressionShaderPlan
 } from './gpu-expression-shader';
 
 const LU_QUERY_WORKGROUP_SIZE = 256;
-const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+
+/** Borrows projected columns while the query owns its working table. @internal */
+export function projectGPUDataFrameQueryResult<Selection extends GPUTypeMap>(
+  context: Pick<
+    GPUDataFrameQueryExtensionContext<Selection>,
+    'table' | 'validity' | 'dictionaries'
+  >,
+  columns: readonly (keyof Selection & string)[]
+): GPUDataFrame<Selection> {
+  const working = new GPUDataFrame<Selection>({
+    table: context.table,
+    validity: context.validity,
+    dictionaries: context.dictionaries,
+    ownership: 'borrowed'
+  });
+  try {
+    return working.select(columns) as GPUDataFrame<Selection>;
+  } finally {
+    working.destroy();
+  }
+}
 
 /** Caller-owned scalar values supplied to an already compiled dataframe filter. */
 export type GPUDataFrameQueryParameters = Readonly<Record<string, number | boolean | null>>;
@@ -50,12 +78,12 @@ type GPUQuerySourceView = {
 
 type GPUQueryDerivedOutput = {
   plan: GPUQueryExpressionOutput;
-  values: GPUVector<GPUQueryScalarFormat>;
+  values: GPUVector<GPUExpressionNumericFormat>;
   validity?: GPUVector<'uint32'>;
 };
 
 type GPUQueryDerivedView = {
-  values: GraphVectorView<GPUQueryScalarFormat>;
+  values: GraphVectorView<GPUExpressionNumericFormat>;
   validity?: GraphVectorView<'uint32'>;
 };
 
@@ -104,7 +132,6 @@ export type GPUDataFrameQueryCompilationExtension<
   Result extends GPUTypeMap,
   Compiled extends CompiledGPUDataFrameQuery<Result> = CompiledGPUDataFrameQuery<Result>
 > = {
-  allowEmptyPredicates?: boolean;
   prepare: (
     context: GPUDataFrameQueryExtensionContext<Row>
   ) => GPUDataFrameQueryExtensionResult<Result, Compiled>;
@@ -216,8 +243,7 @@ export function compileGPUDataFrameQuery<
       retainedSource,
       predicates,
       derivedColumns,
-      selectedColumns,
-      predicates.length === 0 || extension?.allowEmptyPredicates === true
+      selectedColumns
     );
     validateGPUQueryBatchCapacity(retainedSource, graph);
     validateGPUQueryBindingCapacity(plan, graph);
@@ -421,7 +447,7 @@ function validateGPUQueryBindingCapacity(
 }
 
 /** Creates one independently owned fixed-width GPU output chunk for every source batch. */
-function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
+function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
   device: Device,
   name: string,
   lengths: readonly number[],
@@ -434,7 +460,7 @@ function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
     for (const [batchIndex, length] of lengths.entries()) {
       const buffer = device.createBuffer({
         id: `${name}-batch-${batchIndex}`,
-        byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
+        byteLength: Math.max(length, 1) * getGPUVectorWGSLLayout(format).packedByteStride,
         usage:
           Buffer.STORAGE |
           Buffer.COPY_SRC |
@@ -507,7 +533,13 @@ function createGPUQueryDerivedTable<Result extends GPUTypeMap>(
   const layouts: BufferLayout[] = selectedColumns.flatMap(name => {
     const output = outputsByName.get(name);
     if (output) {
-      return [{name, format: output.plan.format, byteStride: UINT32_BYTE_LENGTH}];
+      return [
+        {
+          name,
+          format: output.plan.format,
+          byteStride: getGPUVectorWGSLLayout(output.plan.format).packedByteStride
+        }
+      ];
     }
     return selectedSource.bufferLayout
       .filter(layout => layout.name === name)
@@ -661,6 +693,43 @@ function addGPUQueryControlUpload(
   });
 }
 
+/** Adds a predicate on an already prepared graph table into a caller-supplied mask. @internal */
+export function addGPUDataFrameResultPredicate<T extends GPUTypeMap>(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  queryId: string,
+  source: GPUDataFrame<T>,
+  predicate: GPUExpression<boolean, string>,
+  output: GraphVectorView<'uint32'>
+): void {
+  const plan = makeGPUQueryExpressionShaderPlan(source, [predicate], [], []);
+  validateGPUQueryBindingCapacity(plan, graph);
+  const sourceViews = importGPUQuerySourceViews(graph, source, plan, queryId);
+  const controls =
+    plan.controls.length && output.length
+      ? createTransientView(
+          graph,
+          queryId + '-controls',
+          'uint32',
+          plan.controls.length * 2,
+          Buffer.STORAGE | Buffer.COPY_DST
+        )
+      : undefined;
+  if (controls) addGPUQueryControlUpload(graph, queryId, controls, plan);
+  for (const [batchIndex, chunk] of output.data.entries()) {
+    if (!chunk.length) continue;
+    addGPUQueryPredicatePass(graph, {
+      id: queryId + '-batch-' + batchIndex,
+      batchIndex,
+      columns: plan.columns,
+      sourceViews,
+      derivedViews: new Map(),
+      controls,
+      output: chunk,
+      plan
+    });
+  }
+}
+
 /** Emits one closed-AST expression kernel for one preserved, nonempty source record batch. */
 function addGPUQueryPredicatePass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
@@ -690,7 +759,16 @@ function addGPUQueryPredicatePass(
       `const INPUT_${column.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUQueryShaderType(column.format)}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUVectorWGSLLayout(column.format).scalarType}>;`
+    );
+    const layout = getGPUVectorWGSLLayout(column.format);
+    const components = Array.from(
+      {length: layout.components},
+      (_, component) =>
+        `input${column.index}[INPUT_${column.index}_OFFSET + row * ${layout.components}u + ${component}u]`
+    );
+    declarations.push(
+      `fn readInput${column.index}(row: u32) -> ${layout.shaderType} { return ${layout.components === 1 ? components[0] : `${layout.shaderType}(${components.join(', ')})`}; }`
     );
     bindings[`input${column.index}`] = values;
     resources.push({buffer: values, usage: 'storage-read'});
@@ -731,13 +809,16 @@ function addGPUQueryPredicatePass(
       `const DERIVED_${output.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUQueryShaderType(output.format)}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUVectorWGSLLayout(output.format).scalarType}>;`
     );
     bindings[`derived${output.index}`] = values;
     resources.push({buffer: values, usage: 'storage-write'});
-    derivedWrites.push(
-      `derived${output.index}[DERIVED_${output.index}_OFFSET + index] = ${output.value};`
-    );
+    const layout = getGPUVectorWGSLLayout(output.format);
+    for (let component = 0; component < layout.components; component++) {
+      derivedWrites.push(
+        `derived${output.index}[DERIVED_${output.index}_OFFSET + index * ${layout.components}u + ${component}u] = ${layout.components === 1 ? output.value : `${output.value}[${component}]`};`
+      );
+    }
 
     if (output.nullable) {
       const validity = views?.validity?.data[props.batchIndex];
@@ -774,6 +855,7 @@ function addGPUQueryPredicatePass(
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.output.length}u;
 ${declarations.join('\n')}
+${props.plan.helpers.join('\n')}
 
 @compute @workgroup_size(${LU_QUERY_WORKGROUP_SIZE})
 fn main(
@@ -793,7 +875,7 @@ fn main(
     id: props.id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -811,10 +893,15 @@ fn main(
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

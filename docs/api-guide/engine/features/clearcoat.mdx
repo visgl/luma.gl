@@ -17,7 +17,7 @@ The **CompareClearcoat** sample demonstrates this capability. Drag to orbit and 
 
 `PBRMaterial` from `@luma.gl/anari` is a typed engine `Material` backed by the shared
 `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from
-`@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with
+`@luma.gl/shaders`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with
 `material.setProps({pbrMaterial: {...}})`.
 
 The fields below are optional. Defaults are the shared shader defaults; imported assets can
@@ -67,7 +67,7 @@ Adding a texture or changing a shader feature may require matching defines and a
 model shader layout.
 
 See the [materials guide](/docs/api-guide/engine/materials) and
-[`pbrMaterial` reference](/docs/api-reference/shadertools/shader-modules/pbr-material).
+[`pbrMaterial` reference](/docs/api-reference/shaders/shader-modules/pbr-material).
 
 The extended PBR shader path is disabled by default. Set `USE_MATERIAL_EXTENSIONS: true`
 in the `Model` construction `defines` to enable this feature; uniform values alone do not

@@ -6,9 +6,10 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
   GPUGroupAggregation,
+  GraphVectorView,
   summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 const ROW_COUNT = 4 * 1024 * 1024;
@@ -76,6 +77,48 @@ for (const featureLevel of FEATURE_LEVELS) {
   }
 }
 
+test('GPUGroupAggregation benchmark, fragmented inputs', async ({annotate, skip}) => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) skip('WebGPU is unavailable');
+
+  const groupCount = 4096;
+  const rowCount = 513;
+  const groupKeys = Uint32Array.from({length: rowCount}, (_, index) => index);
+  const values = Float32Array.from({length: rowCount}, (_, index) => index + 1);
+  const keyBuffer = device.createBuffer({data: groupKeys, usage: Buffer.STORAGE});
+  const valueBuffer = device.createBuffer({data: values, usage: Buffer.STORAGE});
+  try {
+    for (const operation of OPERATIONS) {
+      const expected = Array.from({length: groupCount}, (_, index) =>
+        index < rowCount ? values[index] : operation === 'sum' ? 0 : NaN
+      );
+      for (const chunkCount of [1, rowCount]) {
+        const result = await measureGroupAggregation(
+          device,
+          keyBuffer,
+          valueBuffer,
+          groupCount,
+          operation,
+          expected,
+          chunkCount
+        );
+        await annotate(
+          JSON.stringify({
+            benchmark: 'GPU_GROUP_AGGREGATION_FRAGMENTED',
+            rowCount,
+            chunkCount,
+            ...result
+          }),
+          'benchmark'
+        );
+      }
+    }
+  } finally {
+    keyBuffer.destroy();
+    valueBuffer.destroy();
+  }
+}, 300_000);
+
 /** Creates one deterministic pseudo-random key and value sequence shared by every case. */
 function getBenchmarkInput(): BenchmarkInput {
   if (!benchmarkInput) {
@@ -104,27 +147,41 @@ async function measureGroupAggregation(
   valueBuffer: Buffer,
   groupCount: number,
   operation: BenchmarkOperation,
-  expected: number[]
+  expected: number[],
+  chunkCount = 1
 ): Promise<object> {
   const outputBuffer = device.createBuffer({
     byteLength: groupCount * Float32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
   const graph = new GPUCommandGraph(device);
-  const keys = graph.createDataView(
-    graph.importBuffer(
-      {id: 'keys', byteLength: keyBuffer.byteLength, usage: keyBuffer.usage},
-      keyBuffer
-    ),
-    {format: 'uint32', length: ROW_COUNT}
-  );
-  const values = graph.createDataView(
-    graph.importBuffer(
-      {id: 'values', byteLength: valueBuffer.byteLength, usage: valueBuffer.usage},
-      valueBuffer
-    ),
-    {format: 'float32', length: ROW_COUNT}
-  );
+  const rowCount = keyBuffer.byteLength / Uint32Array.BYTES_PER_ELEMENT;
+  const makeInput = <Format extends 'uint32' | 'float32'>(
+    id: string,
+    buffer: Buffer,
+    format: Format
+  ) => {
+    const graphBuffer = graph.importBuffer(
+      {id, byteLength: buffer.byteLength, usage: buffer.usage},
+      buffer
+    );
+    if (chunkCount === 1) return graph.createDataView(graphBuffer, {format, length: rowCount});
+    return new GraphVectorView({
+      id,
+      name: id,
+      format,
+      length: rowCount,
+      valueLength: rowCount,
+      stride: 1,
+      byteStride: 4,
+      rowByteLength: 4,
+      data: Array.from({length: rowCount}, (_, rowIndex) =>
+        graph.createDataView(graphBuffer, {format, length: 1, byteOffset: rowIndex * 4})
+      )
+    });
+  };
+  const keys = makeInput('keys', keyBuffer, 'uint32');
+  const values = makeInput('values', valueBuffer, 'float32');
   const output = graph.createDataView(
     graph.importBuffer(
       {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
@@ -141,7 +198,7 @@ async function measureGroupAggregation(
   try {
     for (let iteration = 0; iteration < WARMUP_ITERATIONS + MEASURED_ITERATIONS; iteration++) {
       const querySet = timestampQueries
-        ? device.createQuerySet({type: 'timestamp', count: 64})
+        ? device.createQuerySet({type: 'timestamp', count: 2 * (chunkCount + 3)})
         : undefined;
       try {
         const start = performance.now();
@@ -178,6 +235,10 @@ async function measureGroupAggregation(
 
   let maximumRelativeError = 0;
   for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+    if (Number.isNaN(expected[groupIndex])) {
+      expect(Number.isNaN(outputs[0][groupIndex])).toBe(true);
+      continue;
+    }
     const relativeError =
       Math.abs(outputs[0][groupIndex] - expected[groupIndex]) /
       Math.max(Math.abs(expected[groupIndex]), 1);

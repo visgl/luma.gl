@@ -1,0 +1,15 @@
+---
+title: Canyon Echo
+description: Reconstruct a moonlit canyon from one captured depth image and explore its occlusion gaps.
+sidebar_custom_props:
+  difficulty: intermediate
+  maturity: stable
+  topics: [rendering, shaders]
+  backends: [webgpu, webgl2]
+---
+
+import {BufferAtlas} from '@site/src/components/docs/buffer-atlas';
+
+Pull the relief angle slider to one side. Each point comes from a visible sample in one captured color and depth image. Look through the gaps behind the bridge to see which surfaces the camera never recorded.
+
+<BufferAtlas kind="canyon" />

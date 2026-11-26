@@ -8,8 +8,8 @@ import {
   CubeGeometry as MathCubeGeometry,
   PrismGeometry,
   RingGeometry
-} from '@math.gl/geometry';
-import {NullDevice} from '@luma.gl/test-utils';
+} from '@math.gl/geometry/primitives';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   Model,
   Geometry,

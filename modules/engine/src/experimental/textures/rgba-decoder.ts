@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** @todo - import from texture-types */
-// import { type TextureFormatPacked } from "../../../../engine/src/experimental/textures/texture-format-types";
+// import { type TextureFormatPacked } from "./texture-format-types";
 export type TextureFormatPacked =
   | 'rgba4unorm-webgl'
   | 'rgb565unorm-webgl'

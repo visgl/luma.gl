@@ -3,11 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld, type GPURigidBody} from '../../src/gpu-physics';
 
-it('solves sparse contacts with parallel pair and body ownership while conserving impact momentum', async context => {
+it.for([
+  'scalar',
+  'block'
+] as const)('conserves impact momentum with %s parallel contacts', async (parallelContactSolver, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU is unavailable');
   const bodies: GPURigidBody[] = [
@@ -30,6 +33,7 @@ it('solves sparse contacts with parallel pair and body ownership while conservin
   const world = new GPURigidBodyWorld({
     bodies,
     solver: 'parallel',
+    parallelContactSolver,
     broadPhase: 'hierarchical-grid',
     gravity: [0, 0, 0],
     sleepAfter: 0

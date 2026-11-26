@@ -11,9 +11,9 @@ import {
   parameter,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
@@ -40,7 +40,7 @@ it('GPUDataFrame groups nullable source batches into explicit dense GPU statisti
   const createBufferSpy = vi.spyOn(device, 'createBuffer');
   const submitSpy = vi.spyOn(device, 'submit');
 
-  const query = fixture.frame.groupBy('category').aggregate({
+  const query = fixture.frame.groupBy('category', {maxMeanScratchBytes: 4}).aggregate({
     count: 'count',
     totalFare: {sum: 'fare'},
     minimumFare: {min: 'fare'},
@@ -59,9 +59,14 @@ it('GPUDataFrame groups nullable source batches into explicit dense GPU statisti
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
     id: 'gpu-dataframe-nullable-dense-group-aggregation'
   });
+  const transientBuffers = vi.spyOn(graph, 'createTransientBuffer');
   const compiled = query.compile(graph);
 
   try {
+    const meanScratch = transientBuffers.mock.calls
+      .map(([descriptor]) => descriptor)
+      .filter(descriptor => descriptor.id.endsWith('-metric-4-partial-counts'));
+    expect(meanScratch.map(descriptor => descriptor.byteLength)).toEqual([4]);
     expect(compiled.groupCount, 'dictionary labels determine the dense group domain').toBe(4);
     expect(
       compiled.table.schema.fields.map(field => field.name),

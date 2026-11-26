@@ -6,16 +6,16 @@ description: GPU-native Gaussian splat rendering, streaming, shading, picking, a
 import {GaussianSplatsExample} from '@site/src/examples';
 import {SplatsDocsTabs} from '@site/src/components/docs/splats-docs-tabs';
 
-# @luma.gl/splats
+# @luma.gl/engine/splats
 
 <SplatsDocsTabs active="overview" />
 
-`@luma.gl/splats` provides experimental GPU-native Gaussian splat rendering. It owns prepared
+`@luma.gl/engine/splats` provides experimental GPU-native Gaussian splat rendering. It owns prepared
 splat data, directional spherical harmonics, semantic filtering, GPU picking, hierarchy traversal,
 bounded residency, decoded Khronos glTF attributes, covariance projection, depth ordering, and
 render models without depending on Apache Arrow, loaders.gl, glTF packages, or deck.gl.
 
-The module is public with experimental APIs. Install it with `yarn add @luma.gl/splats`.
+The module is public with experimental APIs. Install it with `yarn add @luma.gl/engine`.
 
 ## Interactive Gaussian splat showcase
 

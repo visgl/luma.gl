@@ -92,9 +92,9 @@ created device is `'core'` or `'compatibility'`.
 
 Read `device.info.featureLevel` to see the effective level. Use `device.limits`
 when selecting optional paths such as vertex-stage storage
-buffers. For assembled WGSL, shadertools also exposes
+buffers. For assembled WGSL, shaders also exposes
 `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see
-[WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+[WGSL Support](/docs/api-reference/shaders/wgsl-support).
 
 ## Using for compute only
 

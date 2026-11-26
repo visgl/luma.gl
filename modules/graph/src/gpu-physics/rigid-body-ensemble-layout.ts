@@ -6,7 +6,8 @@
 export function getEnsembleContactLayout(
   bodyCount: number,
   instances: number,
-  maximumPairs: number
+  maximumPairs: number,
+  independentRecovery = false
 ) {
   const keyOffset = bodyCount * 8 + 8;
   const headOffset = keyOffset + maximumPairs * 2;
@@ -20,6 +21,8 @@ export function getEnsembleContactLayout(
   const savedFrameOffset = savedHeadOffset + instances;
   const savedHeaderOffset = savedFrameOffset + instances;
   const savedManifoldOffset = Math.ceil((savedHeaderOffset + 8) / 4) * 4;
+  /** Local fault words and one aggregate flag follow the journal payloads. */
+  const failureOffset = savedManifoldOffset + maximumPairs * 104;
   return {
     keyOffset,
     headOffset,
@@ -33,6 +36,7 @@ export function getEnsembleContactLayout(
     savedFrameOffset,
     savedHeaderOffset,
     savedManifoldOffset,
-    byteLength: (savedManifoldOffset + maximumPairs * 104) * 4
+    failureOffset,
+    byteLength: (failureOffset + (independentRecovery ? Math.ceil((instances + 1) / 4) * 4 : 0)) * 4
   };
 }

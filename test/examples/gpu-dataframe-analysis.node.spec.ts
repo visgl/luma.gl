@@ -48,10 +48,10 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
 
     expect(graphCategories).toHaveLength(1);
     const dataframesCategory = graphCategories[0].items.find(
-      entry => typeof entry !== 'string' && entry.label === 'GPU Dataframe'
+      entry => typeof entry !== 'string' && entry.label === '@luma.gl/graph/gpu-dataframe'
     );
     expect(dataframesCategory).toBeDefined();
-    expect(dataframesCategory?.items).toContain(GPU_DATAFRAME_DOCUMENT_IDENTIFIER);
+    expect(dataframesCategory).toMatchObject({link: {id: GPU_DATAFRAME_DOCUMENT_IDENTIFIER}});
 
     const documentation = readGPUDataFrameDocumentation();
     const overview = readRepositoryFile('docs/api-reference/experimental/README.md');
@@ -69,7 +69,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
   test('documents real Arrow ingestion, owned GPU work, supported joins, and accurate limitations', () => {
     const documentation = readGPUDataFrameDocumentation();
 
-    expect(documentation).toContain("from '@luma.gl/arrow'");
+    expect(documentation).toContain("from '@luma.gl/graph/arrow'");
     expect(documentation).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(documentation).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(documentation).toContain('GPUCommandGraph');
@@ -126,11 +126,11 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const graphPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
-    const gpuPackage = JSON.parse(readRepositoryFile('modules/gpgpu/package.json')) as {
+    const gpuPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
 
-    expect(benchmark).toContain("from '@luma.gl/arrow'");
+    expect(benchmark).toContain("from '@luma.gl/graph/arrow'");
     expect(benchmark).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(benchmark).toContain("from 'apache-arrow'");
     expect(benchmark).toContain('makeGPUAnalyticsTableFromArrowTable');

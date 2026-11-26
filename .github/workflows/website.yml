@@ -3,10 +3,14 @@ name: website
 on:
   push:
     branches:
+      - master
       - '*-release'
   workflow_dispatch:
 
-concurrency: website-gh-pages
+concurrency:
+  group: website-gh-pages
+  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
@@ -24,6 +28,7 @@ jobs:
 
       - name: Get version
         id: get_version
+        if: github.ref_name != 'master'
         run: |
           packageFile=$(if [ -d modules ]; then ls modules/core/package.json | head -n 1; else echo package.json; fi)
           packageName=$(jq -r '.name' $packageFile)
@@ -59,7 +64,7 @@ jobs:
     permissions:
       contents: write
 
-    if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_deploy }}
+    if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_deploy == 'true' }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -88,6 +93,9 @@ jobs:
       - name: Install website dependencies
         run: yarn install --immutable
 
+      - name: Build workspace packages
+        run: yarn build
+
       - name: Synchronize website example assets
         run: node website/scripts/sync-example-assets.mjs
 
@@ -110,6 +118,7 @@ jobs:
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
           branch: gh-pages
+          force: false
           folder: website/build
           target-folder: ${{ needs.check_branch.outputs.target_folder }}
           clean: true

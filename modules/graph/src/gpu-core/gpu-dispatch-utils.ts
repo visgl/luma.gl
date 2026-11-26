@@ -23,12 +23,24 @@ export function getBoundedDispatchLayout(
     throw new Error(`${operationName} element count must be a non-negative uint32`);
   }
   validateWorkgroupSize(operationName, workgroupSize);
+  return getBoundedWorkgroupLayout(
+    operationName,
+    Math.max(1, Math.ceil(elementCount / workgroupSize)),
+    maxComputeWorkgroupsPerDimension
+  );
+}
+
+/** Plans a bounded dispatch for kernels that index their work directly by workgroup. Requires a positive count. @internal */
+export function getBoundedWorkgroupLayout(
+  operationName: string,
+  workgroupCount: number,
+  maxComputeWorkgroupsPerDimension: number
+): GPUBoundedDispatchLayout {
   const maximum = Math.floor(maxComputeWorkgroupsPerDimension);
   if (!Number.isSafeInteger(maximum) || maximum < 1) {
     throw new Error('maxComputeWorkgroupsPerDimension must be a positive integer');
   }
 
-  const workgroupCount = Math.max(1, Math.ceil(elementCount / workgroupSize));
   const x = Math.min(workgroupCount, maximum);
   const y = Math.min(Math.ceil(workgroupCount / x), maximum);
   const z = Math.ceil(workgroupCount / x / y);

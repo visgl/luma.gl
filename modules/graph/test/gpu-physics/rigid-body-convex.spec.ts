@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {
   GPURigidBodyWorld,
@@ -60,12 +60,12 @@ it.for(['ordered', 'parallel'] as const)(
         world.addToGraph(definition);
         const graph = await definition.compileAsync();
         try {
+          // The final read synchronizes every queued batch; intermediate state was unused.
           for (let step = 0; step < 240; step += 20) {
             const encoder = device.createCommandEncoder();
             for (let substep = 0; substep < 20; substep++)
               graph.encode(encoder, {parameters: undefined});
             device.submit(encoder.finish());
-            await world.readState();
           }
           const state = (await world.readState())[1];
           expect(state.position.every(Number.isFinite)).toBe(true);
@@ -129,7 +129,6 @@ it('preserves a nonconvex wheel opening and responds only around its unlocked in
       const encoder = device.createCommandEncoder();
       for (let substep = 0; substep < 20; substep++) graph.encode(encoder, {parameters: undefined});
       device.submit(encoder.finish());
-      await world.readState();
     }
     const [wheel, sphere] = await world.readState();
     expect(wheel.position).toEqual([0, 0, 0]);
@@ -180,7 +179,7 @@ it('rejects a separated rotating mesh before a large box can cover its local BVH
       const encoder = device.createCommandEncoder();
       for (let substep = 0; substep < 10; substep++) graph.encode(encoder, {parameters: undefined});
       device.submit(encoder.finish());
-      await world.readState();
+
       expect(await world.readCollisionDiagnostics()).toMatchObject({
         triangleQueries: 0,
         unresolvedQueries: 0,

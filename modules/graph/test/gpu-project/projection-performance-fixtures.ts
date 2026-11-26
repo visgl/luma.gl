@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project-crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
-import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/graph/gpu-project/benchmarks';
+import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   geographicCRS,
   makeTransverseMercatorCRS,
@@ -111,7 +111,7 @@ export function makePerformanceOptions(
     position[1] >= bounds[1] &&
     position[0] <= bounds[2] &&
     position[1] <= bounds[3];
-  const providerLabel = '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript';
+  const providerLabel = '@math.gl/geospatial/projection 5.0.3 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,

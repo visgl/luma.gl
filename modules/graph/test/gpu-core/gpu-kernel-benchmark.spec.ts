@@ -3,12 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation, Kernel} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/graph';
 import {
   GPUCommandGraph,
   summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 const DISPATCH_COUNT = 64;

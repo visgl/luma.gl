@@ -18,8 +18,9 @@ import {
   type ShadowRenderView,
   type ShadowShaderProps
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {type Panel, type SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

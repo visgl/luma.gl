@@ -1,9 +1,11 @@
 ---
-title: GPU physics
+title: How physics engines work
 description: How rigid-body physics works, how luma.gl maps it to WebGPU, and the tradeoffs of GPU-resident simulation.
 ---
 
-# GPU physics
+# How physics engines work
+
+For setup and feature guides, start with the [Physics overview](/docs/api-guide/physics/overview).
 
 A physics engine advances a model of a world through time. For rigid bodies, that means
 predicting motion under forces and finding impulses that prevent objects from passing
@@ -18,7 +20,7 @@ for a pinned glTF physics proposal profile is the first qualification milestone,
 claim about current coverage.
 
 This page explains the architecture rather than prescribing an application API. See the
-[API reference](/docs/api-reference/gpgpu/gpu-physics)
+[API reference](/docs/api-reference/graph/gpu-physics)
 for API details and limitations, and the
 [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)
 for implementation status and qualification gates.
@@ -173,9 +175,9 @@ moving every setup task to a shader.
 | Submit input commands and schedule fixed steps | Integrate poses and produce compact events |
 | Consume requested diagnostics or gameplay events asynchronously | Publish state for GPU rendering |
 
-This is the intended boundary. In particular, the glTF example's CPU pose bridge is a
-remaining integration limitation; a GPU solver alone does not make that whole application
-GPU-resident.
+The engine and glTF gallery can consume published GPU body-node matrices. Deforming
+geometry and live scene mutations have separate update and ownership requirements; a
+GPU solver alone does not make every asset operation GPU-resident.
 
 Readback has two costs: copying data and waiting for the producer. Even a small readback
 can stall progress if the next simulation step depends on it. Diagnostics should normally
@@ -197,7 +199,7 @@ The rigid world retains lifetime failure counters on the GPU, so infrequent samp
 does not hide an incomplete step. Its simulation still advances when work is incomplete;
 recovery requires corrected settings and replay from known valid state. Allocation
 preflight catches device-limit violations before state allocation, but cannot predict
-all driver memory failures. See [capacity and diagnostics](/docs/api-reference/gpgpu/gpu-rigid-body-world#capacity-and-diagnostics).
+all driver memory failures. See [capacity and diagnostics](/docs/api-reference/graph/gpu-rigid-body-world#capacity-and-diagnostics).
 
 ### Synchronization and portability constrain the design
 
@@ -228,9 +230,9 @@ its intended behavior, and doing so within a qualified performance envelope. Fou
 example scenes do not prove all four levels for an extension. Draft revisions also need
 to be pinned; historical sample conventions and newer proposal semantics can differ.
 
-Remaining work includes general moving nonconvex mesh interactions, broad general-body CCD
-qualification, proposal joints and drives, complete trigger/interactivity semantics, and
-GPU pose publication through the glTF renderer. Unsupported behavior must remain visible.
+Remaining work includes general moving nonconvex mesh interactions, broad CCD
+qualification, deformation-driven recooking and full proposal-profile qualification.
+Supported joints, drives and triggers have explicit solver and geometry envelopes. Unsupported behavior must remain visible.
 An asset-specific collision exclusion is not a substitute for implementing the shape pair.
 
 ## Measuring progress toward state of the art
@@ -268,5 +270,5 @@ GPU physics library.
 - [GPGPU programming](/docs/api-guide/gpu/gpgpu)
 - [GPU command graphs](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/graph/src/gpu-physics/README.md)
-- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md)
+- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md)
 - [Physics roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)

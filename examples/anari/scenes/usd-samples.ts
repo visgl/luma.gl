@@ -1,6 +1,6 @@
 import {load, parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {makeANARIJSONSceneFromGLTF} from './gltf-to-anari';
 import {type ANARIJSONScene, preloadANARIJSONTextures} from './playground-scene';
 import {USDLoader, type USDLoaderOptions} from './usd-loader/usd-loader';
@@ -150,5 +150,56 @@ export async function loadSceneFile(file: File): Promise<ANARIJSONScene> {
   const stage = await USDLoader.parse(await file.arrayBuffer());
   const scene = makeANARIJSONSceneFromUSD(stage, name);
   await preloadANARIJSONTextures(scene);
+  return scene;
+}
+
+/** Detailed, locally licensed material reference with a stationary ray-traced view. */
+export async function loadAntiqueCameraRayStudy(): Promise<ANARIJSONScene> {
+  const scene = await loadSceneSample('gltf-antique-camera');
+  scene.name = 'ANTIQUE CAMERA · RAY STUDY';
+  scene.lights = [
+    {
+      '@@id': 'study-key',
+      '@@type': 'directional',
+      direction: [-1, -1, -1],
+      color: [1, 0.93, 0.84],
+      intensity: 3
+    },
+    {
+      '@@id': 'study-fill',
+      '@@type': 'directional',
+      direction: [1, -0.4, -0.5],
+      color: [0.7, 0.82, 1],
+      intensity: 2
+    },
+    {
+      '@@id': 'study-rim',
+      '@@type': 'directional',
+      direction: [0, -1, 1],
+      color: [1, 1, 1],
+      intensity: 2
+    }
+  ];
+  scene.description =
+    'Antique Camera by Maximillan Kamps · CC0 · textured glTF materials and progressive PBR transport';
+  delete scene.camera.orbit;
+  scene.renderer = {
+    '@@type': 'raytrace',
+    background: [0.025, 0.03, 0.045, 1],
+    ambientRadiance: 0.04,
+    exposure: 1,
+    toneMapMode: 3,
+    transportMode: 'pbr',
+    maxBounces: 4,
+    samplesPerPixel: 4,
+    progressive: true,
+    temporalReprojection: false,
+    adaptiveResolution: false,
+    resolutionScale: 1,
+    historySampleLimit: 256,
+    emitterSampling: true,
+    emitterSelection: 'power',
+    fogDensity: 0
+  };
   return scene;
 }

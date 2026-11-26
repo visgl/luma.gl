@@ -3,7 +3,7 @@
 
 import {ANARIDevice} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {makeChartLightingScene} from '../../../examples/anari/scenes/chart-baseline';
 import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';

@@ -8,8 +8,8 @@ import {
   KeyFrames,
   makeRandomGenerator
 } from '@luma.gl/engine';
-import {dirlight} from '@luma.gl/shadertools';
-import {Matrix4, radians} from '@math.gl/core';
+import {dirlight} from '@luma.gl/shaders';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
