@@ -12003,17 +12003,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^13.0.6":
-  version: 13.0.7
-  resolution: "glob@npm:13.0.7"
-  dependencies:
-    minimatch: "npm:^10.2.2"
-    minipass: "npm:^7.1.3"
-    path-scurry: "npm:^2.0.2"
-  checksum: 10c0/e32f4b9029a28f2b2d3610a55758fef37aa9c7098a5ba118628a5332eddd5299c7261d09ed9812e35afac117bc5f1f528ea3a8f4df2d941e38e0bc4f169221f8
-  languageName: node
-  linkType: hard
-
 "glob@npm:^14.0.3, glob@npm:^14.0.5":
   version: 14.0.6
   resolution: "glob@npm:14.0.6"
@@ -12852,7 +12841,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ignore-walk@npm:^9.0.0, ignore-walk@npm:^9.0.1":
+"ignore-walk@npm:^9.0.1":
   version: 9.0.1
   resolution: "ignore-walk@npm:9.0.1"
   dependencies:
@@ -17413,18 +17402,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"npm-packlist@npm:11.3.0":
-  version: 11.3.0
-  resolution: "npm-packlist@npm:11.3.0"
-  dependencies:
-    glob: "npm:^13.0.6"
-    ignore-walk: "npm:^9.0.0"
-    proc-log: "npm:^7.0.0"
-  checksum: 10c0/abdeea53e1eddc33ae1707f368579db17ee3377a8e15e2e850aa048f5810b9b1043cf67df20f6a51c7afc257e7219a5843aaa36739bbf7f15ccdad520bfba060
-  languageName: node
-  linkType: hard
-
-"npm-packlist@npm:^11.2.0":
+"npm-packlist@npm:11.3.2, npm-packlist@npm:^11.2.0":
   version: 11.3.2
   resolution: "npm-packlist@npm:11.3.2"
   dependencies:
@@ -18179,16 +18157,6 @@ __metadata:
   version: 1.0.7
   resolution: "path-parse@npm:1.0.7"
   checksum: 10c0/11ce261f9d294cc7a58d6a574b7f1b935842355ec66fba3c3fd79e0f036462eaf07d0aa95bb74ff432f9afef97ce1926c720988c6a7451d8a584930ae7de86e1
-  languageName: node
-  linkType: hard
-
-"path-scurry@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "path-scurry@npm:2.0.2"
-  dependencies:
-    lru-cache: "npm:^11.0.0"
-    minipass: "npm:^7.1.2"
-  checksum: 10c0/b35ad37cf6557a87fd057121ce2be7695380c9138d93e87ae928609da259ea0a170fac6f3ef1eb3ece8a068e8b7f2f3adf5bb2374cf4d4a57fe484954fcc9482
   languageName: node
   linkType: hard
 
