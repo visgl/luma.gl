@@ -41,6 +41,7 @@ device's default canvas. The canvas context owns those framebuffers.
 | `width?` | `number` | `1` | Width of attachments created from format strings. |
 | `height?` | `number` | `1` | Height of attachments created from format strings. |
 | `colorAttachments?` | `(TextureView \| Texture \| TextureFormatColor)[]` | `[]` | Color targets; format strings create owned textures. |
+| `samples?` | `1 \| 4` | `1` | Render sample count for managed offscreen MSAA. Four-sample passes resolve into the single-sample color attachments when the pass ends. See [Explicit Multisampling](/docs/api-guide/gpu/gpu-antialiasing#explicit-multisampling). |
 | `depthStencilAttachment?` | `TextureView \| Texture \| TextureFormatDepthStencil \| null` | `null` | Optional depth/stencil target. |
 
 At least one attachment is required. Supplied textures must support render-attachment usage.
@@ -53,7 +54,7 @@ Attachment dimensions, formats, and sample counts must be compatible with the pa
 - `props: FramebufferProps`: creation properties.
 - `width: number`, `height: number`: framebuffer dimensions.
 - `colorAttachments: TextureView[]`: resolved color attachment views.
-- `depthStencilAttachment: TextureView | null`: resolved depth/stencil view.
+- `depthStencilAttachment: TextureView | null`: depth/stencil texture view when texture-backed. WebGL2 renderbuffer-backed attachments have no texture view.
 - `handle: unknown`: underlying WebGL framebuffer; WebGPU has no native framebuffer object.
 
 ## Methods and ownership

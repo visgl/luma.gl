@@ -386,6 +386,150 @@ it('Device render pipelines with a depth-stencil attachment format apply stencil
   }
 });
 
+it('resolves partial geometry coverage with four-sample color and depth', async () => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const {vertexShader, fragmentShader} = await createIndexedRenderShaders(device);
+    const source =
+      device.type === 'webgpu' ? WGSL_INDEXED_RENDER_SOURCE : GLSL_INDEXED_VERTEX_SOURCE;
+    // End the triangle a quarter of the way into the right pixel.
+    const edgeShader = device.createShader({
+      ...(device.type === 'webgl' ? {stage: 'vertex' as const} : {}),
+      source: source.replace('3.0, -1.0', '0.25, -1.0').replace('-1.0, 3.0', '0.25, 3.0')
+    });
+    await edgeShader.asyncCompilationStatus;
+    const colorTexture = device.createTexture({
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 2,
+      height: 1,
+      samples: 4,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: 'depth24plus'
+    });
+    const pipeline = device.createRenderPipeline({
+      vs: edgeShader,
+      fs: device.type === 'webgpu' ? edgeShader : fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus',
+      parameters: {sampleCount: 4, depthCompare: 'less', depthWriteEnabled: true}
+    });
+    if (device.type === 'webgl') expect(framebuffer.depthStencilAttachment).toBeNull();
+    try {
+      const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1], clearDepth: 1});
+      pass.setPipeline(pipeline);
+      pass.draw({vertexCount: 3});
+      pass.end();
+      device.submit();
+      const pixels = await readTexturePixels(device, colorTexture, 2);
+      expect(pixels[4], `${device.type} resolves partially covered red samples`).toBeGreaterThan(0);
+      expect(pixels[4]).toBeLessThan(255);
+    } finally {
+      pipeline.destroy();
+      framebuffer.destroy();
+      colorTexture.destroy();
+      for (const shader of new Set([vertexShader, fragmentShader, edgeShader])) shader.destroy();
+    }
+  }
+});
+
+it('resolves four-sample color gated by a multisampled stencil attachment', async () => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const {vertexShader, fragmentShader} = await createIndexedRenderShaders(device);
+    const stencilWritePipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      parameters: {
+        sampleCount: 4,
+        colorMask: 0,
+        stencilReadMask: 0xff,
+        stencilWriteMask: 0xff,
+        stencilFront: {passOp: 'replace'},
+        stencilBack: {passOp: 'replace'}
+      }
+    });
+    const stencilTestPipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus-stencil8',
+      parameters: {
+        sampleCount: 4,
+        stencilWriteMask: 0,
+        stencilCompare: 'equal',
+        stencilPassOperation: 'keep'
+      }
+    });
+    // One row, so the expected pixels don't depend on the framebuffer y origin
+    const colorTexture = device.createTexture({
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 2,
+      height: 1,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: 'depth24plus-stencil8',
+      samples: 4
+    });
+
+    // WebGL scissors clears and WebGPU doesn't, so clear in a separate pass
+    device
+      .beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1], clearDepth: 0, clearStencil: 0})
+      .end();
+    // Write the high stencil bit into the right pixel only
+    const writePass = device.beginRenderPass({
+      framebuffer,
+      clearColor: false,
+      clearDepth: false,
+      clearStencil: false,
+      parameters: {scissorRect: [1, 0, 1, 1]}
+    });
+    writePass.setPipeline(stencilWritePipeline);
+    writePass.setParameters({stencilReference: 0x80});
+    writePass.draw({vertexCount: 3});
+    writePass.end();
+    device.submit();
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} stencil population preserves both color pixels`
+    ).toEqual([0, 0, 255, 255, 0, 0, 255, 255]);
+
+    // The full-screen triangle covers both pixels; the stencil test keeps only the right one
+    const testPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: false,
+      clearDepth: false,
+      clearStencil: false,
+      stencilReadOnly: true
+    });
+    testPass.setPipeline(stencilTestPipeline);
+    testPass.setParameters({stencilReference: 0x80});
+    testPass.draw({vertexCount: 3});
+    testPass.end();
+    device.submit();
+
+    expect(
+      await readTexturePixels(device, colorTexture, 2),
+      `${device.type} stencil test masks the left pixel`
+    ).toEqual([0, 0, 255, 255, 255, 0, 0, 255]);
+    framebuffer.destroy();
+    colorTexture.destroy();
+    stencilWritePipeline.destroy();
+    stencilTestPipeline.destroy();
+    for (const shader of new Set([vertexShader, fragmentShader])) shader.destroy();
+  }
+});
+
 it('Device render passes use portable indexed draw offsets', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const {vertexShader, fragmentShader} = await createIndexedRenderShaders(device);

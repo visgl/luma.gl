@@ -199,3 +199,13 @@ Set `depthStencilAttachment: 'stencil8'` when a framebuffer only needs stencil. 
 allocates a texture. WebGL2 allocates a framebuffer-owned renderbuffer and keeps the
 `depthStencilAttachment` texture view null. The WebGL2 texture capability queries still
 report `stencil8` as unsupported because they describe texture storage.
+
+## Use multisampled stencil
+
+Start with [the offscreen multisampling workflow](/docs/api-guide/gpu/gpu-antialiasing#explicit-multisampling).
+
+For offscreen rendering, create a framebuffer with `samples: 4` and a packed
+`depthStencilAttachment: 'depth24plus-stencil8'`. Set `sampleCount: 4` on each pipeline
+drawing into it. The pass resolves color into the public single-sample color attachments.
+Depth and stencil remain in multisampled storage for subsequent passes on the same
+framebuffer. Only the resolved color attachments are portable sampling targets. Clear either aspect independently with the usual render-pass properties.

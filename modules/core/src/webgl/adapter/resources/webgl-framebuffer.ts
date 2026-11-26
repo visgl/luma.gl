@@ -10,7 +10,10 @@ import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
-import {getDepthStencilAttachmentWebGL} from '../converters/webgl-texture-table';
+import {
+  getDepthStencilAttachmentWebGL,
+  getTextureFormatWebGL
+} from '../converters/webgl-texture-table';
 
 export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
@@ -19,6 +22,10 @@ export class WEBGLFramebuffer extends Framebuffer {
   readonly device: WebGLDevice;
   gl: WebGL2RenderingContext;
   readonly handle: WebGLFramebuffer;
+  /** Private framebuffer used for multisample draws. */
+  multisampleHandle: WebGLFramebuffer | null = null;
+  /** Owned color and depth/stencil renderbuffers. */
+  private multisampleStorage: WebGLRenderbuffer[] = [];
 
   colorAttachments: WEBGLTextureView[] = [];
   depthStencilAttachment: WEBGLTextureView | null = null;
@@ -50,7 +57,9 @@ export class WEBGLFramebuffer extends Framebuffer {
       if (!props.handle) {
         // Auto create textures for attachments if needed
         const attachment = this.props.depthStencilAttachment;
-        this.autoCreateAttachmentTextures(attachment === 'stencil8' ? null : attachment);
+        this.autoCreateAttachmentTextures(
+          this.props.samples === 4 || attachment === 'stencil8' ? null : attachment
+        );
 
         try {
           this.updateAttachments();
@@ -65,6 +74,8 @@ export class WEBGLFramebuffer extends Framebuffer {
   /** destroys any auto created resources etc. */
   protected override destroyHandle(): void {
     if (this.stencilRenderbuffer) this.gl.deleteRenderbuffer(this.stencilRenderbuffer);
+    for (const storage of this.multisampleStorage) this.gl.deleteRenderbuffer(storage);
+    if (this.multisampleHandle) this.gl.deleteFramebuffer(this.multisampleHandle);
     if (this.handle !== null && this.ownsHandle) {
       this.gl.deleteFramebuffer(this.handle);
     }
@@ -95,14 +106,21 @@ export class WEBGLFramebuffer extends Framebuffer {
         this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
       }
 
-      if (this.props.depthStencilAttachment === 'stencil8') this.attachStencilRenderbuffer();
+      if (this.props.samples !== 4 && this.props.depthStencilAttachment === 'stencil8') {
+        this.attachStencilRenderbuffer();
+      }
 
-      if (this.hasStencilRenderbuffer || this.device.props.debug) {
+      if (
+        this.hasStencilRenderbuffer ||
+        (this.device.props.debug && (this.props.samples !== 4 || this.colorAttachments.length))
+      ) {
         const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
         if (status !== GL.FRAMEBUFFER_COMPLETE) {
           throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
         }
       }
+
+      if (this.props.samples === 4) this.updateMultisampleStorage();
     } finally {
       this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
     }
@@ -124,6 +142,84 @@ export class WEBGLFramebuffer extends Framebuffer {
       GL.RENDERBUFFER,
       renderbuffer
     );
+  }
+
+  /** Allocates or resizes the private renderbuffers using the public attachment formats. */
+  private updateMultisampleStorage(): void {
+    const {gl} = this;
+    this.multisampleHandle ??= gl.createFramebuffer();
+    // Native allocation can fail if the context is lost.
+    assert(this.multisampleHandle);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, this.multisampleHandle);
+    const previousStorage = gl.getParameter(GL.RENDERBUFFER_BINDING);
+    try {
+      const attachments = this.colorAttachments.map((view, index) => ({
+        format: view.props.format ?? view.texture.format,
+        point: GL.COLOR_ATTACHMENT0 + index
+      }));
+      const format = this.props.depthStencilAttachment;
+      if (typeof format === 'string') {
+        attachments.push({format, point: getDepthStencilAttachmentWebGL(format)});
+      }
+      for (const [index, {format, point}] of attachments.entries()) {
+        const storage = this.multisampleStorage[index] ?? gl.createRenderbuffer();
+        // Native allocation can fail if the context is lost.
+        assert(storage);
+        this.multisampleStorage[index] = storage;
+        gl.bindRenderbuffer(GL.RENDERBUFFER, storage);
+        const {internalFormat} = getTextureFormatWebGL(format);
+        if (
+          !gl.getInternalformatParameter(GL.RENDERBUFFER, internalFormat, GL.SAMPLES).includes(4)
+        ) {
+          throw new Error(`Four renderbuffer samples are unavailable for ${format}`);
+        }
+        gl.renderbufferStorageMultisample(
+          GL.RENDERBUFFER,
+          4,
+          internalFormat,
+          this.width,
+          this.height
+        );
+        gl.framebufferRenderbuffer(GL.FRAMEBUFFER, point, GL.RENDERBUFFER, storage);
+      }
+      if (gl.checkFramebufferStatus(GL.FRAMEBUFFER) !== GL.FRAMEBUFFER_COMPLETE) {
+        throw new Error('Incomplete multisample framebuffer');
+      }
+    } finally {
+      gl.bindRenderbuffer(GL.RENDERBUFFER, previousStorage);
+    }
+  }
+
+  /** Resolves the private color buffers into the public single-sample textures. */
+  resolveMultisampleColors(): void {
+    if (!this.multisampleHandle || !this.colorAttachments.length) return;
+    const {gl, width, height} = this;
+    this.device.pushState();
+    try {
+      gl.disable(GL.SCISSOR_TEST);
+      gl.bindFramebuffer(GL.READ_FRAMEBUFFER, this.multisampleHandle);
+      gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, this.handle);
+      const drawBuffers = this.colorAttachments.map((_, index) => GL.COLOR_ATTACHMENT0 + index);
+      for (const [index, attachment] of drawBuffers.entries()) {
+        gl.readBuffer(attachment);
+        gl.drawBuffers(drawBuffers.map((point, slot) => (slot === index ? point : GL.NONE)));
+        gl.blitFramebuffer(
+          0,
+          0,
+          width,
+          height,
+          0,
+          0,
+          width,
+          height,
+          GL.COLOR_BUFFER_BIT,
+          GL.NEAREST
+        );
+      }
+      gl.drawBuffers(drawBuffers);
+    } finally {
+      this.device.popState();
+    }
   }
 
   // PRIVATE

@@ -357,7 +357,7 @@ export type GLUnpackParameters = {
  */
 export type GLFunctionParameters = {
   // Function-style setters
-  framebuffer?: Framebuffer | null;
+  framebuffer?: Framebuffer | WebGLFramebuffer | null;
   blend?: boolean;
   blendColor?: [number, number, number, number] | TypedArray;
   blendEquation?: GLBlendEquation | [GLBlendEquation, GLBlendEquation];
