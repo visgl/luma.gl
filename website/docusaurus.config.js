@@ -469,6 +469,23 @@ module.exports = {
         }
       };
     },
+    function maplibreWorkerAssets() {
+      return {
+        name: 'maplibre-worker-assets',
+        configureWebpack(_configuration, isServer) {
+          return {
+            module: {
+              rules: [{
+                test: /maplibre-gl-worker\.mjs$/,
+                resourceQuery: /worker&url/,
+                type: 'asset/resource',
+                generator: {filename: `assets/maplibre/[name][ext]`, emit: !isServer}
+              }]
+            }
+          };
+        }
+      };
+    },
     function deckCommunitySourceAliases() {
       return {
         name: 'deck-community-source-aliases',
