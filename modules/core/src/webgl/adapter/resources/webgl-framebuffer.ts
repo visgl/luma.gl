@@ -5,6 +5,8 @@
 import type {FramebufferProps} from '../../../index';
 import {Framebuffer} from '../../../index';
 import {GL} from '../../../webgl-constants/index';
+import {assert} from '../../../api/utils/assert';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
@@ -20,6 +22,13 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   colorAttachments: WEBGLTextureView[] = [];
   depthStencilAttachment: WEBGLTextureView | null = null;
+  /** Owned stencil-only storage, allocated for the stencil8 framebuffer format. */
+  private stencilRenderbuffer: WebGLRenderbuffer | null = null;
+
+  /** Indicates that the framebuffer owns a stencil-only renderbuffer. */
+  get hasStencilRenderbuffer(): boolean {
+    return this.stencilRenderbuffer !== null;
+  }
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
     super(device, props);
@@ -40,15 +49,22 @@ export class WEBGLFramebuffer extends Framebuffer {
 
       if (!props.handle) {
         // Auto create textures for attachments if needed
-        this.autoCreateAttachmentTextures();
+        const attachment = this.props.depthStencilAttachment;
+        this.autoCreateAttachmentTextures(attachment === 'stencil8' ? null : attachment);
 
-        this.updateAttachments();
+        try {
+          this.updateAttachments();
+        } catch (error) {
+          this.destroy();
+          throw error;
+        }
       }
     }
   }
 
   /** destroys any auto created resources etc. */
   protected override destroyHandle(): void {
+    if (this.stencilRenderbuffer) this.gl.deleteRenderbuffer(this.stencilRenderbuffer);
     if (this.handle !== null && this.ownsHandle) {
       this.gl.deleteFramebuffer(this.handle);
     }
@@ -62,46 +78,55 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.handle
     );
 
-    // Walk the attachments
-    for (let i = 0; i < this.colorAttachments.length; ++i) {
-      const attachment = this.colorAttachments[i];
-      if (attachment) {
-        const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
-        this._attachTextureView(attachmentPoint, attachment);
+    try {
+      // Walk the attachments
+      for (let i = 0; i < this.colorAttachments.length; ++i) {
+        const attachment = this.colorAttachments[i];
+        if (attachment) {
+          const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
+          this._attachTextureView(attachmentPoint, attachment);
+        }
       }
-    }
 
-    if (this.depthStencilAttachment) {
-      const attachmentPoint = getDepthStencilAttachmentWebGL(
-        this.depthStencilAttachment.props.format
-      );
-      this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
-    }
-
-    /** Check the status */
-    if (this.device.props.debug) {
-      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
-      if (status !== GL.FRAMEBUFFER_COMPLETE) {
-        throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+      if (this.depthStencilAttachment) {
+        const attachmentPoint = getDepthStencilAttachmentWebGL(
+          this.depthStencilAttachment.props.format
+        );
+        this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
       }
-    }
 
-    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+      if (this.props.depthStencilAttachment === 'stencil8') this.attachStencilRenderbuffer();
+
+      if (this.hasStencilRenderbuffer || this.device.props.debug) {
+        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
+        if (status !== GL.FRAMEBUFFER_COMPLETE) {
+          throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+        }
+      }
+    } finally {
+      this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+    }
+  }
+
+  /** Allocates or resizes stencil-only storage and restores the renderbuffer binding. */
+  private attachStencilRenderbuffer(): void {
+    const {gl} = this;
+    this.stencilRenderbuffer ??= gl.createRenderbuffer();
+    const renderbuffer = this.stencilRenderbuffer;
+    // Allocation can fail if the context is lost.
+    assert(renderbuffer);
+    withGLParameters(gl, {[GL.RENDERBUFFER_BINDING]: renderbuffer}, () => {
+      gl.renderbufferStorage(GL.RENDERBUFFER, GL.STENCIL_INDEX8, this.width, this.height);
+    });
+    gl.framebufferRenderbuffer(
+      GL.FRAMEBUFFER,
+      GL.STENCIL_ATTACHMENT,
+      GL.RENDERBUFFER,
+      renderbuffer
+    );
   }
 
   // PRIVATE
-
-  /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
-  // protected override createDepthStencilTexture(format: TextureFormat): Texture {
-  //   // return new WEBGLRenderbuffer(this.device, {
-  //   return new WEBGLTexture(this.device, {
-  //     id: `${this.id}-depth-stencil`,
-  //     format,
-  //     width: this.width,
-  //     height: this.height,
-  //     mipmaps: false
-  //   });
-  // }
 
   /**
    * @param attachment
