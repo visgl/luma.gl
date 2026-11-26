@@ -2,6 +2,8 @@
 
 ## Version 10.0
 
+- **Independent graph state.** Reuse a compiled graph with separate [mutable state instances](./api-reference/graph/gpu-graph-state.md) that borrow or copy GPU vectors and can be reset explicitly.
+
 - **GPU graphs.** [Graph](./api-reference/graph/README.md) composes compute and render
   operations, manages transient resources, and processes GPU vectors and tables.
 - **Shaders.** [Shaders](./api-reference/shaders/README.md) provides language-specific
