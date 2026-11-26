@@ -71,7 +71,7 @@ This separation is also compatible with native execution systems such as CUDA Gr
 
 ## External inputs and operation-defined results[​](#external-inputs-and-operation-defined-results "Direct link to External inputs and operation-defined results")
 
-Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))` for external inputs, and `addState()` for initialized borrowed vector state. Operations declare their results through contracts; expressions infer theirs automatically. Applications select returned outputs at compilation and supply `{inputs, state, outputTargets}` at execution. See [Graph inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md) for examples, ownership, dynamic dimension support, and current boundaries.
+Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))` for external inputs, and `addState()` for mutable vector state. Operations declare their results through contracts; expressions infer theirs automatically. Applications select returned outputs at compilation and supply `{inputs, state, outputTargets}` at execution. See [Graph inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md) for examples, ownership, dynamic dimension support, and current boundaries.
 
 ## API[​](#api "Direct link to API")
 
@@ -218,6 +218,8 @@ compiler.compile(graph, {
 See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md) for logical values, views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
 
 `graph.texture(id, props)` declares logical texture storage using the graph texture descriptor fields plus `external`. `graph.textureView(texture, props)` selects subresources without allocating storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may also be supplied when encoding. `compilation.textures` exposes logical graph texture handles. Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+`CompiledGPUGraph.createState()` creates a `GPUGraphState` with explicit borrowing or copying, reset, and destruction. See [Mutable graph state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-state.md).
 
 Reusable `compile(device)` programs also support named texture inputs and operation-produced texture results. See [texture values and execution bindings](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md).
 

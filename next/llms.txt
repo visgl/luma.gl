@@ -1330,6 +1330,7 @@ Describe GPU computations, bind data, and compose execution with rendering.
 - [Overview](https://luma.gl/next/docs/api-reference/graph/gpu-evaluation.md): Evaluate portable GPU data operations and compose vectors, custom operations, and precision-aware compute workflows.
 - [GPUExpressionOperation](https://luma.gl/next/docs/api-reference/graph/gpu-expression-operation.md): GPUExpressionOperation describes a numeric expression over named graph declarations.
 - [GPU Geometry](https://luma.gl/next/docs/api-reference/graph/gpu-geometry.md): @luma.gl/graph/gpu-geometry provides experimental WebGPU mesh operations that compose in a
+- [Mutable graph state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-state.md): A compiled GPUGraph describes a reusable program. Its mutable state is supplied separately,
 - [Texture values and execution bindings](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md): Reusable GPUGraph programs declare texture inputs without allocating storage or fixing their
 - [Graph inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md): Applications declare the graph's external interface. Operations define their results and
 - [GPUOperation contracts](https://luma.gl/next/docs/api-reference/graph/gpu-operation.md): A GPUOperation describes logical work. Its contract identifies graph values it reads and

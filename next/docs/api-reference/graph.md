@@ -5,7 +5,7 @@
 ## Learn in this order[​](#learn-in-this-order "Direct link to Learn in this order")
 
 1. [Getting started](https://luma.gl/next/docs/api-reference/graph/getting-started.md): inputs → operations → selected results → execution.
-2. [Inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding.
+2. [Inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding. For persistent simulations, continue with [mutable state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-state.md).
 3. [Expression syntax](https://luma.gl/next/docs/api-reference/graph/gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
 4. [Upload and copy](https://luma.gl/next/docs/api-reference/graph/gpu-transfer-operations.md) and [capacity/count results](https://luma.gl/next/docs/api-reference/graph/gpu-compaction-operation.md): data movement and GPU-sized selection.
 5. [Texture values](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md) and [fullscreen shader passes](https://luma.gl/next/docs/api-reference/graph/gpu-shader-pass-operation.md): image inputs, operation-owned results, and shared WebGPU effects.

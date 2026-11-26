@@ -2,6 +2,8 @@
 
 ## Version 10.0[​](#version-100 "Direct link to Version 10.0")
 
+* **Independent graph state.** Reuse a compiled graph with separate [mutable state instances](https://luma.gl/next/docs/api-reference/graph/gpu-graph-state.md) that borrow or copy GPU vectors and can be reset explicitly.
+
 * **GPU graphs.** [Graph](https://luma.gl/next/docs/api-reference/graph.md) composes compute and render operations, manages transient resources, and processes GPU vectors and tables.
 
 * **Shaders.** [Shaders](https://luma.gl/next/docs/api-reference/shaders.md) provides language-specific assemblers and reusable WGSL and GLSL shader modules.

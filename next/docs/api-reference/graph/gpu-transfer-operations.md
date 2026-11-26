@@ -53,13 +53,14 @@ This is an immutable upload recipe. For data that changes between executions, de
 
 ## Copy[​](#copy "Direct link to Copy")
 
-| Property | Meaning                         |
-| -------- | ------------------------------- |
-| `input`  | Name of an existing vector.     |
-| `output` | Name of the produced vector.    |
-| `id`     | Optional diagnostic identifier. |
+| Property | Meaning                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------ |
+| `input`  | Name of an existing vector.                                                                            |
+| `output` | Name of a new produced vector; mutually exclusive with `target`.                                       |
+| `target` | Name of an existing mutable vector, such as declared GPUGraph state; mutually exclusive with `output`. |
+| `id`     | Optional diagnostic identifier.                                                                        |
 
-Copy preserves the format, row count, and chunk partition. It copies row bytes into independent storage without readback. It does not cast, gather, compact, or repartition rows. To copy a subrange, bind a vector whose chunks describe that range, using `GPUData.byteOffset` and `length`. Reusable graph bindings currently require packed 32-bit rows.
+Copy preserves the format, row count, and chunk partition. It copies row bytes into independent storage without readback when using `output`. With `target`, it writes the existing vector, which must match the source format and chunk lengths. Graph inputs are read-only and cannot be targets. Use this form to commit expression results to [mutable state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-state.md). It does not cast, gather, compact, or repartition rows. To copy a subrange, bind a vector whose chunks describe that range, using `GPUData.byteOffset` and `length`. Reusable graph bindings currently require packed 32-bit rows.
 
 For capacity/count results, copying the vector copies its entire capacity. The associated count remains a separate graph value; select it explicitly if the caller needs it.
 
@@ -69,7 +70,7 @@ On WebGPU, the same `GPUCopyOperation({input, output})` also copies named textur
 
 ## Execution and ownership[​](#execution-and-ownership "Direct link to Execution and ownership")
 
-Both operations support the normal `outputTargets` bindings. Supplied targets remain borrowed; automatically allocated selected results belong to the caller. Targets must match format and chunk lengths and must not alias inputs or other results. Unselected results are graph scratch.
+Produced results of both operations support the normal `outputTargets` bindings. Copying to `target` uses that existing value's binding instead. Supplied targets remain borrowed; automatically allocated selected results belong to the caller. Targets must match format and chunk lengths and must not alias inputs or other results. Unselected results are graph scratch.
 
 `GPUGraph.prepare()` allocates staging resources without submitting work. Uploads and copies are encoded in order on the caller's encoder. Keep the prepared execution alive through submission, then destroy it to release staging and scratch. `run()` handles that lifecycle.
 
