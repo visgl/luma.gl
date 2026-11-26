@@ -115,7 +115,7 @@ Sync evaluation requires any backend modules to already be registered and any re
 
 ## BackendRegistry[​](#backendregistry "Direct link to BackendRegistry")
 
-The `backendRegistry` dispatches lazy operations to the backend module for the evaluation device. The CPU backend is available by default. If no backend has been registered for a `webgl` or `webgpu` device, `@luma.gl/graph/gpu-simple-graph` automatically loads the matching backend with a dynamic import, so built-in backend registration is not required.
+The `backendRegistry` dispatches lazy operations to the backend module for the evaluation device. The CPU backend is available by default. When a requested handler has not been registered for a `webgl` or `webgpu` device, asynchronous lookup loads the matching built-in backend with a dynamic import. Registered handlers take precedence over these defaults, so registering a subset does not disable other built-in operations. A handler registered as `undefined` does not hide the built-in one. Concurrent lookups share a single built-in import for each device type. Once it succeeds, synchronous evaluation can use those handlers too. A later lookup can retry a failed import.
 
 ```
 const outputVector = await output.evaluate(device);
@@ -155,7 +155,7 @@ const packed = interleave(inputA, inputB);
 cleanEvaluateSync(device, packed);
 ```
 
-The same endpoints export individual backend operation handlers. Applications can combine those handlers with their own custom operation handlers, or register only the handlers they need. When registering a subset, only those operations can be evaluated for that device type:
+The same endpoints export individual backend operation handlers. Applications can combine those handlers with their own custom operation handlers, or register only the handlers they need. Synchronous evaluation requires the requested handler to be registered or already loaded; asynchronous evaluation can load missing built-in handlers:
 
 ```
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
