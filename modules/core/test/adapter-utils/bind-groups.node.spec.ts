@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it, vi} from 'vitest';
+import {expect, it} from 'vitest';
 import {
   type BindingDeclaration,
   type Bindings,
@@ -39,24 +39,10 @@ it('getShaderLayoutBinding returns the first matching binding', () => {
 
   // The alias of the first binding matches before the exact name of the second, as before
   expect(getShaderLayoutBinding({bindings}, 'lightingUniforms')).toBe(bindings[0]);
-});
-
-it('getShaderLayoutBinding does not lower-case names again for a name it already resolved', () => {
-  const shaderLayout = {bindings: makeBindings()};
-  const first = getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms');
-
-  const toLowerCase = vi.spyOn(String.prototype, 'toLowerCase');
-  const toLocaleLowerCase = vi.spyOn(String.prototype, 'toLocaleLowerCase');
-  try {
-    for (let lookupCount = 0; lookupCount < 100; lookupCount++) {
-      expect(getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms')).toBe(first);
-    }
-    expect(toLowerCase).not.toHaveBeenCalled();
-    expect(toLocaleLowerCase).not.toHaveBeenCalled();
-  } finally {
-    toLowerCase.mockRestore();
-    toLocaleLowerCase.mockRestore();
-  }
+  const reversedBindings = [...bindings].reverse();
+  expect(getShaderLayoutBinding({bindings: reversedBindings}, 'lightingUniforms')).toBe(
+    bindings[1]
+  );
 });
 
 it('getShaderLayoutBinding sees an earlier binding that starts to match', () => {

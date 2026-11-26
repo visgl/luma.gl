@@ -13,93 +13,30 @@ import {log} from '../utils/log';
 
 type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
-/** A resolved name: the bindings up to and including its match, and their names at the time */
-type ResolvedBindingName = {
-  /** Layout bindings from the first one up to and including the matched binding */
-  bindings: BindingDeclaration[];
-  /** Names of those bindings when the name was resolved, to notice in-place renames */
-  names: string[];
-};
-
-/**
- * Bindings are resolved by name on every draw. Caching the result per bindings array avoids
- * scanning (and lower-casing) every layout binding for every bound name on each draw.
- */
-const resolvedBindingNames = new WeakMap<
-  readonly BindingDeclaration[],
-  Map<string, ResolvedBindingName>
->();
+const UNIFORMS_SUFFIX = 'uniforms';
 
 export function getShaderLayoutBinding(
   shaderLayout: AnyShaderLayout,
   bindingName: string,
   options?: {ignoreWarnings?: boolean}
 ): BindingDeclaration | null {
-  const bindingLayout = findShaderLayoutBinding(shaderLayout.bindings, bindingName);
+  const lowerCaseName = bindingName.toLowerCase();
+  const aliasName = lowerCaseName.endsWith(UNIFORMS_SUFFIX)
+    ? lowerCaseName.slice(0, -UNIFORMS_SUFFIX.length)
+    : undefined;
+
+  // Check both forms in layout order: an earlier alias can win over a later exact name.
+  const bindingLayout = shaderLayout.bindings.find(
+    binding =>
+      binding.name === bindingName ||
+      (aliasName !== undefined && binding.name.toLowerCase() === aliasName)
+  );
 
   if (!bindingLayout && !options?.ignoreWarnings) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }
 
   return bindingLayout || null;
-}
-
-/**
- * Returns the first binding whose name is `bindingName`, or whose lower-cased name followed by
- * `uniforms` is the lower-cased `bindingName`. The first match can only change when a binding up
- * to and including it is replaced, renamed or removed, so a cached result is used only while
- * those bindings are unchanged. Names that match nothing are not cached.
- */
-function findShaderLayoutBinding(
-  bindings: readonly BindingDeclaration[],
-  bindingName: string
-): BindingDeclaration | undefined {
-  let resolvedNames = resolvedBindingNames.get(bindings);
-  if (!resolvedNames) {
-    resolvedNames = new Map();
-    resolvedBindingNames.set(bindings, resolvedNames);
-  }
-
-  const resolved = resolvedNames.get(bindingName);
-  if (resolved && isResolvedBindingNameCurrent(bindings, resolved)) {
-    return resolved.bindings[resolved.bindings.length - 1];
-  }
-
-  const lowerCaseName = bindingName.toLowerCase();
-  const index = bindings.findIndex(
-    binding =>
-      binding.name === bindingName || `${binding.name.toLowerCase()}uniforms` === lowerCaseName
-  );
-  if (index < 0) {
-    resolvedNames.delete(bindingName);
-    return undefined;
-  }
-
-  const matchedBindings = bindings.slice(0, index + 1);
-  resolvedNames.set(bindingName, {
-    bindings: matchedBindings,
-    names: matchedBindings.map(binding => binding.name)
-  });
-  return bindings[index];
-}
-
-/**
- * Returns true while the bindings up to and including a resolved match are the same objects with
- * the same names, so that the cached match is still the first match.
- */
-function isResolvedBindingNameCurrent(
-  bindings: readonly BindingDeclaration[],
-  resolved: ResolvedBindingName
-): boolean {
-  for (let bindingIndex = 0; bindingIndex < resolved.bindings.length; bindingIndex++) {
-    if (
-      bindings[bindingIndex] !== resolved.bindings[bindingIndex] ||
-      bindings[bindingIndex].name !== resolved.names[bindingIndex]
-    ) {
-      return false;
-    }
-  }
-  return true;
 }
 
 export function normalizeBindingsByGroup(
