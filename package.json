@@ -110,7 +110,7 @@
     "@loaders.gl/tables/apache-arrow": "^17.0.0",
     "vite@npm:^8.0.0": "8.1.6",
     "nx@npm:>=23.1.0 < 24.0.0": "23.2.1",
-    "brace-expansion@npm:5.0.9": "5.0.12"
+    "brace-expansion@npm:5.0.9": "5.1.0"
   },
   "pre-commit": [
     "test-fast"
