@@ -46,6 +46,7 @@ export type AudioGraphDefinition = {
 /** Owns only processing nodes. Scheduled sources and destination nodes remain caller-owned. */
 export class AudioGraph {
   readonly nodes: AudioNode[] = [];
+  /** Tracks whether a source has fed these processors since they were connected. */
   private hasConnectedSource = false;
 
   constructor(
@@ -98,6 +99,7 @@ export class AudioGraph {
     this.connectProcessors(previousNodes);
   }
 
+  /** Wire graph processors, reusing gain nodes to preserve their AudioParam automation. */
   private connectProcessors(previousNodes: readonly AudioNode[] = []): void {
     const {definition, context, destination, getEmitterInputs} = this;
     try {
