@@ -30,7 +30,7 @@
     "@stackblitz/sdk": "^1.11.0",
     "@vis.gl/docusaurus-website": "2.0.0-beta.3",
     "clsx": "^1.1.1",
-    "maplibre-gl": "^5.13.0",
+    "maplibre-gl": "6.4.1",
     "probe.gl": "^5.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
