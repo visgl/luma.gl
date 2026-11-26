@@ -1,1 +1,0 @@
-var e=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Uint8Array.prototype),Symbol.toStringTag).get;function t(t){return ArrayBuffer.isView(t)?e.call(t):void 0}export{t};

@@ -1,1 +1,0 @@
-function e(e){let t=e;return!!(t&&Number.isInteger(t.numRows)&&Array.isArray(t.schema?.fields)&&typeof t.get==`function`&&typeof t.getChild==`function`)}function t(t){let n=t;return n?.shape===`arrow-table`&&e(n.data)?n.data:t}export{e as n,t};

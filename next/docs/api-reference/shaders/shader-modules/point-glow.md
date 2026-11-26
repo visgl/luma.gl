@@ -25,4 +25,4 @@ Partial updates retain previous values. A zero core radius removes the core, and
 
 Use additive color blending (`one`, `one`) after scaling radiance by opacity, and disable depth writes for the halo. Destination alpha can be preserved independently. This is suitable for an opaque scene or an HDR light buffer; adding RGB to a transparent premultiplied canvas without also defining its alpha composition is not supported by this recipe. Standard normalized color targets clamp overlapping brightness. HDR targets preserve it for a later tone-mapping pass.
 
-See [Riverfront lights](https://luma.gl/next/examples/deck/point-glow) for a Deck example with feature picking.
+See [Riverfront lights](https://visgl.github.io/deck.gl-community/examples/layers/point-glow) for a Deck example with feature picking.

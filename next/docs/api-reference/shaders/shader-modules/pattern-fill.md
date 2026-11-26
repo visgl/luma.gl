@@ -34,4 +34,4 @@ Use UVs or local object/world coordinates to attach the pattern to a surface. Us
 
 The shader evaluates derivatives before pattern selection. Call it outside divergent fragment branches. Stripe coverage integrates a periodic pulse over the pixel footprint and preserves mean ink area at distance. Crosshatching combines the two filtered directions. Dots blend toward their analytic mean area when subpixel. The dot filter and oblique crosshatch intersection filter are approximations; there is no temporal accumulation or texture dependency.
 
-See [Riverfront patterns](https://luma.gl/next/examples/deck/pattern-fills) for controls on both rendering backends.
+See [Riverfront patterns](https://visgl.github.io/deck.gl-community/examples/layers/pattern-fills) for controls on both rendering backends.

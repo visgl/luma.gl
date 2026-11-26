@@ -77,7 +77,7 @@ Focused packages and optional engine subpaths for text, computation, effects, as
 
 Explore scene APIs, shader languages, and rendering integrations under active development. These APIs and supported workflows may change.
 
-* [![](/next/images/examples/deck/city-scene.jpg)](https://luma.gl/next/docs/api-reference/anari.md)
+* [![](/next/images/examples/anari/scenes.jpg)](https://luma.gl/next/docs/api-reference/anari.md)
   ### [@luma.gl/<!-- -->anari](https://luma.gl/next/docs/api-reference/anari.md)
   [Exploratory](https://luma.gl/next/docs/api-reference/anari.md)
 
