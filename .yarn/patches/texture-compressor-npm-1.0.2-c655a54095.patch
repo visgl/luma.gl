@@ -1,0 +1,56 @@
+diff --git a/dist/cli/lib/utilities.js b/dist/cli/lib/utilities.js
+index 944f0a5227eb80cf6ff89a5453007bad34045e10..05d6e6213250528fa1df127c4035bb363e91437f 100644
+--- a/dist/cli/lib/utilities.js
++++ b/dist/cli/lib/utilities.js
+@@ -1,14 +1,11 @@
+ "use strict";
+-var __importDefault = (this && this.__importDefault) || function (mod) {
+-    return (mod && mod.__esModule) ? mod : { "default": mod };
+-};
+ Object.defineProperty(exports, "__esModule", { value: true });
+ // Native
++const fs_1 = require("fs");
+ const os_1 = require("os");
+ const path_1 = require("path");
+ // Vendor
+-// @ts-ignore
+-const image_size_1 = __importDefault(require("image-size"));
++const image_size_1 = require("image-size");
+ /**
+  * Get the /bin/ directory from the root of the project
+  */
+@@ -30,7 +27,7 @@ exports.getFileName = (filepath) => path_1.basename(filepath, exports.getFileExt
+  *
+  * @param filepath Path to image
+  */
+-exports.getImageSize = (filepath) => image_size_1.default(filepath);
++exports.getImageSize = (filepath) => image_size_1.imageSize(fs_1.readFileSync(filepath));
+ /**
+  * Get mip map levels based on initial value
+  *
+diff --git a/lib/utilities.ts b/lib/utilities.ts
+index f5eeea11e8ad42f95032983cdfcf7d700dc85a0e..3184fe811c0cf979a64e0c1ed1be4cbc01aeaf0a 100644
+--- a/lib/utilities.ts
++++ b/lib/utilities.ts
+@@ -1,10 +1,10 @@
+ // Native
++import { readFileSync } from 'fs';
+ import { platform } from 'os';
+ import { basename, join, parse } from 'path';
+ 
+ // Vendor
+-// @ts-ignore
+-import imageSize from 'image-size';
++import { imageSize } from 'image-size';
+ 
+ /**
+  * Get the /bin/ directory from the root of the project
+@@ -32,7 +32,7 @@ export const getFileName = (filepath: string): string =>
+  * @param filepath Path to image
+  */
+ export const getImageSize = (filepath: string): { width: number; height: number } =>
+-  imageSize(filepath);
++  imageSize(readFileSync(filepath));
+ 
+ /**
+  * Get mip map levels based on initial value
