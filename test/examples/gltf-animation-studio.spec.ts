@@ -8,7 +8,7 @@ import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {GLTFAnimationStudio} from '../../examples/gltf/asset-studio/gltf-animation-studio';
 

@@ -105,6 +105,7 @@ export {
   type SplatMeshRenderable,
   type SplatMixedRenderOptions,
   type SplatRendererProps,
+  type SplatDepthInterval,
   type SplatRendererStats
 } from './splat-renderer';
 export {

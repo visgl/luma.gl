@@ -74,7 +74,7 @@ import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const canvas = document.querySelector('canvas');
 
@@ -392,7 +392,7 @@ The runtime groups placements by **surface object identity**. One shared surface
 
 Avoid constructing a new `ANARISurface` for every placement when geometry and material can be shared. Distinct surface identities produce distinct compiled models and draw calls.
 
-Transforms are 16-element column-major matrices. `@math.gl/core`'s `Matrix4` can compose translation, rotation, and scale:
+Transforms are 16-element column-major matrices. `@math.gl/core/matrix`'s `Matrix4` can compose translation, rotation, and scale:
 
 ```ts
 const transform = new Matrix4()

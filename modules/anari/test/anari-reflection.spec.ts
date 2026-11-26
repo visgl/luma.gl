@@ -8,20 +8,21 @@ import {expect, it, vi} from 'vitest';
 
 it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh seeded history', async () => {
   if (!webgpuAdapter.isSupported()) return;
+  const size = 16;
   const graphics = await webgpuAdapter.create({
     featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(32, 32)}
+    createCanvasContext: {canvas: new OffscreenCanvas(size, size)}
   });
   const errors = vi.spyOn(graphics, 'reportError');
   const color = graphics.createTexture({
-    width: 32,
-    height: 32,
+    width: size,
+    height: size,
     format: 'rgba32float',
     usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
   });
   const framebuffer = graphics.createFramebuffer({
-    width: 32,
-    height: 32,
+    width: size,
+    height: size,
     colorAttachments: [color],
     depthStencilAttachment: graphics.preferredDepthFormat
   });
@@ -89,7 +90,7 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
   };
   const render = async (parameters: ANARIRendererParameters = {}) => {
     const renderer = device.newRenderer('raytrace', {...settings, ...parameters});
-    const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+    const frame = device.newFrame({world, camera, renderer, size: [size, size]});
     try {
       frame.render();
       graphics.submit();
@@ -101,11 +102,11 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
   const meanChannel = (values: Float32Array, channel: number) => {
     let total = 0;
     const rowStride = color.computeMemoryLayout().bytesPerRow / 4;
-    for (let vertical = 0; vertical < 32; vertical++) {
-      for (let horizontal = 0; horizontal < 32; horizontal++)
+    for (let vertical = 0; vertical < size; vertical++) {
+      for (let horizontal = 0; horizontal < size; horizontal++)
         total += values[vertical * rowStride + horizontal * 4 + channel];
     }
-    return total / (32 * 32);
+    return total / (size * size);
   };
   try {
     expect(meanChannel(await render({maxBounces: 0}), 0)).toBe(0);
@@ -148,11 +149,11 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
       samplesPerPixel: 1,
       temporalReprojection: true
     });
-    const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+    const frame = device.newFrame({world, camera, renderer, size: [size, size]});
     try {
       frame.render();
       graphics.submit();
-      const pick = await frame.pick(16, 16);
+      const pick = await frame.pick(size / 2, size / 2);
       expect(pick).not.toBeNull();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
       graphics.submit();
@@ -165,7 +166,7 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();
       expect(meanChannel(await readColor(), 0)).toBe(0);
-      expect((await frame.pick(16, 16))?.placementId).toBe(pick?.placementId);
+      expect((await frame.pick(size / 2, size / 2))?.placementId).toBe(pick?.placementId);
       renderer.setParameter('transportMode', 'pbr').commitParameters();
       frame.render();
       graphics.submit();
@@ -175,8 +176,9 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
       emitter.setParameter('emissive', [0, 1, 0]).commitParameters();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();
-      expect(meanChannel(await readColor(), 0)).toBe(0);
-      expect(meanChannel(await readColor(), 1)).toBeGreaterThan(0.15);
+      const greenReflection = await readColor();
+      expect(meanChannel(greenReflection, 0)).toBe(0);
+      expect(meanChannel(greenReflection, 1)).toBeGreaterThan(0.15);
     } finally {
       frame.destroy();
     }

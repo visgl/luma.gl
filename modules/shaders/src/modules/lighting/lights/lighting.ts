@@ -12,7 +12,7 @@ import {
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniformsGLSL} from './lighting-glsl';
 import {lightingUniformsWGSL} from './lighting-wgsl';
-import type {NumberArray2, NumberArray3} from '@math.gl/core';
+import type {NumberArray2, NumberArray3} from '@math.gl/core/types';
 import {normalizeByteColor3, resolveUseByteColors} from '../../../lib/color/normalize-byte-colors';
 
 /** Max number of supported lights (in addition to ambient light */

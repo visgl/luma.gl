@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/engine';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {ShaderModule} from '@luma.gl/shaders';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {
   ALGEBRAIC_VARIETIES_WGSL,
   ALGEBRAIC_VARIETY_PRESETS,

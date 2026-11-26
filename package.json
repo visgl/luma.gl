@@ -62,16 +62,16 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-beta.12",
-    "@loaders.gl/images": "~5.0.0-beta.12",
-    "@loaders.gl/pointclouds": "~5.0.0-beta.12",
-    "@loaders.gl/scene": "~5.0.0-beta.12",
-    "@loaders.gl/splats": "~5.0.0-beta.12",
-    "@loaders.gl/sql": "~5.0.0-beta.12",
-    "@loaders.gl/tables": "~5.0.0-beta.12",
+    "@loaders.gl/core": "^5.0.0",
+    "@loaders.gl/images": "^5.0.0",
+    "@loaders.gl/pointclouds": "^5.0.0",
+    "@loaders.gl/scene": "^5.0.0",
+    "@loaders.gl/splats": "^5.0.0",
+    "@loaders.gl/sql": "^5.0.0",
+    "@loaders.gl/tables": "^5.0.0",
     "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*",
-    "@math.gl/dggs": "~5.0.0-beta.12",
-    "@math.gl/geospatial": "~5.0.0-beta.12",
+    "@math.gl/dggs": "^5.0.3",
+    "@math.gl/geospatial": "^5.0.3",
     "@probe.gl/test-utils": "^4.1.1",
     "@types/node": "22.15.2",
     "@vis.gl/dev-tools": "^2.0.0-beta.3",
@@ -93,6 +93,7 @@
     "yaml": "^2.8.1"
   },
   "resolutions": {
+    "@deck.gl/core@npm:10.0.0-alpha.2": "patch:@deck.gl/core@npm%3A10.0.0-alpha.2#~/.yarn/patches/@deck.gl-core-npm-10.0.0-alpha.2-85f6768bd1.patch",
     "@cmfcmf/docusaurus-search-local": "^2.0.1",
     "@docusaurus/plugin-client-redirects": "^3.10.2",
     "@docusaurus/plugin-content-docs": "^3.10.2",
@@ -100,21 +101,20 @@
     "cheerio": "1.0.0-rc.9",
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
+    "@luma.gl/graph": "workspace:*",
     "@luma.gl/shaders": "workspace:*",
-    "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@vitest/browser": "5.0.2",
     "@vitest/browser-playwright": "5.0.2",
     "@luma.gl/webgl": "workspace:modules/core",
     "@loaders.gl/core/apache-arrow": "^17.0.0",
-    "@loaders.gl/tables/apache-arrow": "^17.0.0",
-    "@deck.gl/core/@math.gl/core": "5.0.0-beta.12"
+    "@loaders.gl/tables/apache-arrow": "^17.0.0"
   },
   "pre-commit": [
     "test-fast"
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/core": "~5.0.0-beta.12",
+    "@math.gl/core": "^5.0.3",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

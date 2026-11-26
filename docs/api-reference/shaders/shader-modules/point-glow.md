@@ -34,4 +34,4 @@ opaque scene or an HDR light buffer; adding RGB to a transparent premultiplied c
 also defining its alpha composition is not supported by this recipe. Standard normalized color
 targets clamp overlapping brightness. HDR targets preserve it for a later tone-mapping pass.
 
-See [Riverfront lights](/examples/deck/point-glow) for a Deck example with feature picking.
+See [Riverfront lights](https://visgl.github.io/deck.gl-community/examples/layers/point-glow) for a Deck example with feature picking.

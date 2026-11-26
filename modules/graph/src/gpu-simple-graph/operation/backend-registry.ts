@@ -11,16 +11,51 @@ import * as cpuBackend from '../operations/cpu/index';
  */
 export type BackendModule = Record<string, unknown>;
 
+/** Lazily imports the built-in backend module for one device type. */
+export type BackendModuleLoader = () => Promise<BackendModule>;
+
+/**
+ * Options for a backend registry.
+ *
+ * @internal Exported for tests. Applications use the global {@link backendRegistry}.
+ */
+export type BackendRegistryProps = {
+  /**
+   * Built-in backend loaders keyed by device type. Asynchronous lookup uses them for handlers that
+   * have not been registered. Defaults to the WebGL and WebGPU backends.
+   */
+  defaultModuleLoaders?: Readonly<Record<string, BackendModuleLoader>>;
+};
+
+const DEFAULT_MODULE_LOADERS: Readonly<Record<string, BackendModuleLoader>> = {
+  webgl: () => import('../operations/webgl/index'),
+  webgpu: () => import('../operations/webgpu/index')
+};
+
+type BackendEntry = {
+  registered?: BackendModule | Promise<BackendModule>;
+  builtIn?: BackendModule;
+  loadingBuiltIn?: Promise<void>;
+};
+
 /**
  * Registry for operation backends keyed by luma.gl device type.
  *
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
  * with dynamic imports when a requested handler has not been registered for those device types.
+ * Registered handlers take precedence over the built-in handlers.
+ *
+ * @internal Exported so tests can construct a registry with injected `defaultModuleLoaders`.
+ * Applications use the global {@link backendRegistry}.
  */
-class BackendRegistry {
-  private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
-    cpu: cpuBackend
-  };
+export class BackendRegistry {
+  private readonly _entries = new Map<string, BackendEntry>([['cpu', {registered: cpuBackend}]]);
+  private readonly _defaultModuleLoaders: Readonly<Record<string, BackendModuleLoader>>;
+
+  /** Creates a registry with the CPU backend registered. */
+  constructor(props: BackendRegistryProps = {}) {
+    this._defaultModuleLoaders = props.defaultModuleLoaders ?? DEFAULT_MODULE_LOADERS;
+  }
 
   /**
    * Registers operation handlers for a device type.
@@ -32,88 +67,60 @@ class BackendRegistry {
     deviceType: string,
     moduleOrPromise: BackendModule | Promise<BackendModule>
   ): Promise<BackendModule> {
-    const existingModuleOrPromise = this._modules[deviceType];
-
-    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
-      const loader = Promise.all([
-        Promise.resolve(existingModuleOrPromise || {}),
-        moduleOrPromise as Promise<BackendModule>
-      ]).then(([existingModule, incomingModule]) => ({
-        ...existingModule,
-        ...incomingModule
-      }));
-      this._modules[deviceType] = loader;
-      loader
-        .then(module => {
-          this._modules[deviceType] = module;
-        })
-        .catch(ex => {
-          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-        });
-      return loader;
+    const entry = this._getEntry(deviceType);
+    const existingModuleOrPromise = entry.registered;
+    if (!isPromise(moduleOrPromise) && !isPromise(existingModuleOrPromise)) {
+      const mergedModule = {...existingModuleOrPromise, ...moduleOrPromise};
+      entry.registered = mergedModule;
+      return Promise.resolve(mergedModule);
     }
 
-    if (
-      existingModuleOrPromise &&
-      typeof (existingModuleOrPromise as Promise<BackendModule>).then === 'function'
-    ) {
-      const loader = Promise.resolve(existingModuleOrPromise)
-        .then(existingModule => ({
-          ...existingModule,
-          ...moduleOrPromise
-        }))
-        .then(module => {
-          this._modules[deviceType] = module;
-          return module;
-        })
-        .catch(ex => {
-          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-          throw ex;
-        });
-      this._modules[deviceType] = loader;
-      return loader;
-    }
-
-    const mergedModule = {
-      ...(existingModuleOrPromise || {}),
-      ...moduleOrPromise
-    };
-    this._modules[deviceType] = mergedModule;
-    return Promise.resolve(mergedModule);
+    const loader = Promise.all([existingModuleOrPromise || {}, moduleOrPromise]).then(
+      ([existingModule, incomingModule]) => ({...existingModule, ...incomingModule})
+    );
+    entry.registered = loader;
+    loader
+      .then(module => {
+        // Only the latest registration can publish the merged handlers.
+        if (entry.registered === loader) {
+          entry.registered = module;
+        }
+      })
+      .catch(ex => {
+        log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+      });
+    return loader;
   }
 
   /**
    * Resolves an operation handler for a device type.
    *
-   * Pending async backend registrations are awaited before lookup.
+   * Pending async backend registrations are awaited before lookup. When the requested handler is
+   * not registered, the built-in backend for the device type is imported and its handlers are
+   * added beneath the registered ones.
    */
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
-    let module = this._modules[deviceType];
-    if (!module) {
-      if (deviceType === 'webgl') {
-        module = this.add('webgl', import('../operations/webgl/index'));
-      } else if (deviceType === 'webgpu') {
-        module = this.add('webgpu', import('../operations/webgpu/index'));
-      } else {
-        throw new Error(`${deviceType} backend not registered`);
-      }
+    const entry = this._getEntry(deviceType);
+    const registered = await entry.registered;
+    const registeredHandler = registered?.[operationName];
+    if (typeof registeredHandler === 'function') {
+      return registeredHandler as OperationHandler;
     }
-    const resolvedModule = await module;
-    let operationHandler = resolvedModule[operationName];
-    // A partial registration must not hide the other built-in operations.
-    if (typeof operationHandler !== 'function') {
-      if (deviceType === 'webgl') {
-        const defaultModule: BackendModule = await import('../operations/webgl/index');
-        operationHandler = defaultModule[operationName];
-      } else if (deviceType === 'webgpu') {
-        const defaultModule: BackendModule = await import('../operations/webgpu/index');
-        operationHandler = defaultModule[operationName];
-      }
+    const load = this._defaultModuleLoaders[deviceType];
+    if (load && !entry.builtIn) {
+      entry.loadingBuiltIn ??= load()
+        .then(module => {
+          entry.builtIn = module;
+        })
+        .finally(() => {
+          entry.loadingBuiltIn = undefined;
+        });
+      await entry.loadingBuiltIn;
     }
-    if (typeof operationHandler !== 'function') {
-      throw new Error(`${deviceType} backend does not implement ${operationName}`);
+    while (isPromise(entry.registered)) {
+      await entry.registered;
     }
-    return operationHandler as OperationHandler;
+    return this._getHandler(entry, deviceType, operationName);
   }
 
   /**
@@ -122,25 +129,49 @@ class BackendRegistry {
    * @throws if the backend has not been registered synchronously or is still loading.
    */
   getSync(deviceType: string, operationName: string): OperationHandler {
-    const moduleOrPromise = this._modules[deviceType];
-    if (!moduleOrPromise) {
+    return this._getHandler(this._entries.get(deviceType), deviceType, operationName);
+  }
+
+  /** Removes all registrations and cached built-ins. */
+  clear() {
+    this._entries.clear();
+  }
+
+  private _getEntry(deviceType: string): BackendEntry {
+    let entry = this._entries.get(deviceType);
+    if (!entry) {
+      entry = {};
+      this._entries.set(deviceType, entry);
+    }
+    return entry;
+  }
+
+  private _getHandler(
+    entry: BackendEntry | undefined,
+    deviceType: string,
+    operationName: string
+  ): OperationHandler {
+    const moduleOrPromise = entry?.registered;
+    if (!moduleOrPromise && !entry?.builtIn) {
       throw new Error(`${deviceType} backend not registered`);
     }
-    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
+    if (isPromise(moduleOrPromise)) {
       throw new Error(`${deviceType} backend is not loaded yet`);
     }
-    const module = moduleOrPromise as BackendModule;
-    const operationHandler = module[operationName];
+    const registered = moduleOrPromise?.[operationName];
+    const operationHandler =
+      registered === undefined ? entry?.builtIn?.[operationName] : registered;
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
     return operationHandler as OperationHandler;
   }
+}
 
-  /** Removes all registered backend modules. Primarily intended for tests. */
-  clear() {
-    this._modules = {};
-  }
+function isPromise(
+  value: BackendModule | Promise<BackendModule> | undefined
+): value is Promise<BackendModule> {
+  return typeof (value as Promise<BackendModule> | undefined)?.then === 'function';
 }
 
 /**

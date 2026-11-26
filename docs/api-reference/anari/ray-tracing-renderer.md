@@ -54,15 +54,22 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, and alpha blending require a
-compatible raster renderer.
+not implemented. Retained triangle morph targets update positions and normals
+through the shared morph evaluator and rebuild ray acceleration geometry when
+weights change. Skeletal skinning applies the retained CPU joint palette to
+`JOINTS_0` and `WEIGHTS_0` after morphing, including position, normal and
+tangent deformation. Joint changes rebuild ray acceleration geometry. All
+placements of a surface share its pose. GPU-only and per-instance joint palettes
+require a compatible raster renderer.
 
 ## Material support
 
 | Material feature | Ray-traced support |
 | --- | --- |
 | Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
-| Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
+| Unlit | glTF `KHR_materials_unlit` and retained unlit surfaces display base color without light response. They terminate camera and bounce rays and participate in silhouettes and shadows. |
+| Vertex color | Interpolated glTF `COLOR_0` RGB multiplies the base color. RGBA vertex alpha participates in `MASK` visibility. |
+| Visibility | Alpha masks and stochastic alpha blending for rendering and shadows |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
 | Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
 | Dielectric specular | RGB color and alpha intensity maps |
@@ -75,18 +82,30 @@ compatible raster renderer.
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
 with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
 with base-color maps prioritized for visibility. Primary triangle shading estimates
-a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
-spheres and alpha visibility still sample mip zero. `MASK` multiplies the
+a mip level from the projected pixel footprint and transformed UVs. Secondary triangle shading
+projects the carried camera footprint at each hit. For perspective cameras, the footprint grows
+with travel distance. Analytic spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
+Interpolated vertex alpha is an additional multiplier for triangle masks.
 Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres
 check both interfaces. `OPAQUE` ignores texture alpha.
 
-Triangle mesh normal maps use linear RGB and a tangent frame derived from the
-transformed UV chart. They affect lighting and opaque bounce shading. Analytic spheres and
-degenerate UV charts use the surface normal, which also remains the normal for picking, hit
-channels and smooth dielectric refraction. The tangent frame is derived from the triangle UVs
-and does not use authored vertex tangents.
+`BLEND` uses the product of base-color factor alpha, texture alpha, and vertex
+alpha as the probability of a surface hit. Primary and secondary rays can pass
+through rejected layers, and progressive linear radiance converges to
+source-over compositing for layered surfaces. Shadow rays sample the same
+coverage, and explicit emitter samples weight radiance by coverage.
+Picking, depth, and normal channels deterministically return the nearest
+intersection with nonzero coverage. Low sample counts can show visible noise
+in translucent layers and their shadows. The existing filtered-cutout option
+also filters blend coverage for mipmapped triangle textures.
+
+Triangle mesh normal maps use linear RGB and the interpolated glTF `TANGENT`
+frame when available, including its handedness and retained morph deltas. Meshes
+without usable tangents derive the frame from the transformed UV chart. They affect lighting and opaque bounce shading. Analytic spheres and
+triangles without a usable tangent frame use the surface normal. Picking, hit
+channels and smooth dielectric refraction continue to use the unperturbed normal.
 Dielectric specular color and intensity factors affect direct lighting and opaque PBR bounce
 shading. The color map uses RGB with texture-format color decoding, and the intensity map uses
 alpha. Both use the same UV selection and transforms as the other material maps. Smooth dielectric

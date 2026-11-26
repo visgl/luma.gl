@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4, TypedArray} from '@math.gl/core';
+import type {NumberArray4, TypedArray} from '@math.gl/core/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
@@ -51,6 +51,9 @@ export type RenderPassBindingOptions = {
   _bindGroupCacheKeys?: Partial<Record<number, object>>;
 };
 
+/** Range of clip-space z that maps to the depth range: `-w..w` or `0..w`. */
+export type ClipDepthMode = 'negative-one-to-one' | 'zero-to-one';
+
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
  */
@@ -73,10 +76,19 @@ export type RenderPassProps = DeviceResourceProps & {
   /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect */
   clearStencil?: number | false;
 
+  /**
+   * Clip-space depth range of the projection used in this pass. Default: the backend's own range.
+   * WebGPU always uses `'zero-to-one'`. WebGL uses `'negative-one-to-one'`, and `'zero-to-one'`
+   * requires the `'clip-control-webgl'` feature. Use `'zero-to-one'` for reverse-Z depth.
+   */
+  clipDepthMode?: ClipDepthMode;
+
   /** Indicates that the depth component is read only. */
   depthReadOnly?: boolean;
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
+  /** Whether writable stencil contents are preserved after this pass. */
+  stencilStoreOp?: 'store' | 'discard';
 
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
@@ -186,8 +198,10 @@ export abstract class RenderPass extends DeviceResource<RenderPassProps> {
     clearColors: undefined!,
     clearDepth: RenderPass.defaultClearDepth,
     clearStencil: RenderPass.defaultClearStencil,
+    clipDepthMode: undefined!,
     depthReadOnly: false,
     stencilReadOnly: false,
+    stencilStoreOp: 'store',
     discard: false,
 
     occlusionQuerySet: undefined!,

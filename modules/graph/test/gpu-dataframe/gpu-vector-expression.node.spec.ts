@@ -5,10 +5,16 @@
 import {describe, expect, test} from 'vitest';
 import {parseSQLExpression} from '@math.gl/sql/parser';
 import {
+  caseWhen,
+  coalesce,
+  nullIf,
+  scalarFunction,
   column,
   literal,
+  parameter,
   not,
   vector,
+  vectorColumn,
   cast,
   makeGPUExpressionFromPortableAST,
   makeGPUPredicateFromPortableAST
@@ -57,15 +63,155 @@ describe('GPU dataframe vector syntax', () => {
       'ARRAY[x]::REAL[1]',
       'ARRAY[x,y]::DOUBLE[2]',
       'CAST(x AS VARCHAR)',
-      'sqrt(x)'
+      'unsupported(x)'
     ]) {
       expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression(sql))).toThrow();
     }
   });
 });
 
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
+import {GPUTable} from '@luma.gl/graph/gpu-tables';
+import {
+  encodeGPUQueryExpressionControls,
+  makeGPUQueryExpressionShaderPlan
+} from '../../src/gpu-dataframe/gpu-expression-shader';
+
+test('plans typed vector execution and rejects incompatible widths before allocation', () => {
+  const table = new GPUTable({
+    schema: {
+      fields: [
+        {name: 'x', format: 'float32'},
+        {name: 'y', format: 'sint32'},
+        {name: 'position', format: 'float32x3'}
+      ],
+      metadata: new Map()
+    }
+  });
+  const frame = new GPUDataFrame({table});
+  try {
+    const expression = vector('float32x3', [column('x'), column('y'), literal(null)]);
+    const query = frame.withColumn('result', expression, {format: 'float32x3'});
+    const plan = makeGPUQueryExpressionShaderPlan(frame, [], query.derivedColumns, ['result']);
+    expect(plan.outputs[0].format).toBe('float32x3');
+    expect(plan.outputs[0].nullable).toBe(true);
+    expect(plan.statements.join('\n')).toContain('vec3<f32>');
+    expect(plan.statements.join('\n')).toContain('f32(');
+    const translated = frame.withColumn(
+      'translated',
+      vectorColumn('position').add(vector('float32x3', [literal(1), literal(2), literal(3)])),
+      {format: 'float32x3'}
+    );
+    expect(
+      makeGPUQueryExpressionShaderPlan(frame, [], translated.derivedColumns, ['translated'])
+        .outputs[0].format
+    ).toBe('float32x3');
+    expect(() =>
+      frame.withColumn('bad', cast(column('position'), 'float32x2'), {format: 'float32x2'})
+    ).toThrow(/width/);
+    const ordered = column('position').lessThan(column('position'));
+    expect(() => makeGPUQueryExpressionShaderPlan(frame, [ordered])).toThrow(/ordering/);
+    const equal = makeGPUQueryExpressionShaderPlan(frame, [
+      column('position').equal(column('position'))
+    ]);
+    expect(equal.statements.join('\n')).toContain('all(');
+    const mismatched = frame.withColumn('bad', column('position').add(literal(1)), {
+      format: 'float32x3'
+    });
+    expect(() =>
+      makeGPUQueryExpressionShaderPlan(frame, [], mismatched.derivedColumns, ['bad'])
+    ).toThrow(/broadcast/);
+    expect(() =>
+      makeGPUQueryExpressionShaderPlan(
+        frame,
+        [],
+        [{name: 'bad', expression: cast(literal(true) as any, 'sint32')}],
+        ['bad']
+      )
+    ).toThrow(/numeric/i);
+  } finally {
+    frame.destroy();
+    table.destroy();
+  }
+});
+
 test('rejects scalar formats in vector constructors', () => {
   for (const format of ['float32', 'sint32', 'uint32'] as const) {
     expect(() => vector(format, [literal(1), literal(2)])).toThrow(/width/);
   }
+});
+
+test('integer vector literals saturate, truncate and retain full integer precision', () => {
+  const table = new GPUTable({schema: {fields: [], metadata: new Map()}});
+  const frame = new GPUDataFrame({table});
+  try {
+    const expression = vector('uint32x3', [
+      literal(-1),
+      parameter('component', 1.5),
+      literal(4294967294)
+    ]);
+    const plan = makeGPUQueryExpressionShaderPlan(
+      frame,
+      [],
+      [{name: 'value', expression}],
+      ['value']
+    );
+    expect(Array.from(encodeGPUQueryExpressionControls(plan.controls, {}))).toEqual([
+      0, 1, 1, 1, 4294967294, 1
+    ]);
+  } finally {
+    frame.destroy();
+    table.destroy();
+  }
+});
+
+test('retains cast formats in subsequent scalar analytics', () => {
+  const table = new GPUTable<{x: 'uint32'}>({
+    schema: {fields: [{name: 'x', format: 'uint32'}], metadata: new Map()}
+  });
+  const frame = new GPUDataFrame({table});
+  try {
+    const query = frame.withColumn('fractional', cast(column('x'), 'float32'));
+    expect(query.derivedColumns[0].format).toBe('float32');
+    expect(() => query.histogram('fractional', {edges: [0, 0.5, 1]})).not.toThrow();
+    const chained = frame
+      .withColumn('copy', column('x'))
+      .withColumn('fractional', cast(column('copy'), 'float32'));
+    expect(chained.derivedColumns[1].format).toBe('float32');
+  } finally {
+    frame.destroy();
+    table.destroy();
+  }
+});
+
+test('lowers scalar SQL CASE into the typed DataFrame expression', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('CASE WHEN x > 0 THEN x ELSE NULL END')
+  );
+  expect(expression.node).toEqual(
+    caseWhen(column('x').greaterThan(literal(0)), column('x'), literal(null)).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x']);
+});
+
+test('shares numeric SQL functions with typed DataFrame expressions', () => {
+  expect(makeGPUExpressionFromPortableAST(parseSQLExpression('CeIlInG(x)')).node).toEqual(
+    scalarFunction('ceiling', column('x')).node
+  );
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('ROUND(x, 2)'))).toThrow(
+    /one argument/
+  );
+});
+
+test('shares SQL null-handling syntax with typed DataFrame expressions', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('COALESCE(NULLIF(x, 0), y, 99)')
+  );
+  expect(expression.node).toEqual(
+    coalesce(nullIf(column('x'), literal(0)), coalesce(column('y'), literal(99))).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x', 'y']);
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('NULLIF(x)'))).toThrow(
+    /two arguments/
+  );
 });

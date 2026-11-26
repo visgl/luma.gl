@@ -3,12 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import type {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {type GPUData, type GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUTable, GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   Dictionary,
   Field,
   Float32,
+  FixedSizeList,
   Int32,
   RecordBatch,
   Schema,
@@ -51,6 +52,14 @@ type ArrowAnalyticsRow = {batchIndex: number; rowIndex: number};
  * Ordinary materialization preserves every source batch, including empty chunks. Optional
  * dataframe selection identities retain those batch boundaries, while explicitly requested global
  * identities produce one intentionally reordered Arrow result batch.
+ *
+ * @example
+ * ```ts
+ * const arrowTable = await makeArrowTableFromGPUAnalyticsTable({
+ *   table: compiled.table,
+ *   validity: compiled.validity
+ * });
+ * ```
  */
 export async function makeArrowTableFromGPUAnalyticsTable<T extends GPUTypeMap>(
   props: ArrowTableFromGPUAnalyticsTableProps<T>
@@ -60,7 +69,7 @@ export async function makeArrowTableFromGPUAnalyticsTable<T extends GPUTypeMap>(
     const dictionary = props.dictionaries?.[field.name];
     const type = dictionary
       ? makeArrowAnalyticsDictionaryType(props.table, field.name, dictionary, fieldIndex)
-      : makeArrowAnalyticsScalarType(field.format);
+      : makeArrowAnalyticsType(field.format);
     return new Field(field.name, type, field.nullable, new Map(field.metadata));
   });
   const schema = new Schema(fields, new Map(props.table.schema.metadata));
@@ -119,7 +128,7 @@ function validateArrowGPUAnalyticsReadback<T extends GPUTypeMap>(
     ) {
       throw new Error(`Arrow analytics validity for "${field.name}" must match source batches`);
     }
-    makeArrowAnalyticsScalarType(field.format);
+    makeArrowAnalyticsType(field.format);
   }
 }
 
@@ -189,29 +198,36 @@ async function makeArrowAnalyticsColumn<T extends GPUTypeMap>(
   rows: readonly ArrowAnalyticsRow[]
 ): Promise<Data> {
   const format = props.table.schema.fields[fieldIndex].format;
+  const scalarType = field.type instanceof FixedSizeList ? field.type.valueType : field.type;
+  const width = field.type instanceof FixedSizeList ? field.type.listSize : 1;
+  const Constructor =
+    scalarType instanceof Float32
+      ? Float32Array
+      : format === 'sint32' || scalarType instanceof Int32
+        ? Int32Array
+        : Uint32Array;
   const sourceValues = new Map<number, Float32Array | Int32Array | Uint32Array>();
   const sourceValidity = new Map<number, Uint32Array>();
   await Promise.all(
     Array.from(new Set(rows.map(row => row.batchIndex))).map(async batchIndex => {
       const data = props.table.batches[batchIndex].gpuData[field.name];
-      const bytes = await readArrowAnalyticsBytes(data);
-      const Constructor =
-        format === 'float32' ? Float32Array : format === 'sint32' ? Int32Array : Uint32Array;
+      const bytes = await readArrowAnalyticsBytes(data, data.length, width * 4);
       sourceValues.set(
         batchIndex,
-        new Constructor(bytes.buffer as ArrayBuffer, bytes.byteOffset, data.length)
+        new Constructor(bytes.buffer as ArrayBuffer, bytes.byteOffset, data.length * width)
       );
       const validity = props.validity?.[field.name]?.data[batchIndex];
       if (validity) sourceValidity.set(batchIndex, await readArrowAnalyticsWords(validity));
     })
   );
-  const Constructor =
-    format === 'float32' ? Float32Array : format === 'sint32' ? Int32Array : Uint32Array;
-  const values = new Constructor(rows.length);
+  const values = new Constructor(rows.length * width);
   const nullBitmap = new Uint8Array(Math.ceil(rows.length / 8));
   let nullCount = 0;
   for (const [outputIndex, row] of rows.entries()) {
-    values[outputIndex] = sourceValues.get(row.batchIndex)![row.rowIndex];
+    const source = sourceValues.get(row.batchIndex)!;
+    for (let component = 0; component < width; component++) {
+      values[outputIndex * width + component] = source[row.rowIndex * width + component];
+    }
     const valid = sourceValidity.get(row.batchIndex)?.[row.rowIndex] !== 0;
     if (valid) {
       nullBitmap[outputIndex >> 3] |= 1 << (outputIndex & 7);
@@ -233,6 +249,10 @@ async function makeArrowAnalyticsColumn<T extends GPUTypeMap>(
       nullBitmap,
       nullCount
     });
+  }
+  if (field.type instanceof FixedSizeList) {
+    const child = makeData({type: field.type.valueType, length: values.length, data: values});
+    return makeData({type: field.type, length: rows.length, child, nullBitmap, nullCount});
   }
   return makeData({type: field.type, length: rows.length, data: values, nullBitmap, nullCount});
 }
@@ -263,7 +283,14 @@ function isArrowAnalyticsDictionary(
   return !Array.isArray(value);
 }
 
-function makeArrowAnalyticsScalarType(format: string | undefined): DataType {
+/** Maps a GPU analytics scalar or packed vector format to its Arrow type. */
+function makeArrowAnalyticsType(format: string | undefined): DataType {
+  const match = /^(float32|sint32|uint32)x([234])$/.exec(format ?? '');
+  if (match)
+    return new FixedSizeList(
+      Number(match[2]),
+      new Field('item', makeArrowAnalyticsType(match[1]), false)
+    );
   switch (format) {
     case 'float32':
       return new Float32();
@@ -284,11 +311,20 @@ async function readArrowAnalyticsWords(
   return new Uint32Array(bytes.buffer, bytes.byteOffset, length);
 }
 
-async function readArrowAnalyticsBytes(data: GPUData, length = data.length): Promise<Uint8Array> {
-  if (data.byteStride !== 4 || data.rowByteLength !== 4 || data.byteOffset % 4 !== 0) {
-    throw new Error('Arrow analytics output requires packed 32-bit GPU scalar data');
+/** Reads tightly packed rows from a GPU data view. */
+async function readArrowAnalyticsBytes(
+  data: GPUData,
+  length = data.length,
+  byteLength = 4
+): Promise<Uint8Array> {
+  if (
+    data.byteStride !== byteLength ||
+    data.rowByteLength !== byteLength ||
+    data.byteOffset % 4 !== 0
+  ) {
+    throw new Error('Arrow analytics output requires packed 32-bit GPU numeric data');
   }
   if (length === 0) return new Uint8Array(0);
   const buffer = data.buffer instanceof Buffer ? data.buffer : data.buffer.buffer;
-  return buffer.readAsync(data.byteOffset, length * Uint32Array.BYTES_PER_ELEMENT);
+  return buffer.readAsync(data.byteOffset, length * byteLength);
 }

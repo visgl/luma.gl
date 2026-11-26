@@ -29,8 +29,8 @@ Each operation returns a new [`GPUDataEvaluator`](/docs/api-reference/graph/gpu-
 - The CPU backend is available by default. If no backend has been registered for
   a WebGL or WebGPU device, the matching backend is loaded automatically on
   first evaluation.
-- Backend operation handlers can also be imported from `@luma.gl/graph/gpu-simple-graph/webgl`,
-  `@luma.gl/graph/gpu-simple-graph/webgpu`, or `@luma.gl/graph/gpu-simple-graph/cpu` for eager loading or custom
+- Backend operation handlers can also be imported from `@luma.gl/graph/gpu-simple-graph-webgl`,
+  `@luma.gl/graph/gpu-simple-graph-webgpu`, or `@luma.gl/graph/gpu-simple-graph-cpu` for eager loading or custom
   subset registration.
 
 ## Arithmetic

@@ -293,7 +293,7 @@ helper for use by polygon GPU models.
 For polygon indices, upload with `{usage: Buffer.INDEX, indexType: 'uint32'}` as the third
 argument to `makeGPUVectorFromCPUVector`.
 
-The CPU geometry helpers are also available from `@luma.gl/graph/gpu-project/geoarrow` without
+The CPU geometry helpers are also available from `@luma.gl/graph/gpu-project-geoarrow` without
 loading Apache Arrow. `makeGeoArrowColumnFromCPUVector` borrows packed Float32 coordinates,
 validity and list offsets directly into math.gl descriptors; strided data is packed.
 `makeCPUVectorFromGeoArrowColumn` borrows normalized interleaved Float32 point/linestring/
@@ -307,7 +307,7 @@ internally. Full geometry nesting remains in GeoArrow descriptors rather than CP
 
 ## Layer-facing coordinate projection graph
 
-`CoordinateProjectionGraph` from `@luma.gl/graph/gpu-project/graph` is a reusable point
+`CoordinateProjectionGraph` from `@luma.gl/graph/gpu-project-graph` is a reusable point
 coordinate pipeline. Construct it with a device and `{format: 'float32x2' | 'float32x3',
 projection}` using a prepared math.gl transform. `run(cpuVectorOrGPUVector)` borrows its input
 and returns `{positions, destroy()}`. Every invocation owns an independent projected GPUVector;

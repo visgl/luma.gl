@@ -194,8 +194,7 @@ fn projectSplatVertex(
   return output;
 }
 
-@fragment
-fn fragmentMain(input : SplatFragmentInputs) -> @location(0) vec4<f32> {
+fn evaluateSplatFragment(input : SplatFragmentInputs) -> vec4<f32> {
   let gaussianWeight = exp(-0.5 * dot(input.gaussianCoordinate, input.gaussianCoordinate));
   let alpha = input.color.a * gaussianWeight;
   if (alpha <= 0.0 || alpha < splat.alphaCutoff) {
@@ -211,8 +210,41 @@ fn fragmentMain(input : SplatFragmentInputs) -> @location(0) vec4<f32> {
 }
 `;
 
+const SPLAT_WGSL_DEFAULT_FRAGMENT = /* wgsl */ `\
+@fragment
+fn fragmentMain(input : SplatFragmentInputs) -> @location(0) vec4<f32> {
+  return evaluateSplatFragment(input);
+}
+`;
+
+const SPLAT_DEPTH_INTERVAL_FRAGMENT_MULTISAMPLED = /* wgsl */ `\
+struct SplatDepthIntervalOutput {
+  @location(0) color : vec4<f32>,
+  @builtin(sample_mask) sampleMask : u32,
+};
+
+@fragment
+fn fragmentMain(input : SplatFragmentInputs) -> SplatDepthIntervalOutput {
+  let sampleMask = filterDepthInterval(vec2<i32>(input.position.xy), input.position.z, 0xffffffffu);
+  if (sampleMask == 0u) {
+    discard;
+  }
+  return SplatDepthIntervalOutput(evaluateSplatFragment(input), sampleMask);
+}
+`;
+
+const SPLAT_DEPTH_INTERVAL_FRAGMENT_SINGLE_SAMPLE = /* wgsl */ `\
+@fragment
+fn fragmentMain(input : SplatFragmentInputs) -> @location(0) vec4<f32> {
+  if (filterDepthInterval(vec2<i32>(input.position.xy), input.position.z, 1u) == 0u) {
+    discard;
+  }
+  return evaluateSplatFragment(input);
+}
+`;
+
 /** WebGPU vertex shader that consumes source vectors directly through storage buffers. */
-export const SPLAT_STORAGE_WGSL_SHADER = /* wgsl */ `\
+const SPLAT_STORAGE_WGSL_BASE = /* wgsl */ `\
 ${SPLAT_WGSL_SHARED}
 
 @group(0) @binding(auto) var<storage, read> splatPositions : array<f32>;
@@ -312,9 +344,22 @@ fn vertexMain(
 }
 `;
 
+/** Default storage shader retains the original fragment output and bindings. */
+export const SPLAT_STORAGE_WGSL_SHADER = SPLAT_STORAGE_WGSL_BASE + SPLAT_WGSL_DEFAULT_FRAGMENT;
+
+/** Storage shader that writes only the samples on the selected side of a depth bound. */
+export function getSplatDepthIntervalWGSLShader(samples: number): string {
+  const fragment =
+    samples > 1
+      ? SPLAT_DEPTH_INTERVAL_FRAGMENT_MULTISAMPLED
+      : SPLAT_DEPTH_INTERVAL_FRAGMENT_SINGLE_SAMPLE;
+  return SPLAT_STORAGE_WGSL_BASE + fragment;
+}
+
 /** WebGPU attribute-backed shader retained for shader inspection and device-independent smoke tests. */
 export const SPLAT_ATTRIBUTE_WGSL_SHADER = /* wgsl */ `\
 ${SPLAT_WGSL_SHARED}
+${SPLAT_WGSL_DEFAULT_FRAGMENT}
 
 struct SplatVertexInputs {
   @builtin(vertex_index) vertexIndex : u32,

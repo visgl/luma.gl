@@ -4,8 +4,6 @@
 
 export type {ComparisonSplitterProps} from './comparison-splitter';
 export {ComparisonSplitter} from './comparison-splitter';
-export type {OrbitControlsProps, OrbitPosition} from './orbit-controls';
-export {OrbitControls} from './orbit-controls';
 export type {
   FlatControllerPick,
   FlatControllerProps,

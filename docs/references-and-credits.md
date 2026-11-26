@@ -16,7 +16,7 @@ For feature-specific literature and detailed scientific citations, see
 ## Origins and community
 
 luma.gl began as an ES6 port of **Nicolas Garcia Belmonte's PhiloGL**, developed at
-**Sencha Labs**. Our [v1 release history](./legacy/legacy-whats-new.md#version-10)
+**Sencha Labs**. Our [v1 release history](https://github.com/visgl/luma.gl/blob/v9.4.2/docs/legacy/legacy-whats-new.md#version-10)
 records that origin, and the repository license retains Sencha's notice.
 PhiloGL's approachable WebGL abstractions and examples provided a foundation for
 the project. We thank Nicolas and the PhiloGL contributors for making that work

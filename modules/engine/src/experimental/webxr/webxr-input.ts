@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray3} from '@math.gl/core/types';
 import type {WebXRInputState} from './webxr-manager';
 
 /** Experimental v10 world-space target ray derived from one WebXR input source. */

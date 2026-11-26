@@ -30,6 +30,7 @@ import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
   compileGPUDataFrameQuery,
+  projectGPUDataFrameQueryResult,
   type CompiledGPUDataFrameQueryProps,
   type GPUDataFrameQueryExtensionContext,
   type GPUDataFrameQueryExtensionResult,
@@ -56,7 +57,7 @@ export class CompiledGPUDataFrameGlobalSort<
 > extends CompiledGPUDataFrameSort<T> {
   /** One dense globally ordered source-row permutation; only the selected prefix is meaningful. */
   readonly globalRowIndices: GPUVector<'uint32'>;
-  /** One GPU-resident count of selected rows after applying the optional global top-K limit. */
+  /** One GPU-resident count of selected rows after applying the optional global page. */
   readonly globalSelectedCount: GPUVector<'uint32'>;
 
   /** @internal */
@@ -73,6 +74,12 @@ export class CompiledGPUDataFrameGlobalSort<
   }
 }
 
+/** One globally ordered column and its stable sort controls. @internal */
+export type GPUGlobalSortKey<Column extends string = string> = Readonly<{
+  column: Column;
+  options: GPUDataFrameNormalizedSortOptions;
+}>;
+
 /** Adds explicit globally stable ordering while leaving source buffers and batches untouched. */
 export function compileGPUDataFrameGlobalSort<
   Source extends GPUTypeMap,
@@ -84,9 +91,15 @@ export function compileGPUDataFrameGlobalSort<
   derivedColumns: readonly GPUDataFrameDerivedColumn[],
   column: keyof Selection & string,
   options: GPUDataFrameNormalizedSortOptions,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  resultColumns?: readonly (keyof Selection & string)[],
+  additionalKeys: readonly GPUGlobalSortKey<keyof Selection & string>[] = []
 ): CompiledGPUDataFrameGlobalSort<Selection> {
-  validateGPUAnalyticsSource(source, [column]);
+  const keys = [{column, options}, ...additionalKeys];
+  validateGPUAnalyticsSource(
+    source,
+    keys.map(key => key.column)
+  );
   validateGPUGlobalSortCapacity(source, graph);
   return compileGPUDataFrameQuery<
     Source,
@@ -94,8 +107,7 @@ export function compileGPUDataFrameGlobalSort<
     Selection,
     CompiledGPUDataFrameGlobalSort<Selection>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
-    prepare: context => addGPUGlobalSortToGraph(context, column, options)
+    prepare: context => addGPUGlobalSortToGraph(context, keys, resultColumns)
   });
 }
 
@@ -128,136 +140,27 @@ function validateGPUGlobalSortCapacity<Source extends GPUTypeMap>(
 /** Stages keys and identities explicitly, then stably orders numeric values and null/NaN classes. */
 function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
-  column: keyof Selection & string,
-  options: GPUDataFrameNormalizedSortOptions
+  keys: readonly GPUGlobalSortKey<keyof Selection & string>[],
+  resultColumns?: readonly (keyof Selection & string)[]
 ): GPUDataFrameQueryExtensionResult<Selection, CompiledGPUDataFrameGlobalSort<Selection>> {
-  const graph = context.graph;
   const prefix = `${context.queryId}-global-sort`;
   const ownedVectors: GPUVector[] = [];
 
   try {
-    const input = graph.importGPUVector(`${prefix}-input`, getGPUAnalyticsVector(context, column));
-    const field = context.table.schema.fields.find(candidate => candidate.name === column);
-    const validityVector = field?.nullable ? context.validity[column] : undefined;
-    if (field?.nullable && !validityVector && input.length > 0) {
-      throw new Error(`GPUDataFrame nullable global sort column "${column}" requires GPU validity`);
-    }
-    const validity = validityVector
-      ? graph.importGPUVector(`${prefix}-source-validity`, validityVector)
-      : undefined;
-
-    const globalRowIndices = createGPUAnalyticsOutputVector(
-      graph.device,
-      `${prefix}-row-indices`,
-      'uint32',
-      input.length
-    );
-    ownedVectors.push(globalRowIndices);
-    const globalSelectedCount = createGPUAnalyticsOutputVector(
-      graph.device,
-      `${prefix}-selected-count`,
-      'uint32',
-      1
-    );
-    ownedVectors.push(globalSelectedCount);
-    const globalRows = graph.importGPUVector(`${prefix}-row-vector`, globalRowIndices).data[0];
-    const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
-      .data[0];
-
-    graph.add(
-      new GPUReduction({
-        id: `${prefix}-count-selected`,
-        input: context.selectedCounts,
-        output: selectedCount,
-        operation: 'sum'
-      })
+    const {column, options} = keys[0];
+    const {globalRowIndices, globalSelectedCount} = addGPUGlobalOrdering(
+      context,
+      keys,
+      ownedVectors,
+      prefix
     );
 
-    if (input.length > 0) {
-      const scratch = createGPUGlobalSortScratch(graph, prefix, input.length);
-      let globalOffset = 0;
-      let fallbackOffset = 0;
-      for (const [batchIndex, batch] of context.table.batches.entries()) {
-        if (batch.numRows > 0) {
-          addGPUGlobalSortStagePass(graph, `${prefix}-stage-batch-${batchIndex}`, {
-            input: input.data[batchIndex],
-            selection: context.selectionMask.data[batchIndex],
-            validity: validity?.data[batchIndex],
-            scratch,
-            globalOffset,
-            sourceOffset: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset,
-            options
-          });
-        }
-        globalOffset += batch.numRows;
-        fallbackOffset += batch.numRows;
-      }
-
-      graph.add(
-        new GPUSort({
-          id: `${prefix}-numeric`,
-          keys: scratch.encodedKeys,
-          values: scratch.sourceOrdinals,
-          outputKeys: scratch.sortedKeys,
-          outputValues: scratch.sortedOrdinals,
-          direction: options.direction,
-          algorithm: options.algorithm
-        })
-      );
-
-      addGPUGlobalSortGatherClassesPass(graph, `${prefix}-gather-classes`, scratch);
-      graph.add(
-        new GPUSort({
-          id: `${prefix}-classes`,
-          keys: scratch.sortedKeys,
-          values: scratch.sortedOrdinals,
-          outputKeys: scratch.encodedKeys,
-          outputValues: scratch.sourceOrdinals,
-          direction: 'ascending',
-          algorithm: options.algorithm
-        })
-      );
-
-      addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
-        scratch,
-        output: globalRows,
-        count: selectedCount,
-        limit: options.limit ?? MAXIMUM_UINT32
-      });
-
-      if (options.limit !== undefined) {
-        let globalOffset = 0;
-        let fallbackOffset = 0;
-        for (const [batchIndex, batch] of context.table.batches.entries()) {
-          if (batch.numRows > 0) {
-            const selection = context.selectionMask.data[batchIndex];
-            addGPUGlobalTopKSelectionPass(graph, `${prefix}-select-batch-${batchIndex}`, {
-              ranks: scratch.sourceClasses,
-              selection,
-              globalOffset,
-              limit: options.limit
-            });
-            graph.add(
-              new GPUVisibilityWorkflow({
-                id: `${prefix}-visibility-batch-${batchIndex}`,
-                predicates: [{kind: 'selection', mask: selection}],
-                outputMask: selection,
-                output: context.rowIndices.data[batchIndex],
-                count: context.selectedCounts.data[batchIndex],
-                firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
-              })
-            );
-          }
-          globalOffset += batch.numRows;
-          fallbackOffset += batch.numRows;
-        }
-      }
-    }
-
+    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
     return {
-      table: context.table,
-      validity: context.validity,
-      dictionaries: context.dictionaries,
+      table: projection?.table ?? context.table,
+      validity: projection?.validity ?? context.validity,
+      dictionaries: projection?.dictionaries ?? context.dictionaries,
+      ownedTables: projection ? [projection] : [],
       ownedVectors,
       createCompiled: props =>
         new CompiledGPUDataFrameGlobalSort(
@@ -274,6 +177,171 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
     }
     throw error;
   }
+}
+
+/** Orders a prepared table and its selection within the caller's open graph. @internal */
+export function addGPUGlobalOrdering<Selection extends GPUTypeMap>(
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  keys: readonly GPUGlobalSortKey<keyof Selection & string>[],
+  ownedVectors: GPUVector[],
+  prefix: string
+): {globalRowIndices: GPUVector<'uint32'>; globalSelectedCount: GPUVector<'uint32'>} {
+  const {graph} = context;
+  const {options} = keys[0];
+  const length = context.table.numRows;
+  const globalRowIndices = createGPUAnalyticsOutputVector(
+    graph.device,
+    `${prefix}-row-indices`,
+    'uint32',
+    length
+  );
+  ownedVectors.push(globalRowIndices);
+  const globalSelectedCount = createGPUAnalyticsOutputVector(
+    graph.device,
+    `${prefix}-selected-count`,
+    'uint32',
+    1
+  );
+  ownedVectors.push(globalSelectedCount);
+  const globalRows = graph.importGPUVector(`${prefix}-row-vector`, globalRowIndices).data[0];
+  const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
+    .data[0];
+
+  graph.add(
+    new GPUReduction({
+      id: `${prefix}-count-selected`,
+      input: context.selectedCounts,
+      output: selectedCount,
+      operation: 'sum'
+    })
+  );
+
+  if (length > 0) {
+    const scratch = createGPUGlobalSortScratch(graph, prefix, length);
+    // Stable sorts transfer the ordering of less significant keys through ties.
+    for (let index = keys.length - 1; index >= 0; index--) {
+      addGPUGlobalSortKeyPasses(
+        context,
+        `${prefix}-key-${index}`,
+        keys[index],
+        scratch,
+        index === keys.length - 1
+      );
+    }
+
+    addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
+      scratch,
+      output: globalRows,
+      count: selectedCount,
+      offset: options.offset ?? 0,
+      limit: options.limit ?? MAXIMUM_UINT32
+    });
+
+    if (options.offset || options.limit !== undefined) {
+      let globalOffset = 0;
+      let fallbackOffset = 0;
+      for (const [batchIndex, batch] of context.table.batches.entries()) {
+        if (batch.numRows > 0) {
+          const selection = context.selectionMask.data[batchIndex];
+          addGPUGlobalTopKSelectionPass(graph, `${prefix}-select-batch-${batchIndex}`, {
+            ranks: scratch.sourceClasses,
+            selection,
+            globalOffset,
+            offset: options.offset ?? 0,
+            limit: options.limit ?? MAXIMUM_UINT32
+          });
+          graph.add(
+            new GPUVisibilityWorkflow({
+              id: `${prefix}-visibility-batch-${batchIndex}`,
+              predicates: [{kind: 'selection', mask: selection}],
+              outputMask: selection,
+              output: context.rowIndices.data[batchIndex],
+              count: context.selectedCounts.data[batchIndex],
+              firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
+            })
+          );
+        }
+        globalOffset += batch.numRows;
+        fallbackOffset += batch.numRows;
+      }
+    }
+  }
+  return {globalRowIndices, globalSelectedCount};
+}
+
+/** Stages and stably sorts one key, starting from the permutation of less significant keys. */
+function addGPUGlobalSortKeyPasses<Selection extends GPUTypeMap>(
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  prefix: string,
+  {column, options}: GPUGlobalSortKey<keyof Selection & string>,
+  scratch: GPUGlobalSortScratch,
+  initialize: boolean
+): void {
+  const graph = context.graph;
+  const input = graph.importGPUVector(`${prefix}-input`, getGPUAnalyticsVector(context, column));
+  const field = context.table.schema.fields.find(candidate => candidate.name === column);
+  const validityVector = field?.nullable ? context.validity[column] : undefined;
+  if (field?.nullable && !validityVector && input.length > 0) {
+    throw new Error(`GPUDataFrame nullable global sort column "${column}" requires GPU validity`);
+  }
+  const validity = validityVector
+    ? graph.importGPUVector(`${prefix}-source-validity`, validityVector)
+    : undefined;
+
+  let globalOffset = 0;
+  let fallbackOffset = 0;
+  for (const [batchIndex, batch] of context.table.batches.entries()) {
+    if (batch.numRows > 0) {
+      addGPUGlobalSortStagePass(graph, `${prefix}-stage-batch-${batchIndex}`, {
+        input: input.data[batchIndex],
+        selection: context.selectionMask.data[batchIndex],
+        validity: validity?.data[batchIndex],
+        scratch,
+        globalOffset,
+        sourceOffset: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset,
+        options,
+        initialize
+      });
+    }
+    globalOffset += batch.numRows;
+    fallbackOffset += batch.numRows;
+  }
+
+  if (!initialize) {
+    addGPUGlobalSortGatherPass(graph, `${prefix}-gather-keys`, {
+      ordinals: scratch.sourceOrdinals,
+      input: scratch.encodedKeys,
+      output: scratch.sortedKeys
+    });
+  }
+  graph.add(
+    new GPUSort({
+      id: `${prefix}-numeric`,
+      keys: initialize ? scratch.encodedKeys : scratch.sortedKeys,
+      values: scratch.sourceOrdinals,
+      outputKeys: initialize ? scratch.sortedKeys : scratch.encodedKeys,
+      outputValues: scratch.sortedOrdinals,
+      direction: options.direction,
+      algorithm: options.algorithm
+    })
+  );
+
+  addGPUGlobalSortGatherPass(graph, `${prefix}-gather-classes`, {
+    ordinals: scratch.sortedOrdinals,
+    input: scratch.sourceClasses,
+    output: scratch.sortedKeys
+  });
+  graph.add(
+    new GPUSort({
+      id: `${prefix}-classes`,
+      keys: scratch.sortedKeys,
+      values: scratch.sortedOrdinals,
+      outputKeys: scratch.encodedKeys,
+      outputValues: scratch.sourceOrdinals,
+      direction: 'ascending',
+      algorithm: options.algorithm
+    })
+  );
 }
 
 /** Allocates only explicit global permutation scratch; original dataframe vectors remain intact. */
@@ -303,6 +371,7 @@ function addGPUGlobalSortStagePass(
     scratch: GPUGlobalSortScratch;
     globalOffset: number;
     sourceOffset: number;
+    initialize: boolean;
     options: GPUDataFrameNormalizedSortOptions;
   }
 ): void {
@@ -349,9 +418,9 @@ const ROW_OFFSET: u32 = ${getViewElementOffset(props.scratch.sourceRows)}u;
 @group(0) @binding(1) var<storage, read> selectionMask: array<u32>;
 ${validityBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> encodedKeys: array<u32>;
-@group(0) @binding(${outputBinding + 1}) var<storage, read_write> sourceOrdinals: array<u32>;
-@group(0) @binding(${outputBinding + 2}) var<storage, read_write> sourceClasses: array<u32>;
-@group(0) @binding(${outputBinding + 3}) var<storage, read_write> sourceRows: array<u32>;
+${props.initialize ? `@group(0) @binding(${outputBinding + 1}) var<storage, read_write> sourceOrdinals: array<u32>;` : ''}
+@group(0) @binding(${outputBinding + (props.initialize ? 2 : 1)}) var<storage, read_write> sourceClasses: array<u32>;
+${props.initialize ? `@group(0) @binding(${outputBinding + 3}) var<storage, read_write> sourceRows: array<u32>;` : ''}
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
 fn main(
@@ -369,9 +438,9 @@ fn main(
   if (isNull) { rank = ${nullRank}u; }
   if (selectionMask[SELECTION_OFFSET + index] == 0u) { rank = 3u; }
   encodedKeys[KEY_OFFSET + ordinal] = select(${keyExpression}, 0u, isNull || isNaN);
-  sourceOrdinals[ORDINAL_OFFSET + ordinal] = ordinal;
+  ${props.initialize ? 'sourceOrdinals[ORDINAL_OFFSET + ordinal] = ordinal;' : ''}
   sourceClasses[CLASS_OFFSET + ordinal] = rank;
-  sourceRows[ROW_OFFSET + ordinal] = SOURCE_OFFSET + index;
+  ${props.initialize ? 'sourceRows[ROW_OFFSET + ordinal] = SOURCE_OFFSET + index;' : ''}
 }`;
   const resources: GraphBufferUse[] = [
     {buffer: props.input, usage: 'storage-read'},
@@ -385,12 +454,11 @@ fn main(
     resources.push({buffer: props.validity, usage: 'storage-read'});
     bindings['validityValues'] = props.validity;
   }
-  for (const [name, view] of [
-    ['encodedKeys', props.scratch.encodedKeys],
-    ['sourceOrdinals', props.scratch.sourceOrdinals],
-    ['sourceClasses', props.scratch.sourceClasses],
-    ['sourceRows', props.scratch.sourceRows]
-  ] as const) {
+  const outputs: [string, GraphDataView][] = [['encodedKeys', props.scratch.encodedKeys]];
+  if (props.initialize) outputs.push(['sourceOrdinals', props.scratch.sourceOrdinals]);
+  outputs.push(['sourceClasses', props.scratch.sourceClasses]);
+  if (props.initialize) outputs.push(['sourceRows', props.scratch.sourceRows]);
+  for (const [name, view] of outputs) {
     resources.push({buffer: view, usage: 'storage-write'});
     bindings[name] = view;
   }
@@ -409,46 +477,54 @@ function getGPUGlobalSortNumericKeyExpression(format: GPUAnalyticsScalarFormat):
   }
 }
 
-/** Gathers source null/NaN/filter classes in stable numeric order before the second stable sort. */
-function addGPUGlobalSortGatherClassesPass(
+/** Gathers keys or classes by their current source ordinal permutation. */
+function addGPUGlobalSortGatherPass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
-  scratch: GPUGlobalSortScratch
+  {
+    ordinals,
+    input,
+    output
+  }: {
+    ordinals: GraphDataView<'uint32'>;
+    input: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+  }
 ): void {
   const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${scratch.sortedOrdinals.length}u;
-const ORDINAL_OFFSET: u32 = ${getViewElementOffset(scratch.sortedOrdinals)}u;
-const CLASS_OFFSET: u32 = ${getViewElementOffset(scratch.sourceClasses)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(scratch.sortedKeys)}u;
-@group(0) @binding(0) var<storage, read> sortedOrdinals: array<u32>;
-@group(0) @binding(1) var<storage, read> sourceClasses: array<u32>;
-@group(0) @binding(2) var<storage, read_write> sortedClasses: array<u32>;
+const ELEMENT_COUNT: u32 = ${ordinals.length}u;
+const ORDINAL_OFFSET: u32 = ${getViewElementOffset(ordinals)}u;
+const INPUT_OFFSET: u32 = ${getViewElementOffset(input)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
+@group(0) @binding(0) var<storage, read> sourceOrdinals: array<u32>;
+@group(0) @binding(1) var<storage, read> sourceValues: array<u32>;
+@group(0) @binding(2) var<storage, read_write> gatheredValues: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  ${getGPUAnalyticsInvocationIndexSource(graph, scratch.sortedOrdinals.length)}
+  ${getGPUAnalyticsInvocationIndexSource(graph, ordinals.length)}
   if (index < ELEMENT_COUNT) {
-    sortedClasses[OUTPUT_OFFSET + index] =
-      sourceClasses[CLASS_OFFSET + sortedOrdinals[ORDINAL_OFFSET + index]];
+    gatheredValues[OUTPUT_OFFSET + index] =
+      sourceValues[INPUT_OFFSET + sourceOrdinals[ORDINAL_OFFSET + index]];
   }
 }`;
   addGPUAnalyticsComputePass(graph, {
     id,
     source,
     resources: [
-      {buffer: scratch.sortedOrdinals, usage: 'storage-read'},
-      {buffer: scratch.sourceClasses, usage: 'storage-read'},
-      {buffer: scratch.sortedKeys, usage: 'storage-write'}
+      {buffer: ordinals, usage: 'storage-read'},
+      {buffer: input, usage: 'storage-read'},
+      {buffer: output, usage: 'storage-write'}
     ],
     bindings: {
-      sortedOrdinals: scratch.sortedOrdinals,
-      sourceClasses: scratch.sourceClasses,
-      sortedClasses: scratch.sortedKeys
+      sourceOrdinals: ordinals,
+      sourceValues: input,
+      gatheredValues: output
     },
-    length: scratch.sortedOrdinals.length
+    length: ordinals.length
   });
 }
 
@@ -460,6 +536,7 @@ function addGPUGlobalSortPublishPass(
     scratch: GPUGlobalSortScratch;
     output: GraphDataView<'uint32'>;
     count: GraphDataView<'uint32'>;
+    offset: number;
     limit: number;
   }
 ): void {
@@ -471,6 +548,7 @@ const SOURCE_ROW_OFFSET: u32 = ${getViewElementOffset(props.scratch.sourceRows)}
 const RANK_OFFSET: u32 = ${getViewElementOffset(props.scratch.sourceClasses)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
+const ROW_OFFSET: u32 = ${props.offset}u;
 const ROW_LIMIT: u32 = ${props.limit}u;
 @group(0) @binding(0) var<storage, read> sortedClasses: array<u32>;
 @group(0) @binding(1) var<storage, read> sortedOrdinals: array<u32>;
@@ -489,13 +567,21 @@ fn main(
   let ordinal = sortedOrdinals[ORDINAL_OFFSET + index];
   let accepted = sortedClasses[CLASS_OFFSET + index] != 3u;
   sourceRanks[RANK_OFFSET + ordinal] = select(0xffffffffu, index, accepted);
-  outputRows[OUTPUT_OFFSET + index] = select(
-    0u,
-    sourceRows[SOURCE_ROW_OFFSET + ordinal],
-    accepted && index < ROW_LIMIT
-  );
+  let skipped = min(ROW_OFFSET, ELEMENT_COUNT);
+  if (index >= ELEMENT_COUNT - skipped) {
+    outputRows[OUTPUT_OFFSET + index] = 0u;
+  }
+  if (index >= skipped) {
+    let pageIndex = index - skipped;
+    outputRows[OUTPUT_OFFSET + pageIndex] = select(
+      0u,
+      sourceRows[SOURCE_ROW_OFFSET + ordinal],
+      accepted && pageIndex < ROW_LIMIT
+    );
+  }
   if (index == 0u) {
-    selectedCounts[COUNT_OFFSET] = min(selectedCounts[COUNT_OFFSET], ROW_LIMIT);
+    let total = selectedCounts[COUNT_OFFSET];
+    selectedCounts[COUNT_OFFSET] = min(total - min(total, ROW_OFFSET), ROW_LIMIT);
   }
 }`;
   addGPUAnalyticsComputePass(graph, {
@@ -521,7 +607,7 @@ fn main(
   });
 }
 
-/** Applies a global rank limit back to one original source-aligned selection-mask chunk. */
+/** Applies a global rank window back to one original source-aligned selection-mask chunk. */
 function addGPUGlobalTopKSelectionPass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
@@ -529,6 +615,7 @@ function addGPUGlobalTopKSelectionPass(
     ranks: GraphDataView<'uint32'>;
     selection: GraphDataView<'uint32'>;
     globalOffset: number;
+    offset: number;
     limit: number;
   }
 ): void {
@@ -536,6 +623,7 @@ function addGPUGlobalTopKSelectionPass(
 const ELEMENT_COUNT: u32 = ${props.selection.length}u;
 const RANK_OFFSET: u32 = ${getViewElementOffset(props.ranks) + props.globalOffset}u;
 const SELECTION_OFFSET: u32 = ${getViewElementOffset(props.selection)}u;
+const ROW_OFFSET: u32 = ${props.offset}u;
 const ROW_LIMIT: u32 = ${props.limit}u;
 @group(0) @binding(0) var<storage, read> sourceRanks: array<u32>;
 @group(0) @binding(1) var<storage, read_write> selectionMask: array<u32>;
@@ -547,8 +635,9 @@ fn main(
 ) {
   ${getGPUAnalyticsInvocationIndexSource(graph, props.selection.length)}
   if (index < ELEMENT_COUNT) {
+    let rank = sourceRanks[RANK_OFFSET + index];
     selectionMask[SELECTION_OFFSET + index] =
-      select(0u, 1u, sourceRanks[RANK_OFFSET + index] < ROW_LIMIT);
+      select(0u, 1u, rank != 0xffffffffu && rank >= ROW_OFFSET && rank - ROW_OFFSET < ROW_LIMIT);
   }
 }`;
   addGPUAnalyticsComputePass(graph, {

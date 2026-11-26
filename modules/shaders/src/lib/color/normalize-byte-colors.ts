@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray3, NumberArray4} from '@math.gl/core';
+import type {NumberArray3, NumberArray4} from '@math.gl/core/types';
 
 type FloatColor = Float16Array | Float32Array | Float64Array;
 type ByteColor = Uint8Array | Uint8ClampedArray;

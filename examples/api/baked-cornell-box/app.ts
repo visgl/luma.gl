@@ -8,7 +8,7 @@ import {
   createLightmapFromData,
   type LightmapBakeResult
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {loadCornellScene, prepareCornellAtlas} from '../lightmap-baking/cornell-scene';
 import {
   CORNELL_BAKE_PROFILES,

@@ -84,20 +84,29 @@ export class WebGLStateTracker {
    * temporarily modifying, and then restoring state.
    */
   trackState(gl: WebGL2RenderingContext, options?: {copyState?: boolean}): void {
-    this.cache = options?.copyState
-      ? getGLParameters(gl)
-      : Object.assign({}, GL_PARAMETER_DEFAULTS);
+    if (this.initialized || options?.copyState) {
+      // Reattachment uses the original hooks. Bypass cached getters for the snapshot.
+      const enabled = this.enable;
+      this.enable = false;
+      try {
+        this.cache = getGLParameters(gl);
+        this.program = this.cache[GL.CURRENT_PROGRAM];
+        this.stateStack.length = 0;
+      } finally {
+        this.enable = enabled;
+      }
+      if (this.initialized) {
+        return;
+      }
+    } else {
+      this.cache = {...GL_PARAMETER_DEFAULTS};
 
-    if (!options?.copyState) {
       // These defaults depend on the initial canvas size. Read them before getters are hooked
       // so a matching placeholder cannot suppress the first viewport or scissor update.
       this.cache[GL.VIEWPORT] = gl.getParameter(GL.VIEWPORT);
       this.cache[GL.SCISSOR_BOX] = gl.getParameter(GL.SCISSOR_BOX);
     }
 
-    if (this.initialized) {
-      throw new Error('WebGLStateTracker');
-    }
     this.initialized = true;
 
     // @ts-expect-error

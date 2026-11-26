@@ -3,10 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
-import {type Binding} from '@luma.gl/core';
+import {Buffer, type Binding} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
 import type {
   GPUCommandGraph,
+  GPUCommandGraphGPUIndirectCondition,
   GraphBufferUse,
   GraphDataView,
   GraphVectorView
@@ -28,6 +29,26 @@ const SHORTEST_PATH_WORKGROUP_SIZE = 256;
 const POSITIVE_INFINITY_BITS = 0x7f800000;
 const UNREACHABLE_PREDECESSOR = 0xffffffff;
 
+/**
+ * Layout of the uint32 control record shared by every round. Elements 0-2 are the indirect
+ * dispatch command of each round pass; x is zero once the search stops. @internal
+ */
+export const SHORTEST_PATH_CONTROL_DISPATCH_X = 0;
+/** Control element counting the relaxation rounds that ran. @internal */
+export const SHORTEST_PATH_CONTROL_ITERATIONS = 3;
+/** Control element that is nonzero when invalid weights or adjacency overflow stop the search. @internal */
+export const SHORTEST_PATH_CONTROL_FAILED = 4;
+/** Control element mirroring the convergence status. @internal */
+export const SHORTEST_PATH_CONTROL_CONVERGED = 5;
+/** Byte length of the control record. @internal */
+export const SHORTEST_PATH_CONTROL_BYTE_LENGTH = 32;
+
+/** Buffers that must survive between the separately compiled graphs of a batched run. @internal */
+export type GPUGraphAlgorithmsShortestPathPersistentState = {
+  /** Control record with `STORAGE | INDIRECT` usage. */
+  control: Buffer;
+};
+
 type ShortestPathDataView = GraphDataView<'uint32'> | GraphDataView<'float32'>;
 
 type ImportedShortestPathAdjacency = {
@@ -41,12 +62,15 @@ type ImportedShortestPathState = {
   id: string;
   vertexCount: number;
   edgeCount: number;
-  sourceVertex: number;
   maxIterations: number;
   distances: GraphDataView<'float32'>;
   predecessors: GraphDataView<'uint32'>;
   converged: GraphDataView<'uint32'>;
   invalidWeightCount: GraphDataView<'uint32'>;
+  control: GraphDataView<'uint32'>;
+  roundCondition: GPUCommandGraphGPUIndirectCondition;
+  useIncoming: boolean;
+  seeds?: GraphDataView<'uint32'>;
   previousDistances?: GraphDataView<'float32'>;
   changed?: GraphDataView<'uint32'>;
   sourceVertices?: GraphVectorView<'uint32'>;
@@ -68,14 +92,65 @@ type ShortestPathPassProps = {
   source: string;
   bindings: Record<string, ShortestPathBinding>;
   dispatchLayout: GPUBoundedDispatchLayout;
+  condition?: GPUCommandGraphGPUIndirectCondition;
+  /** Vertex uploaded to a node-owned `seeds` buffer bound after the graph bindings. */
+  ownedSeed?: number;
 };
 
-/** Adds GPU weighted Bellman-Ford passes using an explicit bounded dispatch limit. @internal */
+/**
+ * Adds initialization and `roundCount` GPU-gated weighted Bellman-Ford rounds to one graph,
+ * using an explicit bounded dispatch limit. `roundCount` defaults to `min(maxIterations, 1024)`.
+ * @internal
+ */
 export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit<Parameters>(
   search: GPUGraphAlgorithmsSingleSourceShortestPath,
   commandGraph: GPUCommandGraph<Parameters>,
-  maxComputeWorkgroupsPerDimension: number
+  maxComputeWorkgroupsPerDimension: number,
+  roundCount = Math.min(search.maxIterations, 1024)
 ): void {
+  const state = importShortestPathState(search, commandGraph, maxComputeWorkgroupsPerDimension, {
+    rounds: roundCount > 0
+  });
+  addInitialization(commandGraph, state, search);
+  addRounds(commandGraph, state, roundCount, 0);
+}
+
+/** Adds only the reset, weight validation, status, and seed passes of a batched run. @internal */
+export function addGPUGraphAlgorithmsShortestPathInitializationToGraph<Parameters>(
+  search: GPUGraphAlgorithmsSingleSourceShortestPath,
+  commandGraph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number,
+  persistent: GPUGraphAlgorithmsShortestPathPersistentState
+): void {
+  const state = importShortestPathState(search, commandGraph, maxComputeWorkgroupsPerDimension, {
+    rounds: false,
+    persistent
+  });
+  addInitialization(commandGraph, state, search);
+}
+
+/** Adds `roundCount` GPU-gated rounds that continue from the current distances. @internal */
+export function addGPUGraphAlgorithmsShortestPathRoundsToGraph<Parameters>(
+  search: GPUGraphAlgorithmsSingleSourceShortestPath,
+  commandGraph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number,
+  roundCount: number,
+  persistent: GPUGraphAlgorithmsShortestPathPersistentState
+): void {
+  const state = importShortestPathState(search, commandGraph, maxComputeWorkgroupsPerDimension, {
+    rounds: true,
+    persistent
+  });
+  addRounds(commandGraph, state, roundCount, 0);
+}
+
+/** Imports caller-owned vectors and declares the scratch and control views of one graph. */
+function importShortestPathState<Parameters>(
+  search: GPUGraphAlgorithmsSingleSourceShortestPath,
+  commandGraph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number,
+  options: {rounds: boolean; persistent?: GPUGraphAlgorithmsShortestPathPersistentState}
+): ImportedShortestPathState {
   const directed = search.topology.graph.directed;
   const useIncoming = directed && search.direction === 'incoming';
   const primaryAdjacency = importShortestPathAdjacency(
@@ -83,12 +158,34 @@ export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatch
     `${search.id}-${useIncoming ? 'incoming' : 'outgoing'}`,
     useIncoming ? search.topology.reverse! : search.topology.forward
   );
+  const controlDescriptor = {
+    id: `${search.id}-control`,
+    byteLength: SHORTEST_PATH_CONTROL_BYTE_LENGTH,
+    usage: Buffer.STORAGE | Buffer.INDIRECT | Buffer.COPY_SRC
+  };
+  const controlBuffer = options.persistent
+    ? commandGraph.importBuffer(controlDescriptor, options.persistent.control)
+    : commandGraph.createTransientBuffer(controlDescriptor);
   const state: ImportedShortestPathState = {
     id: search.id,
     vertexCount: search.topology.graph.vertexCount,
     edgeCount: search.topology.graph.edgeCount,
-    sourceVertex: search.sourceVertex,
     maxIterations: search.maxIterations,
+    useIncoming,
+    ...(search.seeds
+      ? {seeds: commandGraph.importGPUVector(`${search.id}-seeds`, search.seeds).data[0]}
+      : {}),
+    control: commandGraph.createDataView(controlBuffer, {
+      format: 'uint32',
+      length: SHORTEST_PATH_CONTROL_BYTE_LENGTH / Uint32Array.BYTES_PER_ELEMENT
+    }),
+    roundCondition: {
+      id: `${search.id}-round-active`,
+      source: 'gpu',
+      mode: 'indirect',
+      buffer: controlBuffer,
+      byteOffset: SHORTEST_PATH_CONTROL_DISPATCH_X * Uint32Array.BYTES_PER_ELEMENT
+    },
     distances: commandGraph.importGPUVector(`${search.id}-distances`, search.distances).data[0],
     predecessors: commandGraph.importGPUVector(`${search.id}-predecessors`, search.predecessors)
       .data[0],
@@ -99,7 +196,7 @@ export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatch
       ? commandGraph.importGPUVector(`${search.id}-invalid-weight-count`, search.invalidWeightCount)
           .data[0]
       : createTransientView(commandGraph, `${search.id}-invalid-weight-scratch`, 'uint32', 1),
-    ...(search.maxIterations > 0
+    ...(options.rounds
       ? {
           previousDistances: createTransientView(
             commandGraph,
@@ -138,7 +235,15 @@ export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatch
       : {}),
     maxComputeWorkgroupsPerDimension
   };
+  return state;
+}
 
+/** Resets outputs, validates weights, publishes the control record, and places the seeds. */
+function addInitialization<Parameters>(
+  commandGraph: GPUCommandGraph<Parameters>,
+  state: ImportedShortestPathState,
+  search: GPUGraphAlgorithmsSingleSourceShortestPath
+): void {
   addInitializationPass(commandGraph, state);
   for (const [chunkIndex, weights] of state.sourceWeights?.data.entries() ?? []) {
     if (weights.length > 0) {
@@ -151,9 +256,19 @@ export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatch
       });
     }
   }
-  addSourcePass(commandGraph, state);
+  addStatusPass(commandGraph, state);
+  addSeedPass(commandGraph, state, search);
+}
 
-  for (let iteration = 0; iteration < state.maxIterations; iteration++) {
+/** Adds GPU-gated rounds; `firstIteration` only names the nodes. */
+function addRounds<Parameters>(
+  commandGraph: GPUCommandGraph<Parameters>,
+  state: ImportedShortestPathState,
+  roundCount: number,
+  firstIteration: number
+): void {
+  const useIncoming = state.useIncoming;
+  for (let iteration = firstIteration; iteration < firstIteration + roundCount; iteration++) {
     addSnapshotPass(commandGraph, state, iteration);
     addRelaxationPass(commandGraph, {
       state,
@@ -215,14 +330,12 @@ function addInitializationPass<Parameters>(
   const bindings: Record<string, ShortestPathBinding> = {
     distances: {view: state.distances, usage: 'storage-write', atomic: true},
     predecessors: {view: state.predecessors, usage: 'storage-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-write', atomic: true},
     invalidWeightCount: {view: state.invalidWeightCount, usage: 'storage-write', atomic: true}
   };
   const source = /* wgsl */ `
 const VERTEX_COUNT: u32 = ${state.vertexCount}u;
 const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const PREDECESSORS_OFFSET: u32 = ${getViewElementOffset(state.predecessors)}u;
-const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
 const INVALID_WEIGHT_COUNT_OFFSET: u32 = ${getViewElementOffset(state.invalidWeightCount)}u;
 ${getBindingDeclarations(bindings)}
 
@@ -233,7 +346,6 @@ fn main(
 ) {
   ${getInvocationIndexSource(state, Math.max(state.vertexCount, 1))}
   if (index == 0u) {
-    atomicStore(&converged[CONVERGED_OFFSET], 0u);
     atomicStore(&invalidWeightCount[INVALID_WEIGHT_COUNT_OFFSET], 0u);
   }
   if (index >= VERTEX_COUNT) { return; }
@@ -299,42 +411,96 @@ fn main(
   });
 }
 
-/** Publishes the source only after complete adjacency and weight status are known. */
-function addSourcePass<Parameters>(
+/** Publishes failure, trivial convergence, and the first round dispatch after weight validation. */
+function addStatusPass<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   state: ImportedShortestPathState
 ): void {
   const bindings: Record<string, ShortestPathBinding> = {
-    distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-read-write', atomic: true},
+    converged: {view: state.converged, usage: 'storage-write'},
+    control: {view: state.control, usage: 'storage-write'},
     invalidWeightCount: {view: state.invalidWeightCount, usage: 'storage-read'},
     ...getOverflowBindings(state)
   };
   const triviallyConverged = state.vertexCount <= 1 || state.edgeCount === 0;
+  const stopsBeforeRounds = triviallyConverged || state.maxIterations === 0;
+  const roundLayout = getDispatchLayout(state, Math.max(state.vertexCount, 1));
   const source = /* wgsl */ `
-const VERTEX_COUNT: u32 = ${state.vertexCount}u;
-const SOURCE_VERTEX: u32 = ${state.sourceVertex}u;
-const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
+const CONTROL_OFFSET: u32 = ${getViewElementOffset(state.control)}u;
 const INVALID_WEIGHT_COUNT_OFFSET: u32 = ${getViewElementOffset(state.invalidWeightCount)}u;
 ${getOverflowConstants(state)}
 ${getBindingDeclarations(bindings)}
 
 @compute @workgroup_size(1)
 fn main() {
-  if (invalidWeightCount[INVALID_WEIGHT_COUNT_OFFSET] != 0u || ${getOverflowGuard(state)}) {
-    return;
-  }
-  if (VERTEX_COUNT > 0u) {
-    atomicStore(&distances[DISTANCES_OFFSET + SOURCE_VERTEX], 0u);
-  }
-  atomicStore(&converged[CONVERGED_OFFSET], ${triviallyConverged ? '1u' : '0u'});
+  let failed = invalidWeightCount[INVALID_WEIGHT_COUNT_OFFSET] != 0u || ${getOverflowGuard(state)};
+  let converges = !failed && ${triviallyConverged};
+  let stopped = failed || ${stopsBeforeRounds};
+  control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_DISPATCH_X}u] = select(${roundLayout.x}u, 0u, stopped);
+  control[CONTROL_OFFSET + 1u] = ${roundLayout.y}u;
+  control[CONTROL_OFFSET + 2u] = ${roundLayout.z}u;
+  control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_ITERATIONS}u] = 0u;
+  control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_FAILED}u] = select(0u, 1u, failed);
+  control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_CONVERGED}u] = select(0u, 1u, converges);
+  converged[CONVERGED_OFFSET] = select(0u, 1u, converges);
 }`;
   addShortestPathPass(commandGraph, {
-    id: `${state.id}-source`,
+    id: `${state.id}-status`,
     source,
     bindings,
     dispatchLayout: {x: 1, y: 1, z: 1}
+  });
+}
+
+/**
+ * Places every valid seed at distance zero unless the search failed.
+ *
+ * A constant `sourceVertex` is uploaded to a node-owned buffer at compile time, so the shader
+ * source, and with it the cached pipeline, does not depend on the source vertex.
+ */
+function addSeedPass<Parameters>(
+  commandGraph: GPUCommandGraph<Parameters>,
+  state: ImportedShortestPathState,
+  search: GPUGraphAlgorithmsSingleSourceShortestPath
+): void {
+  const seedCount = state.seeds?.length ?? 1;
+  const bindings: Record<string, ShortestPathBinding> = {
+    control: {view: state.control, usage: 'storage-read'},
+    distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
+    ...(state.seeds ? {seeds: {view: state.seeds, usage: 'storage-read' as const}} : {})
+  };
+  const declarations = getBindingDeclarations(bindings);
+  const ownedSeedLocation = Object.keys(bindings).length;
+  const source = /* wgsl */ `
+const VERTEX_COUNT: u32 = ${state.vertexCount}u;
+const SEED_COUNT: u32 = ${seedCount}u;
+const SEEDS_OFFSET: u32 = ${state.seeds ? getViewElementOffset(state.seeds) : 0}u;
+const CONTROL_OFFSET: u32 = ${getViewElementOffset(state.control)}u;
+const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
+${declarations}
+${state.seeds ? '' : `@group(0) @binding(${ownedSeedLocation}) var<storage, read> seeds: array<u32>;`}
+
+@compute @workgroup_size(${SHORTEST_PATH_WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getInvocationIndexSource(state, seedCount)}
+  if (index >= SEED_COUNT || control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_FAILED}u] != 0u) {
+    return;
+  }
+  let vertex = seeds[SEEDS_OFFSET + index];
+  if (vertex < VERTEX_COUNT) {
+    atomicStore(&distances[DISTANCES_OFFSET + vertex], 0u);
+  }
+}`;
+  addShortestPathPass(commandGraph, {
+    id: `${state.id}-seeds`,
+    source,
+    bindings,
+    dispatchLayout: getDispatchLayout(state, seedCount),
+    ...(state.seeds ? {} : {ownedSeed: search.sourceVertex!})
   });
 }
 
@@ -349,15 +515,13 @@ function addSnapshotPass<Parameters>(
   const bindings: Record<string, ShortestPathBinding> = {
     distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
     previousDistances: {view: previousDistances, usage: 'storage-write'},
-    changed: {view: changed, usage: 'storage-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-read'}
+    changed: {view: changed, usage: 'storage-write', atomic: true}
   };
   const source = /* wgsl */ `
 const VERTEX_COUNT: u32 = ${state.vertexCount}u;
 const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const PREVIOUS_DISTANCES_OFFSET: u32 = ${getViewElementOffset(previousDistances)}u;
 const CHANGED_OFFSET: u32 = ${getViewElementOffset(changed)}u;
-const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
 ${getBindingDeclarations(bindings)}
 
 @compute @workgroup_size(${SHORTEST_PATH_WORKGROUP_SIZE})
@@ -367,7 +531,7 @@ fn main(
 ) {
   ${getInvocationIndexSource(state, Math.max(state.vertexCount, 1))}
   if (index == 0u) { atomicStore(&changed[CHANGED_OFFSET], 0u); }
-  if (index >= VERTEX_COUNT || converged[CONVERGED_OFFSET] != 0u) { return; }
+  if (index >= VERTEX_COUNT) { return; }
   previousDistances[PREVIOUS_DISTANCES_OFFSET + index] =
     bitcast<f32>(atomicLoad(&distances[DISTANCES_OFFSET + index]));
 }`;
@@ -375,7 +539,8 @@ fn main(
     id: `${state.id}-iteration-${iteration}-snapshot`,
     source,
     bindings,
-    dispatchLayout: getDispatchLayout(state, Math.max(state.vertexCount, 1))
+    dispatchLayout: getDispatchLayout(state, Math.max(state.vertexCount, 1)),
+    condition: state.roundCondition
   });
 }
 
@@ -400,8 +565,7 @@ function addRelaxationPass<Parameters>(
       : {}),
     previousDistances: {view: previousDistances, usage: 'storage-read'},
     distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
-    changed: {view: changed, usage: 'storage-read-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-read'}
+    changed: {view: changed, usage: 'storage-read-write', atomic: true}
   };
   const weightOffset = adjacency.edgeWeights
     ? `const WEIGHTS_OFFSET: u32 = ${getViewElementOffset(adjacency.edgeWeights)}u;`
@@ -415,7 +579,6 @@ const NEIGHBORS_OFFSET: u32 = ${getViewElementOffset(adjacency.neighbors)}u;
 const PREVIOUS_DISTANCES_OFFSET: u32 = ${getViewElementOffset(previousDistances)}u;
 const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const CHANGED_OFFSET: u32 = ${getViewElementOffset(changed)}u;
-const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
 ${weightOffset}
 ${getBindingDeclarations(bindings)}
 
@@ -425,7 +588,7 @@ fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
   ${getInvocationIndexSource(state, state.vertexCount)}
-  if (index >= VERTEX_COUNT || converged[CONVERGED_OFFSET] != 0u) { return; }
+  if (index >= VERTEX_COUNT) { return; }
   let distance = previousDistances[PREVIOUS_DISTANCES_OFFSET + index];
   if (bitcast<u32>(distance) >= 0x7f800000u) { return; }
   let first = min(offsets[OFFSETS_OFFSET + index], CAPACITY);
@@ -444,7 +607,8 @@ fn main(
     id: `${state.id}-iteration-${props.iteration}-relax-${props.direction}`,
     source,
     bindings,
-    dispatchLayout: getDispatchLayout(state, state.vertexCount)
+    dispatchLayout: getDispatchLayout(state, state.vertexCount),
+    condition: state.roundCondition
   });
 }
 
@@ -458,16 +622,13 @@ function addPredecessorResetPass<Parameters>(
   const bindings: Record<string, ShortestPathBinding> = {
     previousDistances: {view: previousDistances, usage: 'storage-read'},
     distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
-    predecessors: {view: state.predecessors, usage: 'storage-read-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-read'}
+    predecessors: {view: state.predecessors, usage: 'storage-read-write', atomic: true}
   };
   const source = /* wgsl */ `
 const VERTEX_COUNT: u32 = ${state.vertexCount}u;
-const SOURCE_VERTEX: u32 = ${state.sourceVertex}u;
 const PREVIOUS_DISTANCES_OFFSET: u32 = ${getViewElementOffset(previousDistances)}u;
 const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const PREDECESSORS_OFFSET: u32 = ${getViewElementOffset(state.predecessors)}u;
-const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
 ${getBindingDeclarations(bindings)}
 
 @compute @workgroup_size(${SHORTEST_PATH_WORKGROUP_SIZE})
@@ -476,9 +637,8 @@ fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
   ${getInvocationIndexSource(state, state.vertexCount)}
-  if (index >= VERTEX_COUNT || index == SOURCE_VERTEX || converged[CONVERGED_OFFSET] != 0u) {
-    return;
-  }
+  // A seed keeps distance zero, so it never takes this branch and keeps the sentinel parent.
+  if (index >= VERTEX_COUNT) { return; }
   let previous = bitcast<u32>(previousDistances[PREVIOUS_DISTANCES_OFFSET + index]);
   let current = atomicLoad(&distances[DISTANCES_OFFSET + index]);
   if (current < previous) {
@@ -489,7 +649,8 @@ fn main(
     id: `${state.id}-iteration-${iteration}-reset-predecessors`,
     source,
     bindings,
-    dispatchLayout: getDispatchLayout(state, state.vertexCount)
+    dispatchLayout: getDispatchLayout(state, state.vertexCount),
+    condition: state.roundCondition
   });
 }
 
@@ -513,8 +674,7 @@ function addPredecessorPass<Parameters>(
       : {}),
     previousDistances: {view: previousDistances, usage: 'storage-read'},
     distances: {view: state.distances, usage: 'storage-read-write', atomic: true},
-    predecessors: {view: state.predecessors, usage: 'storage-read-write', atomic: true},
-    converged: {view: state.converged, usage: 'storage-read'}
+    predecessors: {view: state.predecessors, usage: 'storage-read-write', atomic: true}
   };
   const weightOffset = adjacency.edgeWeights
     ? `const WEIGHTS_OFFSET: u32 = ${getViewElementOffset(adjacency.edgeWeights)}u;`
@@ -522,14 +682,12 @@ function addPredecessorPass<Parameters>(
   const weight = adjacency.edgeWeights ? 'edgeWeights[WEIGHTS_OFFSET + slot]' : '1.0';
   const source = /* wgsl */ `
 const VERTEX_COUNT: u32 = ${state.vertexCount}u;
-const SOURCE_VERTEX: u32 = ${state.sourceVertex}u;
 const CAPACITY: u32 = ${adjacency.neighbors.length}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(adjacency.offsets)}u;
 const NEIGHBORS_OFFSET: u32 = ${getViewElementOffset(adjacency.neighbors)}u;
 const PREVIOUS_DISTANCES_OFFSET: u32 = ${getViewElementOffset(previousDistances)}u;
 const DISTANCES_OFFSET: u32 = ${getViewElementOffset(state.distances)}u;
 const PREDECESSORS_OFFSET: u32 = ${getViewElementOffset(state.predecessors)}u;
-const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
 ${weightOffset}
 ${getBindingDeclarations(bindings)}
 
@@ -539,14 +697,15 @@ fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
   ${getInvocationIndexSource(state, state.vertexCount)}
-  if (index >= VERTEX_COUNT || converged[CONVERGED_OFFSET] != 0u) { return; }
+  if (index >= VERTEX_COUNT) { return; }
   let sourceDistance = previousDistances[PREVIOUS_DISTANCES_OFFSET + index];
   if (bitcast<u32>(sourceDistance) >= 0x7f800000u) { return; }
   let first = min(offsets[OFFSETS_OFFSET + index], CAPACITY);
   let last = min(offsets[OFFSETS_OFFSET + index + 1u], CAPACITY);
   for (var slot = first; slot < last; slot++) {
     let neighbor = neighbors[NEIGHBORS_OFFSET + slot];
-    if (neighbor >= VERTEX_COUNT || neighbor == SOURCE_VERTEX) { continue; }
+    // A seed never improves, so the first condition below also keeps its sentinel parent.
+    if (neighbor >= VERTEX_COUNT) { continue; }
     let previousDistance = bitcast<u32>(previousDistances[PREVIOUS_DISTANCES_OFFSET + neighbor]);
     let currentDistance = atomicLoad(&distances[DISTANCES_OFFSET + neighbor]);
     let candidate = bitcast<u32>(sourceDistance + ${weight});
@@ -559,11 +718,17 @@ fn main(
     id: `${state.id}-iteration-${props.iteration}-predecessors-${props.direction}`,
     source,
     bindings,
-    dispatchLayout: getDispatchLayout(state, state.vertexCount)
+    dispatchLayout: getDispatchLayout(state, state.vertexCount),
+    condition: state.roundCondition
   });
 }
 
-/** Publishes fixed-point convergence without synchronously reading status back to the CPU. */
+/**
+ * Counts the round and stops later rounds on convergence or at the round budget.
+ *
+ * Stopping writes a zero x dimension into the shared indirect dispatch command, so every later
+ * round pass dispatches no workgroups, in this submission and in later ones.
+ */
 function addConvergencePass<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   state: ImportedShortestPathState,
@@ -572,26 +737,29 @@ function addConvergencePass<Parameters>(
   const changed = state.changed!;
   const bindings: Record<string, ShortestPathBinding> = {
     changed: {view: changed, usage: 'storage-read'},
-    converged: {view: state.converged, usage: 'storage-read-write', atomic: true},
-    invalidWeightCount: {view: state.invalidWeightCount, usage: 'storage-read'},
-    ...getOverflowBindings(state)
+    converged: {view: state.converged, usage: 'storage-write'},
+    control: {view: state.control, usage: 'storage-read-write'}
   };
-  const reachesSimplePathBound = iteration + 1 >= state.vertexCount - 1;
   const source = /* wgsl */ `
+const VERTEX_COUNT: u32 = ${state.vertexCount}u;
+const MAX_ITERATIONS: u32 = ${state.maxIterations}u;
 const CHANGED_OFFSET: u32 = ${getViewElementOffset(changed)}u;
 const CONVERGED_OFFSET: u32 = ${getViewElementOffset(state.converged)}u;
-const INVALID_WEIGHT_COUNT_OFFSET: u32 = ${getViewElementOffset(state.invalidWeightCount)}u;
-${getOverflowConstants(state)}
+const CONTROL_OFFSET: u32 = ${getViewElementOffset(state.control)}u;
 ${getBindingDeclarations(bindings)}
 
 @compute @workgroup_size(1)
 fn main() {
-  if (invalidWeightCount[INVALID_WEIGHT_COUNT_OFFSET] != 0u || ${getOverflowGuard(state)}) {
-    atomicStore(&converged[CONVERGED_OFFSET], 0u);
-    return;
-  }
-  if (changed[CHANGED_OFFSET] == 0u${reachesSimplePathBound ? ' || true' : ''}) {
-    atomicStore(&converged[CONVERGED_OFFSET], 1u);
+  if (control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_DISPATCH_X}u] == 0u) { return; }
+  let iterations = control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_ITERATIONS}u] + 1u;
+  control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_ITERATIONS}u] = iterations;
+  // No change, or V - 1 rounds, which bound every simple path, mean every distance is final.
+  if (changed[CHANGED_OFFSET] == 0u || iterations + 1u >= VERTEX_COUNT) {
+    converged[CONVERGED_OFFSET] = 1u;
+    control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_CONVERGED}u] = 1u;
+    control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_DISPATCH_X}u] = 0u;
+  } else if (iterations >= MAX_ITERATIONS) {
+    control[CONTROL_OFFSET + ${SHORTEST_PATH_CONTROL_DISPATCH_X}u] = 0u;
   }
 }`;
   addShortestPathPass(commandGraph, {
@@ -653,15 +821,18 @@ function addShortestPathPass<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   props: ShortestPathPassProps
 ): void {
+  const names = Object.keys(props.bindings);
+  if (props.ownedSeed !== undefined) names.push('seeds');
   commandGraph.addComputePass({
     id: props.id,
     resources: Object.values(props.bindings).map(({view, usage}) => ({buffer: view, usage})),
+    ...(props.condition ? {condition: props.condition} : {}),
     compile: ({device}) => {
       const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
+          bindings: names.map((name, location) => ({
             name,
             type: 'storage' as const,
             group: 0,
@@ -669,6 +840,14 @@ function addShortestPathPass<Parameters>(
           }))
         }
       });
+      const ownedSeed =
+        props.ownedSeed === undefined
+          ? undefined
+          : device.createBuffer({
+              id: `${props.id}-source-vertex`,
+              data: Uint32Array.of(props.ownedSeed),
+              usage: Buffer.STORAGE
+            });
 
       return {
         encode: ({computePass, getBuffer}) => {
@@ -676,15 +855,18 @@ function addShortestPathPass<Parameters>(
           for (const [name, binding] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(binding.view, getBuffer);
           }
-          const kernelBindings = bindings;
+          if (ownedSeed) bindings['seeds'] = ownedSeed;
           kernel.dispatch(computePass, {
-            bindings: kernelBindings,
+            bindings,
             x: props.dispatchLayout.x,
             y: props.dispatchLayout.y,
             z: props.dispatchLayout.z
           });
         },
-        destroy: () => kernel.destroy()
+        destroy: () => {
+          kernel.destroy();
+          ownedSeed?.destroy();
+        }
       };
     }
   });

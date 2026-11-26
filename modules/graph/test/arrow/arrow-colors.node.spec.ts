@@ -13,7 +13,7 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/graph/arrow';
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 

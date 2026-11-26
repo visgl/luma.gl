@@ -636,6 +636,8 @@ export type GLTFNodePostprocessed = {
   mesh?: GLTFMeshPostprocessed;
   /** Index of the draft glTF 2.1 external asset instantiated by this node. */
   externalAsset?: GlTfId;
+  /** Draft glTF 2.1 authored spatial bound. */
+  boundingVolume?: import('./gltf-shape-schema').GLTFBoundingVolume;
   /**
    * The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.
    */
@@ -781,6 +783,8 @@ export type GLTFPostprocessed = {
   scene?: GLTFScenePostprocessed;
   /** An array of scenes. */
   scenes: GLTFScenePostprocessed[];
+  /** Draft glTF 2.1 analytic shapes shared by authored bounds and physics. */
+  shapes?: import('./gltf-shape-schema').GLTFShape[];
   /** An array of skins. */
   skins: GLTFSkinPostprocessed[];
   /** An array of textures. */

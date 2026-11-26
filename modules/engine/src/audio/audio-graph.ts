@@ -46,11 +46,14 @@ export type AudioGraphDefinition = {
 /** Owns only processing nodes. Scheduled sources and destination nodes remain caller-owned. */
 export class AudioGraph {
   readonly nodes: AudioNode[] = [];
+  /** Tracks whether a source has fed these processors since they were connected. */
+  private hasConnectedSource = false;
+
   constructor(
     readonly definition: AudioGraphDefinition,
-    context: BaseAudioContext,
-    destination: AudioNode,
-    getEmitterInputs: (index: number) => readonly AudioNode[]
+    private readonly context: BaseAudioContext,
+    private readonly destination: AudioNode,
+    private readonly getEmitterInputs: (index: number) => readonly AudioNode[]
   ) {
     // Multi-port routing processors cannot be replaced by a one-port bypass gain.
     for (const node of definition.nodes)
@@ -85,31 +88,46 @@ export class AudioGraph {
       visited.add(index);
     };
     definition.nodes.forEach((_, index) => visit(index));
+    this.connectProcessors();
+  }
+
+  /** Flush buffered samples while retaining gain automation. */
+  reset(): void {
+    if (!this.hasConnectedSource) return;
+    const previousNodes = this.nodes.slice();
+    this.destroy();
+    this.connectProcessors(previousNodes);
+  }
+
+  /** Wire graph processors, reusing gain nodes to preserve their AudioParam automation. */
+  private connectProcessors(previousNodes: readonly AudioNode[] = []): void {
+    const {definition, context, destination, getEmitterInputs} = this;
     try {
       definition.nodes.forEach((node, index) =>
         this.nodes.push(
-          createProcessor(
-            context,
-            node,
-            Math.max(
-              1,
-              ...definition.connections
-                .filter(edge => edge.from.node === index)
-                .map(edge => (edge.from.output ?? 0) + 1),
-              ...(definition.outputs || [])
-                .filter(output => output.node === index)
-                .map(output => (output.output ?? 0) + 1)
-            ),
-            Math.max(
-              1,
-              ...definition.connections
-                .filter(edge => edge.to.node === index)
-                .map(edge => (edge.to.input ?? 0) + 1),
-              ...(definition.inputs || [])
-                .filter(input => input.node === index)
-                .map(input => (input.input ?? 0) + 1)
+          (node.kind === 'gain' ? previousNodes[index] : undefined) ??
+            createProcessor(
+              context,
+              node,
+              Math.max(
+                1,
+                ...definition.connections
+                  .filter(edge => edge.from.node === index)
+                  .map(edge => (edge.from.output ?? 0) + 1),
+                ...(definition.outputs || [])
+                  .filter(output => output.node === index)
+                  .map(output => (output.output ?? 0) + 1)
+              ),
+              Math.max(
+                1,
+                ...definition.connections
+                  .filter(edge => edge.to.node === index)
+                  .map(edge => (edge.to.input ?? 0) + 1),
+                ...(definition.inputs || [])
+                  .filter(input => input.node === index)
+                  .map(input => (input.input ?? 0) + 1)
+              )
             )
-          )
         )
       );
       for (const edge of definition.connections) {
@@ -138,8 +156,10 @@ export class AudioGraph {
 
   connectSource(index: number, source: AudioNode): void {
     for (const input of this.definition.inputs || []) {
-      if (input.source === index)
+      if (input.source === index) {
         source.connect(this.nodes[input.node], 0, this.getInputPort(input.node, input.input ?? 0));
+        this.hasConnectedSource = true;
+      }
     }
   }
 
@@ -172,6 +192,7 @@ export class AudioGraph {
   destroy(): void {
     for (const node of this.nodes) node.disconnect();
     this.nodes.length = 0;
+    this.hasConnectedSource = false;
   }
 
   private getInputPort(index: number, port: number): number {

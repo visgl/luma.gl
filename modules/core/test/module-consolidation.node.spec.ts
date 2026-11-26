@@ -4,7 +4,7 @@
 
 import {describe, expect, it} from 'vitest';
 import * as core from '@luma.gl/core';
-import {WebGLDevice, GL as webglGL} from '@luma.gl/core/webgl';
+import * as webgl from '@luma.gl/core/webgl';
 import {WebGPUDevice} from '@luma.gl/core/webgpu';
 import {GL} from '@luma.gl/core/webgl-constants';
 import {scanWGSLInterface} from '@luma.gl/core/wgsl';
@@ -19,12 +19,12 @@ describe('consolidated core module', () => {
     expect(core).not.toHaveProperty('webgl2Adapter');
     expect(core).not.toHaveProperty('webgpuAdapter');
     expect(core).not.toHaveProperty('GL');
-    expect(WebGLDevice.prototype).toBeInstanceOf(core.Device);
+    expect(webgl).not.toHaveProperty('GL');
+    expect(webgl.WebGLDevice.prototype).toBeInstanceOf(core.Device);
     expect(WebGPUDevice.prototype).toBeInstanceOf(core.Device);
   });
 
-  it('shares constants and WGSL scanning across entry points', () => {
-    expect(GL).toBe(webglGL);
+  it('exports constants separately and shares WGSL scanning', () => {
     expect(scanWGSLInterface).toBe(scanShadersWGSLInterface);
     expect(GL.TRIANGLES).toBe(4);
     expect(

@@ -7,11 +7,7 @@ import type {SceneSurface} from './scene-renderer';
 
 const MATERIAL_MAPS = [
   ['baseColor', 'pbr_baseColorSampler', 'primitive.baseColor *= sampled;'],
-  [
-    'emissive',
-    'pbr_emissiveSampler',
-    'primitive.emissive = vec4<f32>(primitive.emissive.rgb * sampled.rgb, primitive.emissive.w);'
-  ],
+  ['emissive', 'pbr_emissiveSampler', ''],
   [
     'metallicRoughness',
     'pbr_metallicRoughnessSampler',
@@ -62,10 +58,17 @@ const MATERIAL_MAPS = [
   ]
 ] as const;
 
+/** Marks materials that can contribute an index-matched straight shadow path. */
+function hasIndexMatchedTransmission(surface: SceneSurface): boolean {
+  const uniforms = surface.material.uniforms;
+  return uniforms?.ior === 1 && (uniforms.transmissionFactor ?? 0) > 0;
+}
+
 /** Borrowed material maps; ownership remains with the scene adapter. */
 export function getRayMaterialTextures(
   surfaces: readonly SceneSurface[],
-  opacityOnly = false
+  opacityOnly = false,
+  textureLimit = 14
 ): Texture[] {
   const textures: Texture[] = [];
   for (const [name, binding] of MATERIAL_MAPS) {
@@ -81,7 +84,7 @@ export function getRayMaterialTextures(
       if (texture instanceof Texture && !textures.includes(texture)) {
         textures.push(texture);
         // Temporal history occupies two of the 16 guaranteed sampled texture bindings.
-        if (textures.length === 14) return textures;
+        if (textures.length === textureLimit) return textures;
       }
     }
   }
@@ -96,6 +99,7 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
       surface.id,
       surface.material.uniforms?.normalScale,
       (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0,
+      hasIndexMatchedTransmission(surface),
       (surface.material.uniforms?.anisotropyStrength ?? 0) > 0,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
@@ -113,9 +117,10 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
 export function getRayMaterialTextureShader(
   source: string,
   surfaces: readonly SceneSurface[],
-  opacityOnly = false
+  opacityOnly = false,
+  textureLimit = 14
 ): string {
-  const textures = getRayMaterialTextures(surfaces, opacityOnly);
+  const textures = getRayMaterialTextures(surfaces, opacityOnly, textureLimit);
   const declarations = textures
     .map(
       (texture, index) => `
@@ -141,6 +146,7 @@ export function getRayMaterialTextureShader(
     })
     .join('\n');
   const opacityMaterials: string[] = [];
+  const emissionMaterials: string[] = [];
   const normalMaterials: string[] = [];
   const clearcoatNormalMaterials: string[] = [];
   const anisotropyMaterials: string[] = [];
@@ -166,6 +172,14 @@ export function getRayMaterialTextureShader(
           texture.mipLevels > 1
             ? `getMaterialFootprint(hit, transform, ${uniforms?.[`${name}UVSet`] === 1})`
             : 'vec2<f32>(0.0)';
+        if (name === 'emissive') {
+          emissionMaterials.push(`case ${surfaceIndex}u: {
+            let transform = mat3x3<f32>(${matrix});
+            let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+            emission *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint}).rgb;
+          }`);
+          return '';
+        }
         if (name === 'normal' || name === 'clearcoatNormal') {
           const scale = name === 'normal' ? Number(uniforms?.normalScale ?? 1).toFixed(9) : '1.0';
           const cases = name === 'normal' ? normalMaterials : clearcoatNormalMaterials;
@@ -184,8 +198,9 @@ export function getRayMaterialTextureShader(
         }
         if (name === 'baseColor') {
           opacityMaterials.push(`case ${surfaceIndex}u: {
-            let coordinates = (mat3x3<f32>(${matrix}) * vec3<f32>(${coordinates}, 1.0)).xy;
-            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, vec2<f32>(0.0)).a;
+            let transform = mat3x3<f32>(${matrix});
+            let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint}).a;
           }`);
         }
         return `{ let transform = mat3x3<f32>(${matrix});
@@ -207,13 +222,21 @@ export function getRayMaterialTextureShader(
           surfaces.some(surface => (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0)
       )
     )
+    .replace(
+      '/* MATERIAL_HAS_INDEX_MATCHED_TRANSMISSION */ false',
+      String(!opacityOnly && surfaces.some(hasIndexMatchedTransmission))
+    )
     .replace('/* MATERIAL_HAS_ANISOTROPY */ false', String(hasAnisotropy))
+    .replace(
+      '/* MATERIAL_HAS_MIPMAPS */ false',
+      String(textures.some(texture => texture.mipLevels > 1))
+    )
     .replace(
       '/* MATERIAL_PRIMARY_FOOTPRINT */',
       textures.some(texture => texture.mipLevels > 1)
         ? `
-      let horizontal = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(1.0, 0.0));
-      let vertical = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(0.0, 1.0));
+      let horizontal = makeCameraRayAtFullCoordinates(getFullSampleCoordinates(pixel, sampleOffset + vec2<f32>(1.0, 0.0)));
+      let vertical = makeCameraRayAtFullCoordinates(getFullSampleCoordinates(pixel, sampleOffset + vec2<f32>(0.0, 1.0)));
       let position = ray.origin + ray.direction * hit.distance;
       let face = getFaceNormal(hit, ray);
       let horizontalOffset = horizontal.origin + horizontal.direction * hit.distance - position;
@@ -226,6 +249,7 @@ export function getRayMaterialTextureShader(
     .replace('/* MATERIAL_TEXTURE_CASES */', cases)
     .replace('/* MATERIAL_SURFACE_CASES */', materials)
     .replace('/* MATERIAL_OPACITY_CASES */', opacityMaterials.join('\n'))
+    .replace('/* MATERIAL_EMISSION_CASES */', emissionMaterials.join('\n'))
     .replace('/* MATERIAL_NORMAL_CASES */', normalMaterials.join('\n'))
     .replace('/* MATERIAL_CLEARCOAT_NORMAL_CASES */', clearcoatNormalMaterials.join('\n'))
     .replace('/* MATERIAL_ANISOTROPY_CASES */', anisotropyMaterials.join('\n'));

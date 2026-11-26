@@ -15,23 +15,33 @@ on:
       - 'vitest.config.ts'
       - 'test/utils/**'
       - 'modules/anari/src/**'
+      - 'modules/anari/test/anari-reflection.spec.ts'
+      - 'modules/anari/test/engine/ray-tracing-image-export.spec.ts'
+      - 'modules/three/**'
+      - 'examples/experimental/three/**'
+      - 'modules/anari/test/anari-emitter-sampling*'
       - 'modules/anari/test/engine/ray-material*'
+      - 'modules/anari/test/engine/ray-alpha-pixels.spec.ts'
+      - 'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts'
+      - 'modules/anari/test/engine/ray-environment-lighting.spec.ts'
+      - 'modules/anari/test/engine/ray-secondary-texture-filtering.spec.ts'
       - 'modules/shaders/src/**'
       - 'modules/core/src/**'
       - 'modules/engine/src/**'
+      - 'modules/engine/test/gltf/gltf/gltf-area-lights-render.spec.ts'
 
 permissions:
   contents: read
 
 concurrency:
   group: render-conformance-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   conformance:
     name: Full material transport matrix
     runs-on: ubuntu-22.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
@@ -72,7 +82,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/render-conformance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="4"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="37"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload material results

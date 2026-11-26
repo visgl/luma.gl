@@ -11,7 +11,7 @@ import {
 } from '@luma.gl/anari';
 import {pbrMaterial, pbrScene, skin, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test} from 'vitest';
 import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';
 

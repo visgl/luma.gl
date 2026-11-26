@@ -21,7 +21,7 @@ import {
   getPBREnvironmentUniforms,
   type LightmapBakeResult
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 function createGeometry() {
   return new Geometry({

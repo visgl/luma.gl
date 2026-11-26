@@ -1,3 +1,7 @@
+import {timeCaptureFrame} from './ray-capture-timing';
+import {RayBatchBudget} from './ray-batch-budget';
+import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
+import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
   ANARIDevice,
   type ANARIFrame,
@@ -12,7 +16,7 @@ import {
   type ANARIWorld
 } from '@luma.gl/anari';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {createANARIJSONScene, type ANARIJSONScene} from './playground-scene';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
@@ -84,6 +88,10 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private orbitControls: OrbitControls | null = null;
   private bloomEnabled = true;
   private temporalAntialiasingEnabled = true;
+  /** Limits outstanding live ray work while leaving raster submissions on their normal path. */
+  private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
+  /** Calibrates the ray trace dispatch independently of queue pacing. */
+  private readonly rayBatchBudget = new RayBatchBudget();
   private lastStatisticsUpdate = 0;
   private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
@@ -147,7 +155,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     setElementText('device-type', `${device.type.toUpperCase()}${displayMode}`);
   }
 
-  override onRender({width, height, time}: AnimationProps): void {
+  override onRender({device, width, height, time}: AnimationProps): void {
     const elapsedSeconds = time * 0.001;
     const activeScene = this.scenes[this.activeSceneIndex];
     for (const animation of activeScene.animations) {
@@ -180,7 +188,29 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     ];
     this.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
 
-    const statistics = this.frame.render();
+    const paceRayFrame = this.frame.getParameter('renderer')?.subtype === 'raytrace';
+    if (paceRayFrame && !this.raySubmissionPacer.isReady()) return;
+    if (paceRayFrame) {
+      this.frame
+        .getParameter('renderer')
+        ?.setParameters({
+          previousFrameExecutionMilliseconds: this.raySubmissionPacer.lastSubmissionMilliseconds,
+          rayBatchPhaseCount: this.rayBatchBudget.phaseCount
+        })
+        .commitParameters();
+    }
+    /** Scene render and optional asynchronous GPU pass timing. */
+    const timedFrame =
+      paceRayFrame && this.rayBatchBudget.canMeasure(device)
+        ? timeCaptureFrame(device, () => this.frame.render())
+        : undefined;
+    const statistics = timedFrame?.result ?? this.frame.render();
+    if (timedFrame) this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
+    if (paceRayFrame) {
+      void submitPacedRayFrame(device, this.raySubmissionPacer).catch(() => {
+        setElementText('ray-tracing-frame', 'GPU work interrupted');
+      });
+    }
     if (elapsedSeconds - this.lastStatisticsUpdate > 0.3) {
       setElementText('instance-count', statistics.instanceCount.toLocaleString());
       setElementText('draw-count', statistics.drawCount.toLocaleString());
@@ -276,6 +306,8 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           ) {
             return;
           }
+          this.raySubmissionPacer.resetCooldown();
+          this.rayBatchBudget.reset();
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
@@ -328,6 +360,8 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   }
 
   private selectScene(sceneIndex: number): void {
+    this.raySubmissionPacer.resetCooldown();
+    this.rayBatchBudget.reset();
     const scene = this.scenes[sceneIndex];
     this.activeSceneIndex = sceneIndex;
     this.orbitControls?.setProps({

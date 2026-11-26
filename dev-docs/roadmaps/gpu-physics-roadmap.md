@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 13, 2026
+Updated: November 22, 2026
 
 ## Goal and current status
 
@@ -29,6 +29,22 @@ Implementation references on master:
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
+## glTF 2.1 composition and passive ragdolls
+
+The composed-scene adapter mounts independently owned instances of decoded external
+assets under their referencing nodes. It targets the Khronos
+[glTF 2.1 draft c330f9e5](https://github.com/KhronosGroup/glTF/tree/c330f9e5a324c9858145be183d2a1e63718fd3e8)
+and accepts core analytic shapes as an additional input profile for the existing
+[rigid-body review draft](https://github.com/KhronosGroup/glTF/pull/2424).
+The loaders.gl adapter handles file and GLB v3 decoding. An embedded external asset in
+a multi-chunk GLB is exercised end to end. Authored bounding volumes are resolved as
+scenegraph metadata.
+
+Marionette Theater uses the same glTF-authored joints and skins as the engine, with
+two independent physics sessions. A fixed-step animation release feeds live pose
+matrices to the standard skin palette on the GPU. The G9 active-ragdoll checkpoint adds torque-limited animation tracking to dynamic joints. Marionette Theater can release, recover its relative pose on the stage, and reset either puppet independently. Contact-coupled articulations, balance control, progressive asset
+materialization, broader draft conformance, and cross-device limits remain open.
+
 ## G7 glTF physics qualification checkpoint
 
 The [G7 qualification report](../benchmarks/gltf-physics-g7.md) records the status
@@ -41,6 +57,10 @@ The next release qualification work is to reproduce these checks on additional
 hardware and browsers, then expand the timed envelope to dense worlds, moving
 meshes, and authored scenes with rendering active. G8 and later continue to track
 broader library capabilities separately from the pinned glTF profile.
+
+The rendered authored-scene gate adds capture, recook, restore, and native export
+to the GPU presentation qualification. It records frame intervals with rendering
+and simulation active. Cross-vendor and mobile evidence remain open.
 
 ## Authored qualification closure — October 24, 2026
 
@@ -73,9 +93,8 @@ The four broad G6 rows now have executable import/behavior/performance selectors
 Their pass status must come from the qualification report, not this roadmap. The
 publication benchmark measures 10,000 transforms and AABBs on Apple hardware and
 SwiftShader separately. This closes a bounded publication measurement obligation;
-it does not establish multi-vendor hardware or whole-step performance. Explicit
-recooking remains required for skin/morph topology changes and scale reconciliation
-before native export. Mutable animated nodes are instance-local; immutable resources
+it does not establish multi-vendor hardware or whole-step performance. Native export now reconciles settled analytic scale and collider frames in the live
+scene. Mesh deformation and topology changes still require explicit recooking. Mutable animated nodes are instance-local; immutable resources
 may be shared. Cross-device release qualification remains G7 work.
 
 ## Authored runtime and GPU execution checkpoint — October 23, 2026
@@ -370,6 +389,25 @@ collider/node identity, hit fraction and normal. Bind proposal-defined
 Specify fixed-step/tick ordering, repeated events between ticks and invalid-node
 handling. GPU events remain compact and bounded, with explicit overflow recovery.
 
+Batched rays and sphere sweeps now share one GPU dispatch and readback, with
+per-command nearest-hit and completion reporting. Compact common selections
+and workgroup-local reduction bound the staging cost by query count. The Batch
+Lab collision scan compares a matched subset with scalar queries and presents a
+depth image for larger workloads. Batched ray and sphere casts now support an
+opt-in GPU-refitted BVH for sphere and box colliders. The Batch Lab compares
+every cast with the matched direct scan. Extended geometry remains on the direct
+path to preserve local traversal completeness. Dynamic spatial reordering,
+extended geometry indexing, event compaction, and the remaining glTF behavior
+operations are open.
+
+Rigid-body contact and trigger publication now uses deterministic tiled GPU
+compaction. The ring keeps event order and reports overwritten sequences even
+during a burst larger than the ring, without running the whole publication
+loop in one invocation. The Batch Lab exercises both publishers in one step.
+Contact and trigger snapshots now restore the active set and its matching cursor
+after ring loss. Capacity-wide classification, scalable readback, and qualification
+for consumers that require every historic transition remain open.
+
 Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
 produce correct payloads and ordering without whole-world readback per operation.
 
@@ -434,7 +472,100 @@ Exit: published quality/performance comparisons against independent engines usin
 matched scenes, timestep, approximation and error tolerances; no unsupported SOTA claim
 based solely on body count or a discovery benchmark.
 
+### Vehicle dynamics checkpoint across G9–G11
+
+The off-road buggy integrates GPU suspension and tire forces with live chassis
+rendering. The vehicle follow-up groups multiple four-wheel chassis into one
+suspension dispatch. Per-chassis controls and wheel pose ranges stay independent.
+The handling model adds optional Ackermann steering, paired anti-roll load
+transfer, and longitudinal/lateral slip gains.
+
+Qualification covers independent forward/reverse controls, inner/outer wheel
+angles, axle load conservation, checkpoint restoration, and a passive trailer
+coupled through an ordered hinge. The buggy shows live suspension and GPU graph
+timings. Broader articulated mechanisms, independent-world batching with vehicles,
+measured tire calibration, and cross-adapter fleet throughput remain open.
+
+### Fleet terrain and replay checkpoint across G9–G12
+
+Scenegraph controllers can register fleets by chassis and terrain path, target
+individual chassis, and preserve their wheel state across index-changing rebuilds.
+Vehicle sweeps select the nearest supporting hit across up to four static colliders.
+Off-road Buggy uses four adjoining collision tiles cooked from the rendered terrain.
+
+Qualification exercises shared terrain and separate controls, removes a chassis and
+rebuilds with the surviving chassis in a different slot, then replays an identical
+tile crossing from a GPU checkpoint. This is same-device checkpoint evidence.
+Cross-adapter repeatability, streaming terrain residency, and larger-scale throughput
+remain open.
+
+### Independent-world vehicle qualification across G10–G12
+
+Vehicle templates replicate chassis indices and terrain tile indices per collision partition.
+A single indirect suspension pass visits scheduled instances. Shared-step rollback restores
+wheel state and chassis state together, and individual reset restores vehicle inputs, telemetry
+and GPU wheel poses from the template image.
+
+The Physics Batch Lab compares a tiled vehicle workload across fused, batched and separate
+submissions. It reports active vehicle steps per second, wheel snapshot bytes and suspension
+timing when adapter timestamps are available. Qualification covers overlapping fleet coordinates,
+terrain movement scoped to one instance, pause and resume, reset and shared contact overflow.
+The workload measures browser and adapter throughput without claiming calibrated tire response.
+Cross-adapter fleet results, streaming terrain residency and articulated ensembles remain open.
+
+### Height-field geometry bridge across G10–G12
+
+math.gl owns grid sampling and terrain triangulation. GPU physics accepts the resulting CPU
+triangle geometry through a static surface cooker that discards unused vertices and omits
+closed-solid mass work. Load-time BVH construction reuses precomputed triangle bounds and
+centroid keys. Off-road Buggy uses the shared geometry contract and tile-local collision
+coordinates without adding a terrain package dependency.
+
+The triangle surface path establishes the reference for authored holes, tile seams, and origin
+shifts. Native height fields now reconstruct cell triangles on the GPU from scalar samples
+and a stackless hierarchy. Fixed-size standalone collider slots can upload, move, and evict
+tiles without rebuilding the graph; checkpoints restore residency and body state together.
+Off-road Buggy uses a hysteresis window and retains a cooked-mesh reference mode.
+
+Provider-backed terrain windows bound fetch concurrency, cancel obsolete requests, and stage
+stitched samples for publication between submissions. Neighboring tiles with nested grids
+share the coarse piecewise-linear boundary, including partial-span seams and T-junctions.
+Qualification covers fetched mixed-resolution tiles, failed and superseded windows, and
+capacity-neutral eviction and replacement.
+
+Automatic terrain selection bounds residency by fixed collider slots and optional focus
+radius. It balances neighboring quadtree LODs, retains slots with hysteresis, and emits
+seams for the provider stream. Qualification covers sparse manifests, slot budgets,
+mixed-level seams, and WebGPU ray continuity as a focus moves. Off-road Buggy exposes
+the active terrain window with `?terrain=auto`.
+
+Terrain edits now invalidate warm-start impulses by collider revision. Standalone worlds
+wake sleeping bodies overlapping old and new tile footprints, and fused worlds wake only
+the partitions that receive tile edits. Fused instances can reserve private writable slots
+while continuing to share authored terrain. Their independent provider windows share
+fetches and concurrency, and a template reset preserves committed tile residency.
+The Physics Batch Lab reports streaming and step latency, activity, provider reuse, and
+resident bytes. Qualification covers scoped wake and cache behavior, capacity-neutral
+replacement, mixed-resolution seams, and reset after origin shifting.
+
+An optional shared atlas now assigns one immutable GPU page to identical packed terrain
+payloads, including stitched seams. Fixed per-grid pools account for reserved bytes up
+front. Copy-on-write isolates diverging windows, and batched publication can hand off a
+page when its last users update together. Qualification covers occupancy and buffer
+savings, capacity rejection without partial publication, per-instance reset, origin
+shifting, GPU checkpoints, and capture restore.
+
+Fused ensembles can opt into disjoint persistent contact caches and recover independently
+from local cache exhaustion. Failed instances are rolled back and held until a scoped reset
+while healthy instances publish poses and events. The Batch Lab exercises this on the same
+compiled graph. Shared discovery, mesh-work, solver, and nonfinite-state faults still reject
+the whole step. Qualification across adapters and broader fault attribution remain open.
+
 ### G9. Articulations and mechanism quality
+
+The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. A [3 kg work-stop trial](../benchmarks/robot-arm.md#press-and-lift-at-120-hz) qualifies unilateral sphere–static-box contact through press and release. Multiple simultaneous contacts, friction, moving counterparts, floating bases, limits and larger-tree scaling remain open.
+
+The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold was chosen as the reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
 
 Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate
 reduced-coordinate articulation solving, contact coupling, motors, limits and closed-loop
@@ -471,6 +602,9 @@ Stabilize API ownership, mutation and disposal contracts; version cooked assets;
 capture/replay and solver diagnostics; define device-loss and capacity-failure behavior.
 Maintain continuous correctness and performance coverage across integrated/discrete GPUs
 and a declared mobile envelope. Publish reproducible benchmarks and known limitations.
+
+Contact and trigger recovery snapshots establish a coherent cursor under ring overflow
+and preserve queued-step ordering across asynchronous reads and checkpoint restore.
 
 Exit: a versioned supported-feature contract, end-to-end rendering integration, release
 regression gates and reproducible competitive evidence. SOTA status is evaluated per

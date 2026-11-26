@@ -11,6 +11,8 @@
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
       "showcase/instancing",
+      "showcase/the-river-remembers",
+      "showcase/canyon-echo",
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -77,7 +79,8 @@
       "experimental/physics-stress",
       "experimental/physics-batch",
       "gltf/physics",
-      "gltf/authored-scene-stress"
+      "gltf/authored-scene-stress",
+      "gltf/marionette-theater"
     ]
   },
   {
@@ -313,28 +316,6 @@
       "deck/arrow-path-layer",
       "deck/arrow-polygon-layer",
       "deck/arrow-text-layer"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Visual Effects - deck.gl v10",
-    "items": [
-      "deck/weather",
-      "deck/soft-shadows",
-      "deck/globe-clouds",
-      "deck/city-scene",
-      "deck/flow-particles",
-      "deck/wind",
-      "deck/point-glow",
-      "deck/hdr-night-lighting",
-      "deck/global-illumination",
-      "deck/light-shafts",
-      "deck/ambient-occlusion",
-      "deck/depth-of-field",
-      "deck/sketch-edges",
-      "deck/scene-buffers",
-      "deck/pattern-fills",
-      "deck/styled-paths"
     ]
   },
   {

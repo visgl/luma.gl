@@ -8,9 +8,10 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {applyExampleTheme} from '../../example-theme';
+import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
 /** Mount the driving instruments and sample the physics readback at dashboard refresh rate. */
-export function createDashboard(travel: number) {
+export function createDashboard(travel: number, diagnostics: GPUGraphDiagnostics) {
   const host = document.querySelector<HTMLElement>('#info')!;
   const dashboard = document.querySelector<HTMLElement>('#dashboard')!;
   const speed = dashboard.querySelector<HTMLElement>('#speed')!;
@@ -64,7 +65,8 @@ export function createDashboard(travel: number) {
               title: 'Driving',
               html: '<p>Use W/S or the arrow keys to drive forward and reverse. Steer with A/D or the left and right arrows. Hold Space to brake.</p><p>Drag to orbit and scroll to zoom. Chase camera follows the heading of the buggy.</p><p>Spring travel shows compression from full extension at each wheel. Axle load shows how the supported weight shifts between the front and rear wheels.</p>',
               onRender: root => configurePanelHostElement(root, 'cinematic')
-            })
+            }),
+            diagnostics.inspectorPanel.panel
           ]
         })
       })

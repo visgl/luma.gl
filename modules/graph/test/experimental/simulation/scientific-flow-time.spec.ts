@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 import {
   ScientificFlowGraph,
   type ScientificVectorFieldInput
-} from '@luma.gl/graph/experimental/simulation';
+} from '@luma.gl/graph/experimental-simulation';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 function makeUniformField(speed: number, valid = 1): ScientificVectorFieldInput {

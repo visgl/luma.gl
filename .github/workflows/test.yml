@@ -286,7 +286,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Run all Node tests
+      - name: Run Node tests outside the focused coverage pass
+        env:
+          LUMA_TEST_NODE_SKIP_COVERED: 'true'
         run: yarn test-node
 
       - name: Collect focused Node coverage

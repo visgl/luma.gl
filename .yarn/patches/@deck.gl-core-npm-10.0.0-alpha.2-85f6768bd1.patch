@@ -1,0 +1,227 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 6d2a96a9abccee9cd520d1be1b333c528c744d02..485071ec4db8a229dd9296a563b16fa812dc3ef1 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -8795,8 +8795,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -8912,8 +8917,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -10583,7 +10593,7 @@ var Deck = class {
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+diff --git a/dist/lib/deck-picker.js b/dist/lib/deck-picker.js
+index 1f2ae3acb966cfa68814e184f0b8cb36a6bdc50e..629965b052745ebefe491ad142af620c53417598 100644
+--- a/dist/lib/deck-picker.js
++++ b/dist/lib/deck-picker.js
+@@ -133,8 +133,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Leaving the canvas has no viewport but still clears the last hovered object.
++            const infos = processPickInfo({
++              pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++              lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Leaving the canvas has no viewport but still clears the last hovered object.
++            const infos = processPickInfo({
++              pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++              lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+diff --git a/dist/lib/deck.js b/dist/lib/deck.js
+index 5f98a6fcd90829bf61da44544e8fbcabd0cee0db..8b54f81449656a5d7d7a72e47adeeb126b540255 100644
+--- a/dist/lib/deck.js
++++ b/dist/lib/deck.js
+@@ -681,7 +681,7 @@ class Deck {
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
+diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
+index 35f1538c1e3bdedff2c50b2f80b0f5fa85f31662..dd9f9d9da6d3acc3014b78c1c6fe07f25308018c 100644
+--- a/dist.webgl-only/index.cjs
++++ b/dist.webgl-only/index.cjs
+@@ -8153,8 +8153,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -8270,8 +8275,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -9941,7 +9951,7 @@ var Deck = class {
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+diff --git a/dist.webgl-only/lib/deck-picker.js b/dist.webgl-only/lib/deck-picker.js
+index 4c98d40d51bbaa49d903b201c8c2f1ff3e0b30ef..e08289d8fc5e8e1f24533d02147c6703a9ac99d1 100644
+--- a/dist.webgl-only/lib/deck-picker.js
++++ b/dist.webgl-only/lib/deck-picker.js
+@@ -133,8 +133,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Leaving the canvas has no viewport but still clears the last hovered object.
++            const infos = processPickInfo({
++              pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++              lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Leaving the canvas has no viewport but still clears the last hovered object.
++            const infos = processPickInfo({
++              pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++              lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+diff --git a/dist.webgl-only/lib/deck.js b/dist.webgl-only/lib/deck.js
+index 5f98a6fcd90829bf61da44544e8fbcabd0cee0db..8b54f81449656a5d7d7a72e47adeeb126b540255 100644
+--- a/dist.webgl-only/lib/deck.js
++++ b/dist.webgl-only/lib/deck.js
+@@ -681,7 +681,7 @@ class Deck {
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
+diff --git a/src/lib/deck-picker.ts b/src/lib/deck-picker.ts
+index a86f72d181915be3250bc2f96d93e672dbe28bbd..1cf25a81d4ae175894ad3e5f642885d7cce481fa 100644
+--- a/src/lib/deck-picker.ts
++++ b/src/lib/deck-picker.ts
+@@ -252,8 +252,13 @@ export default class DeckPicker {
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+@@ -418,8 +423,13 @@ export default class DeckPicker {
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Leaving the canvas has no viewport but still clears the last hovered object.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+diff --git a/src/lib/deck.ts b/src/lib/deck.ts
+index f3b8ddbc5d2770738dbe8905387eeaa2d95cdbf4..bd171f298e8cd39b552fa1f94d4cfa9b30cc9cd9 100644
+--- a/src/lib/deck.ts
++++ b/src/lib/deck.ts
+@@ -1049,7 +1049,7 @@ export default class Deck<ViewsT extends ViewOrViews = null> {
+       return;
+     }
+ 
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+ 
+     let pickedInfo = emptyInfo;
+     let handled = false;

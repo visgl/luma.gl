@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {WebXRManager} from '@luma.gl/engine/experimental/webxr';
+import {WebXRManager} from '@luma.gl/engine/experimental-webxr';
 
 it('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebuffer', async () => {
   const device = await getWebGLTestDevice();

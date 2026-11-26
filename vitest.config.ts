@@ -30,6 +30,11 @@ const excludePatterns = [
 // These specs exercise pure data transforms, layouts, shader assembly, and validation. Running
 // them in Node preserves the assertions while avoiding one isolated browser page per file.
 const nodeOnlyTestPatterns = [
+  'test/examples/poisson-problem.spec.{ts,js}',
+  'modules/core/test/webgl/constants/webgl-constant-utils.spec.{ts,js}',
+  'modules/core/test/webgl/adapter/helpers/get-shader-layout-from-glsl.spec.{ts,js}',
+  'modules/engine/test/gltf/parsers/post-process-gltf-legacy.spec.{ts,js}',
+  'modules/shaders/test/modules/volume/volume-raymarch.spec.{ts,js}',
   'test/devtools/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-adjust-filters/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
@@ -140,6 +145,7 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
 
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
@@ -224,7 +230,11 @@ const vitestConfig = getVitestConfig({
           ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
           : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
-        exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
+        exclude: [
+          ...excludePatterns,
+          ...nodeWrapperSourcePatterns,
+          ...(process.env.LUMA_TEST_NODE_SKIP_COVERED === 'true' ? nodeCoveragePatterns : [])
+        ]
       }
     },
     browser: {

@@ -5,7 +5,7 @@ import {Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {ClipSpace} from '@luma.gl/engine';
 import {ClusteredLightGrid} from '@luma.gl/engine/lighting';
 import {clusteredLightGrid} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** GPU-only occupancy preview: each horizontal band displays a logarithmic depth slice. */
 export class ClusterGridPreview {

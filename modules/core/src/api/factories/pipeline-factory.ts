@@ -4,7 +4,11 @@
 
 import {Device} from '../adapter/device';
 import {ComputePipeline, type ComputePipelineProps} from '../adapter/resources/compute-pipeline';
-import {RenderPipeline, type RenderPipelineProps} from '../adapter/resources/render-pipeline';
+import {
+  getPipelineDepthStencilFormat,
+  RenderPipeline,
+  type RenderPipelineProps
+} from '../adapter/resources/render-pipeline';
 import {DeviceResource} from '../adapter/resources/device-resource';
 import type {SharedRenderPipeline} from '../adapter/resources/shared-render-pipeline';
 import {log} from '../utils/log';
@@ -453,9 +457,7 @@ export class PipelineFactory {
     const colorAttachmentFormats = props.colorAttachmentFormats ?? [
       this.device.preferredColorFormat
     ];
-    const depthStencilAttachmentFormat =
-      props.depthStencilAttachmentFormat ??
-      (props.parameters?.depthWriteEnabled ? this.device.preferredDepthFormat : null);
+    const depthStencilAttachmentFormat = getPipelineDepthStencilFormat(this.device, props) ?? null;
 
     return this._getHash(
       JSON.stringify({

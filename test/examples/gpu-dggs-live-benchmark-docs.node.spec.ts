@@ -33,8 +33,8 @@ describe('GPU DGGS documentation', () => {
 
   test('keeps the reusable primitive and optional benchmark in isolated package entry points', () => {
     expect(packageManifest).toContain('"./gpu-dggs"');
-    expect(packageManifest).toContain('"./gpu-dggs/benchmarks"');
+    expect(packageManifest).toContain('"./gpu-dggs-benchmarks"');
     expect(documentationPages[0]).toContain('GPUDGGSCellProjection');
-    expect(documentationPages[0]).toContain("'@luma.gl/graph/gpu-dggs/benchmarks'");
+    expect(documentationPages[0]).toContain("'@luma.gl/graph/gpu-dggs-benchmarks'");
   });
 });

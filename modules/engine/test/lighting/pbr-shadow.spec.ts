@@ -14,7 +14,7 @@ import {
   getPBREnvironmentBindings,
   getPBREnvironmentUniforms
 } from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
   test(`standalone PBR shadows preserve indirect light and alpha cutouts (${getDevice.name})`, async context => {

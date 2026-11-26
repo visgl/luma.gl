@@ -7,7 +7,8 @@ import type {prepareCornellAtlas} from '../lightmap-baking/cornell-scene';
 import {estimateBakeTextureBytes, planBakeTiles} from '../lightmap-baking/bake-tiles';
 import {IndirectLightmap} from '../lightmap-baking/indirect-lightmap';
 import {makeBakingScene, type BakingScene} from '../lightmap-baking/scenes';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {
   LightmapBaker,
   createLightmapAtlas,

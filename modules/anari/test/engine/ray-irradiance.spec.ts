@@ -4,7 +4,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Geometry} from '@luma.gl/engine';
 import {RayTracingSceneRenderer, type RayTracingSceneRenderOptions} from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, test} from 'vitest';
 
 test('irradiance transport preserves coverage and receives emissive color', async () => {

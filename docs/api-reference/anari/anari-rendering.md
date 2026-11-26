@@ -108,7 +108,7 @@ implements that feature. Registered custom renderers define their own support.
 | Matte and scalar metallic-roughness materials | Yes | Yes | Yes; diffuse or opaque GGX transport | Diagnostic output |
 | Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | [Supported ray maps](/docs/api-reference/anari/ray-tracing-renderer#material-support) with UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
 | Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar and texture alpha, including shadows and queries | Shared raster mask behavior |
-| Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
+| Alpha blending | Yes; sorted forward draws | Fallback | Yes; stochastic coverage | Progressive ray accumulation resolves translucent layers |
 | Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission and absorption; specular, clearcoat, occlusion, sheen, iridescence, anisotropy, and thin-surface diffuse transmission | Diagnostic output, not physical transport |
 | Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
 | Ambient, directional and point lights | Yes | Yes; one directional and up to 64 point lights, otherwise fallback | Yes | No lighting; normals or depth |
@@ -305,9 +305,18 @@ Picking uses the runtime that last rendered the frame, even if a different rende
 has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
-geometry semantics. Scalar and textured alpha masks exclude below-cutoff intersections. Picking does not follow refracted paths or alpha-blended layers.
+geometry semantics. Scalar and textured alpha masks exclude below-cutoff intersections. Picking skips fully transparent blend layers and returns the nearest layer with nonzero coverage. It does not follow refracted paths.
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
 Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
+
+### `readRadiance()`
+
+After submitting a ray-traced frame, call `await frame.readRadiance()` to read the
+internal-resolution color history before tone mapping, denoising and upscaling.
+The returned `ANARIFrameRadiance` has `width`, `height` and tightly packed
+little-endian RGBA16F `data` in top-left row order. RGB includes the renderer's
+exposure. Alpha contains sample-history metadata. Unsupported renderers and
+frames without history return `null`.
 
 ### `captureChannels()`
 
@@ -488,8 +497,7 @@ Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` o
 `TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
 color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
 uses explicit LOD inside divergent traversal and honors the texture's sampler. Primary triangle
-shading estimates its footprint from the camera and transformed UVs. Secondary hits, analytic
-spheres, and cutout tests use mip zero.
+shading estimates its footprint from the camera and transformed UVs. Secondary triangle hits use the propagated camera footprint. Analytic spheres and cutout tests use mip zero.
 The ray renderer binds up to fourteen distinct material textures per frame. Excess maps use the underlying material values.
 Textures are borrowed and must remain alive until their submitted GPU work finishes.
 
@@ -502,8 +510,7 @@ smooth dielectric continuation with Fresnel reflection, refraction, total intern
 and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
 handling. See [ray material support](/docs/api-reference/anari/ray-tracing-renderer#material-support)
 for the supported extension maps. Rough transmission and nested dielectric media remain open. Base-color texture alpha masks apply to primary/secondary
-rays, shadows, explicit emitter samples, picking and channels. Alpha blending and transparent
-shadow transport remain unsupported.
+rays, shadows, explicit emitter samples, picking and channels. Alpha blending samples fractional coverage in radiance and shadow rays.
 
 The **Indirect Light Study** playground preset provides a fixed-camera emissive scene with
 three diffuse bounces. Set `maxBounces` to zero to compare direct-only rendering.

@@ -60,9 +60,8 @@ export function makeGaussianSplatInfoHtml(): string {
   <label style="display:flex;align-items:center;gap:8px;font-size:12px">
     <input data-gaussian-splats-orbit type="checkbox" checked /> Cinematic orbit
   </label>
-  <details data-gaussian-splats-graph-details hidden style="font-size:12px">
-    <summary style="cursor:pointer">GPU graph inspector</summary>
-    <div data-gaussian-splats-graph-inspector style="margin-top:9px"></div>
-  </details>
+  <label hidden style="font-size:12px">
+    <input data-gaussian-splats-glass type="checkbox" /> Moving tinted glass
+  </label>
 </section>`;
 }

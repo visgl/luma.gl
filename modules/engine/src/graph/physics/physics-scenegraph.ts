@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {CubeGeometry, GroupNode, ScenegraphNode, type Geometry} from '../../index';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {makeConvexHullGeometry, makeTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
 import {normalizeRigidBodyRotation, type GPURigidBody} from '@luma.gl/graph/gpu-physics';
 import type {GPURigidBodyBounds} from '@luma.gl/graph/gpu-physics';

@@ -3,46 +3,66 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
-import {
-  parseSQLExpression,
-  parseSQLSelectStatement,
-  SQLParseError,
-  type SQLSelectStatement
-} from '@math.gl/sql/parser';
+import {parseSQLSelectStatement} from '@math.gl/sql/parser';
 import type {Expression} from '@math.gl/sql/expressions';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
+
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
-import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
+import {
+  GPUDataFrameQuery,
+  type GPUDataFrameDerivedColumn
+} from '../gpu-dataframe/gpu-data-frame-query';
+import {
+  compileGPUDataFrameGroupedAggregation,
+  compileGPUDataFrameObservedAggregation
+} from '../gpu-dataframe/gpu-group-aggregation-compiler';
+import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
+import {
+  compileGPUDataFrameGlobalSort,
+  type GPUGlobalSortKey
+} from '../gpu-dataframe/gpu-global-sort-compiler';
+import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-query';
 import {
   GPUExpression,
   column,
-  literal,
+  isGPUScalarFunction,
   parameter,
   type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
-import type {GPUDataFrameJoinType} from '../gpu-dataframe/gpu-join-query';
+import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
+import {compileGPUDataFrameAggregation} from '../gpu-dataframe/gpu-global-aggregation-compiler';
+import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
+import {compileGPUDataFrameJoin, type GPUAggregateJoin} from '../gpu-dataframe/gpu-join-compiler';
+import type {
+  GPUDataFrameJoinType,
+  GPUDataFrameNormalizedJoinOptions
+} from '../gpu-dataframe/gpu-join-query';
 import type {
   CompiledGPUDataFrameQuery,
   GPUDataFrameQueryParameters
 } from '../gpu-dataframe/gpu-query-compiler';
 
-const MAXIMUM_SQL_LENGTH = 65_536;
-const MAXIMUM_SQL_TOKENS = 4_096;
-
 /** Explicit GPU dataframe registrations; Arrow remains exclusively an adapter boundary. */
 export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
 
-/** Defaults for named SQL parameters such as `:minimumFare`; values remain caller-controlled. */
-export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParameters}>;
-
-type GPUSQLToken = Readonly<{
-  kind: 'identifier' | 'number' | 'parameter' | 'symbol';
-  value: string;
+/** Configuration for GPU-only SQL planning. */
+export type GPUSQLQueryOptions = Readonly<{
+  /** Defaults for named SQL parameters such as :minimumFare. */
+  parameters?: GPUDataFrameQueryParameters;
+  /** Maximum temporary count bytes per grouped AVG operation. */
+  maxMeanScratchBytes?: number;
 }>;
+
+/** A source column name with its optional, separately parsed table qualifier. */
+type GPUSQLColumnReference = Readonly<{name: string; qualifier?: string}>;
+
+/** A bound-column spelling or a one-based SELECT position. */
+
 type GPUSQLSelectItem = Readonly<{
-  expression?: GPUExpressionNode;
+  expression?: Expression;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
-  aggregateColumn?: string;
+  aggregateInput?: Expression;
   alias?: string;
   star?: boolean;
 }>;
@@ -54,18 +74,54 @@ type GPUSQLStatement = Readonly<{
     type: GPUDataFrameJoinType;
     table: string;
     alias?: string;
-    left: string;
-    right: string;
+    left: GPUSQLColumnReference;
+    right: GPUSQLColumnReference;
   }>;
-  predicate?: GPUExpressionNode;
-  groupBy?: string;
-  orderBy?: Readonly<{
-    column: string;
+  predicate?: Expression;
+  groupBy?: readonly Expression[];
+  having?: Expression;
+  orderBy?: readonly Readonly<{
+    expression: Expression;
     direction: 'ascending' | 'descending';
     nulls?: 'first' | 'last';
-  }>;
+  }>[];
   limit?: number;
+  offset?: number;
 }>;
+
+/** Execution route selected by the GPU SQL planner. */
+export type GPUSQLExecution =
+  | 'projection'
+  | 'global-sort'
+  | 'global-aggregation'
+  | 'dense-grouping'
+  | 'observed-grouping'
+  | 'unique-right-join';
+
+/** CPU-only description of the bound GPU SQL plan. */
+export type GPUSQLExplanation = Readonly<{
+  /** Registered input table. */
+  table: string;
+  /** Whether a source-row WHERE predicate runs before the terminal operation. */
+  filtered: boolean;
+  /** A post-aggregation HAVING predicate filters the grouped result. */
+  having?: true;
+  /** Terminal GPU dataframe execution route. */
+  execution: GPUSQLExecution;
+  /** Result fields in SELECT order. */
+  columns: readonly string[];
+  /** Columns used internally, including derived or hidden keys when applicable. */
+  workingColumns: readonly string[];
+  /** Number of resolved grouping or ordering keys. */
+  keyCount: number;
+  /** Registered right table and join type for join plans. */
+  join?: Readonly<{table: string; type: GPUDataFrameJoinType}>;
+  /** Applied global page bounds, when supplied. */
+  page?: Readonly<{offset: number; limit?: number}>;
+}>;
+
+/** Binds executable operations to the immutable description produced at planning time. */
+type GPUSQLBoundPlan = {plan: GPUSQLCompiledPlan; explanation: GPUSQLExplanation};
 
 type GPUSQLCompiledPlan = Readonly<{
   compile: (graph: GPUCommandGraph<GPUDataFrameQueryParameters>) => CompiledGPUDataFrameQuery;
@@ -73,12 +129,21 @@ type GPUSQLCompiledPlan = Readonly<{
 
 type GPUSQLAggregationDefinitions = Record<
   string,
-  'count' | {sum: string} | {min: string} | {max: string} | {mean: string}
+  'count' | {count: string} | {sum: string} | {min: string} | {max: string} | {mean: string}
 >;
+
+/** Existing global-sort plan and its already-validated controls. */
+type GPUSQLSortPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedSortOptions};
+
+/** Validated join plan with normalized key and hash-index controls. */
+
+type GPUSQLJoinPlan = GPUSQLCompiledPlan & {readonly options: GPUDataFrameNormalizedJoinOptions};
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
 type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
-  predicates: readonly GPUExpression<boolean, string>[];
+  readonly selectedColumns: readonly string[];
+  readonly predicates: readonly GPUExpression<boolean, string>[];
+  readonly derivedColumns: readonly GPUDataFrameDerivedColumn[];
   filter: (predicate: GPUExpression<boolean, string>) => GPUSQLDynamicQuery;
   select: (names: readonly string[]) => GPUSQLDynamicQuery;
   withColumn: (
@@ -86,20 +151,19 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
     expression: GPUExpression<number | null, string>
   ) => GPUSQLDynamicQuery;
   groupBy: (key: string) => {
-    aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
+    readonly groupCount: number;
   };
-  aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
+  aggregate: (
+    definitions: GPUSQLAggregationDefinitions
+  ) => GPUSQLCompiledPlan & {readonly definitions: readonly GPUDataFrameAggregationDefinition[]};
   sortByGlobal: (
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
-  ) => GPUSQLCompiledPlan & {topK: (limit: number) => GPUSQLCompiledPlan};
-  innerJoin: (
-    right: GPUDataFrame,
-    options: {leftOn: string; rightOn: string}
-  ) => GPUSQLCompiledPlan;
-  leftJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
-  semiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
-  antiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
+  ) => GPUSQLSortPlan & {page: (offset: number, limit?: number) => GPUSQLSortPlan};
+  innerJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  leftJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  semiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
+  antiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLJoinPlan;
 };
 
 /**
@@ -127,8 +191,11 @@ export class GPUSQLContext {
 
   /** Parses and validates one immutable SELECT plan without touching registered GPU sources. */
   query(source: string, options: GPUSQLQueryOptions = {}): GPUSQLQuery {
-    const statement = parseGPUSQLStatement(source, options.parameters ?? {});
-    return new GPUSQLQuery(source, buildGPUSQLPlan(this.tables, statement));
+    const statement = parseGPUSQLStatement(source);
+    return new GPUSQLQuery(
+      source,
+      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {}, options.maxMeanScratchBytes)
+    );
   }
 }
 
@@ -136,71 +203,415 @@ export class GPUSQLContext {
 export class GPUSQLQuery {
   /** Original application-owned SQL text, retained solely for diagnostics and inspection. */
   readonly sql: string;
-  private readonly plan: GPUSQLCompiledPlan;
+  private readonly plan: GPUSQLBoundPlan;
 
   /** @internal */
-  constructor(sql: string, plan: GPUSQLCompiledPlan) {
+  constructor(sql: string, plan: GPUSQLBoundPlan) {
     this.sql = sql;
     this.plan = plan;
     Object.freeze(this);
   }
 
+  /** Returns a frozen plan description without allocating GPU resources. */
+  explain(): GPUSQLExplanation {
+    return this.plan.explanation;
+  }
+
   /** Compiles existing dataframe operations into the caller-owned GPU command graph. */
   compile(graph: GPUCommandGraph<GPUDataFrameQueryParameters>): CompiledGPUDataFrameQuery {
-    return this.plan.compile(graph);
+    return this.plan.plan.compile(graph);
   }
 }
 
 function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
-  statement: GPUSQLStatement
-): GPUSQLCompiledPlan {
+  statement: GPUSQLStatement,
+  parameters: GPUDataFrameQueryParameters,
+  maxMeanScratchBytes?: number
+): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
   let query = new GPUDataFrameQuery(frame, [], frame.columnNames) as unknown as GPUSQLDynamicQuery;
   const qualifier = statement.alias ?? statement.table;
-  const resolve = (name: string): string => resolveGPUSQLColumn(name, qualifier, frame.columnNames);
+  const resolve = (reference: GPUSQLColumnReference): string =>
+    resolveGPUSQLColumn(reference, qualifier, frame.columnNames);
   if (statement.predicate) {
     query = query.filter(
-      new GPUExpression<boolean, string>(resolveGPUSQLExpression(statement.predicate, resolve))
+      new GPUExpression<boolean, string>(
+        lowerSQLExpression(statement.predicate, parameters, resolve)
+      )
     );
   }
 
-  const aggregates = statement.items.filter(item => item.aggregate);
-  if (aggregates.length > 0) {
-    if (statement.join || statement.orderBy || statement.limit !== undefined) {
-      throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or limits');
+  /** Captures the route chosen by the same branch that supplies the executable plan. */
+  const describe = (
+    plan: GPUSQLCompiledPlan,
+    execution: GPUSQLExecution,
+    columns: readonly string[],
+    workingColumns: readonly string[] = columns,
+    keyCount = 0
+  ): GPUSQLBoundPlan => ({
+    plan,
+    explanation: Object.freeze({
+      table: statement.table,
+      filtered: Boolean(statement.predicate),
+      ...(statement.having ? {having: true as const} : {}),
+      execution,
+      columns: Object.freeze([...columns]),
+      workingColumns: Object.freeze([...workingColumns]),
+      keyCount,
+      ...(statement.join
+        ? {join: Object.freeze({table: statement.join.table, type: statement.join.type})}
+        : {}),
+      ...(statement.limit !== undefined || statement.offset !== undefined
+        ? {page: Object.freeze({offset: statement.offset ?? 0, limit: statement.limit})}
+        : {})
+    })
+  });
+
+  /** Binds a single equality join for row-returning and aggregate plans. */
+  const bindJoin = (join: NonNullable<GPUSQLStatement['join']>) => {
+    const right = tables[join.table.toLowerCase()];
+    if (!right) throw new Error(`GPUSQL table "${join.table}" is not registered`);
+    const rightQualifier = join.alias ?? join.table;
+    const {left: firstOperand, right: secondOperand} = join;
+    const matchesLeft = (reference: GPUSQLColumnReference) =>
+      matchesGPUSQLColumn(reference, qualifier, frame.columnNames);
+    const matchesRight = (reference: GPUSQLColumnReference) =>
+      matchesGPUSQLColumn(reference, rightQualifier, right.columnNames);
+    const forward = matchesLeft(firstOperand) && matchesRight(secondOperand);
+    const reversed = matchesLeft(secondOperand) && matchesRight(firstOperand);
+    if (forward && reversed) {
+      throw new Error('GPUSQL JOIN key references are ambiguous; qualify the columns');
     }
-    const definitions: GPUSQLAggregationDefinitions = {};
-    for (const item of aggregates) {
-      const name = item.alias ?? `${item.aggregate}_${item.aggregateColumn ?? 'all'}`;
-      if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
+    const leftKey = resolve(reversed ? secondOperand : firstOperand);
+    const rightKey = resolveGPUSQLColumn(
+      reversed ? firstOperand : secondOperand,
+      rightQualifier,
+      right.columnNames
+    );
+    return {right, leftKey, rightKey};
+  };
+  const joinMethods = {
+    left: 'leftJoin',
+    semi: 'semiJoin',
+    anti: 'antiJoin',
+    inner: 'innerJoin'
+  } as const;
+
+  const aggregates = statement.items.filter(item => item.aggregate);
+  if (statement.having && !statement.groupBy) {
+    throw new Error('GPUSQL HAVING requires GROUP BY');
+  }
+  if (aggregates.length > 0 || statement.having || (statement.groupBy && statement.orderBy)) {
+    if (
+      !statement.groupBy &&
+      (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined)
+    ) {
+      throw new Error(
+        'GPUSQL aggregate queries without GROUP BY do not yet support ordering or pagination'
+      );
+    }
+    let aggregateJoin: GPUAggregateJoin | undefined;
+    if (statement.join) {
+      const {right, leftKey, rightKey} = bindJoin(statement.join);
+      const type = statement.join.type;
+      const join = query[joinMethods[type]](right, {leftOn: leftKey, rightOn: rightKey});
+      aggregateJoin = {right, type, options: join.options};
+    }
+    const definitions: GPUSQLAggregationDefinitions = Object.create(null);
+    const reservedNames = new Set(frame.columnNames);
+    const outputNames = new Map<GPUSQLSelectItem, string>();
+    const aggregateOutputs = new Map<string, string>();
+    let inputIndex = 0;
+    /** Registers an aggregate and materializes its computed input when needed. */
+    const registerAggregate = (
+      operation: NonNullable<GPUSQLSelectItem['aggregate']>,
+      input?: GPUExpressionNode,
+      alias?: string
+    ): string => {
+      let inputColumn = input?.kind === 'column' ? input.name : undefined;
+      if (input && input.kind !== 'column') {
+        if (!alias)
+          throw new Error('GPUSQL computed aggregate inputs require an explicit AS alias');
+        do {
+          inputColumn = '__sqlAggregateInput' + inputIndex++;
+        } while (reservedNames.has(inputColumn));
+        reservedNames.add(inputColumn);
+        query = query.withColumn(inputColumn, new GPUExpression<number | null, string>(input));
+      }
+      const name = alias ?? `${operation}_${inputColumn ?? 'all'}`;
+      if (Object.hasOwn(definitions, name)) {
+        throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
+      }
+      aggregateOutputs.set(JSON.stringify([operation, input ?? null]), name);
       definitions[name] =
-        item.aggregate === 'count'
-          ? 'count'
-          : ({[item.aggregate!]: resolve(item.aggregateColumn!)} as
+        operation === 'count'
+          ? inputColumn === undefined
+            ? 'count'
+            : {count: inputColumn}
+          : ({[operation]: inputColumn!} as
               | {sum: string}
               | {min: string}
               | {max: string}
               | {mean: string});
+      return name;
+    };
+    for (const item of aggregates) {
+      const input =
+        item.aggregateInput && lowerSQLExpression(item.aggregateInput, parameters, resolve);
+      outputNames.set(item, registerAggregate(item.aggregate!, input, item.alias));
     }
-    if (statement.groupBy) {
-      const key = resolve(statement.groupBy);
-      const nonAggregates = statement.items.filter(item => !item.aggregate);
+    if (statement.groupBy !== undefined) {
       if (
-        nonAggregates.length !== 1 ||
-        resolveGPUSQLProjectionName(nonAggregates[0], resolve) !== key
+        maxMeanScratchBytes !== undefined &&
+        (!Number.isSafeInteger(maxMeanScratchBytes) || maxMeanScratchBytes < 4)
       ) {
-        throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
+        throw new Error('GPUSQL mean scratch budget requires at least four bytes');
       }
-      return query.groupBy(key).aggregate(definitions);
+      const keyItems = statement.items.filter(item => !item.aggregate);
+      const occupied = new Set(Object.keys(definitions));
+      const selectedKeys = new Map<string, {source: string; output: string}>();
+      const keyByItem = new Map<GPUSQLSelectItem, {source: string; output: string}>();
+      /** Reuses a source field or creates an internal column for a computed group key. */
+
+      const materializeKey = (expression: GPUExpressionNode): string => {
+        if (expression.kind === 'column') return expression.name;
+        let source: string;
+        do {
+          source = '__sqlGroupKey' + inputIndex++;
+        } while (reservedNames.has(source));
+        reservedNames.add(source);
+        query = query.withColumn(source, new GPUExpression<number | null, string>(expression));
+        return source;
+      };
+      for (const item of keyItems) {
+        if (!item.expression) {
+          throw new Error('GPUSQL grouped SELECT requires explicit key expressions');
+        }
+        const expression = lowerSQLExpression(item.expression, parameters, resolve);
+        const output = item.alias ?? (expression.kind === 'column' ? expression.name : undefined);
+        if (!output) throw new Error('GPUSQL computed group keys require an explicit AS alias');
+        if (occupied.has(output)) {
+          throw new Error('GPUSQL output column "' + output + '" is duplicated');
+        }
+        const signature = JSON.stringify(expression);
+        if (selectedKeys.has(signature)) {
+          throw new Error('GPUSQL grouped queries must select each GROUP BY key exactly once');
+        }
+        const key = {source: materializeKey(expression), output};
+        selectedKeys.set(signature, key);
+        keyByItem.set(item, key);
+        occupied.add(output);
+        outputNames.set(item, output);
+      }
+
+      const hiddenKeys = new Map<string, {source: string}>();
+      const keys = statement.groupBy.map<{source: string; output?: string}>(reference => {
+        if (reference.type === 'Literal' && typeof reference.value === 'number') {
+          const item = getGPUSQLProjectionItem(statement.items, reference.value, 'GROUP BY');
+          const key = keyByItem.get(item);
+          if (!key) throw new Error('GPUSQL GROUP BY position must reference a group key directly');
+          return key;
+        }
+        if (
+          reference.type === 'Identifier' &&
+          !('gpuSQLParameter' in reference) &&
+          !frame.columnNames.includes(reference.name)
+        ) {
+          const alias = keyItems.find(item => item.alias === reference.name);
+          if (alias) return keyByItem.get(alias)!;
+        }
+        const expression = lowerSQLExpression(reference, parameters, resolve);
+        const signature = JSON.stringify(expression);
+        const existing = selectedKeys.get(signature) ?? hiddenKeys.get(signature);
+        if (existing) return existing;
+        const key = {source: materializeKey(expression)};
+        hiddenKeys.set(signature, key);
+        return key;
+      });
+      const uniqueKeys = new Set(keys);
+      if (uniqueKeys.size !== keys.length) {
+        throw new Error('GPUSQL GROUP BY keys must be distinct');
+      }
+      if ([...selectedKeys.values()].some(key => !uniqueKeys.has(key))) {
+        throw new Error(
+          'GPUSQL grouped queries must group by every non-aggregate SELECT expression'
+        );
+      }
+
+      const columns = statement.items.map(item => outputNames.get(item)!);
+      if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
+        throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
+      }
+      /** Resolves or registers an aggregate used by a post-group clause. */
+      const bindAggregateCall = (call: Extract<Expression, {type: 'CallExpression'}>) => {
+        const name =
+          call.callee.type === 'Identifier' ? String(call.callee['name']).toLowerCase() : '';
+        const operation = name === 'avg' ? 'mean' : name;
+        if (
+          operation !== 'count' &&
+          operation !== 'sum' &&
+          operation !== 'min' &&
+          operation !== 'max' &&
+          operation !== 'mean'
+        )
+          return undefined;
+        if (call.arguments.length !== 1) throw new Error('GPUSQL aggregates require one argument');
+        const argument = call.arguments[0] as Expression;
+        const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+        if (wildcard && operation !== 'count') {
+          throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
+        }
+        const input = wildcard ? undefined : lowerSQLExpression(argument, parameters, resolve);
+        const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
+        if (output !== undefined) return column(output).node;
+        let hiddenName: string;
+        do {
+          hiddenName = '__sqlPostGroupAggregate' + inputIndex++;
+        } while (occupied.has(hiddenName));
+        occupied.add(hiddenName);
+        return column(registerAggregate(operation, input, hiddenName)).node;
+      };
+      const having = statement.having
+        ? new GPUExpression<boolean, string>(
+            lowerSQLExpression(
+              statement.having,
+              parameters,
+              reference => resolveGPUSQLColumn(reference, '', columns),
+              bindAggregateCall
+            )
+          )
+        : undefined;
+      const ordering: GPUGlobalSortKey[] | undefined = statement.orderBy?.map(
+        ({expression, direction, nulls}, index) => {
+          const column =
+            expression.type === 'Literal' && typeof expression.value === 'number'
+              ? getGPUSQLProjectionItem(columns, expression.value, 'ORDER BY')
+              : expression.type === 'Identifier' && !('gpuSQLParameter' in expression)
+                ? expression.name
+                : undefined;
+          const aggregate =
+            expression.type === 'CallExpression' ? bindAggregateCall(expression) : undefined;
+          const sortColumn = aggregate?.kind === 'column' ? aggregate.name : column;
+          if (sortColumn === undefined || (!aggregate && !columns.includes(sortColumn))) {
+            throw new Error(
+              'GPUSQL grouped ORDER BY requires a SELECT output name, position, or aggregate call'
+            );
+          }
+          return {
+            column: sortColumn,
+            options: {
+              direction,
+              nulls: nulls ?? 'last',
+              nans: 'last',
+              algorithm: 'auto',
+              ...(index === 0 ? {limit: statement.limit, offset: statement.offset} : {})
+            }
+          };
+        }
+      );
+      const {predicates, selectedColumns, derivedColumns} = query;
+      if (Object.keys(definitions).length === 0) {
+        throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+      }
+      const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
+        {...query, source: frame},
+        keys[0].output,
+        definitions
+      );
+
+      if (keys.length > 1 || keys[0].output === undefined || !frame.dictionaries[keys[0].source]) {
+        for (const {source} of keys) {
+          const format = frame.schema.fields.find(field => field.name === source)?.format;
+          if (
+            !derivedColumns.some(column => column.name === source) &&
+            format !== 'uint32' &&
+            format !== 'sint32' &&
+            format !== 'float32'
+          ) {
+            throw new Error('GPUSQL GROUP BY requires 32-bit numeric or dictionary keys');
+          }
+        }
+        return describe(
+          {
+            compile: graph =>
+              compileGPUDataFrameObservedAggregation(
+                frame,
+                predicates,
+                selectedColumns,
+                derivedColumns,
+                keys,
+                normalized,
+                graph,
+                columns,
+                ordering,
+                having,
+                aggregateJoin,
+                maxMeanScratchBytes
+              )
+          },
+          'observed-grouping',
+          columns,
+          selectedColumns,
+          keys.length
+        );
+      }
+
+      const [key] = keys;
+      const {groupCount} = query.groupBy(key.source);
+      return describe(
+        {
+          compile: graph =>
+            compileGPUDataFrameGroupedAggregation(
+              frame,
+              predicates,
+              selectedColumns,
+              derivedColumns,
+              key.source,
+              groupCount,
+              normalized,
+              graph,
+              {key: key.output!, columns},
+              ordering,
+              having,
+              aggregateJoin,
+              maxMeanScratchBytes
+            )
+        },
+        'dense-grouping',
+        columns,
+        selectedColumns,
+        1
+      );
     }
     if (aggregates.length !== statement.items.length) {
       throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
     }
-    return query.aggregate(definitions);
+    const aggregate = query.aggregate(definitions);
+    const {predicates, selectedColumns, derivedColumns} = query;
+    return describe(
+      aggregateJoin
+        ? {
+            compile: graph =>
+              compileGPUDataFrameAggregation(
+                frame,
+                predicates,
+                selectedColumns,
+                derivedColumns,
+                aggregate.definitions,
+                graph,
+                aggregateJoin
+              )
+          }
+        : aggregate,
+      'global-aggregation',
+      statement.items.map(item => outputNames.get(item)!),
+      query.selectedColumns
+    );
   }
-  if (statement.groupBy) throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+  if (statement.groupBy !== undefined)
+    throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
   for (const item of statement.items) {
@@ -210,7 +621,7 @@ function buildGPUSQLPlan(
       selected.push(...frame.columnNames);
       continue;
     }
-    const node = resolveGPUSQLExpression(item.expression!, resolve);
+    const node = lowerSQLExpression(item.expression!, parameters, resolve);
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
     if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
     if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
@@ -224,119 +635,202 @@ function buildGPUSQLPlan(
   }
 
   if (statement.join) {
-    if (statement.orderBy || statement.limit !== undefined) {
-      throw new Error('GPUSQL joined results do not yet support ORDER BY or LIMIT');
+    if (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined) {
+      throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
-    const right = tables[statement.join.table.toLowerCase()];
-    if (!right) throw new Error(`GPUSQL table "${statement.join.table}" is not registered`);
-    const leftKey = resolve(statement.join.left);
-    const rightQualifier = statement.join.alias ?? statement.join.table;
-    const rightKey = resolveGPUSQLColumn(statement.join.right, rightQualifier, right.columnNames);
-    if (!selected.includes(leftKey)) {
-      throw new Error('GPUSQL joins require the left join key to remain selected');
-    }
-    query = query.select(selected);
-    const options = {leftOn: leftKey, rightOn: rightKey};
-    switch (statement.join.type) {
-      case 'left':
-        return query.leftJoin(right, options);
-      case 'semi':
-        return query.semiJoin(right, options);
-      case 'anti':
-        return query.antiJoin(right, options);
-      default:
-        return query.innerJoin(right, options);
-    }
+    const {right, leftKey, rightKey} = bindJoin(statement.join);
+    const keyIsSelected = selected.includes(leftKey);
+    const workingColumns = keyIsSelected ? selected : [...selected, leftKey];
+    const workingQuery = query.select(workingColumns);
+    const joinType = statement.join.type;
+    const join = workingQuery[joinMethods[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
+    if (keyIsSelected) return describe(join, 'unique-right-join', selected, workingColumns, 1);
+
+    const {predicates, derivedColumns} = workingQuery;
+    return describe(
+      {
+        compile: graph =>
+          compileGPUDataFrameJoin(
+            frame,
+            predicates,
+            workingColumns,
+            derivedColumns,
+            right,
+            join.options,
+            joinType,
+            graph,
+            selected
+          )
+      },
+      'unique-right-join',
+      selected,
+      workingColumns,
+      1
+    );
   }
 
   if (statement.orderBy) {
-    const {column: requested, direction, nulls} = statement.orderBy;
-    const orderColumn = selected.includes(requested) ? requested : resolve(requested);
-    if (!selected.includes(orderColumn)) {
-      throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
-    }
-    const sort = query.select(selected).sortByGlobal(orderColumn, {
-      direction,
-      ...(nulls ? {nulls} : {})
+    const workingColumns = new Set(selected);
+    const resolvedKeys = statement.orderBy.map(({expression, direction, nulls}) => {
+      let orderColumn: string;
+      if (expression.type === 'Literal' && typeof expression.value === 'number') {
+        orderColumn = getGPUSQLProjectionItem(selected, expression.value, 'ORDER BY');
+      } else if (
+        expression.type === 'Identifier' &&
+        !('gpuSQLParameter' in expression) &&
+        selected.includes(expression.name)
+      ) {
+        orderColumn = expression.name;
+      } else {
+        const sortExpression = lowerSQLExpression(expression, parameters, resolve);
+        if (sortExpression.kind === 'column') {
+          orderColumn = sortExpression.name;
+        } else {
+          orderColumn = '__sqlOrderKey';
+          while (frame.columnNames.includes(orderColumn) || workingColumns.has(orderColumn)) {
+            orderColumn += '_';
+          }
+          query = query.withColumn(
+            orderColumn,
+            new GPUExpression<number | null, string>(sortExpression)
+          );
+        }
+      }
+      workingColumns.add(orderColumn);
+      return {column: orderColumn, direction, nulls};
     });
-    return statement.limit === undefined ? sort : sort.topK(statement.limit);
+
+    const columns = [...workingColumns];
+    const workingQuery = query.select(columns);
+    const plans = resolvedKeys.map(({column, direction, nulls}) => ({
+      column,
+      plan: workingQuery.sortByGlobal(column, {direction, nulls})
+    }));
+    const [{column, plan: sort}, ...secondary] = plans;
+    const page =
+      statement.limit === undefined && statement.offset === undefined
+        ? sort
+        : sort.page(statement.offset ?? 0, statement.limit);
+    const projection = columns.length > selected.length ? selected : undefined;
+    if (!projection && secondary.length === 0)
+      return describe(page, 'global-sort', selected, columns, plans.length);
+
+    const {predicates, derivedColumns} = workingQuery;
+    const additionalKeys: GPUGlobalSortKey[] = secondary.map(key => ({
+      column: key.column,
+      options: key.plan.options
+    }));
+    return describe(
+      {
+        compile: graph =>
+          compileGPUDataFrameGlobalSort(
+            frame,
+            predicates,
+            columns,
+            derivedColumns,
+            column,
+            page.options,
+            graph,
+            projection,
+            additionalKeys
+          )
+      },
+      'global-sort',
+      selected,
+      columns,
+      plans.length
+    );
   }
-  if (statement.limit !== undefined) throw new Error('GPUSQL LIMIT currently requires ORDER BY');
-  if (query.predicates.length === 0) {
-    const firstColumn = frame.columnNames[0];
-    if (!firstColumn) throw new Error('GPUSQL SELECT requires at least one GPU source column');
-    query = query.filter(column(firstColumn).isValid().or(column(firstColumn).isNull()));
-  }
-  return query.select(selected);
+  if (statement.limit !== undefined || statement.offset !== undefined)
+    throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
+  return describe(query.select(selected), 'projection', selected);
 }
 
-function resolveGPUSQLProjectionName(
-  item: GPUSQLSelectItem,
-  resolve: (name: string) => string
+/** Formats the source spelling for diagnostics. */
+function formatGPUSQLColumn({name, qualifier}: GPUSQLColumnReference): string {
+  return qualifier === undefined ? name : qualifier + '.' + name;
+}
+
+/** Checks whether a join operand can bind to one side of the join. */
+function matchesGPUSQLColumn(
+  reference: GPUSQLColumnReference,
+  qualifier: string,
+  columns: readonly string[]
+): boolean {
+  return (
+    (reference.qualifier === undefined ||
+      reference.qualifier.toLowerCase() === qualifier.toLowerCase()) &&
+    columns.includes(reference.name)
+  );
+}
+
+/** Binds a parsed reference to an exact dataframe field. */
+function resolveGPUSQLColumn(
+  reference: GPUSQLColumnReference,
+  qualifier: string,
+  columns: readonly string[]
 ): string {
-  if (item.expression?.kind !== 'column') {
-    throw new Error('GPUSQL grouped source expressions must reference the group key directly');
-  }
-  return resolve(item.expression.name);
-}
-
-function resolveGPUSQLColumn(name: string, qualifier: string, columns: readonly string[]): string {
-  const parts = name.split('.');
   if (
-    parts.length > 2 ||
-    (parts.length === 2 && parts[0].toLowerCase() !== qualifier.toLowerCase())
+    reference.qualifier !== undefined &&
+    reference.qualifier.toLowerCase() !== qualifier.toLowerCase()
   ) {
-    throw new Error(`GPUSQL column "${name}" has an unknown table qualifier`);
+    throw new Error(
+      'GPUSQL column "' + formatGPUSQLColumn(reference) + '" has an unknown table qualifier'
+    );
   }
-  const requested = parts[parts.length - 1];
-  if (!columns.includes(requested)) throw new Error(`GPUSQL column "${name}" does not exist`);
-  return requested;
+  if (!columns.includes(reference.name)) {
+    throw new Error('GPUSQL column "' + formatGPUSQLColumn(reference) + '" does not exist');
+  }
+  return reference.name;
 }
 
-function resolveGPUSQLExpression(
-  expression: GPUExpressionNode,
-  resolve: (name: string) => string
-): GPUExpressionNode {
-  switch (expression.kind) {
-    case 'column':
-      return {kind: 'column', name: resolve(expression.name)};
-    case 'unary':
-      return {...expression, operand: resolveGPUSQLExpression(expression.operand, resolve)};
-    case 'binary':
-      return {
-        ...expression,
-        left: resolveGPUSQLExpression(expression.left, resolve),
-        right: resolveGPUSQLExpression(expression.right, resolve)
+/** Isolates the top-level HAVING clause until the shared SELECT parser exposes it. */
+function splitGPUSQLHaving(source: string): {select: string; having?: string} {
+  const tokens = /"(?:""|[^"])*"|'(?:''|[^'])*'|:[A-Za-z_]\w*|[A-Za-z_]\w*|[();]|--[^\r\n]*|\/\*/g;
+  let depth = 0;
+  let start = -1;
+  let predicateStart = -1;
+  let end = source.length;
+  let tailStarted = false;
+  for (const token of source.matchAll(tokens)) {
+    if (token[0].startsWith('--')) continue;
+    if (token[0] === '/*') {
+      throw new Error('GPUSQL does not support SQL comments');
+    }
+    if (token[0] === '(') depth++;
+    if (token[0] === ')') depth--;
+    if (depth !== 0) continue;
+    const keyword = token[0].toUpperCase();
+    if (start !== -1 && ['ORDER', 'LIMIT', 'OFFSET', ';'].includes(keyword)) {
+      end = token.index;
+      break;
+    }
+    if (start === -1 && ['ORDER', 'LIMIT', 'OFFSET', ';'].includes(keyword)) tailStarted = true;
+    if (start === -1 && keyword === 'HAVING') {
+      if (tailStarted) throw new Error('GPUSQL HAVING must precede ORDER BY and pagination');
+      start = token.index;
+      predicateStart = start + token[0].length;
+    }
+  }
+  return start === -1
+    ? {select: source}
+    : {
+        select: source.slice(0, start) + ' ' + source.slice(end),
+        having: source.slice(predicateStart, end)
       };
-    default:
-      return expression;
-  }
 }
 
-function parseGPUSQLStatement(
-  source: string,
-  parameters: GPUDataFrameQueryParameters
-): GPUSQLStatement {
-  // Preserve GPUSQL's lexical limits and accepted input tokens.
-  const tokens = tokenizeGPUSQL(source);
-  let statement: SQLSelectStatement;
-  try {
-    statement = parseSQLSelectStatement(source, {
-      parseParameter: name => ({type: 'Identifier', name: `:${name}`})
-    });
-  } catch (error) {
-    // Older GPUSQL queries permit unquoted keyword-named columns, such as "limit".
-    if (!(error instanceof SQLParseError)) throw error;
-    return new GPUSQLParser(tokens, parameters).parse();
+/** Parses the SQL subset supported by the GPU relational planner. */
+function parseGPUSQLStatement(source: string): GPUSQLStatement {
+  const {select, having} = splitGPUSQLHaving(source);
+  const options = {
+    parseParameter: (name: string) => ({type: 'Identifier' as const, name, gpuSQLParameter: true})
+  };
+  const statement = parseSQLSelectStatement(select, options);
+  if (statement.offset !== undefined && statement.offset > 0xffffffff) {
+    throw new Error('GPUSQL OFFSET must fit an unsigned 32-bit row count');
   }
-  if (statement.offset !== undefined) throw new Error('GPUSQL does not support OFFSET');
   if (statement.joins.length > 1) throw new Error('GPUSQL currently supports one JOIN');
-  if ((statement.groupBy?.length ?? 0) > 1) {
-    throw new Error('GPUSQL currently supports one GROUP BY column');
-  }
-  if ((statement.orderBy?.length ?? 0) > 1) {
-    throw new Error('GPUSQL currently supports one ORDER BY column');
-  }
   if (statement.limit !== undefined && statement.limit > 0xffffffff) {
     throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
   }
@@ -353,17 +847,25 @@ function parseGPUSQLStatement(
           if (expression.arguments.length !== 1) {
             throw new Error('GPUSQL aggregates require one argument');
           }
-          const argument = readGPUSQLColumn(expression.arguments[0]);
-          if ((aggregate === 'count') !== (argument === '*')) {
+          const argument = expression.arguments[0] as Expression;
+          const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+          if (wildcard && aggregate !== 'count') {
             throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
           }
-          return {aggregate, ...(argument !== '*' ? {aggregateColumn: argument} : {}), alias};
+          return {
+            aggregate,
+            ...(wildcard ? {} : {aggregateInput: argument}),
+            alias
+          };
         }
       }
     }
-    return {expression: lowerSQLExpression(expression, parameters), alias};
+    return {expression, alias};
   }) ?? [{star: true}];
   const join = statement.joins[0];
+  if (statement.from.inputTable !== undefined || join?.table.inputTable !== undefined) {
+    throw new Error('GPUSQL does not support table functions');
+  }
   let loweredJoin: GPUSQLStatement['join'];
   if (join) {
     if (join.unnest) throw new Error('GPUSQL does not support JOIN UNNEST');
@@ -379,359 +881,117 @@ function parseGPUSQLStatement(
       right: readGPUSQLColumn(join.on.right)
     };
   }
-  const sort = statement.orderBy?.[0];
   return {
     items,
     table: statement.from.name,
     alias: statement.from.alias,
     join: loweredJoin,
-    predicate: statement.where && lowerSQLExpression(statement.where, parameters),
-    groupBy: statement.groupBy?.[0] && readGPUSQLColumn(statement.groupBy[0]),
-    orderBy: sort && {
-      column: readGPUSQLColumn(sort.expression),
-      direction: sort.direction === 'desc' ? 'descending' : 'ascending',
-      nulls: sort.nulls
-    },
+    predicate: statement.where as Expression | undefined,
+    having:
+      having === undefined
+        ? undefined
+        : parseSQLSelectStatement('SELECT (' + having + '\n) FROM __gpu_having', options).select![0]
+            .expression,
+    groupBy: statement.groupBy?.length
+      ? statement.groupBy.map(expression => expression as Expression)
+      : undefined,
+    orderBy: statement.orderBy?.length
+      ? statement.orderBy.map(sort => ({
+          expression: sort.expression as Expression,
+          direction: sort.direction === 'desc' ? 'descending' : 'ascending',
+          nulls: sort.nulls
+        }))
+      : undefined,
+    offset: statement.offset,
     limit: statement.limit
   };
 }
 
-function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>['left']): string {
+/** Resolves a one-based projection position with a clause-specific diagnostic. */
+function getGPUSQLProjectionItem<Item>(
+  projection: readonly Item[],
+  position: number,
+  clause: 'ORDER BY' | 'GROUP BY'
+): Item {
+  if (!Number.isSafeInteger(position) || position < 1 || position > projection.length) {
+    throw new Error('GPUSQL ' + clause + ' position must be a one-based SELECT column number');
+  }
+  return projection[position - 1];
+}
+
+/** Reads a source column name or a two-part qualified column reference. */
+function readGPUSQLColumn(
+  node: Extract<Expression, {type: 'BinaryExpression'}>['left']
+): GPUSQLColumnReference {
   const expression = node as Expression;
-  if (expression.type === 'Identifier' && !expression.name.startsWith(':')) return expression.name;
+  if (expression.type === 'Identifier' && !('gpuSQLParameter' in expression)) {
+    return {name: expression.name};
+  }
   if (expression.type === 'MemberExpression' && !expression.computed) {
     const object = expression.object as Expression;
     const property = expression.property as Expression;
-    if (object.type === 'Identifier' && property.type === 'Identifier') {
-      return `${object.name}.${property.name}`;
+    if (
+      object.type === 'Identifier' &&
+      property.type === 'Identifier' &&
+      !('gpuSQLParameter' in object) &&
+      !('gpuSQLParameter' in property)
+    ) {
+      return {qualifier: object.name, name: property.name};
     }
   }
   throw new Error('GPUSQL expected a table or column identifier');
 }
 
-class GPUSQLParser {
-  private readonly tokens: readonly GPUSQLToken[];
-  private readonly parameters: GPUDataFrameQueryParameters;
-  private position = 0;
-
-  constructor(tokens: readonly GPUSQLToken[], parameters: GPUDataFrameQueryParameters) {
-    this.tokens = tokens;
-    this.parameters = parameters;
-  }
-
-  parse(): GPUSQLStatement {
-    this.expectKeyword('SELECT');
-    const items: GPUSQLSelectItem[] = [];
-    do {
-      items.push(this.parseSelectItem());
-    } while (this.takeSymbol(','));
-    this.expectKeyword('FROM');
-    const table = this.parseIdentifier();
-    const alias = this.parseOptionalTableAlias();
-    const join = this.parseOptionalJoin();
-    const predicate = this.takeKeyword('WHERE') ? this.parseExpression() : undefined;
-    let groupBy: string | undefined;
-    if (this.takeKeyword('GROUP')) {
-      this.expectKeyword('BY');
-      groupBy = this.parseIdentifier();
-      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one GROUP BY column');
-    }
-    let orderBy: GPUSQLStatement['orderBy'];
-    if (this.takeKeyword('ORDER')) {
-      this.expectKeyword('BY');
-      const sortColumn = this.parseIdentifier();
-      const direction = this.takeKeyword('DESC')
-        ? 'descending'
-        : (this.takeKeyword('ASC'), 'ascending');
-      let nulls: 'first' | 'last' | undefined;
-      if (this.takeKeyword('NULLS')) {
-        nulls = this.takeKeyword('FIRST') ? 'first' : this.expectKeyword('LAST') && 'last';
-      }
-      orderBy = {column: sortColumn, direction, ...(nulls ? {nulls} : {})};
-      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one ORDER BY column');
-    }
-    let limit: number | undefined;
-    if (this.takeKeyword('LIMIT')) {
-      const token = this.take();
-      if (token?.kind !== 'number' || !/^\d+$/.test(token.value)) {
-        throw new Error('GPUSQL LIMIT requires a nonnegative integer');
-      }
-      limit = Number(token.value);
-      if (!Number.isSafeInteger(limit) || limit > 0xffffffff) {
-        throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
-      }
-    }
-    this.takeSymbol(';');
-    if (this.peek())
-      throw new Error(`GPUSQL does not support unexpected token "${this.peek()!.value}"`);
-    return {
-      items,
-      table,
-      ...(alias ? {alias} : {}),
-      ...(join ? {join} : {}),
-      ...(predicate ? {predicate} : {}),
-      ...(groupBy ? {groupBy} : {}),
-      ...(orderBy ? {orderBy} : {}),
-      ...(limit !== undefined ? {limit} : {})
-    };
-  }
-
-  private parseSelectItem(): GPUSQLSelectItem {
-    if (this.takeSymbol('*')) return {star: true};
-    const token = this.peek();
-    if (
-      token?.kind === 'identifier' &&
-      /^(COUNT|SUM|MIN|MAX|AVG|MEAN)$/i.test(token.value) &&
-      this.tokens[this.position + 1]?.value === '('
-    ) {
-      this.take();
-      this.expectSymbol('(');
-      const aggregate = token.value.toLowerCase();
-      const aggregateColumn = this.takeSymbol('*') ? undefined : this.parseIdentifier();
-      this.expectSymbol(')');
-      if (!aggregateColumn && aggregate !== 'count') {
-        throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
-      }
-      if (aggregateColumn && aggregate === 'count') {
-        throw new Error('GPUSQL currently supports COUNT(*) but not nullable COUNT(column)');
-      }
-      return {
-        aggregate: aggregate === 'avg' ? 'mean' : (aggregate as GPUSQLSelectItem['aggregate']),
-        ...(aggregateColumn ? {aggregateColumn} : {}),
-        ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
-      };
-    }
-    const expression = this.parseExpression();
-    return {
-      ...(expression ? {expression} : {}),
-      ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
-    };
-  }
-
-  private parseOptionalJoin(): GPUSQLStatement['join'] {
-    let type: GPUDataFrameJoinType = 'inner';
-    if (this.takeKeyword('LEFT')) {
-      this.takeKeyword('OUTER');
-      type = 'left';
-    } else if (this.takeKeyword('SEMI')) {
-      type = 'semi';
-    } else if (this.takeKeyword('ANTI')) {
-      type = 'anti';
-    } else {
-      this.takeKeyword('INNER');
-    }
-    if (!this.takeKeyword('JOIN')) {
-      if (type !== 'inner') throw new Error('GPUSQL join modifier must be followed by JOIN');
-      return undefined;
-    }
-    const table = this.parseIdentifier();
-    const alias = this.parseOptionalTableAlias();
-    this.expectKeyword('ON');
-    const left = this.parseIdentifier();
-    this.expectSymbol('=');
-    const right = this.parseIdentifier();
-    return {type, table, ...(alias ? {alias} : {}), left, right};
-  }
-
-  private parseExpression(): GPUExpressionNode {
-    const tokens: string[] = [];
-    let depth = 0;
-    let expectsOperand: boolean = true;
-    for (let token = this.peek(); token; token = this.peek()) {
-      const value = token.value;
-      if (depth === 0) {
-        if (token.kind === 'symbol' && (value === ',' || value === ';')) break;
-        if (
-          token.kind === 'identifier' &&
-          !expectsOperand &&
-          /^(AS|FROM|GROUP|ORDER|LIMIT)$/i.test(value)
-        ) {
-          break;
-        }
-      }
-      switch (token.kind) {
-        case 'parameter':
-          // The shared AST leaves parameter binding to the GPU planner.
-          tokens.push(`":${value}"`);
-          expectsOperand = false;
-          break;
-        case 'identifier': {
-          const operator: boolean =
-            /^NOT$/i.test(value) || (!expectsOperand && /^(AND|OR|IS)$/i.test(value));
-          const keyword = operator || /^(NULL|TRUE|FALSE)$/i.test(value);
-          tokens.push(keyword ? value : `"${value}"`);
-          expectsOperand = operator;
-          break;
-        }
-        case 'symbol':
-          if (value === '(') depth++;
-          if (value === ')') depth--;
-          tokens.push(value);
-          expectsOperand = value !== ')';
-          break;
-        case 'number':
-          tokens.push(value);
-          expectsOperand = false;
-          break;
-      }
-      this.take();
-    }
-    return lowerSQLExpression(parseSQLExpression(tokens.join(' ')), this.parameters);
-  }
-
-  private parseOptionalTableAlias(): string | undefined {
-    if (this.takeKeyword('AS')) return this.parseIdentifier();
-    const token = this.peek();
-    return token?.kind === 'identifier' &&
-      !/^(WHERE|GROUP|ORDER|LIMIT|JOIN|INNER|LEFT|OUTER|SEMI|ANTI|ON)$/i.test(token.value)
-      ? this.parseIdentifier()
-      : undefined;
-  }
-
-  private parseIdentifier(): string {
-    const token = this.take();
-    if (token?.kind !== 'identifier')
-      throw new Error('GPUSQL expected a table or column identifier');
-    return token.value;
-  }
-
-  private expectKeyword(keyword: string): true {
-    if (!this.takeKeyword(keyword)) throw new Error(`GPUSQL expected ${keyword}`);
-    return true;
-  }
-
-  private takeKeyword(keyword: string): boolean {
-    const token = this.peek();
-    if (token?.kind !== 'identifier' || token.value.toUpperCase() !== keyword) return false;
-    this.position++;
-    return true;
-  }
-
-  private expectSymbol(symbol: string): void {
-    if (!this.takeSymbol(symbol)) throw new Error(`GPUSQL expected "${symbol}"`);
-  }
-
-  private takeSymbol(symbol: string): boolean {
-    const token = this.peek();
-    if (token?.kind !== 'symbol' || token.value !== symbol) return false;
-    this.position++;
-    return true;
-  }
-
-  private take(): GPUSQLToken | undefined {
-    const token = this.tokens[this.position];
-    if (token) this.position++;
-    return token;
-  }
-
-  private peek(): GPUSQLToken | undefined {
-    return this.tokens[this.position];
-  }
-}
-
-function tokenizeGPUSQL(source: string): GPUSQLToken[] {
-  if (typeof source !== 'string' || source.length === 0 || source.length > MAXIMUM_SQL_LENGTH) {
-    throw new Error('GPUSQL requires a nonempty, safely bounded SELECT statement');
-  }
-  const expression =
-    /\s+|(?:--[^\n\r]*)|(?::([A-Za-z_][A-Za-z0-9_]*))|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)|(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(<=|>=|<>|!=|[(),;*+\-/=<>])/gy;
-  const tokens: GPUSQLToken[] = [];
-  let cursor = 0;
-  while (cursor < source.length) {
-    expression.lastIndex = cursor;
-    const match = expression.exec(source);
-    if (!match) throw new Error(`GPUSQL contains an unsupported token at character ${cursor}`);
-    cursor = expression.lastIndex;
-    if (match[1]) tokens.push({kind: 'parameter', value: match[1]});
-    else if (match[2]) tokens.push({kind: 'identifier', value: match[2]});
-    else if (match[3]) tokens.push({kind: 'number', value: match[3]});
-    else if (match[4]) tokens.push({kind: 'symbol', value: match[4]});
-    if (tokens.length > MAXIMUM_SQL_TOKENS)
-      throw new Error('GPUSQL statement exceeds its safe token limit');
-  }
-  return tokens;
-}
-
-const SQL_BINARY_OPERATORS: Readonly<
-  Partial<Record<string, Extract<GPUExpressionNode, {kind: 'binary'}>['operator']>>
-> = {
-  '||': 'or',
-  '&&': 'and',
-  '==': 'equal',
-  '!=': 'not-equal',
-  '>': 'greater-than',
-  '>=': 'greater-than-or-equal',
-  '<': 'less-than',
-  '<=': 'less-than-or-equal',
-  '+': 'add',
-  '-': 'subtract',
-  '*': 'multiply',
-  '/': 'divide'
-};
-
 function lowerSQLExpression(
   node: Extract<Expression, {type: 'BinaryExpression'}>['left'],
-  parameters: GPUDataFrameQueryParameters
+  parameters: GPUDataFrameQueryParameters,
+  resolve: (reference: GPUSQLColumnReference) => string,
+  resolveCall?: (
+    call: Extract<Expression, {type: 'CallExpression'}>
+  ) => GPUExpressionNode | undefined
 ): GPUExpressionNode {
-  // math.gl types child nodes as generic expressions, though the SQL parser emits the AST union.
   const expression = node as Expression;
-  switch (expression.type) {
-    case 'Identifier': {
-      if (!expression.name.startsWith(':')) return column(expression.name).node;
-      const name = expression.name.slice(1);
-      if (!Object.hasOwn(parameters, name)) {
-        throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
+  try {
+    return lowerPortableExpression(expression, leaf => {
+      if (leaf.type === 'Identifier' && 'gpuSQLParameter' in leaf) {
+        const name = leaf.name;
+        if (!Object.hasOwn(parameters, name)) {
+          throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
+        }
+        return parameter(name, parameters[name]).node;
       }
-      return parameter(name, parameters[name]).node;
+      if (leaf.type === 'Identifier' || leaf.type === 'MemberExpression') {
+        return column(resolve(readGPUSQLColumn(leaf))).node;
+      }
+      if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
+        const replacement = resolveCall?.(leaf);
+        if (replacement) return replacement;
+        const name = leaf.callee['name'];
+        const functionName =
+          typeof name === 'string' && leaf['sqlFunction'] === true ? name.toLowerCase() : name;
+        if (
+          name !== 'isNull' &&
+          name !== 'isNotNull' &&
+          name !== 'in' &&
+          name !== 'cast' &&
+          functionName !== 'coalesce' &&
+          functionName !== 'nullif' &&
+          !isGPUScalarFunction(functionName)
+        ) {
+          throw new Error(`GPUSQL does not support SQL expression "${name}"`);
+        }
+      }
+      return undefined;
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'Unsupported portable GPU dataframe expression'
+    ) {
+      throw new Error(`GPUSQL does not support SQL expression "${expression.type}"`, {
+        cause: error
+      });
     }
-    case 'MemberExpression':
-      return column(readGPUSQLColumn(expression)).node;
-    case 'Literal': {
-      const value = expression.value;
-      if (
-        value === null ||
-        typeof value === 'boolean' ||
-        (typeof value === 'number' && Number.isFinite(value))
-      ) {
-        return literal(value).node;
-      }
-      break;
-    }
-    case 'UnaryExpression':
-      if (expression.operator === '!' || expression.operator === '-') {
-        return {
-          kind: 'unary',
-          operator: expression.operator === '!' ? 'not' : 'negate',
-          operand: lowerSQLExpression(expression.argument, parameters)
-        };
-      }
-      break;
-    case 'BinaryExpression': {
-      const operator = SQL_BINARY_OPERATORS[expression.operator];
-      if (operator) {
-        return {
-          kind: 'binary',
-          operator,
-          left: lowerSQLExpression(expression.left, parameters),
-          right: lowerSQLExpression(expression.right, parameters)
-        };
-      }
-      break;
-    }
-    case 'CallExpression':
-      if (
-        expression.arguments.length === 1 &&
-        (expression.callee['name'] === 'isNull' || expression.callee['name'] === 'isNotNull')
-      ) {
-        return {
-          kind: 'unary',
-          operator: expression.callee['name'] === 'isNull' ? 'is-null' : 'is-valid',
-          operand: lowerSQLExpression(expression.arguments[0], parameters)
-        };
-      }
-      break;
-    default:
-      break;
+    throw error;
   }
-  throw new Error(`GPUSQL does not support SQL expression "${expression.type}"`);
 }

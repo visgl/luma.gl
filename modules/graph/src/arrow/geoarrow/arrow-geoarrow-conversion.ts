@@ -7,7 +7,7 @@ import {
   mergeGeoArrowDimensions,
   interleaveGeoArrowCoordinates,
   isGeoArrowValueValid,
-  sliceGeoArrowColumn,
+  getGeoArrowColumnView,
   type GeoArrowColumn,
   type GeoArrowDimension,
   type GeoArrowEncoding,
@@ -319,7 +319,7 @@ function splitGeoArrowColumn(column: GeoArrowColumn, chunkLengths: number[]): Ge
   const chunks = [];
   let rowOffset = 0;
   for (const chunkLength of chunkLengths) {
-    const slicedColumn = sliceGeoArrowColumn(column, rowOffset, rowOffset + chunkLength);
+    const slicedColumn = getGeoArrowColumnView(column, rowOffset, rowOffset + chunkLength);
     if (slicedColumn.chunks.length !== 1) {
       throw new Error('GeoArrow conversion could not preserve Arrow chunk boundaries');
     }

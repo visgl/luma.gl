@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {PolygonLayer} from '@deck.gl/layers';
 import {ThreeSceneLayer} from '@luma.gl/three/deck';
 import type {ThreeSceneAdapter} from '@luma.gl/three/objects';
@@ -181,13 +180,13 @@ export function createGeographicLayers(
       id: String(model.userData['geographicId']),
       object: model
     })),
-    coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+    coordinateSystem: 'meter-offsets',
     coordinateOrigin: GEOGRAPHIC_ORIGIN
   });
   const context = new PolygonLayer({
     id: 'geographic-buildings',
     data: [{id: 'ground', position: [0, 0, -0.1], width: 70, depth: 50, height: 0.1}, ...buildings],
-    coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+    coordinateSystem: 'meter-offsets',
     coordinateOrigin: GEOGRAPHIC_ORIGIN,
     getPolygon: building => [
       [
