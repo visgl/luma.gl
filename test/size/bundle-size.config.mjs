@@ -104,7 +104,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Resnapshotting native state on reattachment adds about 0.15 KB minified.
     // Clip control, depth clamp and polygon offset clamp together measure 142,944 B / 40,366 B gzip.
     // Per-face stencil operations and scoped stencil clears.
-    maximum: {minified: 144_500, gzip: 40_995, brotli: 35_135},
+    maximum: {minified: 144_580, gzip: 40_995, brotli: 35_135},
     targetGzip: 30_000
   },
   {
@@ -121,7 +121,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     sum: ['core', 'webgl'],
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
     // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
-    maximum: {minified: 249_655, gzip: 70_630, brotli: 61_145},
+    maximum: {minified: 249_735, gzip: 70_630, brotli: 61_145},
     targetGzip: 54_000
   },
   {

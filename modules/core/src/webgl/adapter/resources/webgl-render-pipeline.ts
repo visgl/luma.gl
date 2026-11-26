@@ -36,9 +36,6 @@ import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {WEBGLSharedRenderPipeline} from './webgl-shared-render-pipeline';
 import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
 
-/** Texture parameter exposed by WEBGL_stencil_texturing. */
-const DEPTH_STENCIL_TEXTURE_MODE_WEBGL = 0x90ea;
-
 /** Creates a new render pipeline */
 export class WEBGLRenderPipeline extends RenderPipeline {
   /** The WebGL device that created this render pipeline */
@@ -294,7 +291,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             // WebGL stores the aspect on the texture. A draw can only use one aspect per texture.
             gl.texParameteri(
               texture.glTarget,
-              DEPTH_STENCIL_TEXTURE_MODE_WEBGL,
+              GL.DEPTH_STENCIL_TEXTURE_MODE_WEBGL,
               stencilOnly ? GL.STENCIL_INDEX : GL.DEPTH_COMPONENT
             );
             texture._stencilSampling = stencilOnly;
