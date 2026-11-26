@@ -52,6 +52,23 @@ Use hyphenated projection subpaths such as
 - Validate all geometry indices against the supplied vertices, including indices
   outside an explicit draw count. See the [geometry reference](./api-reference/engine/geometry/geometry.md).
 
+### GPUGroupAggregation sum and mean limits
+
+`GPUGroupAggregation` `sum` and `mean` now reduce graph-owned partials in a fixed order instead
+of using float atomics. The props are unchanged, but the operation has new capacity limits:
+
+- An unpartitioned pass with more than 16,777,215 groups throws when the operation adds its command nodes.
+  Count, minimum, and maximum keep their previous limits.
+- Each operation allocates a transient partial-sum array of up to about 4 MB, or `4 × groupCount`
+  bytes above about one million groups. Mean allocates a second array of the same size for
+  partial counts. The `maxMeanScratchBytes` option caps each mean array. The graph throws when one array exceeds the device's
+  `maxStorageBufferBindingSize`.
+- Results are bitwise repeatable across runs on the same device, but can differ from earlier
+  releases in the last bits because the addition order changed. Accumulation is still
+  sequential `float32`, so cancellation-heavy inputs can lose small terms.
+
+See [GPUGroupAggregation](./api-reference/experimental/gpu-core/gpu-group-aggregation) for details.
+
 ## Upgrading to v9.4
 
 Review any custom shader injection hooks and the rendering options documented in

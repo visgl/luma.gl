@@ -65,7 +65,7 @@ it('GPUDataFrame groups nullable source batches into explicit dense GPU statisti
   try {
     const meanScratch = transientBuffers.mock.calls
       .map(([descriptor]) => descriptor)
-      .filter(descriptor => descriptor.id.endsWith('-metric-4-counts'));
+      .filter(descriptor => descriptor.id.endsWith('-metric-4-partial-counts'));
     expect(meanScratch.map(descriptor => descriptor.byteLength)).toEqual([4]);
     expect(compiled.groupCount, 'dictionary labels determine the dense group domain').toBe(4);
     expect(
