@@ -320,12 +320,6 @@
   },
   {
     "type": "category",
-    "label": "Visual Effects - deck.gl v10",
-    "items": [
-    ]
-  },
-  {
-    "type": "category",
     "label": "GPU Graph Layers - deck.gl v10",
     "items": [
       {
