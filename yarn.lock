@@ -13105,10 +13105,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ip-address@npm:10.7.1":
-  version: 10.7.1
-  resolution: "ip-address@npm:10.7.1"
-  checksum: 10c0/96a99ccf7a5cf4f1dde86c5dc669accc55a4350615b6e0e340cc7e4251d7fe1788a89a725a9641e817b4f5563e1a00029aeae9801069de5ebbd79d437a1d3cde
+"ip-address@npm:10.7.6":
+  version: 10.7.6
+  resolution: "ip-address@npm:10.7.6"
+  checksum: 10c0/b1877874793345a00ef46877e18b8ff38d91ce4d07195f8e26d1381a0248b296cfad73e2ec1ba7c5c39e347d365971e036fbb6ffbc672b7d3f0d9648ed2fafa5
   languageName: node
   linkType: hard
 
