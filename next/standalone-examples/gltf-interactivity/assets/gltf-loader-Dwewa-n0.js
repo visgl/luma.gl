@@ -1,0 +1,1 @@
+import{n as e}from"./gltf-loader-Ds_Q4JlZ.js";export{e as parse};

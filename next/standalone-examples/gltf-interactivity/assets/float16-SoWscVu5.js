@@ -1,1 +1,0 @@
-import{t as e}from"./typed-array-brand-DxO13oAz.js";function t(t){return e(t)===`Float16Array`}var n=globalThis.Float16Array;function r(){return n??Uint16Array}function i(e){return!!(n&&e===n)}export{i,r as n,t as r,n as t};

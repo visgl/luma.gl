@@ -1,0 +1,1 @@
+import{t as e}from"./gltf-loader-Ds_Q4JlZ.js";import"./gltf-BvRk9kiK.js";export{e as GLTFLoaderWithParser};

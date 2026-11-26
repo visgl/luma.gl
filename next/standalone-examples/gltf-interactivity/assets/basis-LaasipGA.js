@@ -1,0 +1,1 @@
+import{t as e}from"./basis-B_bg40-I.js";export{e as BasisLoaderWithParser};
