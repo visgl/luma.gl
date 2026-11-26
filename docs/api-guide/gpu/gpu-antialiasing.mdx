@@ -159,11 +159,18 @@ it. This example assumes backend-appropriate vertex and fragment shaders. It use
 depth testing for opaque geometry.
 
 ```ts
+const colorTexture = device.createTexture({
+  width,
+  height,
+  format: 'rgba8unorm',
+  usage: Texture.RENDER | Texture.SAMPLE
+});
+
 const framebuffer = device.createFramebuffer({
   width,
   height,
   samples: 4,
-  colorAttachments: ['rgba8unorm'],
+  colorAttachments: [colorTexture],
   depthStencilAttachment: 'depth24plus'
 });
 
@@ -190,7 +197,7 @@ const resolvedColor = framebuffer.colorAttachments[0];
 
 Bind `resolvedColor` in a later pass to composite the antialiased image or apply an effect.
 The pass resolves color when it ends. The underlying texture remains single-sampled.
-Reuse the framebuffer across frames and destroy it when finished.
+Reuse the framebuffer across frames and destroy it and the supplied color texture when finished.
 
 ### Attachment rules
 
@@ -198,7 +205,7 @@ Reuse the framebuffer across frames and destroy it when finished.
 | --- | --- |
 | Framebuffer sample count | Use `1` for ordinary rendering or `4` for managed offscreen MSAA. |
 | Pipeline sample count | Match the framebuffer on every draw. |
-| Color attachments | Use format strings or supply single-sample textures matching the framebuffer dimensions. |
+| Color attachments | Use format strings for render-only color, or supply matching single-sample textures with the usage flags needed by later passes. |
 | Depth/stencil | Supply a format string to allocate matching multisampled storage. Omit it for color-only rendering. |
 | Later passes | Use the same framebuffer and load the aspects you want to preserve. Only color is resolved. |
 
