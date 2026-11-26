@@ -715,6 +715,9 @@ export type {GPUUploadOperationProps, GPUCopyOperationProps} from './gpu-transfe
 export {GPUCompactionOperation} from './gpu-compaction-operation';
 export type {GPUCompactionOperationProps} from './gpu-compaction-operation';
 
+export {GPUGraphState} from './gpu-graph-state';
+export type {GPUGraphStateBindings, GPUGraphStateOptions} from './gpu-graph-state';
+
 export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-graph-value';
 export type {GPUGraphTextureBinding, GPUGraphOutput, GPUGraphOutputs} from './gpu-texture-plan';
 

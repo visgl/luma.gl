@@ -1,4 +1,5 @@
-import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import {Matrix4} from '@math.gl/core/matrix';
@@ -40,13 +41,14 @@ export async function initializeExternalWebGLContext(
   const baseModelMatrix = new Matrix4();
   const modelViewProjectionMatrix = new Matrix4();
 
+  maplibregl.setWorkerUrl(maplibreWorkerUrl);
   const maplibreMap = new maplibregl.Map({
     container,
     style: 'https://tiles.openfreemap.org/styles/positron',
     center: [-122.43, 37.77],
     pitch: 60,
     zoom: 12.5,
-    antialias: true
+    canvasContextAttributes: {antialias: true}
   });
 
   const resizeCanvasContext = (webglContext: WebGL2RenderingContext) => {
@@ -131,7 +133,7 @@ export async function initializeExternalWebGLContext(
         }
       });
     },
-    render: (maplibreWebglContext, customRenderInput: CustomRenderMethodInput) => {
+    render: (maplibreWebglContext, customRenderInput: maplibregl.CustomRenderMethodInput) => {
       if (
         !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
         !device ||
