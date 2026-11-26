@@ -125,9 +125,12 @@ export class WEBGLRenderPass extends RenderPass {
       const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
       const view = framebuffer?.depthStencilAttachment;
       if (framebuffer?.handle) {
+        const format = framebuffer.multisampleHandle
+          ? framebuffer.props.depthStencilAttachment
+          : (view?.props.format ?? view?.texture.format);
         if (
           framebuffer.hasStencilRenderbuffer ||
-          (view?.props.format ?? view?.texture.format)?.includes('stencil')
+          (typeof format === 'string' && format.includes('stencil'))
         ) {
           gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL_ATTACHMENT]);
         }

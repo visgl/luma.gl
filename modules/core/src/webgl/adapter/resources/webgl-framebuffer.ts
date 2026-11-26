@@ -57,7 +57,9 @@ export class WEBGLFramebuffer extends Framebuffer {
       if (!props.handle) {
         // Auto create textures for attachments if needed
         const attachment = this.props.depthStencilAttachment;
-        this.autoCreateAttachmentTextures(attachment === 'stencil8' ? null : attachment);
+        this.autoCreateAttachmentTextures(
+          this.props.samples === 4 || attachment === 'stencil8' ? null : attachment
+        );
 
         try {
           this.updateAttachments();
@@ -104,9 +106,14 @@ export class WEBGLFramebuffer extends Framebuffer {
         this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
       }
 
-      if (this.props.depthStencilAttachment === 'stencil8') this.attachStencilRenderbuffer();
+      if (this.props.samples !== 4 && this.props.depthStencilAttachment === 'stencil8') {
+        this.attachStencilRenderbuffer();
+      }
 
-      if (this.hasStencilRenderbuffer || this.device.props.debug) {
+      if (
+        this.hasStencilRenderbuffer ||
+        (this.device.props.debug && (this.props.samples !== 4 || this.colorAttachments.length))
+      ) {
         const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
         if (status !== GL.FRAMEBUFFER_COMPLETE) {
           throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
@@ -141,7 +148,8 @@ export class WEBGLFramebuffer extends Framebuffer {
   private updateMultisampleStorage(): void {
     const {gl} = this;
     this.multisampleHandle ??= gl.createFramebuffer();
-    if (!this.multisampleHandle) throw new Error('Could not allocate the multisample framebuffer');
+    // Native allocation can fail if the context is lost.
+    assert(this.multisampleHandle);
     gl.bindFramebuffer(GL.FRAMEBUFFER, this.multisampleHandle);
     const previousStorage = gl.getParameter(GL.RENDERBUFFER_BINDING);
     try {
@@ -149,17 +157,14 @@ export class WEBGLFramebuffer extends Framebuffer {
         format: view.props.format ?? view.texture.format,
         point: GL.COLOR_ATTACHMENT0 + index
       }));
-      if (this.depthStencilAttachment) {
-        const view = this.depthStencilAttachment;
-        const format = view.props.format ?? view.texture.format;
+      const format = this.props.depthStencilAttachment;
+      if (typeof format === 'string') {
         attachments.push({format, point: getDepthStencilAttachmentWebGL(format)});
-      }
-      if (this.hasStencilRenderbuffer) {
-        attachments.push({format: 'stencil8', point: GL.STENCIL_ATTACHMENT});
       }
       for (const [index, {format, point}] of attachments.entries()) {
         const storage = this.multisampleStorage[index] ?? gl.createRenderbuffer();
-        if (!storage) throw new Error('Could not allocate multisample renderbuffer');
+        // Native allocation can fail if the context is lost.
+        assert(storage);
         this.multisampleStorage[index] = storage;
         gl.bindRenderbuffer(GL.RENDERBUFFER, storage);
         const {internalFormat} = getTextureFormatWebGL(format);
@@ -187,7 +192,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   /** Resolves the private color buffers into the public single-sample textures. */
   resolveMultisampleColors(): void {
-    if (!this.multisampleHandle) return;
+    if (!this.multisampleHandle || !this.colorAttachments.length) return;
     const {gl, width, height} = this;
     this.device.pushState();
     try {

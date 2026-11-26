@@ -418,6 +418,7 @@ it('resolves partial geometry coverage with four-sample color and depth', async 
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {sampleCount: 4, depthCompare: 'less', depthWriteEnabled: true}
     });
+    if (device.type === 'webgl') expect(framebuffer.depthStencilAttachment).toBeNull();
     try {
       const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1], clearDepth: 1});
       pass.setPipeline(pipeline);

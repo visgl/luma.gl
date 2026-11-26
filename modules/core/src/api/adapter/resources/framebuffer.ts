@@ -180,7 +180,7 @@ export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
         this.props.samples === 4
           ? Texture.RENDER_ATTACHMENT
           : Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
-      samples: this.device.type === 'webgpu' ? this.props.samples : 1,
+      samples: this.props.samples,
       format,
       width: this.width,
       height: this.height

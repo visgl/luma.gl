@@ -54,7 +54,7 @@ Attachment dimensions, formats, and sample counts must be compatible with the pa
 - `props: FramebufferProps`: creation properties.
 - `width: number`, `height: number`: framebuffer dimensions.
 - `colorAttachments: TextureView[]`: resolved color attachment views.
-- `depthStencilAttachment: TextureView | null`: resolved depth/stencil view.
+- `depthStencilAttachment: TextureView | null`: depth/stencil texture view when texture-backed. WebGL2 renderbuffer-backed attachments have no texture view.
 - `handle: unknown`: underlying WebGL framebuffer; WebGPU has no native framebuffer object.
 
 ## Methods and ownership
