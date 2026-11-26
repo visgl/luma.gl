@@ -2,4 +2,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export * from './gpu-simple-graph/operations/webgpu/index';
+export {
+  arithmetic,
+  castData,
+  convertColors,
+  dot,
+  equalAll,
+  extent,
+  fround,
+  gather,
+  interleave,
+  length,
+  segmentedMap,
+  select,
+  sequence,
+  swizzle
+} from './gpu-simple-graph/operations/webgpu/index';
