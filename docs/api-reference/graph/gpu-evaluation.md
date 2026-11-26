@@ -129,7 +129,9 @@ handler has not been registered for a `webgl` or `webgpu` device, asynchronous
 lookup loads the matching built-in backend with a dynamic import. Registered
 handlers take precedence over these defaults, so registering a subset does not
 disable other built-in operations. A handler registered as `undefined` does not
-hide the built-in one.
+hide the built-in one. Concurrent lookups share a single built-in import for
+each device type. Once it succeeds, synchronous evaluation can use those handlers
+too. A later lookup can retry a failed import.
 
 ```ts
 const outputVector = await output.evaluate(device);

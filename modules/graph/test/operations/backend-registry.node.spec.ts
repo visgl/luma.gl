@@ -183,6 +183,34 @@ describe('BackendRegistry', () => {
     expect(() => registry.getSync('webgpu', 'interleave')).toThrow();
   });
 
+  test('shares concurrent built-in loads and retries after failure', async () => {
+    const handler = vi.fn();
+    const load = vi.fn().mockRejectedValueOnce(new Error('failed')).mockResolvedValue({handler});
+    const registry = new BackendRegistry({defaultModuleLoaders: {webgpu: load}});
+    const results = await Promise.allSettled([
+      registry.get('webgpu', 'handler'),
+      registry.get('webgpu', 'handler')
+    ]);
+    expect(results.map(result => result.status)).toEqual(['rejected', 'rejected']);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(await registry.get('webgpu', 'handler')).toBe(handler);
+    expect(registry.getSync('webgpu', 'handler')).toBe(handler);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  test('a cleared import finishes without populating the new registry', async () => {
+    const {registry, resolveDefaultModule} = createDeferredDefaultRegistry();
+    const loading = registry.get('webgpu', 'convertColors');
+    await Promise.resolve();
+    registry.clear();
+    const handler = vi.fn();
+    await registry.add('webgpu', {custom: handler});
+    resolveDefaultModule({convertColors});
+    expect(await loading).toBe(convertColors);
+    expect(() => registry.getSync('webgpu', 'convertColors')).toThrow('does not implement');
+    expect(registry.getSync('webgpu', 'custom')).toBe(handler);
+  });
+
   test('reports missing custom backends and unimplemented operations', async () => {
     const registry = new BackendRegistry();
     await expect(registry.get('custom', 'missing')).rejects.toThrow('not registered');
