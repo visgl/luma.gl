@@ -4,9 +4,8 @@
 
 // Bootstrap this constants-only bundle before compiling core. Loading the complete
 // core package here would require the build output that this transformer produces.
-const {GL} = require('../../modules/core/dist/webgl-constants/index.cjs');
-
 module.exports = function inlineWebGLConstants(program, pluginConfig, {ts: typescript}) {
+  const GL = pluginConfig?.constants ?? require('../../modules/core/dist/webgl-constants/index.cjs').GL;
   return context => sourceFile => {
     function visitNode(node) {
       if (
