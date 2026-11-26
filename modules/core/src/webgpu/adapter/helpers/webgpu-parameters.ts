@@ -111,7 +111,7 @@ export const PARAMETER_TABLE: Partial<Record<keyof Parameters, Function>> = {
   // COLOR
 
   colorMask: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    const target = addColorState(descriptor, 0);
+    const target = getColorState(descriptor, 0);
     target.writeMask = value;
   },
 
@@ -269,7 +269,12 @@ function setParameters(
   parameters: Parameters,
   features?: Pick<DeviceFeatures, 'has'>
 ): void {
+  const [colorTarget] = pipelineDescriptor.fragment?.targets ?? [];
   for (const [key, value] of Object.entries(parameters)) {
+    // Depth-only pipelines may reuse parameters from models that normally render to color.
+    if (!colorTarget && (key === 'colorMask' || key.startsWith('blend'))) {
+      continue;
+    }
     if (value === undefined) {
       continue;
     }
@@ -285,25 +290,16 @@ function setParameters(
   }
 }
 
-/** @todo - support multiple color targets... */
-function addColorState(
+/** Returns the configured color target. Callers skip color parameters when it is absent. */
+function getColorState(
   descriptor: GPURenderPipelineDescriptor,
   attachment: number
 ): GPUColorTargetState {
-  // @ts-ignore
-  descriptor.fragment.targets = descriptor.fragment?.targets || ([] as GPUColorTargetState[]);
-  if (!Array.isArray(descriptor.fragment?.targets)) {
-    log.warn('parameters: no targets array')();
-  }
-  if (descriptor.fragment?.targets?.length === 0) {
-    // @ts-expect-error GPU types as iterator
-    descriptor.fragment.targets?.push({});
-  }
-  return descriptor.fragment?.targets?.[0] as GPUColorTargetState;
+  return (descriptor.fragment?.targets as GPUColorTargetState[])[attachment];
 }
 
 function addBlendState(descriptor: GPURenderPipelineDescriptor, attachment: number): GPUBlendState {
-  const target = addColorState(descriptor, attachment);
+  const target = getColorState(descriptor, attachment);
   target.blend = target.blend || {color: {}, alpha: {}};
   return target.blend;
 }
