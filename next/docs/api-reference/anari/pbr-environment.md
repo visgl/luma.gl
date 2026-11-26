@@ -205,7 +205,7 @@ import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 
 import {load} from '@loaders.gl/core';
 
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 
 
 

@@ -1,0 +1,1 @@
+import{n as e,t}from"./parse-draco-DWVvWq-M.js";import{t as n}from"./library-utils-DQ9UG7zO.js";import{t as r}from"./draco-loader-types-vr5HD86C.js";var{preload:i,...a}=r,o={...a,parse:async(r,i,a)=>await t(r,i,async()=>await e(n({core:i?.core,modules:i?.modules}),`wasm`,i?.draco?.decoderProfile),a)};export{o as DracoWASMLoaderWithParser};

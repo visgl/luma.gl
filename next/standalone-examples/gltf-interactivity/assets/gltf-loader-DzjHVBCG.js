@@ -1,1 +1,0 @@
-import{n as e}from"./gltf-loader-fShCaIg7.js";export{e as parse};

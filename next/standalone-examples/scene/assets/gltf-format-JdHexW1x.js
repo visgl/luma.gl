@@ -1,0 +1,1 @@
+var e=`5.0.1`,t={name:`glTF`,id:`gltf`,module:`scene`,encoding:`binary`,format:`gltf`,extensions:[`gltf`,`glb`],mimeTypes:[`model/gltf+json`,`model/gltf-binary`],text:!0,binary:!0,tests:[`glTF`]},n={name:`GLB`,id:`glb`,module:`scene`,encoding:`binary`,format:`glb`,extensions:[`glb`],mimeTypes:[`model/gltf-binary`],binary:!0,tests:[`glTF`]};export{t as n,e as r,n as t};

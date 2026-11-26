@@ -162,7 +162,7 @@ yarn add @loaders.gl/core@^5.0.0 @loaders.gl/tables@^5.0.0
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```
-import {createParquetSource} from '@loaders.gl/tables/parquet';
+import {ParquetSource} from '@loaders.gl/tables/parquet/bundled';
 
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
@@ -178,7 +178,7 @@ import {
 
 
 
-const source = createParquetSource(parquetBlob, {});
+const source = new ParquetSource(parquetBlob, {});
 
 
 

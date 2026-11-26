@@ -313,7 +313,7 @@ import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/glt
 
 import {load} from '@loaders.gl/core';
 
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 
 
 

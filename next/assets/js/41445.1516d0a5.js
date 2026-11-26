@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkwebsite_docusaurus=self.webpackChunkwebsite_docusaurus||[]).push([["41445"],{5700(e,s,u){u.d(s,{GLBLoaderWithParser:()=>n});var t=u(99305);let{preload:r,...a}=u(64126).T,n={...a,parse:c,parseSync:b};async function c(e,s){return b(e,s)}function b(e,s){let u={};return(0,t.A)(u,e,s?.glb?.byteOffset||0,s?.glb),u}}}]);

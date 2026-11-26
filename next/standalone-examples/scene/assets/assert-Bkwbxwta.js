@@ -1,0 +1,1 @@
+function e(e,t){if(!e)throw Error(t||`loader assertion failed.`)}export{e as t};
