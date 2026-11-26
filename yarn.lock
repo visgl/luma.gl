@@ -22072,7 +22072,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typedoc@npm:^0.28.19":
+"typedoc@npm:0.28.19":
   version: 0.28.19
   resolution: "typedoc@npm:0.28.19"
   dependencies:
@@ -22086,6 +22086,23 @@ __metadata:
   bin:
     typedoc: bin/typedoc
   checksum: 10c0/a46ea8ec4e661320dacf27f1d68595bdf9d671383f20060b590f212e6ebbf9a65d4962e698e8a43804a14add1f04a3528381c338801350dc03ddc6baf33fb898
+  languageName: node
+  linkType: hard
+
+"typedoc@patch:typedoc@npm%3A0.28.19#~/.yarn/patches/typedoc-npm-0.28.19-d7fd22c3f7.patch":
+  version: 0.28.19
+  resolution: "typedoc@patch:typedoc@npm%3A0.28.19#~/.yarn/patches/typedoc-npm-0.28.19-d7fd22c3f7.patch::version=0.28.19&hash=8b85e1"
+  dependencies:
+    "@gerrit0/mini-shiki": "npm:^3.23.0"
+    lunr: "npm:^2.3.9"
+    markdown-it: "npm:^14.1.1"
+    minimatch: "npm:^10.2.5"
+    yaml: "npm:^2.8.3"
+  peerDependencies:
+    typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x || 5.9.x || 6.0.x
+  bin:
+    typedoc: bin/typedoc
+  checksum: 10c0/9a2600139bca1c47bb167b1d0f5a4340edb67488d9534b9f2ca2053fc22aa4eab570c43fa82a62bbcfbeeb2898743ca69fb7e04fedb35c66bf7ab01ad9e6a378
   languageName: node
   linkType: hard
 
@@ -22910,7 +22927,7 @@ __metadata:
     probe.gl: "npm:^5.0.0"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
-    typedoc: "npm:^0.28.19"
+    typedoc: "patch:typedoc@npm%3A0.28.19#~/.yarn/patches/typedoc-npm-0.28.19-d7fd22c3f7.patch"
     typedoc-plugin-markdown: "npm:^4.10.0"
     typescript: "npm:6.0.3"
     zustand: "npm:^4.1.5"
