@@ -235,10 +235,29 @@ empty set.
 readonly glslLanguageFeatures: ReadonlySet<string>;
 ```
 
-GLSL `#extension` directive names supported by the WebGL context. Check a name with
-`device.glslLanguageFeatures.has('GL_ANGLE_multi_draw')`. Enable the corresponding WebGL
-extension with `getExtension()` before compiling a shader that uses it. Non-WebGL devices
-expose an empty set.
+On WebGL, this set lists the GLSL `#extension` directive names the context advertises.
+A positive `.has()` result reports support. Before compiling a shader that requires a directive,
+enable its corresponding WebGL extension. Non-WebGL devices expose an empty set.
+
+For a directive with a luma.gl feature in the table, use `device.features.has(featureName)`.
+It enables the extension when available and honors `DeviceProps._disabledFeatures`.
+The GLSL support set reports the context’s capabilities even when a luma.gl feature override disables one.
+
+For the other directives, call `device.gl.getExtension(webglExtensionName)` on a `WebGLDevice`
+and check that it returns an extension object. For `GL_ANGLE_multi_draw`, either listed extension
+can enable the directive.
+
+| GLSL directive | WebGL extension | luma.gl device feature |
+| --- | --- | --- |
+| `GL_EXT_conservative_depth` | `EXT_conservative_depth` | `shader-conservative-depth-webgl` |
+| `GL_NV_shader_noperspective_interpolation` | `NV_shader_noperspective_interpolation` | `shader-noperspective-interpolation-webgl` |
+| `GL_OES_sample_variables` | `OES_sample_variables` | — |
+| `GL_OES_shader_multisample_interpolation` | `OES_shader_multisample_interpolation` | — |
+| `GL_OVR_multiview2` | `OVR_multiview2` | — |
+| `GL_EXT_blend_func_extended` | `WEBGL_blend_func_extended` | — |
+| `GL_ANGLE_clip_cull_distance` | `WEBGL_clip_cull_distance` | `shader-clip-cull-distance-webgl` |
+| `GL_ANGLE_multi_draw` | `WEBGL_multi_draw` or `WEBGL_multi_draw_instanced_base_vertex_base_instance` | — |
+| `GL_ANGLE_shader_pixel_local_storage` | `WEBGL_shader_pixel_local_storage` | — |
 
 ### limits
 
