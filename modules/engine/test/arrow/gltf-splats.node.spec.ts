@@ -162,8 +162,8 @@ test('opt-in scene creation skips compressed Gaussian primitives instead of crea
 
 test('prepares an embedded SPZ payload decoded by loaders.gl', async () => {
   const {parse} = await import('@loaders.gl/core');
-  const {GLTFLoader} = await import('@loaders.gl/scene/gltf');
-  const {SPZLoader} = await import('@loaders.gl/splats');
+  const {GLTFLoader} = await import('@loaders.gl/scene/gltf/bundled');
+  const {SPZLoader} = await import('@loaders.gl/splats/spz/bundled');
   const encoded = 'H4sIAAAAAAAAE/NzDw5gYmBgYARiBh4gFmCAgP8NDQ0LFiwAsgB3I+Z5IwAAAA==';
   const bytes = Buffer.from(encoded, 'base64');
   const json = JSON.stringify({
@@ -324,8 +324,8 @@ test('rejects decoded sRGB splats until their color space is converted', async (
 test('showcase GLB produces an identity-placed visible Gaussian instance', async () => {
   const {readFile} = await import('node:fs/promises');
   const {parse} = await import('@loaders.gl/core');
-  const {GLTFLoader} = await import('@loaders.gl/scene/gltf');
-  const {SPZLoader} = await import('@loaders.gl/splats');
+  const {GLTFLoader} = await import('@loaders.gl/scene/gltf/bundled');
+  const {SPZLoader} = await import('@loaders.gl/splats/spz/bundled');
   const bytes = await readFile(
     new URL(
       '../../../../examples/showcase/gaussian-splats/fixtures/gaussian-splats.glb',
@@ -385,7 +385,7 @@ test('resolves EXT_mesh_gpu_instancing transforms for Gaussian nodes', () => {
 
 test('prepares the upstream uncompressed Gaussian glTF sample', async () => {
   const {parse} = await import('@loaders.gl/core');
-  const {GLTFLoader} = await import('@loaders.gl/scene/gltf');
+  const {GLTFLoader} = await import('@loaders.gl/scene/gltf/bundled');
   const {readFile} = await import('node:fs/promises');
   const directory = new URL(
     '../../../../examples/showcase/gaussian-splats/fixtures/godot-minimal/',

@@ -9,7 +9,7 @@ from `@luma.gl/engine/gltf`.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 
 const source = await load('/model.glb', GLTFLoader);

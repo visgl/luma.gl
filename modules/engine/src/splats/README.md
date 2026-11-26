@@ -60,8 +60,8 @@ and uncompressed Gaussian primitives:
 
 ```typescript
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {SPZLoader} from '@loaders.gl/splats';
+import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
+import {SPZLoader} from '@loaders.gl/splats/spz/bundled';
 import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/engine/gltf';
 import type {GLTFWithBuffers} from '@luma.gl/engine/gltf';
 import {getGLTFSplatSceneInstances, makeGPUSplatDataFromGLTFScene} from '@luma.gl/engine/arrow';

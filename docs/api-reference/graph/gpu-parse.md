@@ -232,7 +232,7 @@ yarn add @loaders.gl/core@^5.0.0 @loaders.gl/tables@^5.0.0
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```ts
-import {createParquetSource} from '@loaders.gl/tables/parquet';
+import {ParquetSource} from '@loaders.gl/tables/parquet/bundled';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,
@@ -240,7 +240,7 @@ import {
   planGPUParquetEncodedPageBatch
 } from '@luma.gl/graph/gpu-parse';
 
-const source = createParquetSource(parquetBlob, {});
+const source = new ParquetSource(parquetBlob, {});
 
 for await (const encodedBatch of source.readPages({
   columns: ['position', 'category'],

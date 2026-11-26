@@ -12,7 +12,7 @@ animation mixer, interpolation implementation, or skinning shader.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/engine/gltf';
 

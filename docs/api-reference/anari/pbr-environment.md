@@ -183,7 +183,7 @@ If cubemap faces and a BRDF lookup texture have already been generated offline, 
 ```ts
 import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 import {load} from '@loaders.gl/core';
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 
 const loadedEnvironment = loadPBREnvironment(device, {
   loadImage: url => load(url, ImageLoader),

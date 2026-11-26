@@ -3,7 +3,7 @@
 
 import {expect, test} from 'vitest';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
 import {Buffer, Texture} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Geometry} from '@luma.gl/engine';
