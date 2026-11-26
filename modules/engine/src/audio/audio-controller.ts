@@ -305,6 +305,10 @@ export class AudioController {
       gain.disconnect();
     }
     this.playing.clear();
+    for (const graph of this.graphs.values()) {
+      if (this.destroyed) graph.destroy();
+      else graph.reset();
+    }
     for (const bus of this.reverbBuses.values()) bus.reset();
   }
 
@@ -415,7 +419,6 @@ export class AudioController {
       emitter.airFilter?.disconnect();
       emitter.gain.disconnect();
     }
-    for (const graph of this.graphs.values()) graph.destroy();
     for (const bus of this.reverbBuses.values()) bus.destroy();
     this.reverbBuses.clear();
     for (const direct of this.directGains) direct.disconnect();
