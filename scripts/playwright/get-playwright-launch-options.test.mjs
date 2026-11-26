@@ -29,7 +29,7 @@ test('getPlaywrightLaunchOptions selects Dawn SwiftShader for WebGPU', () => {
   });
 });
 
-test('getPlaywrightLaunchOptions uses the proven ANGLE software path for Linux WebGPU', () => {
+test('getPlaywrightLaunchOptions preserves ANGLE and enables Vulkan presentation for Linux WebGPU', () => {
   const launchOptions = getPlaywrightLaunchOptions({
     backend: 'webgpu-core',
     headless: true,
@@ -44,7 +44,10 @@ test('getPlaywrightLaunchOptions uses the proven ANGLE software path for Linux W
       '--enable-unsafe-webgpu',
       '--ignore-gpu-blocklist',
       '--use-angle=swiftshader',
-      '--enable-unsafe-swiftshader'
+      '--enable-unsafe-swiftshader',
+      '--enable-gpu',
+      '--enable-features=Vulkan',
+      '--use-vulkan=swiftshader'
     ]
   });
 });
@@ -70,7 +73,7 @@ test('getPlaywrightLaunchOptions selects ANGLE SwiftShader for WebGL', () => {
 });
 
 test('getPlaywrightLaunchOptions selects both software adapters without a requested backend', () => {
-  const launchOptions = getPlaywrightLaunchOptions({softwareGpu: true});
+  const launchOptions = getPlaywrightLaunchOptions({softwareGpu: true, platform: 'darwin'});
 
   assert(launchOptions.args.includes('--use-angle=swiftshader'));
   assert(launchOptions.args.includes('--use-webgpu-adapter=swiftshader'));
@@ -86,4 +89,12 @@ test('getPlaywrightLaunchOptions deduplicates custom software GPU arguments', ()
 
   assert.equal(launchOptions.args.filter(argument => argument === '--use-gl=angle').length, 1);
   assert(launchOptions.args.includes('--custom-argument'));
+});
+
+test('mixed Linux backends retain ANGLE and use Vulkan compositing', () => {
+  const launchOptions = getPlaywrightLaunchOptions({softwareGpu: true, platform: 'linux'});
+  assert(launchOptions.args.includes('--use-angle=swiftshader'));
+  assert(launchOptions.args.includes('--use-vulkan=swiftshader'));
+  assert(!launchOptions.args.includes('--use-webgpu-adapter=swiftshader'));
+  assert.equal(new Set(launchOptions.args).size, launchOptions.args.length);
 });

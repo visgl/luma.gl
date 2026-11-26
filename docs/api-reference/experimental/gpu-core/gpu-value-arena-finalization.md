@@ -55,7 +55,7 @@ Stable offsets keep generated WGSL, traces and debugging easy to inspect. Small-
 
 The initial arena reserves 16 KiB, enough for 4096 32-bit values. This is deliberately small in GPU-memory terms while avoiding mutable buffer descriptors during graph construction.
 
-If real workloads approach this limit, the architecture can add an explicit graph-level arena-capacity option. Algorithms should not choose arena capacity independently.
+Allocation throws when the shared capacity is exhausted. `GPUValueArena` also accepts an explicit capacity in its constructor; callers using the shared `getGPUValueArena(graph)` should coordinate allocations within its default capacity.
 
 ## Binding pressure
 

@@ -14,8 +14,8 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
-import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVectorModel} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -139,9 +139,11 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
       data: new Uint8Array([0, 0, 0, 255])
     });
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_SCATTERPLOT_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
+      inferDrawCount: 'instance',
       isInstanced: true,
       vertexCount: 6,
       instanceCount: 0,
@@ -176,7 +178,7 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
     this.setState({model, styleBuffer} satisfies GPUScatterplotLayerState);
   }
 
-  override getModels(): Model[] {
+  override getModels(): GPUVectorModel[] {
     const model = (this.state as GPUScatterplotLayerState).model;
     return model ? [model] : [];
   }

@@ -16,12 +16,12 @@ import {
   ArrowPathRenderer,
   getArrowRecordBatchAsyncIterator,
   resolveArrowPathSourceVectors,
-  type ArrowColorType,
   type ArrowPathSourceVectors,
   type ArrowPathSourceVectorSelectors,
   type ArrowRecordBatchSource,
   type PreparedArrowPathRendererGPUVectors
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {type ArrowColorType} from '@luma.gl/graph/arrow';
 import {
   Buffer,
   type BufferLayout,
@@ -30,8 +30,8 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {GPUConstant, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {PathAttributeModel, PathStorageModel} from '@luma.gl/experimental/models';
+import {GPUConstant, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
+import {PathAttributeModel, PathStorageModel} from '@luma.gl/engine/models';
 import {
   DataType,
   vectorFromArray,
@@ -798,6 +798,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     try {
       if (model === 'storage') {
         renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          shaderAssembler: this.context.shaderAssembler,
           ...prepared,
           model: 'storage',
           id: `${props.id}-batch-${batchIndex}`,
@@ -816,6 +817,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
         });
       } else {
         renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          shaderAssembler: this.context.shaderAssembler,
           ...prepared,
           model: 'attribute',
           id: `${props.id}-batch-${batchIndex}`,

@@ -24,16 +24,16 @@ Non-goals:
 
 The luma.gl v9 API design launched in 2023 stays fairly close to the WebGPU API, just as the earlier luma.gl v8 API followed the WebGL 2 API. The idea is to let users build their knowledge of WebGPU and the luma.gl API in tandem, rather than asking them to learn an abstraction and perhaps never get to work directly with WebGPU.
 
-Accordingly the luma.gl `Device` API is designed to be similar to the WebGPU `Device` API. for example:
+Accordingly the luma.gl `Device` API is designed to be similar to the WebGPU `Device` API. For example:
 
 - The application must first obtain a `Device` instance
 - It then uses methods on this device to create GPU resource classes such as buffers, textures, shaders and pipelines.
 - The name of the resource classes mirror those in the WebGPU API.
-- the luma.gl API uses string constants and parameter option names that mirror those in the WebGPU API.
+- The luma.gl API uses string constants and parameter option names that mirror those in the WebGPU API.
 
-These similarities are intentional: 
+These similarities are intentional:
 
-- The avoids creating a new abstraction layer that developers must learn. 
+- This avoids creating a new abstraction layer that developers must learn.
 - Knowledge of the WebGPU API carries over to the luma.gl API and vice versa.
 - They allow the luma.gl WebGPU Device implementation to remain thin, ensuring optimal performance and minimal overhead.
 

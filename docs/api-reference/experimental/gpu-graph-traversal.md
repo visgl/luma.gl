@@ -9,12 +9,12 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-traversal" />
 
-## Follow unweighted paths with GPUGraphBreadthFirstSearch
+## Follow unweighted paths with GPUGraphAlgorithmsBreadthFirstSearch
 
 **Question: Which entities can I reach within a chosen number of hops, and what shortest path gets
 me there?**
 
-`GPUGraphBreadthFirstSearch` expands outward from one or more selected vertices and records the
+`GPUGraphAlgorithmsBreadthFirstSearch` expands outward from one or more selected vertices and records the
 shortest unweighted hop count to every reachable vertex. Use it to highlight a selected account's
 neighborhood, follow a service's dependencies, or explain how two entities connect.
 
@@ -24,9 +24,9 @@ depends on indirect relationships; choose it over connected components when dist
 or a particular starting vertex matters.
 
 ```ts
-import {GPUGraphBreadthFirstSearch} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsBreadthFirstSearch} from '@luma.gl/graph/gpu-graph-algorithms';
 
-const search = new GPUGraphBreadthFirstSearch({
+const search = new GPUGraphAlgorithmsBreadthFirstSearch({
   topology,
   seeds: selectedVertexIds,
   distances: hopDistances,
@@ -49,7 +49,7 @@ equal-length parent ties select the numerically lowest stable vertex identifier.
 ignored, duplicate seeds are harmless, and the optional mask publishes zero or one per vertex.
 This is an unweighted shortest-path operation, not a weighted route or travel-time solver.
 
-## Find least-cost routes with GPUGraphSingleSourceShortestPath
+## Find least-cost routes with GPUGraphAlgorithmsSingleSourceShortestPath
 
 **Question: Which route from my starting vertex costs the least when each connection has its own
 travel time, distance, latency, or other nonnegative price?**
@@ -57,7 +57,7 @@ travel time, distance, latency, or other nonnegative price?**
 The route with the fewest steps is not necessarily the cheapest. Suppose a direct train takes
 40 minutes, while two connecting trains take 10 minutes each: breadth-first search chooses the
 one-hop direct train, but the least-cost route takes the two connections and arrives in 20 minutes.
-`GPUGraphSingleSourceShortestPath` computes that minimum accumulated nonnegative edge weight from one
+`GPUGraphAlgorithmsSingleSourceShortestPath` computes that minimum accumulated nonnegative edge weight from one
 selected starting vertex to every reachable destination without moving graph columns to the CPU.
 
 Use it for travel-time maps, delivery networks, communication latency, transaction fees, or
@@ -67,9 +67,9 @@ weights can change which route wins. This operation computes routes from **one**
 it does not implement all-pairs routing, negative-weight paths, or A* geographic search.
 
 ```ts
-import {GPUGraphSingleSourceShortestPath} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsSingleSourceShortestPath} from '@luma.gl/graph/gpu-graph-algorithms';
 
-const shortestPaths = new GPUGraphSingleSourceShortestPath({
+const shortestPaths = new GPUGraphAlgorithmsSingleSourceShortestPath({
   topology,
   sourceVertex: selectedVertex,
   distances: routeCosts,
@@ -108,14 +108,46 @@ adjacency. If any selected adjacency overflowed, all distances again become `+In
 predecessors become `0xffffffff`, and an optional convergence status is zero.
 
 The contributor uses bounded Bellman–Ford-style synchronized relaxation, not a CPU Dijkstra queue.
-`maxIterations` can range from `0` through `1024`; its default is
-`min(max(vertexCount - 1, 0), 1024)`. The optional caller-owned one-row
-`GPUVector<'uint32'>` `converged` indicates whether the final compiled relaxation reached a fixed
-point. A zero-round budget initializes only the selected root. `sourceVertex` must identify an
-existing vertex; an empty graph permits the value zero and has no distance rows. A limited budget
-may publish partially relaxed routes without proving shortest-path completion; there is no
-automatic early termination or implicit CPU synchronization. With `K` compiled relaxation rounds,
-work is bounded by `O(K × (V + E))`, with `O(V)` graph-owned scratch.
+`maxIterations` is the round budget, a uint32; its default is `max(vertexCount - 1, 0)`, which
+is enough for every simple path. The optional caller-owned one-row `GPUVector<'uint32'>`
+`converged` indicates whether every distance is final. A zero-round budget initializes only the
+roots. `sourceVertex` must identify an existing vertex; an empty graph permits the value zero and
+has no distance rows. A limited budget may publish partially relaxed routes without proving
+shortest-path completion. With `K` executed relaxation rounds, work is bounded by
+`O(K × (V + E))`, with `O(V)` graph-owned scratch.
+
+Every round is gated on the GPU. When a round changes no distance, or the budget is spent, the
+search writes a zero workgroup count into the indirect dispatch command of all later rounds, so
+they cost almost nothing. `addToGraph()` encodes at most 1,024 rounds into the caller's graph and
+never reads back. A search that can need more rounds, such as a road network with a hop depth of
+several thousand, uses `run()`:
+
+```ts
+const shortestPaths = new GPUGraphAlgorithmsSingleSourceShortestPath({
+  topology,
+  seeds: selectedVertices, // caller-owned GPUVector<'uint32'>
+  distances: routeCosts,
+  predecessors: routeParents
+});
+
+const {converged, iterations} = await shortestPaths.run();
+selectedVertices.data[0].buffer.write(Uint32Array.of(nextVertex));
+await shortestPaths.run(); // the same compiled graphs, no shader or pipeline compilation
+shortestPaths.destroy();
+```
+
+`run()` submits batches of `iterationsPerSubmit` rounds (default 128) and reads one 32-byte status
+record after each batch, until the search converges or spends `maxIterations`. It continues from
+the current distances, so the round budget is not limited to one command graph. It reuses its two
+compiled command graphs for runs with the same batch size. The caller builds the topology first.
+An overlapping `run()` call rejects. Await the current run before writing new seed identifiers or
+calling `destroy()`.
+
+`seeds` replaces `sourceVertex` (give exactly one). The identifiers are read when the GPU work
+runs, so a new source needs only a buffer write. Several seeds start at distance zero together;
+identifiers outside the graph are ignored. With a constant `sourceVertex`, the vertex lives in a
+small node-owned buffer, not in the shader source, so a search for a new source reuses the cached
+shader modules and pipelines.
 
 ## Related pages
 

@@ -1,0 +1,43 @@
+---
+title: Scene visibility
+description: Hide a scene subtree while preserving its hierarchy and resources for later reuse.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Scene visibility
+
+Hide a scene subtree while preserving its hierarchy and resources for later reuse.
+
+<GLTFModelExample modelUrl={new URL('../../../../modules/engine/test/gltf/data/CubeVisibility.glb', import.meta.url).href} title="CubeVisibility" animate embedded showStats={false} />
+
+## API
+
+Engine scenegraph nodes expose `display` and `setProps({display})`. Visible traversal skips
+hidden nodes and their descendants, while structural traversal can still inspect them. Imported
+nodes are available through `scenegraphs.gltfNodeIndexToNodeMap`; source node indices are
+asset-specific.
+
+```ts
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf);
+const sourceNode = scenegraphs.gltfNodeIndexToNodeMap.get(0);
+if (sourceNode) {
+  sourceNode.setProps({display: false});
+  // Restore this subtree when needed.
+  sourceNode.setProps({display: true});
+}
+```
+
+## glTF support
+
+`KHR_node_visibility` initializes recursive visibility. `KHR_animation_pointer` can animate its
+boolean `visible` property with `STEP` interpolation. Authored visibility animation also refreshes
+the existing `scenegraphs.lights` array to omit hidden punctual lights. A manual `display` update
+only changes scenegraph visibility; applications managing lights separately must refresh them too.
+Bounds stored in `sceneBounds` and `modelBounds` are load-time snapshots.
+
+See [native glTF extensions](/docs/api-reference/gltf/gltf-native-extensions).
+
+[All engine features](/docs/api-guide/engine/features)

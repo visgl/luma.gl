@@ -28,9 +28,9 @@ Each raster `frame.render()` performs the following work:
 
 The ANARI adapter does not own a second shader or material pipeline. It translates retained
 objects into the format-independent
-[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer),
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer), or
-`RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses
+[`SceneRenderer`](/docs/api-reference/anari/scene-renderer),
+[`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer), or
+`RayTracingSceneRenderer` descriptors from `@luma.gl/anari`. The shared forward runtime uses
 WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves
 compatible opaque scenes through the same retained object graph and falls back to forward rendering
 for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute,
@@ -49,7 +49,7 @@ frame.setParameter('renderer', raymarch).commitParameters();
 ```
 
 Runtime factories are lazy and device-owned. See
-[registering renderer runtimes](/docs/api-reference/scene/anari-device#registering-renderer-runtimes)
+[registering renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes)
 for the runtime contract and ownership details.
 
 ### Ray-tracing technique background and tradeoffs
@@ -177,9 +177,9 @@ visibility, and Fresnel terms while retaining immediate ambient and emissive con
 renderer paths interpret the retained scene's directional-light vector as incoming light; the
 forward raster boundary adapts that vector to its shader module's outgoing convention without
 mutating shared scene lights. Multiple retained ambient lights are also combined consistently
-across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material
-gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or
-indirect bounces to the ray tracer.
+across forward, deferred, and ray-traced rendering. The [ray material path](/docs/api-reference/anari/ray-tracing-renderer#material-support)
+also evaluates retained textures and alpha cutouts. Diffuse transport samples cosine-weighted
+secondary rays. PBR transport adds GGX reflection and smooth dielectric continuation.
 
 #### Graph-stage diagnostics
 
@@ -238,10 +238,10 @@ current renderer.
 | Area | Implemented now | Planned or absent |
 | --- | --- | --- |
 | Acceleration | Morton-sorted TLAS/BLAS, retained transform refits, tight BLAS-root bounds, batched segmented sort/BVH construction | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
-| Execution | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings |
-| Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
-| Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
-| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
+| Execution | Megakernel with bounded bounces and hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, GPU-stage timings |
+| Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples, explicit emissive geometry sampling | Multiple importance sampling, environment lighting, variance-driven adaptive sampling and reservoir-based many-light reuse |
+| Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, guided spatial denoising and HDR upscaling | SVGF-class temporal denoising, stronger edge-aware upscaling, reactive masks |
+| Shading and presentation | Analytic spheres, mesh triangles, textured PBR and alpha cutouts, opaque GGX, smooth dielectric refraction, HDR/SDR presentation and tiled offscreen export | Full PBR parity, alpha blending, rough refraction, nested media and deformation |
 
 ### Cache invalidation
 
@@ -268,5 +268,5 @@ associated instance buffers.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {visitSyntaxChildren} from './syntax';
+import {emitIntrinsicName} from './operations';
+import {emitNumericType} from './ir-types';
+import {lowerSlangType} from './slang-types';
+
+import type {ShaderOperation, ShaderInterface} from './ir';
+import type {InterfaceLowerer} from './expression-analysis';
+import {resolveExpressionType, INTRINSICS} from './expression-analysis';
+
 import type {
   Expression,
   Program,
@@ -12,6 +21,7 @@ import type {
   Variable
 } from './ast';
 import {
+  lowerSlangResource,
   ATOMICS,
   BARRIERS,
   isByteAddressBuffer,
@@ -28,15 +38,14 @@ import {
   getTextureCoordinateWidth
 } from './textures';
 import {
-  getNumericShape,
-  getLiteralType,
-  getCommonNumericType,
   getBinaryType,
+  getNumericShape,
+  getCommonNumericType,
   getIntegerConstant,
   returnsValue
 } from './type-checker';
 import {UniformEmitter} from './uniform-emitter';
-import {getSlangParameterDirection, getSlangTypeSignature} from './modules';
+import {getSlangParameterDirection, getSlangTypeSignature} from './signatures';
 import {markSlangSource, mapSlangSource} from './source-map';
 import type {
   SlangExport,
@@ -59,106 +68,26 @@ type Symbol = {
   integerConstant?: number;
 };
 type InterfaceLeaf = {
+  interface: ShaderInterface;
   variable: Variable;
   path: string[];
   field: string;
   reflection: SlangInterfaceVariable;
 };
 const SCALARS: Record<string, string> = {float: 'f32', int: 'i32', uint: 'u32', bool: 'bool'};
-const INTRINSICS: Record<string, number[]> = {
-  abs: [1],
-  acos: [1],
-  asin: [1],
-  atan: [1],
-  atan2: [2],
-  ceil: [1],
-  clamp: [3],
-  cos: [1],
-  cosh: [1],
-  cross: [2],
-  degrees: [1],
-  distance: [2],
-  dot: [2],
-  exp: [1],
-  exp2: [1],
-  floor: [1],
-  fract: [1],
-  frac: [1],
-  fwidth: [1],
-  length: [1],
-  lerp: [3],
-  log: [1],
-  log2: [1],
-  max: [2],
-  min: [2],
-  normalize: [1],
-  pow: [2],
-  radians: [1],
-  reflect: [2],
-  refract: [3],
-  round: [1],
-  rsqrt: [1],
-  saturate: [1],
-  sign: [1],
-  sin: [1],
-  sinh: [1],
-  smoothstep: [3],
-  sqrt: [1],
-  step: [2],
-  tan: [1],
-  tanh: [1],
-  transpose: [1],
-  trunc: [1],
-  all: [1],
-  any: [1],
-  ddx: [1],
-  ddy: [1],
-  mul: [2],
-  GroupMemoryBarrierWithGroupSync: [0]
-};
-const BUILTINS: Record<string, {wgsl: string; glsl: string; stages: string[]; type: string}> = {
-  SV_POSITION: {
-    wgsl: 'position',
-    glsl: 'gl_Position',
-    stages: ['vertex:out', 'fragment:in'],
-    type: 'float4'
-  },
-  SV_VERTEXID: {wgsl: 'vertex_index', glsl: 'gl_VertexID', stages: ['vertex:in'], type: 'uint'},
-  SV_INSTANCEID: {
-    wgsl: 'instance_index',
-    glsl: 'gl_InstanceID',
-    stages: ['vertex:in'],
-    type: 'uint'
-  },
-  SV_ISFRONTFACE: {
-    wgsl: 'front_facing',
-    glsl: 'gl_FrontFacing',
-    stages: ['fragment:in'],
-    type: 'bool'
-  },
-  SV_DEPTH: {wgsl: 'frag_depth', glsl: 'gl_FragDepth', stages: ['fragment:out'], type: 'float'},
-  SV_DISPATCHTHREADID: {
-    wgsl: 'global_invocation_id',
-    glsl: 'gl_GlobalInvocationID',
-    stages: ['compute:in'],
-    type: 'uint3'
-  },
-  SV_GROUPID: {wgsl: 'workgroup_id', glsl: 'gl_WorkGroupID', stages: ['compute:in'], type: 'uint3'},
-  SV_GROUPTHREADID: {
-    wgsl: 'local_invocation_id',
-    glsl: 'gl_LocalInvocationID',
-    stages: ['compute:in'],
-    type: 'uint3'
-  },
-  SV_GROUPINDEX: {
-    wgsl: 'local_invocation_index',
-    glsl: 'gl_LocalInvocationIndex',
-    stages: ['compute:in'],
-    type: 'uint'
-  }
+const GLSL_BUILTINS: Record<string, string> = {
+  position: 'gl_Position',
+  vertex_index: 'gl_VertexID',
+  instance_index: 'gl_InstanceID',
+  front_facing: 'gl_FrontFacing',
+  frag_depth: 'gl_FragDepth',
+  global_invocation_id: 'gl_GlobalInvocationID',
+  workgroup_id: 'gl_WorkGroupID',
+  local_invocation_id: 'gl_LocalInvocationID',
+  local_invocation_index: 'gl_LocalInvocationIndex'
 };
 
-export class SlangEmitter {
+export class ShaderEmitter {
   private structures = new Map<string, Structure>();
   private functions = new Map<string, ShaderFunction>();
   private overloads = new Map<string, ShaderFunction[]>();
@@ -193,9 +122,27 @@ export class SlangEmitter {
   private combinedTextures = new Map<string, {texture: string; sampler: string; code: string}>();
   private atomicGlobals = new Set<string>();
 
+  private expressionContext = {
+    fail: this.fail.bind(this),
+    findSymbol: this.findSymbol.bind(this),
+    getExpressionType: this.getExpressionType.bind(this),
+    matchType: this.matchType.bind(this),
+    getCommonType: this.getCommonType.bind(this),
+    resolveFunction: this.resolveFunction.bind(this),
+    isValueType: this.isValueType.bind(this),
+    checkMultiplyArguments: this.checkMultiplyArguments.bind(this),
+    isScalar: this.isScalar.bind(this),
+    isFloatIntrinsic: this.isFloatIntrinsic.bind(this),
+    getFloatIntrinsicType: this.getFloatIntrinsicType.bind(this),
+    structures: this.structures,
+    overloads: this.overloads
+  };
+
   constructor(
     private program: Program,
     private options: SlangTranspileOptions,
+    private lowerInterface: InterfaceLowerer,
+    private lowerOperation: (expression: Expression) => ShaderOperation | undefined,
     private discoveringTextureUsage = false
   ) {
     const inspectNames = (value: unknown): void => {
@@ -224,7 +171,7 @@ export class SlangEmitter {
           }
         }
       }
-      Object.values(value).forEach(inspectNames);
+      visitSyntaxChildren(value, inspectNames);
     };
     inspectNames(program);
     const names = new Set<string>();
@@ -465,20 +412,8 @@ export class SlangEmitter {
     if (type.element) {
       this.fail(`Unsupported value type ${type.name}`, location);
     }
-    if (SCALARS[type.name]) {
-      return this.isWGSL ? SCALARS[type.name] : type.name;
-    }
-    const vector = /^(float|int|uint|bool)([2-4])$/.exec(type.name);
-    if (vector) {
-      return this.isWGSL
-        ? `vec${vector[2]}<${SCALARS[vector[1]]}>`
-        : `${{float: '', int: 'i', uint: 'u', bool: 'b'}[vector[1]]}vec${vector[2]}`;
-    }
-    const matrix = /^float([2-4])x([2-4])$/.exec(type.name);
-    // Slang matrix indexing is by row. Represent rows as target columns and reverse mul.
-    if (matrix) {
-      return this.isWGSL ? `mat${matrix[1]}x${matrix[2]}<f32>` : `mat${matrix[1]}x${matrix[2]}`;
-    }
+    const numericType = emitNumericType(lowerSlangType(type), this.options.target);
+    if (numericType) return numericType;
     if (this.structures.has(type.name)) {
       return this.program.publicNames?.get(type.name) || `_slang_type_${type.name}`;
     }
@@ -520,206 +455,10 @@ export class SlangEmitter {
     scope.set(variable.name, {type: variable.type, code, writable});
   }
   private getExpressionType(expression: Expression): SlangType {
-    switch (expression.kind) {
-      case 'initializer':
-        this.fail('Initializer lists require a declared value type', expression);
-      case 'identifier': {
-        const type = this.findSymbol(expression.value, expression).type;
-        return type.name === 'ConstantBuffer' ? type.element! : type;
-      }
-      case 'number':
-        return getLiteralType(expression, (message, location) => this.fail(message, location));
-      case 'boolean':
-        return {name: 'bool'};
-      case 'cast':
-        return expression.type;
-      case 'unary': {
-        if (
-          expression.operator === '-' &&
-          expression.operand.kind === 'number' &&
-          expression.operand.value === '2147483648'
-        )
-          return {name: 'int'};
-        const type = this.getExpressionType(expression.operand);
-        if (expression.operator === '!' && !/^bool([2-4])?$/.test(type.name))
-          this.fail('Logical negation requires a boolean value', expression);
-        if (expression.operator === '~' && !/^(int|uint)([2-4])?$/.test(type.name))
-          this.fail('Bitwise negation requires an integer value', expression);
-        if (
-          ['+', '-'].includes(expression.operator) &&
-          !/^(float|int|uint)([2-4](x[2-4])?)?$/.test(type.name)
-        )
-          this.fail('Numeric negation requires a numeric value', expression);
-        return type;
-      }
-      case 'binary': {
-        const left = this.getExpressionType(expression.left);
-        const right = this.getExpressionType(expression.right);
-        return expression.operator.endsWith('=') &&
-          !['==', '!=', '<=', '>='].includes(expression.operator)
-          ? left
-          : getBinaryType(expression, left, right, (message, location) =>
-              this.fail(message, location)
-            );
-      }
-      case 'conditional': {
-        const consequent = this.getExpressionType(expression.consequent);
-        const alternate = this.getExpressionType(expression.alternate);
-        if (this.matchType(consequent, alternate)) return consequent;
-        if (
-          /^(float|int|uint)([2-4])?$/.test(consequent.name) &&
-          /^(float|int|uint)([2-4])?$/.test(alternate.name)
-        ) {
-          const consequentWidth = /[2-4]$/.exec(consequent.name)?.[0];
-          const alternateWidth = /[2-4]$/.exec(alternate.name)?.[0];
-          if (consequentWidth && alternateWidth && consequentWidth !== alternateWidth)
-            this.fail('Conditional branches have incompatible vector widths', expression);
-          return this.getCommonType([expression.consequent, expression.alternate]);
-        }
-        this.fail('Conditional branches have incompatible types', expression);
-      }
-      case 'member': {
-        const object = this.getExpressionType(expression.object);
-        const structure = this.structures.get(
-          object.name === 'ConstantBuffer' ? object.element!.name : object.name
-        );
-        if (structure) {
-          const field = structure.fields.find(variable => variable.name === expression.member);
-          if (!field) {
-            this.fail(`Unknown field ${expression.member}`, expression);
-          }
-          return field.type;
-        }
-        const vector = /^(float|int|uint|bool)([2-4])$/.exec(object.name);
-        if (vector && /^[xyzwrgba]{1,4}$/.test(expression.member)) {
-          const indices = 'xyzw';
-          const colors = 'rgba';
-          if (
-            [...expression.member].some(
-              character =>
-                Math.max(indices.indexOf(character), colors.indexOf(character)) >= Number(vector[2])
-            )
-          ) {
-            this.fail('Swizzle is outside the vector width', expression);
-          }
-          if (/[xyzw]/.test(expression.member) && /[rgba]/.test(expression.member)) {
-            this.fail('Swizzle cannot mix component sets', expression);
-          }
-          return {name: vector[1] + (expression.member.length > 1 ? expression.member.length : '')};
-        }
-        this.fail(`Unsupported member ${expression.member} on ${object.name}`, expression);
-      }
-      case 'index': {
-        const object = this.getExpressionType(expression.object);
-        if (object.element) {
-          return object.element;
-        }
-        const vector = /^(float|int|uint|bool)[2-4]$/.exec(object.name);
-        if (vector) {
-          return {name: vector[1]};
-        }
-        const matrix = /^float[2-4]x([2-4])$/.exec(object.name);
-        if (matrix) {
-          return {name: `float${matrix[1]}`};
-        }
-        this.fail(`Cannot index ${object.name}`, expression);
-      }
-      case 'call': {
-        if (expression.callee.kind === 'member') {
-          const resource = this.getExpressionType(expression.callee.object);
-          if (isByteAddressBuffer(resource)) {
-            if (
-              ['GetDimensions', 'Store', 'Store2', 'Store3', 'Store4'].includes(
-                expression.callee.member
-              ) ||
-              ATOMICS[expression.callee.member]
-            )
-              return {name: 'void'};
-            if (/^Load[2-4]?$/.test(expression.callee.member))
-              return {name: 'uint' + expression.callee.member.slice(4)};
-          }
-          if (isSlangTexture(resource)) {
-            if (expression.callee.member === 'GetDimensions') return {name: 'void'};
-            if (expression.callee.member.startsWith('Gather'))
-              return {
-                name:
-                  (expression.callee.member === 'GatherCmp'
-                    ? 'float'
-                    : resource.element!.name.replace(/[2-4]$/, '')) + '4'
-              };
-            return ['SampleCmp', 'SampleCmpLevelZero'].includes(expression.callee.member)
-              ? {name: 'float'}
-              : resource.element!;
-          }
-          this.fail('Unsupported resource method', expression);
-        }
-        if (expression.callee.kind !== 'identifier') {
-          this.fail('Unsupported function expression', expression);
-        }
-        const name = expression.callee.value;
-        if (this.overloads.has(name)) {
-          return this.resolveFunction(name, expression.arguments, expression).type;
-        }
-        if (INTRINSICS[name] && !INTRINSICS[name].includes(expression.arguments.length)) {
-          this.fail(`Wrong number of arguments for ${name}`, expression);
-        }
-        if (this.isValueType(name)) {
-          return {name};
-        }
-        if (['dot', 'length', 'distance'].includes(name)) {
-          return {name: 'float'};
-        }
-        if (['all', 'any'].includes(name)) {
-          return {name: 'bool'};
-        }
-        if (BARRIERS[name] || ATOMICS[name]) {
-          return {name: 'void'};
-        }
-        if (['asfloat', 'asint', 'asuint'].includes(name)) {
-          const argumentType = this.getExpressionType(expression.arguments[0]);
-          return {name: name.slice(2) + (/[2-4]$/.exec(argumentType.name)?.[0] || '')};
-        }
-        if (name === 'transpose') {
-          const matrix = /^float([2-4])x([2-4])$/.exec(
-            this.getExpressionType(expression.arguments[0]).name
-          );
-          if (!matrix) {
-            this.fail('transpose requires a matrix', expression);
-          }
-          return {name: `float${matrix[2]}x${matrix[1]}`};
-        }
-        if (name === 'mul') {
-          this.checkMultiplyArguments(expression);
-          const left = this.getExpressionType(expression.arguments[0]);
-          const right = this.getExpressionType(expression.arguments[1]);
-          const leftMatrix = /^float([2-4])x([2-4])$/.exec(left.name);
-          const rightMatrix = /^float([2-4])x([2-4])$/.exec(right.name);
-          if (leftMatrix && rightMatrix) {
-            return {name: `float${leftMatrix[1]}x${rightMatrix[2]}`};
-          }
-          if (leftMatrix) {
-            return {name: `float${leftMatrix[1]}`};
-          }
-          if (rightMatrix) {
-            return {name: `float${rightMatrix[2]}`};
-          }
-          if (!this.isScalar(left) && !this.isScalar(right)) {
-            return {name: 'float'};
-          }
-          return this.isScalar(left) ? right : left;
-        }
-        if (!INTRINSICS[name]) {
-          this.fail(`Unsupported function ${name}`, expression);
-        }
-        if (['clamp', 'min', 'max', 'lerp', 'step', 'smoothstep', 'pow', 'atan2'].includes(name)) {
-          return this.isFloatIntrinsic(name)
-            ? this.getFloatIntrinsicType(expression)
-            : this.getCommonType(expression.arguments);
-        }
-        if (this.isFloatIntrinsic(name)) return this.getFloatIntrinsicType(expression);
-        return this.getExpressionType(expression.arguments[0]);
-      }
-    }
+    const type = expression.valueType || resolveExpressionType(expression, this.expressionContext);
+    expression.resolvedType = lowerSlangType(type);
+    expression.operation ||= this.lowerOperation(expression);
+    return type;
   }
   private isFloatIntrinsic(name: string): boolean {
     return ![
@@ -964,11 +703,15 @@ export class SlangEmitter {
     if (elements.length > types.length)
       this.fail('Initializer list has the wrong element count', expression);
     const values = types.map((type, index) =>
-      elements[index] ? this.coerceExpression(elements[index], type) : this.getZeroValue(type)
+      elements[index]
+        ? this.program.evaluationOrder && this.currentFunction
+          ? this.captureTypedValue(this.coerceExpression(elements[index], type), type)
+          : this.coerceExpression(elements[index], type)
+        : this.getZeroValue(type)
     );
     const constructorName =
       !this.isWGSL && expected.name === 'array'
-        ? `${this.getTypeName(expected.element!)}[${expected.length}]`
+        ? this.getDeclaration(expected, '', expression).replace(' ', '')
         : this.getTypeName(expected);
     return `${constructorName}(${values.join(', ')})`;
   }
@@ -978,7 +721,7 @@ export class SlangEmitter {
     if (structure)
       return `${this.getTypeName(type)}(${structure.fields.map(field => this.getZeroValue(field.type)).join(', ')})`;
     if (type.name === 'array')
-      return `${this.getTypeName(type.element!)}[${type.length}](${Array.from({length: type.length!}, () => this.getZeroValue(type.element!)).join(', ')})`;
+      return `${this.getDeclaration(type, '', this.entry.location).replace(' ', '')}(${Array.from({length: type.length!}, () => this.getZeroValue(type.element!)).join(', ')})`;
     return `${this.getTypeName(type)}(${type.name.startsWith('bool') ? 'false' : type.name.startsWith('uint') ? '0u' : type.name.startsWith('float') ? '0.0' : '0'})`;
   }
   private getUniformAccess(expression: Expression): {type: SlangType; code: string} | undefined {
@@ -1034,11 +777,40 @@ export class SlangEmitter {
     this.fail('Assignment requires a writable variable', expression);
   }
   private emitExpression(expression: Expression): string {
+    if (expression.constantValue !== undefined) return expression.constantValue;
     const uniform = this.getUniformAccess(expression);
     if (uniform) return this.uniformEmitter.readValue(uniform.type, uniform.code);
     if (this.isWGSL && this.isAtomicValue(expression))
       return `atomicLoad(&${this.freezeLvalue(expression)})`;
     switch (expression.kind) {
+      case 'texture-dimensions': {
+        const texture = this.getTexture(expression.texture);
+        return `uvec2(textureSize(${texture.code}, int(${this.emitExpression(expression.level)})))`;
+      }
+      case 'select': {
+        const values = expression.arguments.map(argument =>
+          this.captureTypedValue(this.emitExpression(argument), this.getExpressionType(argument))
+        );
+        const type = this.getExpressionType(expression);
+        const condition = this.getExpressionType(expression.arguments[2]);
+        if (condition.name === 'bool') return `(${values[2]} ? ${values[1]} : ${values[0]})`;
+        return `${this.getTypeName(type)}(${Array.from({length: Number(condition.name.slice(-1))}, (_, index) => `(${values[2]}[${index}] ? ${values[1]}[${index}] : ${values[0]}[${index}])`).join(', ')})`;
+      }
+      case 'construct':
+        return this.emitInitializer(
+          {...expression, kind: 'initializer', elements: expression.elements},
+          expression.type
+        );
+      case 'bitcast': {
+        const source = this.getExpressionType(expression.operand);
+        const target = expression.type;
+        const value = this.emitExpression(expression.operand);
+        if (source.name.startsWith('float') && !target.name.startsWith('float'))
+          return `${target.name.startsWith('uint') ? 'floatBitsToUint' : 'floatBitsToInt'}(${value})`;
+        if (target.name.startsWith('float') && !source.name.startsWith('float'))
+          return `${source.name.startsWith('uint') ? 'uintBitsToFloat' : 'intBitsToFloat'}(${value})`;
+        return `${this.getTypeName(target)}(${value})`;
+      }
       case 'initializer':
         this.fail('Initializer lists require a declared value type', expression);
       case 'identifier':
@@ -1173,19 +945,26 @@ export class SlangEmitter {
           );
         }
         this.checkBinaryTypes(expression, leftType, rightType);
-        if (this.isWGSL && ['&&', '||'].includes(expression.operator)) {
+        if (
+          this.currentFunction &&
+          (this.isWGSL || this.program.evaluationOrder) &&
+          ['&&', '||'].includes(expression.operator)
+        ) {
           const left = this.coerceExpression(expression.left, {name: 'bool'});
           const right = this.captureExpression(() =>
             this.coerceExpression(expression.right, {name: 'bool'})
           );
           const temporary = this.createTemporary();
           this.expressionPrelude.push(
-            `var ${temporary}: bool = ${left};`,
+            this.isWGSL ? `var ${temporary}: bool = ${left};` : `bool ${temporary} = ${left};`,
             `if (${expression.operator === '&&' ? temporary : `!${temporary}`}) {\n${[...right.statements, `${temporary} = ${right.code};`].join('\n')}\n}`
           );
           return temporary;
         }
-        let left = this.captureValue(this.emitExpression(expression.left));
+        let left =
+          this.program.evaluationOrder && this.currentFunction
+            ? this.captureTypedValue(this.emitExpression(expression.left), leftType)
+            : this.captureValue(this.emitExpression(expression.left));
         let right = this.emitExpression(expression.right);
         return this.emitBinaryValue(expression, leftType, rightType, left, right);
       }
@@ -1203,9 +982,13 @@ export class SlangEmitter {
       this.fail('Unsupported function expression', expression);
     }
     const name = callee.value;
-    const declaration = this.overloads.has(name)
-      ? this.resolveFunction(name, expression.arguments, expression)
-      : undefined;
+    this.getExpressionType(expression);
+    const declaration =
+      expression.resolvedCall?.kind === 'function'
+        ? expression.resolvedCall.declaration
+        : this.overloads.has(name)
+          ? this.resolveFunction(name, expression.arguments, expression)
+          : undefined;
     if (declaration) {
       if (expression.arguments.length !== declaration.parameters.length) {
         this.fail(`Wrong number of arguments for ${name}`, expression);
@@ -1218,13 +1001,13 @@ export class SlangEmitter {
       }
       return this.emitFunctionCall(expression, declaration);
     }
-    if (this.isValueType(name)) {
+    if (expression.resolvedCall?.kind === 'constructor') {
       const structure = this.structures.get(name);
       if (structure) {
         if (expression.arguments.length !== structure.fields.length) {
           this.fail('A structure constructor requires one argument per field', expression);
         }
-        return `${this.getTypeName({name})}(${expression.arguments.map((argument, index) => this.captureValue(this.coerceExpression(argument, structure.fields[index].type))).join(', ')})`;
+        return `${this.getTypeName({name})}(${expression.arguments.map((argument, index) => (this.program.evaluationOrder && this.currentFunction ? this.captureTypedValue(this.coerceExpression(argument, structure.fields[index].type), structure.fields[index].type) : this.captureValue(this.coerceExpression(argument, structure.fields[index].type)))).join(', ')})`;
       }
       const matrix = /^float([2-4])x([2-4])$/.exec(name);
       const vector = /^(float|int|uint|bool)([2-4])$/.exec(name);
@@ -1251,7 +1034,7 @@ export class SlangEmitter {
               /^(float|int|uint)[2-4]$/.test(type.name) && Number(type.name.slice(-1)) === columns
           )
         )
-          return `${this.getTypeName({name})}(${expression.arguments.map(argument => this.emitCast(argument, {name: `float${columns}`})).join(', ')})`;
+          return `${this.getTypeName({name})}(${expression.arguments.map(argument => (this.program.evaluationOrder && this.currentFunction ? this.captureTypedValue(this.emitCast(argument, {name: `float${columns}`}), {name: `float${columns}`}) : this.emitCast(argument, {name: `float${columns}`}))).join(', ')})`;
         if (types.length !== rows * columns || types.some(type => !this.isScalar(type)))
           this.fail(
             'Matrix constructors require a scalar, matching matrix, row vectors, or all scalar elements',
@@ -1274,9 +1057,11 @@ export class SlangEmitter {
           const type = this.getExpressionType(argument);
           const argumentVector = /^(float|int|uint|bool)([2-4])$/.exec(type.name);
           width += argumentVector ? Number(argumentVector[2]) : 1;
-          return this.emitCast(argument, {
-            name: vector[1] + (argumentVector ? argumentVector[2] : '')
-          });
+          const target = {name: vector[1] + (argumentVector ? argumentVector[2] : '')};
+          const value = this.emitCast(argument, target);
+          return this.program.evaluationOrder && this.currentFunction
+            ? this.captureTypedValue(value, target)
+            : value;
         });
         if (width !== Number(vector[2]) && !(expression.arguments.length === 1 && width === 1)) {
           this.fail('Vector constructor has the wrong component count', expression);
@@ -1342,7 +1127,11 @@ export class SlangEmitter {
       ? this.getFloatIntrinsicType(expression)
       : undefined;
     const argumentsList = expression.arguments.map((argument, index) => {
-      const value = this.captureValue(this.emitExpression(argument));
+      const emitted = this.emitExpression(argument);
+      const value =
+        this.program.evaluationOrder && this.currentFunction
+          ? this.captureTypedValue(emitted, argumentTypes[index])
+          : this.captureValue(emitted);
       return floatType
         ? this.coerceCode(
             value,
@@ -1374,9 +1163,6 @@ export class SlangEmitter {
       }
       return this.isWGSL ? 'workgroupBarrier()' : 'barrier()';
     }
-    const mappings: Record<string, string> = this.isWGSL
-      ? {lerp: 'mix', frac: 'fract', rsqrt: 'inverseSqrt', ddx: 'dpdx', ddy: 'dpdy'}
-      : {lerp: 'mix', frac: 'fract', rsqrt: 'inversesqrt', ddx: 'dFdx', ddy: 'dFdy', atan2: 'atan'};
     const expected = floatType ?? this.getCommonType(expression.arguments);
     if (['clamp', 'min', 'max', 'lerp', 'step', 'smoothstep', 'pow', 'atan2'].includes(name)) {
       for (let index = 0; index < argumentsList.length; index++) {
@@ -1390,7 +1176,14 @@ export class SlangEmitter {
         );
       }
     }
-    return `${mappings[name] || name}(${argumentsList.join(', ')})`;
+    const intrinsic =
+      this.program.clipSpace === 'webgpu' && name === 'round'
+        ? 'roundEven'
+        : emitIntrinsicName(expression.operation, this.options.target) || name;
+    const result = `${intrinsic}(${argumentsList.join(', ')})`;
+    return this.program.clipSpace === 'webgpu' && expression.operation === 'derivative-y'
+      ? `(-${result})`
+      : result;
   }
   private isAtomicValue(expression: Expression): boolean {
     if (!['identifier', 'index'].includes(expression.kind)) return false;
@@ -1545,7 +1338,7 @@ export class SlangEmitter {
       if (!value || typeof value !== 'object') return;
       const node = value as Expression;
       if (node.kind === 'call') callback(node);
-      Object.values(value).forEach(child => visit(child, callback));
+      visitSyntaxChildren(value, child => visit(child, callback));
     };
     for (const key of reachable)
       visit(this.functions.get(key)!.body, expression => {
@@ -1594,7 +1387,7 @@ export class SlangEmitter {
         );
       if (node.kind === 'binary' && ['&&', '||'].includes(node.operator) && containsBarrier(value))
         this.fail('Synchronization barriers cannot be short-circuited', node);
-      Object.values(value).forEach(inspect);
+      visitSyntaxChildren(value, inspect);
     };
     for (const key of synchronized) {
       const body = this.functions.get(key)!.body;
@@ -1608,7 +1401,7 @@ export class SlangEmitter {
             'Early returns in functions with synchronization barriers are outside this subset',
             node
           );
-        Object.values(value).forEach(findReturn);
+        visitSyntaxChildren(value, findReturn);
       };
       statements.forEach((statement, index) => {
         if (index !== statements.length - 1 || statement.kind !== 'return') findReturn(statement);
@@ -1634,11 +1427,19 @@ export class SlangEmitter {
       ? code
       : `(${code}).${'xyzw'.slice(0, layout.components)}`;
   }
+  private emitOrderedValue(expression: Expression, type: SlangType): string {
+    const code = this.coerceExpression(expression, type);
+    return this.program.evaluationOrder
+      ? this.captureTypedValue(code, type)
+      : this.captureValue(code);
+  }
   private captureTypedValue(code: string, type: SlangType): string {
     if (!this.currentFunction) return code;
     if (this.isWGSL) return this.captureValue(code);
     const temporary = this.createTemporary();
-    this.expressionPrelude.push(`${this.getTypeName(type)} ${temporary} = ${code};`);
+    this.expressionPrelude.push(
+      `${this.getDeclaration(type, temporary, this.entry.location)} = ${code};`
+    );
     return temporary;
   }
   private emitResourceSelection(
@@ -1857,7 +1658,7 @@ export class SlangEmitter {
             }
           }
       }
-      Object.values(value).forEach(visit);
+      visitSyntaxChildren(value, visit);
     };
     visit(this.program);
   }
@@ -1929,7 +1730,9 @@ export class SlangEmitter {
     }
     const {code, layout} = this.getTexture(callee.object);
     const method = callee.member;
-    if (method === 'GetDimensions') return this.emitTextureDimensions(expression);
+    this.getExpressionType(expression);
+    if (expression.operation === 'texture-dimensions')
+      return this.emitTextureDimensions(expression);
     if (this.discoveringTextureUsage) {
       const root = getExpressionRoot(callee.object);
       if (root.kind === 'identifier') {
@@ -1947,7 +1750,11 @@ export class SlangEmitter {
         true,
         expression.arguments[1]
       );
-    const comparison = ['SampleCmp', 'SampleCmpLevelZero', 'GatherCmp'].includes(method);
+    const comparison = [
+      'texture-sample-compare',
+      'texture-sample-compare-level',
+      'texture-gather-compare'
+    ].includes(expression.operation || '');
     const gather = /^Gather(Red|Green|Blue|Alpha|Cmp)?$/.test(method);
     const gradient = method === 'SampleGrad';
     const count = gradient ? 4 : method === 'Sample' || (gather && !comparison) ? 2 : 3;
@@ -1985,9 +1792,9 @@ export class SlangEmitter {
       this.fail('Texture sampling has the wrong sampler type', expression);
     const sampler = this.emitExpression(expression.arguments[0]);
     const width = getTextureCoordinateWidth(layout);
-    const coordinates = this.captureValue(
-      this.coerceExpression(expression.arguments[1], {name: `float${width === 1 ? '' : width}`})
-    );
+    const coordinates = this.emitOrderedValue(expression.arguments[1], {
+      name: `float${width === 1 ? '' : width}`
+    });
     const layered = layout.dimension === '2d-array' || layout.dimension === 'cube-array';
     const position =
       this.isWGSL && layered
@@ -1999,15 +1806,13 @@ export class SlangEmitter {
       extra = expression.arguments
         .slice(2)
         .map(argument =>
-          this.captureValue(
-            this.coerceExpression(argument, {
-              name: `float${gradientWidth === 1 ? '' : gradientWidth}`
-            })
-          )
+          this.emitOrderedValue(argument, {
+            name: `float${gradientWidth === 1 ? '' : gradientWidth}`
+          })
         )
         .join(', ');
     } else if (expression.arguments[2])
-      extra = this.captureValue(this.coerceExpression(expression.arguments[2], {name: 'float'}));
+      extra = this.emitOrderedValue(expression.arguments[2], {name: 'float'});
     const component = {Gather: 0, GatherRed: 0, GatherGreen: 1, GatherBlue: 2, GatherAlpha: 3}[
       method as 'Gather'
     ];
@@ -2076,6 +1881,7 @@ export class SlangEmitter {
     left: SlangType,
     right: SlangType
   ): void {
+    if (expression.valueType) return;
     getBinaryType(expression, left, right, (message, location) => this.fail(message, location));
   }
   private emitBinaryValue(
@@ -2085,9 +1891,12 @@ export class SlangEmitter {
     left: string,
     right: string
   ): string {
-    const result = getBinaryType(expression, leftType, rightType, (message, location) =>
-      this.fail(message, location)
-    );
+    if (expression.operation === 'matrix-multiply') return `(${left} * ${right})`;
+    const result =
+      expression.valueType ||
+      getBinaryType(expression, leftType, rightType, (message, location) =>
+        this.fail(message, location)
+      );
     const operator = expression.operator;
     const common = this.getCommonType([expression.left, expression.right]);
     const shape = getNumericShape(common)!;
@@ -2102,6 +1911,8 @@ export class SlangEmitter {
         },
         expression.right
       );
+      if (expression.operation === 'shift-left' || expression.operation === 'shift-right')
+        right = `(${right} & ${this.getTypeName(rightType)}(31u))`;
       return `(${left} ${operator} ${right})`;
     }
     if (shape.columns > 1) {
@@ -2174,7 +1985,12 @@ export class SlangEmitter {
           const temporary = this.createTemporary();
           this.expressionPrelude.push(`let ${temporary} = ${value};`);
           argumentsList.push(temporary);
-        } else argumentsList.push(value);
+        } else
+          argumentsList.push(
+            this.program.evaluationOrder && this.currentFunction
+              ? this.captureTypedValue(value, parameter.type)
+              : value
+          );
         continue;
       }
       this.checkWritable(argument);
@@ -2283,9 +2099,11 @@ export class SlangEmitter {
       }
       const binary = {...expression, operator: expression.operator.slice(0, -1)};
       const rightType = this.getExpressionType(expression.right);
-      const resultType = getBinaryType(binary, leftType, rightType, (message, location) =>
-        this.fail(message, location)
-      );
+      const resultType =
+        expression.valueType ||
+        getBinaryType(binary, leftType, rightType, (message, location) =>
+          this.fail(message, location)
+        );
       const leftValue =
         this.isWGSL && this.isAtomicValue(expression.left)
           ? `atomicLoad(&${destination})`
@@ -2735,8 +2553,8 @@ export class SlangEmitter {
         variable.location
       );
     if (textureLayout) this.textureLayouts.set(name, textureLayout);
-    const access =
-      textureLayout?.access ?? (variable.type.name.startsWith('RW') ? 'read_write' : 'read');
+    const resource = lowerSlangResource(variable.type, binding, textureLayout?.access);
+    const access = resource.access;
     if (!texture && variable.attributes.some(attribute => attribute.name === 'format'))
       this.fail('format requires a storage texture', variable.location);
     if (textureLayout?.format && !this.isWGSL && this.glslVersion !== '450')
@@ -2785,7 +2603,7 @@ export class SlangEmitter {
       name: variable.name,
       shaderName: name,
       ...binding,
-      kind: storage ? 'storage' : texture ? 'texture' : sampler ? 'sampler' : 'uniform',
+      kind: resource.kind,
       access,
       visibility: 0,
       ...(sampler
@@ -2813,12 +2631,12 @@ export class SlangEmitter {
     if (this.isWGSL) {
       const prefix = `@group(${binding.group}) @binding(${binding.binding})`;
       if (storage) {
-        return `${prefix} var<storage, ${access}> ${name}: array<${this.scopes[0].get(variable.name)!.atomic ? `atomic<${this.getTypeName(variable.type.element!, variable.location)}>` : this.getTypeName(variable.type.element!, variable.location)}>;`;
+        return `${prefix} var<${resource.addressSpace}, ${access}> ${name}: array<${this.scopes[0].get(variable.name)!.atomic ? `atomic<${this.getTypeName(variable.type.element!, variable.location)}>` : this.getTypeName(variable.type.element!, variable.location)}>;`;
       }
       if (texture || sampler) {
         return `${prefix} var ${name}: ${texture ? getWGSLTextureType(textureLayout!) : variable.type.name === 'SamplerComparisonState' ? 'sampler_comparison' : 'sampler'};`;
       }
-      return `${prefix} var<uniform> ${name}: ${this.uniformEmitter.getTypeName(valueType!)};`;
+      return `${prefix} var<${resource.addressSpace}> ${name}: ${this.uniformEmitter.getTypeName(valueType!)};`;
     }
     if (storage) {
       if (this.glslVersion !== '450') {
@@ -2883,44 +2701,40 @@ export class SlangEmitter {
       );
     }
     if (!variable.semantic) {
-      this.fail('Entry point values require a semantic', variable.location);
+      this.fail(
+        this.program.clipSpace === 'webgpu'
+          ? 'Entry point values require a builtin or location'
+          : 'Entry point values require a semantic',
+        variable.location
+      );
     }
     if (
       variable.type.element ||
       /^float[2-4]x[2-4]$/.test(variable.type.name) ||
       variable.type.name.startsWith('bool')
     ) {
-      if (variable.semantic.toUpperCase() !== 'SV_ISFRONTFACE') {
+      if (
+        variable.interface?.builtin !== 'front_facing' &&
+        variable.semantic.toUpperCase() !== 'SV_ISFRONTFACE'
+      ) {
         this.fail('Entry point leaves must be numeric scalars or vectors', variable.location);
       }
     }
-    const semantic = variable.semantic.toUpperCase();
-    const builtin = BUILTINS[semantic];
+    const interfaceMetadata = this.lowerInterface(
+      variable,
+      this.stage,
+      direction,
+      this.locations,
+      message => this.fail(message, variable.location)
+    );
+    const builtin = interfaceMetadata.builtin;
     const reflection: SlangInterfaceVariable = {
       name: path.join('.'),
       semantic: variable.semantic,
       shaderName: `_slang_${direction}_${(direction === 'in' ? this.inputs : this.outputs).length}`,
-      type: variable.type.name
+      type: variable.type.name,
+      ...(builtin ? {builtin} : {location: interfaceMetadata.location})
     };
-    if (builtin) {
-      if (!builtin.stages.includes(`${this.stage}:${direction}`)) {
-        this.fail(`Invalid ${variable.semantic} for ${this.stage} ${direction}`, variable.location);
-      }
-      if (variable.type.name !== builtin.type) {
-        this.fail(`${variable.semantic} requires ${builtin.type}`, variable.location);
-      }
-      reflection.builtin = builtin.wgsl;
-    } else if (/^SV_TARGET\d*$/.test(semantic)) {
-      if (this.stage !== 'fragment' || direction !== 'out') {
-        this.fail('SV_Target requires fragment output', variable.location);
-      }
-      reflection.location = Number(semantic.slice(9) || 0);
-    } else {
-      if (semantic.startsWith('SV_') || this.stage === 'compute') {
-        this.fail(`Unsupported semantic ${variable.semantic}`, variable.location);
-      }
-      reflection.location = this.locations.get(semantic)!;
-    }
     this.getTypeName(variable.type, variable.location);
     const leaves = direction === 'in' ? this.inputs : this.outputs;
     if (
@@ -2933,6 +2747,7 @@ export class SlangEmitter {
       this.fail('Duplicate entry point semantic location or builtin', variable.location);
     }
     const leaf: InterfaceLeaf = {
+      interface: interfaceMetadata,
       variable,
       path,
       field: `_slang_${direction}_${leaves.length}`,
@@ -2975,6 +2790,7 @@ export class SlangEmitter {
           name: 'result',
           type: this.entry.type,
           semantic: this.entry.semantic,
+          interface: this.entry.interface,
           attributes: [],
           modifiers: [],
           location: this.entry.location
@@ -2987,7 +2803,12 @@ export class SlangEmitter {
       this.stage === 'vertex' &&
       !this.outputs.some(leaf => leaf.reflection.builtin === 'position')
     ) {
-      this.fail('Vertex entry points must return SV_Position', this.entry.location);
+      this.fail(
+        this.program.clipSpace === 'webgpu'
+          ? 'Vertex entry points require a position builtin'
+          : 'Vertex entry points must return SV_Position',
+        this.entry.location
+      );
     }
     this.reflection.inputs = this.inputs.map(leaf => leaf.reflection);
     this.reflection.outputs = this.outputs.map(leaf => leaf.reflection);
@@ -3021,18 +2842,8 @@ export class SlangEmitter {
       (this.stage === 'fragment' && direction === 'in') ||
       (this.stage === 'vertex' && direction === 'out');
     if (interpolated) {
-      const modifiers = leaf.variable.modifiers;
-      const mode =
-        modifiers.includes('nointerpolation') || /^(int|uint)/.test(leaf.variable.type.name)
-          ? 'flat'
-          : modifiers.includes('noperspective')
-            ? 'linear'
-            : 'perspective';
-      const sampling = modifiers.includes('centroid')
-        ? 'centroid'
-        : modifiers.includes('sample')
-          ? 'sample'
-          : 'center';
+      const mode = leaf.interface.interpolation;
+      const sampling = leaf.interface.sampling;
       attribute += mode === 'flat' ? ' @interpolate(flat)' : ` @interpolate(${mode}, ${sampling})`;
     }
     return attribute;
@@ -3060,9 +2871,7 @@ export class SlangEmitter {
             const interpolated =
               (this.stage === 'fragment' && direction === 'in') ||
               (this.stage === 'vertex' && direction === 'out');
-            const flat =
-              leaf.variable.modifiers.includes('nointerpolation') ||
-              /^(int|uint)/.test(leaf.variable.type.name);
+            const flat = leaf.interface.interpolation === 'flat';
             // GLSL ES 3.00 cannot assign explicit locations to varying interfaces.
             const location =
               this.glslVersion === '450' ||
@@ -3070,31 +2879,35 @@ export class SlangEmitter {
               (this.stage === 'fragment' && direction === 'out')
                 ? `layout(location = ${leaf.reflection.location}) `
                 : '';
-            const modifiers = leaf.variable.modifiers;
+            const interfaceMetadata = leaf.interface;
             if (
               interpolated &&
               !flat &&
               this.glslVersion === '300 es' &&
-              modifiers.includes('noperspective')
+              interfaceMetadata.interpolation === 'linear'
             ) {
               this.fail('noperspective interpolation requires GLSL 450', leaf.variable.location);
             }
-            if (interpolated && this.glslVersion === '300 es' && modifiers.includes('sample')) {
+            if (
+              interpolated &&
+              this.glslVersion === '300 es' &&
+              interfaceMetadata.sampling === 'sample'
+            ) {
               this.fail('sample interpolation requires GLSL 450', leaf.variable.location);
             }
             const interpolation = !interpolated
               ? ''
               : flat
                 ? 'flat '
-                : modifiers.includes('noperspective')
+                : interfaceMetadata.interpolation === 'linear'
                   ? 'noperspective '
                   : '';
             const sampling =
               !interpolated || flat
                 ? ''
-                : modifiers.includes('centroid')
+                : interfaceMetadata.sampling === 'centroid'
                   ? 'centroid '
-                  : modifiers.includes('sample')
+                  : interfaceMetadata.sampling === 'sample'
                     ? 'sample '
                     : '';
             pieces.push(
@@ -3116,10 +2929,7 @@ export class SlangEmitter {
         let value = this.isWGSL
           ? `_slang_input.${leaf.field}`
           : this.getGLSLInterfaceName(leaf, 'in');
-        if (
-          !this.isWGSL &&
-          ['SV_VERTEXID', 'SV_INSTANCEID'].includes(leaf.variable.semantic!.toUpperCase())
-        ) {
+        if (!this.isWGSL && ['vertex_index', 'instance_index'].includes(leaf.interface.builtin!)) {
           value = `uint(${value})`;
         }
         body.push(`${name}${this.getMemberPath(parameter.type, leaf.path.slice(1))} = ${value};`);
@@ -3151,6 +2961,12 @@ export class SlangEmitter {
         `${this.isWGSL ? `_slang_output.${leaf.field}` : this.getGLSLInterfaceName(leaf, 'out')} = ${source};`
       );
     }
+    if (!this.isWGSL && this.program.clipSpace === 'webgpu' && this.stage === 'vertex') {
+      body.push(
+        'gl_Position.y = -gl_Position.y;',
+        'gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;'
+      );
+    }
     if (this.isWGSL && this.outputs.length) body.push('return _slang_output;');
     const workgroup = this.reflection.workgroupSize;
     if (workgroup && !this.isWGSL) {
@@ -3166,10 +2982,10 @@ export class SlangEmitter {
   }
   private getGLSLInterfaceName(leaf: InterfaceLeaf, direction: 'in' | 'out'): string {
     if (leaf.reflection.builtin) {
-      if (leaf.variable.semantic!.toUpperCase() === 'SV_POSITION' && direction === 'in') {
+      if (leaf.interface.builtin === 'position' && direction === 'in') {
         return 'gl_FragCoord';
       }
-      return BUILTINS[leaf.variable.semantic!.toUpperCase()].glsl;
+      return GLSL_BUILTINS[leaf.interface.builtin!];
     }
     const varying =
       (this.stage === 'vertex' && direction === 'out') ||
@@ -3276,7 +3092,13 @@ export class SlangEmitter {
   }
   discoverTextureUsage(): {comparison: Set<string>; ordinary: Set<string>} {
     if (!this.hasComparisonCalls) return {comparison: new Set(), ordinary: new Set()};
-    const discovery = new SlangEmitter(this.program, this.options, true);
+    const discovery = new ShaderEmitter(
+      this.program,
+      this.options,
+      this.lowerInterface,
+      this.lowerOperation,
+      true
+    );
     discovery.emitProgramParts();
     return {comparison: discovery.comparisonTextures, ordinary: discovery.ordinaryTextures};
   }

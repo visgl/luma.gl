@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {Geometry} from '@luma.gl/engine';
+import {Matrix4} from '@math.gl/core/matrix';
+import {expect, it} from 'vitest';
+import {createMaterialFixture} from './ray-material-fixture';
+
+it('interpolates glTF vertex color and applies vertex alpha to ray masks', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, geometry, surface, renderer, readPixel, destroy} = await createMaterialFixture();
+  try {
+    options.background = [0, 0, 0, 1];
+    options.progressive = false;
+    options.samplingFrameIndex = 0;
+    const colored = {
+      ...surface,
+      geometry: new Geometry({
+        topology: 'triangle-list',
+        attributes: {
+          ...geometry.attributes,
+          COLOR_0: {
+            size: 4,
+            normalized: true,
+            value: new Uint8Array([255, 0, 0, 63, 0, 255, 0, 63, 0, 0, 255, 63])
+          }
+        }
+      }),
+      material: {
+        id: 'vertex-color',
+        alphaMode: 'OPAQUE' as const,
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          alphaCutoff: 0.5
+        }
+      }
+    };
+    options.surfaces = [colored];
+    const rgb = await readPixel();
+    expect(rgb.every(channel => channel > 30 && channel < 200)).toBe(true);
+    expect(rgb.reduce((sum, channel) => sum + channel, 0)).toBeCloseTo(255, -1);
+    expect(await renderer.pick(options.id, 4, 4)).not.toBeNull();
+
+    options.surfaces = [{...colored, material: {...colored.material, alphaMode: 'MASK'}}];
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    expect(await renderer.pick(options.id, 4, 4)).toBeNull();
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('updates packed triangle geometry and picking after retained morph weight changes', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, renderer, readPixel, getStatistics, destroy} =
+    await createMaterialFixture();
+  try {
+    options.background = [0, 0, 0, 1];
+    options.progressive = false;
+    options.samplingFrameIndex = 0;
+    options.sceneRevisions = {
+      identity: 'morph',
+      topology: 0,
+      transforms: 0,
+      materials: 0,
+      lights: 0
+    };
+    const geometry = new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        ...surface.geometry.attributes,
+        POSITION: {
+          size: 3,
+          value: new Float32Array([
+            -4, -4, 0, 4, -4, 0, 0, 4, 0, 18, -4, 0, 20, -4, 0, 19, 4, 0, -20, -4, 0, -18, -4, 0,
+            -19, 4, 0
+          ])
+        },
+        NORMAL: {
+          size: 3,
+          value: new Float32Array([
+            0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1
+          ])
+        },
+        TEXCOORD_0: {size: 2, value: new Float32Array(18).fill(0.25)},
+        TEXCOORD_1: {size: 2, value: new Float32Array(18).fill(0.75)}
+      }
+    });
+    const posed = {
+      ...surface,
+      geometry,
+      morphTargets: [
+        {
+          POSITION: new Float32Array([
+            12, 0, 0, 12, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ])
+        }
+      ],
+      morphWeights: [0]
+    };
+    options.surfaces = [posed];
+    const before = await readPixel();
+    expect(before[0]).toBeGreaterThan(100);
+    const buildNodeCount = getStatistics()?.rayTracing?.graph?.topology?.nodeCount ?? 0;
+    expect(await renderer.pick(options.id, 4, 4)).not.toBeNull();
+
+    posed.morphWeights[0] = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    expect(await renderer.pick(options.id, 4, 4)).toBeNull();
+
+    posed.morphWeights[0] = 0;
+    expect(await readPixel()).toEqual(before);
+    expect(await renderer.pick(options.id, 4, 4)).not.toBeNull();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.topology?.nodeCount).toBeLessThan(buildNodeCount);
+
+    // An inactive morph shares its base mesh with the distant copy.
+    options.surfaces = [
+      posed,
+      {...surface, id: 'shared-base', geometry, transforms: [new Matrix4().translate([-40, 0, 0])]}
+    ];
+    options.sceneRevisions.topology++;
+    expect(await readPixel()).toEqual(before);
+
+    // Activating the morph splits the packed layout into two meshes.
+    posed.morphWeights[0] = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    expect(getStatistics()?.rayTracing?.graph?.acceleration).toBeDefined();
+    expect(getStatistics()?.rayTracing?.graph?.refit).toBeUndefined();
+    expect(await renderer.pick(options.id, 4, 4)).toBeNull();
+  } finally {
+    destroy();
+  }
+}, 180_000);

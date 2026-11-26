@@ -8,16 +8,16 @@ import {
   type GPUProjectedPointPickingInfo
 } from '@deck.gl-community/gpu-layers';
 import {Buffer, Texture} from '@luma.gl/core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   prepareCRSProjection,
   ProjectionRenderTransform,
   ProjectionTableTransform
-} from '@luma.gl/experimental/gpu-project/crs';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/graph/gpu-project-crs';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
-import {uploadSourceTable} from '../../experimental/test/gpu-project/projection-table-fixtures';
+import {uploadSourceTable} from '../../graph/test/gpu-project/projection-table-fixtures';
 
 for (const mode of ['pipeline', 'precision'] as const) {
   it(`inline UTM rendering: ${mode === 'pipeline' ? 'links the complete model bindings' : 'picks sub-float32-separated rows matching CPU and materialized output'}`, async context => {

@@ -11,8 +11,8 @@ import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs'
 </DocumentationBadges>
 
 `GPUInputSchema` is the runtime contract a model or renderer uses to declare the
-prepared varying [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) and constant
-[`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) inputs it accepts.
+prepared varying [`GPUVector`](/docs/api-reference/graph/gpu-vector) and constant
+[`GPUConstant`](/docs/api-reference/graph/gpu-constant) inputs it accepts.
 Models expose the contract as a static `gpuInputSchema` property so renderers,
 adapters, validation helpers, and application code can inspect the same
 declaration.
@@ -27,7 +27,7 @@ It is distinct from [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gp
 ## Types
 
 ```ts
-import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
 
@@ -111,7 +111,7 @@ available to TypeScript while the declaration is checked against the public
 schema type:
 
 ```ts
-import type {GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 export const PATH_GPU_INPUT_SCHEMA = [
   {
@@ -153,7 +153,7 @@ Only generated inputs need `internal: true`.
 `validateGPUInputVectors()` checks a prepared vector map against a schema:
 
 ```ts
-import {validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
+import {validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 
 validateGPUInputVectors('PathModel', PathModel.gpuInputSchema, {
   paths,
@@ -220,4 +220,4 @@ The built-in table and text models expose schemas for their prepared inputs:
   `TextDictionaryModel`.
 
 These schemas describe the GPU-facing boundary. Arrow-specific source types and
-conversion rules remain in `@luma.gl/arrow`.
+conversion rules remain in `@luma.gl/graph/arrow`.

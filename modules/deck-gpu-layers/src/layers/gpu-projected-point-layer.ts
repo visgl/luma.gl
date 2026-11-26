@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  COORDINATE_SYSTEM,
   Layer,
   picking,
   project32,
@@ -14,13 +13,14 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {fp64arithmetic} from '@luma.gl/shadertools';
-import type {ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
+import {GPUVectorModel} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {fp64arithmetic} from '@luma.gl/shaders';
+import type {ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import type {
   ProjectionRenderTransform,
   ProjectedRenderPosition
-} from '@luma.gl/experimental/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -60,7 +60,7 @@ type ProjectedPointState = {
 /** Inline 2D CRS projection in a non-geospatial Cartesian deck viewport. */
 export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
   static override layerName = 'GPUProjectedPointLayer';
-  static override defaultProps = {coordinateSystem: COORDINATE_SYSTEM.CARTESIAN};
+  static override defaultProps = {coordinateSystem: 'cartesian'};
 
   override getAttributeManager() {
     return null;
@@ -96,6 +96,7 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
         positions.data.length
       );
       const model = new GPUVectorModel(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           // Model reflects the shared WGSL uniform declaration even on the integer path.
           // Restore its uniform metadata; graph kernels strip this unused declaration instead.
@@ -112,6 +113,7 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
         id: `${this.id}-model`,
         topology: 'triangle-list',
         isInstanced: true,
+        inferDrawCount: 'instance',
         vertexCount: 6,
         instanceCount: 0,
         attributes: {
@@ -219,7 +221,7 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
     if (
       this.context.device.type !== 'webgpu' ||
       this.context.viewport.isGeospatial ||
-      this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN ||
+      this.props.coordinateSystem !== 'cartesian' ||
       this.props.modelMatrix ||
       this.props.coordinateOrigin.some(value => value !== 0)
     ) {

@@ -56,7 +56,7 @@ function ensureStyles(): void {
 const EXAMPLE_HTML = `
 <main class="gpu-sort-example">
   <header>
-    <p class="eyebrow">@luma.gl/experimental · GPUCommandGraph</p>
+    <p class="eyebrow">@luma.gl/graph · GPUCommandGraph</p>
     <h1>Graph-native GPU sort</h1>
     <p>Stable paired uint32 sorting for one global domain or independent streaming batches.</p>
   </header>

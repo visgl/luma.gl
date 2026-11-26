@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Buffer} from '@luma.gl/core';
 import {expect, it} from 'vitest';
 import {
   ConeGeometry,
@@ -13,7 +14,7 @@ import {
   TruncatedConeGeometry
 } from '@luma.gl/engine';
 import {makeGPUGeometry} from '@luma.gl/engine/geometry/gpu-geometry';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 const BUILT_IN_GEOMETRY_TESTS = [
   {name: 'ConeGeometry', Geometry: ConeGeometry},
@@ -74,4 +75,26 @@ it('makeGPUGeometry interleaves cube geometry into one vertex buffer', async () 
   expect(gpuGeometry.indices, 'indexed cube keeps index buffer').toBeTruthy();
 
   gpuGeometry.destroy();
+});
+
+it('makeGPUVectorGeometry owns uploaded interleaved and index buffers', async () => {
+  const {makeGPUVectorGeometry} = await import('@luma.gl/engine');
+  const device = await getWebGLTestDevice();
+  const source = new CubeGeometry({indices: true});
+  const geometry = makeGPUVectorGeometry(device, source);
+  const vector = geometry.attributes['geometry'];
+  if (!vector || !('data' in vector)) throw new Error('Expected geometry vector');
+  const vertexBuffer = vector.data[0]!.buffer;
+  const indexBuffer = geometry.indices!.data[0]!.buffer;
+
+  expect(Object.keys(geometry.attributes)).toEqual(['geometry']);
+  expect(geometry.bufferLayout![0].attributes!.length).toBe(4);
+  expect(geometry.vertexCount).toBe(source.vertexCount);
+  expect(geometry.topology).toBe(source.topology);
+  if (!(vertexBuffer instanceof Buffer) || !(indexBuffer instanceof Buffer))
+    throw new Error('Expected buffers');
+  expect(vertexBuffer.destroyed).toBe(false);
+  geometry.destroy();
+  expect(vertexBuffer.destroyed).toBe(true);
+  expect(indexBuffer.destroyed).toBe(true);
 });

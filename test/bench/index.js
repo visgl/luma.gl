@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /* eslint-disable no-console, no-invalid-this */
-import {Bench} from '@probe.gl/bench';
+import {Bench} from 'probe.gl/bench';
 
 import shadersBench from './shaders.bench';
 import uniformsBench from './uniforms.bench';

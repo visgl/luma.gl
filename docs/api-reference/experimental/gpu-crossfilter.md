@@ -8,7 +8,7 @@ import {GPUExampleCard} from '@site/src/components/docs/gpu-example-card';
 
 ## Overview
 
-`@luma.gl/experimental/gpu-crossfilter` coordinates linked selections across GPU-resident maps,
+`@luma.gl/graph/gpu-crossfilter` coordinates linked selections across GPU-resident maps,
 scatterplots, histograms, categorical summaries, and application-defined views. Brush one view,
 update its selection, and encode the same command graph again: source rows, selection masks,
 aggregations, and stable visible-row identifiers remain on the GPU.
@@ -50,8 +50,8 @@ buffer to update its visible counts and distributions.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUCrossfilter} from '@luma.gl/graph/gpu-crossfilter';
 
 const graph = new GPUCommandGraph(device);
 const longitude = graph.importGPUVector('longitude', longitudeVector);
@@ -176,7 +176,7 @@ The comparison below reflects the official cuXfilter
 | GPU data boundary | cuDF data lives with the Python/CUDA application; charts consume their required results | Uploaded source rows, masks, and aggregates stay on the local GPU; compact display readback is explicit |
 | Scaling model | Single-GPU cuDF or distributed, multi-GPU Dask-cuDF | One WebGPU device; preserves source chunks without claiming multi-GPU execution |
 | Deployment | Jupyter notebooks, Bokeh-backed applications, and documented multi-user deployments | A browser application; no Python process or dashboard server is required |
-| Project status | Final RAPIDS release 26.06; subsequently sunset and archived | Experimental optional `@luma.gl/experimental/gpu-crossfilter` entry point |
+| Project status | Final RAPIDS release 26.06; subsequently sunset and archived | Experimental optional `@luma.gl/graph/gpu-crossfilter` entry point |
 
 The projects solve related interaction problems in different environments. GPUCrossfilter does not
 provide cuXfilter feature parity, a migration layer, built-in chart integrations, or distributed

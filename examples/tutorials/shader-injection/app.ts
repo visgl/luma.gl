@@ -1,0 +1,146 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import type {ShaderPlugin} from '@luma.gl/shaders';
+import {ShaderInjectionInfoHtml} from './app-ui';
+
+// Base vertex and fragment shader code
+const vs = `\
+#version 300 es
+
+in vec2 position;
+
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+  OFFSET_POSITION(gl_Position);
+}
+`;
+
+const fs = `\
+#version 300 es
+
+uniform appUniforms {  
+  vec3 color;
+} app;
+
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(app.color, 1.0);
+}
+`;
+
+const offsetLeftPlugin: ShaderPlugin = {
+  name: 'offsetLeft',
+  injections: [{stage: 'vertex', target: 'OFFSET_POSITION', glsl: 'position.x -= 0.5;'}]
+};
+
+const offsetRightPlugin: ShaderPlugin = {
+  name: 'offsetRight',
+  injections: [{stage: 'vertex', target: 'OFFSET_POSITION', glsl: 'position.x += 0.5;'}]
+};
+
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = ShaderInjectionInfoHtml;
+
+  model1: Model;
+  model2: Model;
+  positionBuffer: Buffer;
+  uniformBuffer1: Buffer;
+  uniformBuffer2: Buffer;
+
+  uniformStore: UniformStore<{
+    app: {
+      color: NumberArray;
+    };
+  }>;
+
+  constructor({device, animationLoop}: AnimationProps) {
+    super();
+
+    if (device.type !== 'webgl') {
+      throw new Error('This demo is only implemented for WebGL2');
+    }
+
+    const shaderAssembler = new GLSLShaderAssembler();
+    shaderAssembler.addShaderInjectionTarget({
+      name: 'OFFSET_POSITION',
+      stage: 'vertex',
+      glsl: {parameters: 'inout vec4 position'}
+    });
+    this.uniformStore = new UniformStore(device, {
+      app: {
+        uniformTypes: {
+          color: 'vec3<f32>'
+        }
+      }
+    });
+
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer('app', {
+      app: {
+        color: [1, 0, 0]
+      }
+    });
+
+    const uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    this.uniformBuffer1.write(uniformBufferData);
+
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer('app', {
+      app: {
+        color: [0, 0, 1]
+      }
+    });
+
+    this.model1 = new Model(device, {
+      vs,
+      fs,
+      shaderAssembler,
+      plugins: [offsetLeftPlugin],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      attributes: {
+        position: this.positionBuffer
+      },
+      vertexCount: 3,
+      bindings: {
+        app: this.uniformBuffer1
+      }
+    });
+
+    this.model2 = new Model(device, {
+      vs,
+      fs,
+      shaderAssembler,
+      plugins: [offsetRightPlugin],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      vertexCount: 3,
+      attributes: {
+        position: this.positionBuffer
+      },
+      bindings: {
+        app: this.uniformBuffer2
+      }
+    });
+  }
+
+  onFinalize() {
+    this.model1.destroy();
+    this.model2.destroy();
+    this.positionBuffer.destroy();
+    this.uniformStore.destroy();
+    this.uniformBuffer1.destroy();
+    this.uniformBuffer2.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model1.draw(renderPass);
+    this.model2.draw(renderPass);
+    renderPass.end();
+  }
+}

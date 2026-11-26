@@ -1,7 +1,7 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
-# Shader Types
+# @luma.gl/core/shadertypes
 
 <CoreDocsTabs group="shader-types" active="shader-types" />
 
@@ -16,8 +16,8 @@ across WebGL2 and WebGPU.
 This page is the canonical reference for the uniform and shader-module side of
 that system:
 
-- `uniformTypes` on [`ShaderModule`](/docs/api-reference/shadertools/shader-module)
-- `UniformTypes<T>` validation in `@luma.gl/shadertools`
+- `uniformTypes` on [`ShaderModule`](/docs/api-reference/shaders/shader-module)
+- `UniformTypes<T>` validation in `@luma.gl/shaders`
 - nested values flowing through [`ShaderInputs`](/docs/api-reference/engine/shader-inputs),
   [`UniformStore`](/docs/api-reference/core/uniform-store), and
   [`ShaderBlockLayout`](/docs/api-reference/core/shader-block-layout)
@@ -109,7 +109,7 @@ type Uniforms = {
 
 ## TypeScript Type Inference
 
-`@luma.gl/shadertools` exports `UniformTypes<T>` to validate `uniformTypes`
+`@luma.gl/shaders` exports `UniformTypes<T>` to validate `uniformTypes`
 against your declared uniform value shape.
 
 When a module is declared with both `uniformTypes` and a typed
@@ -125,9 +125,9 @@ automatically:
 Example:
 
 ```ts
-import type {ShaderModule, UniformTypes} from '@luma.gl/shadertools';
+import type {ShaderModule, UniformTypes} from '@luma.gl/shaders';
 import {ShaderInputs} from '@luma.gl/engine';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 
 type Uniforms = {
   color: [number, number, number, number];
@@ -227,7 +227,7 @@ That matters for composite values because plain objects no longer imply
 - only keys outside `uniformTypes` are treated as bindings
 
 This is what makes modules like
-[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting) work
+[`lighting`](/docs/api-reference/shaders/shader-modules/lighting) work
 with a nested `lights` array at the public API boundary.
 
 ## Limitations

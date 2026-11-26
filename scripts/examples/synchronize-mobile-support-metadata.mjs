@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 
 const REPOSITORY_ROOT = process.cwd();
 const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
 const SUPPORT_BLOCK_PATTERN = /\n?\s*<!-- luma-example-support -->[\s\S]*?<!-- \/luma-example-support -->\n?/;
 const CATALOG_ALIASES = new Map([
+  ['gltf/features', 'showcase/gltf-billboard'],
+  ['gltf/audio', 'showcase/gltf-audio'],
   ['arrow/arrow-instancing', 'showcase/instancing'],
-  ['showcase/scene', 'experimental/scene-playground'],
-  ['showcase/scene/playground', 'experimental/scene-playground'],
+  ['anari/scenes', 'anari/scenes'],
+  ['anari/scenes/playground', 'anari/scenes'],
   ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
   ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
 ]);
@@ -43,7 +45,9 @@ for (const relativeHtmlFile of htmlFiles) {
 console.log(`Synchronized mobile support metadata for ${htmlFiles.length} standalone pages.`);
 
 function readSupportDefinition(catalogId, standaloneId) {
-  const sidecarFile = path.join(EXAMPLE_DIRECTORY, catalogId, 'mobile-support.ts');
+  const standaloneSidecar = path.join(EXAMPLE_DIRECTORY, standaloneId, 'mobile-support.ts');
+  const catalogSidecar = path.join(EXAMPLE_DIRECTORY, catalogId, 'mobile-support.ts');
+  const sidecarFile = existsSync(catalogSidecar) ? catalogSidecar : standaloneSidecar;
   try {
     const source = readFileSync(sidecarFile, 'utf8');
     const backends = source

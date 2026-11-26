@@ -70,7 +70,7 @@ This is the first major difference between GEMM and simpler elementwise GPU oper
 ## Contract
 
 ```ts
-import {GPUMatMul} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMatMul} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUMatMul({
   left: a,
@@ -120,7 +120,7 @@ MatVec is frequently memory-bandwidth dominated. GEMM has much greater arithmeti
 
 A fixed 16×16 tile is a portable baseline, not a universal optimum. Performance depends on tile dimensions, per-thread output blocking, vectorized loads, workgroup-memory behavior, register pressure, matrix shape and GPU architecture.
 
-This makes GEMM a strong target for Jarnevon autotuning:
+This makes GEMM a strong target for luma.gl autotuning:
 
 ```text
 matrix shape + device limits

@@ -8,28 +8,28 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 ## Usage
 
-To draw to the screen in luma.gl, simply create a `RenderPass` by calling 
-`device.beginRenderPass()` and start rendering. When done rendering, call 
-`renderPass.end()`  
+To draw to the screen in luma.gl, simply create a `RenderPass` by calling
+`device.beginRenderPass()` and start rendering. When done rendering, call
+`renderPass.end()`
 
 ```typescript
-  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext
   const renderPass = device.beginRenderPass();
   model.draw(renderPass);
   renderPass.end();
   device.submit();
 ```
 
-`device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to: 
+`device.getDefaultCanvasContext().getCurrentFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to:
 
 ```typescript
-  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getCurrentFramebuffer()});
   ...
 ```
 
 ### Clearing the screen
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Clearing can also be disabled by setting `loadOp='load'`.
+`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Set a clear property to boolean `false` to preserve that attachment.
 
 ```typescript
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
@@ -55,25 +55,27 @@ Depth and stencil buffers are also cleared to default values:
 `RenderPassProps.parameters.viewport` controls how the rendered graphics is mapped to window pixels / texels (more precisely, the affine transformation of x and y from normalized device coordinates to window coordinates).
 
 If no value for the `viewport` parameter is provided, the following defaults will be applied.
-- If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getCanvasContext().getDrawingBufferSize()`)
+- If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getDefaultCanvasContext().getDrawingBufferSize()`)
 - If a framebuffer is specified, the `width` and `height` of the framebuffer will be used.
 
 ## Types
 
 ### `RenderPassProps`
 
-`RenderPassProps` extends [`ResourceProps`](resource.md#resourceprops) and accepts the following fields.
+`RenderPassProps` extends [`DeviceResourceProps`](device-resource.md#deviceresourceprops) and accepts the following fields.
 
 | Property               | Type                                  | Default        | Description |
 | ---------------------- | ------------------------------------- | -------------- | ----------- |
 | `framebuffer?` | `Framebuffer \| null` | `null` | Render target that receives the output of the pass. When omitted, the default canvas framebuffer is used. |
-| `parameters?` | `RenderPassParameters` | `undefined` | Mutable pipeline parameters such as viewport, scissor rectangle, blend constant and stencil reference. |
+| `parameters?` | `RenderPassParameters` | `undefined` | Dynamic render-pass parameters such as viewport, scissor rectangle, blend constant and stencil reference. |
 | `clearColor?` | `NumberArray4 \| TypedArray \| false` | `[0, 0, 0, 1]` | Color used to clear the default color attachment. Set to `false` to preserve the previous value. |
 | `clearColors?` | `(TypedArray \| false)[]` | `undefined` | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
 | `clearDepth?` | `number \| false` | `1` | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth. |
 | `clearStencil?` | `number \| false` | `0` | Stencil value used when clearing the stencil attachment. Set to `false` to preserve the previous stencil. |
+| `clipDepthMode?` | `'negative-one-to-one' \| 'zero-to-one'` | backend range | Clip-space depth range of the projection. WebGPU always uses `'zero-to-one'` and throws on `'negative-one-to-one'`. WebGL uses `'negative-one-to-one'`; `'zero-to-one'` requires the `clip-control-webgl` feature (`EXT_clip_control`). Use `'zero-to-one'` for [reverse-Z depth](/docs/api-guide/gpu/depth-buffers#reverse-z). |
 | `depthReadOnly?` | `boolean` | `false` | Marks the depth attachment as read-only for the duration of the pass. |
 | `stencilReadOnly?` | `boolean` | `false` | Marks the stencil attachment as read-only for the duration of the pass. |
+| `stencilStoreOp?` | `'store' \| 'discard'` | `'store'` | Controls whether the writable stencil contents remain available after the pass. |
 | `discard?` | `boolean` | `false` | Disables rasterization output when set to `true`. |
 | `occlusionQuerySet?` | `QuerySet` | `undefined` | Query set that records occlusion query results generated by the pass. |
 | `timestampQuerySet?` | `QuerySet` | `undefined` | Query set that will receive timestamps at the beginning and end of the pass. |
@@ -83,7 +85,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 ## Members
 
 - `device`: `Device` - holds a reference to the `Device` that created this `RenderPass`.
-- `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
+- `handle`: `unknown` - holds the backend render-pass handle
 - `props`: `RenderPassProps` - holds a copy of the `RenderPassProps` used to create this `RenderPass`.
 
 ## Methods
@@ -94,7 +96,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 ### `end(): void`
 
-Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
+Ends command encoding for the pass. Submit the encoder to execute WebGPU work; ending a pass does not itself submit it. `AnimationLoop` submits the default encoder after `onRender` returns.
 
 ### `setPipeline(pipeline: RenderPipeline): void`
 
@@ -118,6 +120,11 @@ draw counts and offsets such as `vertexCount`, `indexCount`,
 
 For indexed draws, `indexCount` takes precedence. When it is omitted, the active
 backend may use `vertexCount` as the indexed draw count for compatibility.
+`firstIndex` is measured in index elements; `firstVertex` applies to non-indexed
+draws. WebGL requires an index buffer when `indexCount` is supplied. A vertex array
+can be omitted for attribute-less non-indexed draws. WebGL requires
+`isInstanced: true` to use `instanceCount`; WebGPU infers instancing from the count.
+`baseVertex` and `firstInstance` are supported only on WebGPU.
 
 ```ts
 renderPass.setPipeline(pipeline);
@@ -162,3 +169,21 @@ Removes a debug group (implementation dependent).
 ### `insertDebugMarker(markerLabel: string): void`
 
 Adds a debug marker (implementation dependent).
+
+### `getParameters(): RenderPassParameters`
+
+Returns a detached snapshot of the current viewport (including depth range), scissor
+rectangle, blend constant and stencil reference. Mutating returned arrays does not
+change the pass. Restore a snapshot with `setParameters(snapshot)`.
+
+WebGPU reports values tracked through luma's pass API; native encoder calls bypass
+that tracking. WebGL reads the current context state. Its `WebGLRenderPassParameters`
+snapshot also includes `scissorTest` and `stencilBackReference`, preserving disabled
+scissor bounds and independent front/back stencil references when passed back to
+`setParameters`. Keep these fields when restoring a snapshot. Setting `scissorRect`
+to null disables scissoring on WebGL and resets the rectangle to the full attachment
+extent on WebGPU. Render bundle encoders
+reject snapshots because dynamic parameters belong to their executing render pass.
+
+Use `Model.draw(renderPass, {parameters})` for temporary overrides that are restored
+automatically, including when a draw throws.

@@ -17,8 +17,11 @@ import {
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
+import type {GLTFScenegraphs} from '@luma.gl/engine/gltf';
+import {getGLTFModelOptions, selectGLTFModelOption, type GLTFModelSource} from './components/gltf-model-options';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
+import type {RigidBodyScene} from '../../examples/experimental/gpu-rigid-body-world/scenes';
 import type {GPUSortExampleHandle} from '../../examples/experimental/gpu-sort/src/app';
 import type {GPUDataAnalysisExampleHandle} from '../../examples/experimental/gpu-data-analysis/src/app';
 import type {GPGPUShowcaseHandle} from '../../examples/v10/gpgpu/src/app';
@@ -31,6 +34,10 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadBakedCornellBoxApp = () => import('../../examples/api/baked-cornell-box/app');
+const loadLightmapBakingApp = () => import('../../examples/api/lightmap-baking/app');
+const loadPBRShadowsApp = () => import('../../examples/api/pbr-shadows/app');
+const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
 const loadCubemapApp = () => import('../../examples/api/cubemap/app');
 const loadArrowDggsPolygonsApp = () => import('../../examples/arrow/arrow-dggs-polygons/app');
 const loadArrowColumnRendererApp = () => import('../../examples/arrow/arrow-columns/app');
@@ -50,7 +57,7 @@ const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene
 const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
 const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
 const loadGPUGraphExplorerApp = () => import('../../examples/experimental/gpu-graph-explorer/app');
-const loadLuCIMVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
+const loadGPUVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
 const loadGPT2App = () => import('../../examples/experimental/gpt-2/app');
 const loadVideoTextureApp = () => import('../../examples/api/video-texture/app');
 const loadWebXRKaleidoscopeApp = () => import('../../examples/experimental/webxr-kaleidoscope/app');
@@ -69,8 +76,13 @@ const loadVolumetricFireForgeApp = () => import('../../examples/experimental/vol
 const loadVirtualGeometryCanyonApp = () => import('../../examples/experimental/virtual-geometry-canyon/app');
 const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/app');
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
-const loadGLTFApp = () => import('../../examples/showcase/gltf/app');
+const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
+/** Loads the captured-scene default for the standalone website showcase. */
+const loadGaussianSplatsShowcaseApp = async () => ({
+  default: (await loadGaussianSplatsApp()).GaussianSplatsShowcase
+});
+
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
 const loadArrowText2DApp = () => import('../../examples/arrow/arrow-text-2d/app');
@@ -94,9 +106,13 @@ const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app')
 const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
 const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
 const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
+const loadGLTFFeatureApp = () => import('../../examples/gltf/features/app');
+import type {GLTFFeature} from '../../examples/gltf/features/presets';
+import type {GLTFAudioFeature} from '../../examples/gltf/audio/presets';
+const loadGLTFAudioApp = () => import('../../examples/gltf/audio/app');
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
 const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
-const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
+const loadShaderInjectionApp = () => import('../../examples/tutorials/shader-injection/app');
 const loadShaderPluginsApp = () => import('../../examples/tutorials/shader-plugins/app');
 const loadShaderModulesApp = () => import('../../examples/tutorials/shader-modules/app');
 const loadSlangParticlesApp = () => import('../../examples/tutorials/slang-particles/app');
@@ -109,7 +125,7 @@ const loadBillionPointSpatialAtlasExample = () =>
 const loadMillionRowCrossfilterExample = () =>
   import('../../examples/showcase/million-row-crossfilter/app');
 const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
-const loadGPUSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadGPUSpatialTaxiExample = () => import('../../examples/deck/gpu-spatial-taxi/app');
 const loadGPUGraphExplorerDeckExample = () => import('../../examples/deck/gpu-graph-explorer/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 const loadGPUSortExample = () => import('../../examples/experimental/gpu-sort/src/app');
@@ -513,7 +529,7 @@ export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = (
   if (!module) {
     return (
       <DeferredGPUExampleStatus
-        title="GPU Project + luSpatial Taxi Explorer"
+        title="GPU Project + GPU Spatial Taxi Explorer"
         description="Loading the projection, spatial-query, and interactive map tools."
         errorMessage={errorMessage}
         embedded={embedded}
@@ -528,8 +544,8 @@ export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = (
       componentProps={{
         createDeck: module.createGPUSpatialTaxiDeck,
         panel: {
-          id: 'luspatial-taxi',
-          title: 'GPU Project + luSpatial Taxi Explorer',
+          id: 'gpu-spatial-taxi',
+          title: 'GPU Project + GPU Spatial Taxi Explorer',
           devices: ['webgpu']
         }
       }}
@@ -690,11 +706,12 @@ const GPGPU_EXAMPLE_STYLE = `
 
   .gpgpu-showcase .expression-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 108px auto;
     gap: 8px;
   }
 
   .gpgpu-showcase .expression-row input,
+  .gpgpu-showcase .expression-row select,
   .gpgpu-showcase .expression-row button {
     border: 1px solid #cfd6e2;
     border-radius: 8px;
@@ -702,6 +719,12 @@ const GPGPU_EXAMPLE_STYLE = `
     color: inherit;
     font: 14px/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
     padding: 9px 10px;
+  }
+
+  .gpgpu-showcase .expression-row input,
+  .gpgpu-showcase .expression-row select {
+    min-width: 0;
+    width: 100%;
   }
 
   .gpgpu-showcase .expression-row button {
@@ -733,7 +756,6 @@ const GPGPU_EXAMPLE_STYLE = `
   }
 
   .gpgpu-showcase .table-header {
-    min-width: 880px;
     will-change: transform;
   }
 
@@ -773,7 +795,6 @@ const GPGPU_EXAMPLE_STYLE = `
 
   .gpgpu-showcase .row-layer {
     position: relative;
-    min-width: 880px;
   }
 
   .gpgpu-showcase .data-row {
@@ -822,11 +843,11 @@ const GPGPU_EXAMPLE_STYLE = `
 
 // Showcase Examples
 
-export const ANARIPlaygroundExample: React.FC = () => {
+export const ANARIPlaygroundExample: React.FC<{embedded?: boolean}> = ({embedded}) => {
   const source = useBaseUrl('/standalone-examples/scene/playground.html');
 
   return (
-    <ExamplePage style={{background: '#070913', minHeight: '720px'}}>
+    <ExamplePage embedded={embedded} embeddedHeight={420} style={{background: '#070913'}}>
       <iframe
         title="ANARI Scene Lab"
         src={source}
@@ -837,21 +858,190 @@ export const ANARIPlaygroundExample: React.FC = () => {
   );
 };
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+/** Embeds the Three.js integration example in documentation. */
+export const ThreeIntegrationDocsExample: React.FC<{integration?: 'graph' | 'engine' | 'core' | 'deck'}> = ({integration = 'core'}) => {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [runtimeState, setRuntimeState] = useState<'loading' | 'running' | 'failed'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
+      if (event.data?.type === 'luma-example-ready') setRuntimeState('running');
+      if (event.data?.type === 'luma-example-error') {
+        setErrorMessage(String(event.data.message));
+        setRuntimeState('failed');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+  const path = integration === 'graph' ? 'gpu-graph-galaxy.html' : 'embed.html';
+  const source = useBaseUrl('/standalone-examples/three/' + path);
+  const query = '&integration=' + integration;
+  return (
+    <ExamplePage embedded embeddedHeight={360} runtimeState={runtimeState}>
+      <iframe
+        ref={frameRef}
+        title={`Three.js ${integration} integration example`}
+        onLoad={event => {
+          const frameDocument = event.currentTarget.contentDocument;
+          frameDocument?.addEventListener('wheel', wheelEvent => {
+            if (wheelEvent.ctrlKey || wheelEvent.metaKey) return;
+            wheelEvent.preventDefault();
+            wheelEvent.stopImmediatePropagation();
+            const scale = wheelEvent.deltaMode === 1 ? 16 : wheelEvent.deltaMode === 2 ? window.innerHeight : 1;
+            window.scrollBy({left: wheelEvent.deltaX * scale, top: wheelEvent.deltaY * scale, behavior: 'instant'});
+          }, {capture: true, passive: false});
+        }}
+        src={`${source}?embedded=1${query}`}
+        allow="fullscreen"
+        style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}}
+      />
+      {runtimeState === 'failed' ? <div role="alert" style={{position: 'absolute', inset: 20, color: 'white'}}>{errorMessage}</div> : null}
+    </ExamplePage>
+  );
+};
+
+export const GLTFExample: React.FC<WebsiteExampleProps & {
+  extension?: 'KHR_materials_clearcoat' | 'KHR_materials_sheen' | 'KHR_materials_iridescence' | 'KHR_materials_anisotropy';
+}> = ({extension, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: AssetStudioApp} = await loadGLTFApp();
+    return {default: class ConfiguredAssetStudioApp extends AssetStudioApp {
+      constructor(animationProps: AnimationProps) { super(animationProps, extension); }
+    }};
+  }, [extension]);
   const referenceDevice = getGLTFReferenceDeviceSelection();
+  const materialTitles = {
+    KHR_materials_clearcoat: 'glTF Clearcoat', KHR_materials_sheen: 'glTF Sheen',
+    KHR_materials_iridescence: 'glTF Iridescence', KHR_materials_anisotropy: 'glTF Anisotropy'
+  };
 
   return (
     <LumaExample
-      id="gltf"
-      title="glTF Asset Studio"
-      subtitle="Physical materials · animated characters · standards-native glTF"
-      directory="showcase"
-      loadTemplate={loadGLTFApp}
+      id="asset-studio"
+      title={extension ? materialTitles[extension] : 'glTF Asset Studio'}
+      subtitle={extension ? `${extension} · published glTF assets` : 'Physical materials · animated characters · standards-native glTF'}
+      directory="gltf"
+      loadTemplate={loadTemplate}
+      infoBoxAppearance="cinematic"
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       devices={referenceDevice ? [referenceDevice] : undefined}
       {...props}
     />
+  );
+};
+
+/** Focused viewer: pass an explicit asset URL or a curated subset of Khronos sample names. */
+export const GLTFModelExample: React.FC<
+  WebsiteExampleProps & GLTFModelSource & {
+    title?: string;
+    animate?: boolean;
+    materialVariant?: string;
+    showVariants?: boolean;
+  }
+> = ({modelUrl: sourceModelUrl, models, title = 'glTF model', animate = false, materialVariant, showVariants, ...props}) => {
+  const modelOptions = useMemo(() => getGLTFModelOptions(models, sourceModelUrl), [models, sourceModelUrl]);
+  const [selectedModelUrl, setSelectedModelUrl] = useState('');
+  const selectedModel = selectGLTFModelOption(modelOptions, selectedModelUrl);
+  const modelUrl = selectedModel?.url || '';
+  const [loadedModel, setLoadedModel] = useState<{
+    modelUrl: string;
+    scenegraphs: GLTFScenegraphs;
+  } | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState(materialVariant || '');
+  const scenegraphs = loadedModel?.modelUrl === modelUrl ? loadedModel.scenegraphs : null;
+
+  useEffect(() => {
+    if (!scenegraphs) {
+      return;
+    }
+    if (materialVariant) {
+      scenegraphs.variants.selectVariant(materialVariant);
+    } else {
+      scenegraphs.variants.resetVariant();
+    }
+    setSelectedVariant(materialVariant || '');
+  }, [materialVariant, scenegraphs]);
+
+  const loadModelTemplate = useMemo(
+    () => async () => {
+      const {default: GLTFViewer} = await loadHelloGLTFApp();
+      return {
+        default: class extends GLTFViewer {
+          constructor(animationProps: AnimationProps) {
+            super(animationProps, {
+              modelUrl,
+              animate,
+              onLoad: loadedScenegraphs => setLoadedModel({modelUrl, scenegraphs: loadedScenegraphs}),
+              onUnload: unloadedScenegraphs =>
+                setLoadedModel(current =>
+                  current?.scenegraphs === unloadedScenegraphs ? null : current
+                )
+            });
+          }
+        }
+      };
+    },
+    [modelUrl, animate]
+  );
+
+  if (!selectedModel) {
+    return null;
+  }
+
+  return (
+    <>
+      {modelOptions.length > 1 ? (
+        <div className="margin-bottom--sm">
+          <label>
+            Sample model{' '}
+            <select value={modelUrl} onChange={event => setSelectedModelUrl(event.target.value)}>
+              {modelOptions.map(model => (
+                <option key={model.url} value={model.url}>{model.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+      {showVariants && scenegraphs && scenegraphs.variants.names.length > 0 ? (
+        <div className="margin-bottom--sm">
+          <label>
+            Material variant{' '}
+            <select
+              value={selectedVariant}
+              onChange={event => {
+                const variantName = event.target.value;
+                if (variantName) {
+                  scenegraphs.variants.selectVariant(variantName);
+                } else {
+                  scenegraphs.variants.resetVariant();
+                }
+                setSelectedVariant(variantName);
+              }}
+            >
+              <option value="">Original</option>
+              {scenegraphs.variants.names.map(variantName => (
+                <option key={variantName} value={variantName}>
+                  {variantName}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+      <LumaExample
+        key={modelUrl}
+        id="hello-gltf"
+        title={title}
+        directory="tutorials"
+        loadTemplate={loadModelTemplate}
+        config={exampleConfig}
+        canvasContextProfile="high-dynamic-range"
+        {...props}
+      />
+    </>
   );
 };
 
@@ -885,10 +1075,10 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
     <LumaExample
       id="gaussian-splats"
       title="Gaussian Splats"
-      subtitle="Progressive HDR Gaussian splat rendering"
+      subtitle="Moving glass and Gaussian splat compositing"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
-      loadTemplate={loadGaussianSplatsApp}
+      loadTemplate={props.embedded ? loadGaussianSplatsApp : loadGaussianSplatsShowcaseApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       showStats
@@ -1252,14 +1442,14 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
   />
 );
 
-export const GPGPUExample: React.FC = () => {
+export const GPGPUExample: React.FC<{useSimpleGraph?: boolean}> = ({useSimpleGraph = false}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
 
   useEffect(() => {
-    if (!deviceType?.startsWith('webgpu-') || !device) {
+    if ((!deviceType?.startsWith('webgpu-') && !(useSimpleGraph && deviceType === 'webgl')) || !device) {
       return;
     }
 
@@ -1271,7 +1461,7 @@ export const GPGPUExample: React.FC = () => {
       start: async () => {
         const {initializeGPGPUShowcase} = await loadGPGPUShowcaseExample();
         if (!isCancelled) {
-          handle = initializeGPGPUShowcase({device});
+          handle = initializeGPGPUShowcase({device, useSimpleGraph});
           setIsRunning(true);
         }
       },
@@ -1293,7 +1483,7 @@ export const GPGPUExample: React.FC = () => {
       isCancelled = true;
       stopExclusiveExample();
     };
-  }, [deviceType, device]);
+  }, [deviceType, device, useSimpleGraph]);
 
   return (
     <ExamplePage
@@ -1302,11 +1492,12 @@ export const GPGPUExample: React.FC = () => {
     >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
-        <DeviceTabs devices={['webgpu']} style={{marginBottom: 16}} />
-        <h1>@luma.gl/gpgpu evaluator showcase</h1>
+        <DeviceTabs devices={useSimpleGraph ? ['webgpu', 'webgl2'] : ['webgpu']} style={{marginBottom: 16}} />
+        <h1>{useSimpleGraph ? '@luma.gl/graph SimpleGraph showcase' : '@luma.gl/graph/gpu-simple-graph evaluator showcase'}</h1>
         <p className="subtitle">
-          Arrow-backed source columns are extracted as typed-array views and wrapped in
-          GPUDataEvaluator inputs.
+          {useSimpleGraph
+            ? 'Arrow-backed inputs and expression outputs are composed as SimpleGraph operations and evaluated on WebGPU or WebGL2.'
+            : 'Arrow-backed source columns are extracted as typed-array views and wrapped in GPUDataEvaluator inputs.'}
         </p>
 
         <div className="metadata-grid">
@@ -1337,6 +1528,13 @@ export const GPGPUExample: React.FC = () => {
               defaultValue="fround(coordinates)"
               spellCheck={false}
             />
+            <select id="expression-preset" aria-label="Expression examples" defaultValue="">
+              <option value="">Examples</option>
+              <option value="fround(coordinates)">Float32 coordinates</option>
+              <option value="fround(coordinates) * 2">Scale coordinates</option>
+              <option value="length(fround(coordinates))">Coordinate length</option>
+              <option value="sampleMetrics.values * 2">Scale sample metrics</option>
+            </select>
             <button id="expression-run" type="submit" disabled>
               Run
             </button>
@@ -1366,6 +1564,8 @@ export const GPGPUExample: React.FC = () => {
     </ExamplePage>
   );
 };
+
+export const GPUSimpleGraphExample: React.FC = () => <GPGPUExample useSimpleGraph />;
 
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
 export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
@@ -1661,13 +1861,13 @@ export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props =
   />
 );
 
-export const LuCIMVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
+export const GPUVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="lucim-volume-lab"
-    title="LuCIM Volume Lab"
+    title="GPU Volume Algorithms Volume Lab"
     subtitle="GPU-resident tri-planar volume segmentation"
     directory="experimental"
-    loadTemplate={loadLuCIMVolumeLabApp}
+    loadTemplate={loadGPUVolumeLabApp}
     config={exampleConfig}
     devices={['webgpu']}
     {...props}
@@ -2358,6 +2558,22 @@ export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
+export const PrefilteredEnvironmentExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="prefiltered-environment"
+    title="Prefiltered Environment"
+    directory="api"
+    loadTemplate={loadPrefilteredEnvironmentApp}
+    config={exampleConfig}
+    devices={['webgl2', 'webgpu']}
+    {...props}
+  />
+);
+
+export const PBRShadowsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="pbr-shadows" title="PBR Shadows" directory="api" loadTemplate={loadPBRShadowsApp} config={exampleConfig} devices={['webgl2','webgpu']} {...props} />
+);
+
 // Integration Examples
 
 export const ExternalContextExample: React.FC = () => {
@@ -2598,11 +2814,11 @@ export const HelloInstancingExample: React.FC = props => (
   />
 );
 
-export const ShaderHooksExample: React.FC = props => (
+export const ShaderInjectionExample: React.FC = props => (
   <LumaExample
-    id="shader-hooks"
+    id="shader-injection"
     directory="tutorials"
-    loadTemplate={loadShaderHooksApp}
+    loadTemplate={loadShaderInjectionApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -2641,6 +2857,7 @@ export const SlangParticlesExample: React.FC = props => (
 export const SlangShadersExample: React.FC = props => (
   <LumaExample
     id="slang-shaders"
+    infoBoxExtraTabs={[{id: 'settings', label: 'Settings'}, {id: 'shaders', label: 'Shaders'}]}
     directory="tutorials"
     loadTemplate={loadSlangShadersApp}
     config={exampleConfig}
@@ -2671,6 +2888,197 @@ export const TransformExample: React.FC = props => (
     showStats={false}
     stackBlitz
     devices={['webgl2']}
+    {...props}
+  />
+);
+
+const loadGPUTimeSeriesApp = () => import('../../examples/experimental/gpu-timeseries/app');
+
+export const GPUTimeSeriesExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-timeseries"
+    title="Signal Room"
+    subtitle="Find a service incident hidden in 29 hours of telemetry"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={loadGPUTimeSeriesApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUGeometryExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-geometry"
+    title="GPU Geometry Surface Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-geometry/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud"
+    title="GPU Point Cloud Cleanup Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudOctreeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud-octree"
+    title="Additive Octree · Point Cloud Tiles"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud-octree/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+const loadGLTFPhysicsApp = () => import('../../examples/gltf/physics/app');
+
+export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="physics"
+    title="glTF Physics Extensions"
+    subtitle="Published glTF assets · GPU rigid bodies · draft extensions"
+    directory="gltf"
+    loadTemplate={loadGLTFPhysicsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const GLTFFeatureExample: React.FC<WebsiteExampleProps & {feature: GLTFFeature}> = ({feature, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: FeatureApp} = await loadGLTFFeatureApp();
+    return {default: class ConfiguredFeatureApp extends FeatureApp {
+      static info = FeatureApp.getInfo(feature);
+      constructor(animationProps: AnimationProps) { super(animationProps, feature); }
+    }};
+  }, [feature]);
+  return <LumaExample id={`gltf-${feature}`} directory="showcase" sourcePath="examples/gltf/features/app.ts" infoBoxAppearance="cinematic" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};
+
+export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAudioFeature}> = ({feature = 'emitter', ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: AudioApp} = await loadGLTFAudioApp();
+    return {default: class ConfiguredAudioApp extends AudioApp {
+      static info = feature === 'environment' ? AudioApp.environmentInfo : feature === 'graph' ? AudioApp.graphInfo : AudioApp.info;
+      constructor(animationProps: AnimationProps) { super(animationProps, feature); }
+    }};
+  }, [feature]);
+  return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};
+
+export const GPURigidBodyWorldExample: React.FC<{scene?: RigidBodyScene; title?: string}> = ({scene, title = 'Rigid Body Lab'}) => {
+  const baseSource = useBaseUrl('/standalone-examples/gpu-rigid-body-world/index.html');
+  const source = scene ? `${baseSource}?scene=${encodeURIComponent(scene)}` : baseSource;
+  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
+    <iframe title={title} src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const OffroadBuggyExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/offroad-buggy/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Off-road Buggy" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const PhysicsStressExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/physics-stress/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Physics Stress Lab" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="authored-scene-stress" title="Authored Scene Stress Lab" directory="gltf"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);
+
+/** A composed glTF 2.1 scene with independent GPU ragdoll puppets. */
+export const MarionetteTheaterExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="marionette-theater" title="Marionette Theater" directory="gltf"
+    sourcePath="examples/gltf/authored-scene-stress/ragdoll-app.ts"
+    infoBoxAppearance="cinematic"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/ragdoll-app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);
+
+export const VectorObservatoryExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/vector-observatory/index.html');
+  return <ExamplePage style={{background: '#050c14', minHeight: '820px'}}>
+    <iframe title="Vector Observatory" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const PhysicsBatchExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/physics-batch/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Physics Batch Lab" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const WreckingBallExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-rigid-body-world/wrecking-ball.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Wrecking Ball" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUSphereWorldExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-sphere-world/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Sphere World" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUSphereScaleExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-sphere-scale/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Large Sphere World" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUPoolExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-pool/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="GPU Pool Practice" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const LightmapBakingExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lightmap-baking"
+    title="Lightmap Baking"
+    directory="api"
+    loadTemplate={loadLightmapBakingApp}
+    config={exampleConfig}
+    devices={['webgl2', 'webgpu']}
+    {...props}
+  />
+);
+
+export const BakedCornellBoxExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="baked-cornell-box"
+    title="Baked Cornell Box"
+    directory="api"
+    loadTemplate={loadBakedCornellBoxApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );

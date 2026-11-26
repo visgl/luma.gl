@@ -7,7 +7,7 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 <EngineDocsTabs group="model" active="shader-inputs" />
 
 `ShaderInputs` stores per-module uniform values and binding values for shader modules.
-It is the glue between engine classes like [`Model`](/docs/api-reference/engine/model) and [`Computation`](/docs/api-reference/engine/compute/computation) and the uniform layouts defined by `@luma.gl/shadertools` modules.
+It is the glue between engine classes like [`Model`](/docs/api-reference/engine/model) and [`Computation`](/docs/api-reference/engine/compute/computation) and the uniform layouts defined by `@luma.gl/shaders` modules.
 
 <DocumentationContract title="ShaderInputs" rows={[
   {label: 'Role', value: 'Bridge shader-module props to uniform and binding values'},
@@ -22,7 +22,7 @@ It is the glue between engine classes like [`Model`](/docs/api-reference/engine/
 
 ```typescript
 import {ShaderInputs} from '@luma.gl/engine';
-import {picking} from '@luma.gl/shadertools';
+import {picking} from '@luma.gl/shaders';
 
 const shaderInputs = new ShaderInputs({picking});
 shaderInputs.setProps({

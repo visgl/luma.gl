@@ -7,7 +7,7 @@
 </head>
 <script type="module">
   import {makeAnimationLoop} from '@luma.gl/engine';
-  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {webgpuAdapter} from '@luma.gl/core/webgpu';
   import AnimationLoopTemplate from './app.ts';
 
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]});

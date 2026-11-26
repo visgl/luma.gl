@@ -4,7 +4,7 @@
 
 import {Buffer, type ComputeShaderLayout, type Device, type QuerySet} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
-import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
 
 export type FP64BenchmarkMode = 'automatic' | 'classic' | 'hybrid' | 'integer' | 'float32';
 export type FP64BenchmarkOperation = 'add' | 'multiply' | 'divide' | 'square root';

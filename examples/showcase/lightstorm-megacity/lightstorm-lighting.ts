@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {DeferredPointLight} from '@luma.gl/experimental';
-import type {Matrix4} from '@math.gl/core';
+import type {DeferredPointLight} from '@luma.gl/anari';
+import type {Matrix4} from '@math.gl/core/matrix';
 import {LIGHTSTORM_GRID_SPACING} from './lightstorm-data';
 
 export const LIGHTSTORM_POINT_LIGHT_COUNT = 128;

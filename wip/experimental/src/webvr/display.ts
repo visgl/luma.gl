@@ -1,7 +1,7 @@
 // luma.gl, MIT
 // @ts-nocheck
 
-import {withParameters} from '@luma.gl/webgl';
+import {withParameters} from '@luma.gl/core/webgl';
 import {ClassicAnimationLoop as AnimationLoop} from '@luma.gl/webgl-legacy';
 
 export class Display {

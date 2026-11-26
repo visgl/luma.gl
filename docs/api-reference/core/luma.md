@@ -16,7 +16,7 @@ luma.gl applications with a complete GPU API.
 The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
 
 One or more GPU backend modules must be imported from a corresponding 
-GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+GPU API backend module (`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`) and then registered with luma.gl.
 
 ## Usage
 
@@ -24,7 +24,7 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], createCanvasContext: true});
 ```
@@ -43,7 +43,7 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 luma.registerAdapters([webgl2Adapter]);
 const webglDevice = luma.createDevice({type: 'webgl', createCanvasContext: {canvas: ...}});
 ```
@@ -54,8 +54,8 @@ that can work in both WebGL and WebGPU environments
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuDevice} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuDevice} from '@luma.gl/core/webgl';
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
 const device = luma.createDevice({type: 'best-available', createCanvasContext: {canvas: ...}});
 ```
@@ -66,15 +66,15 @@ Install device modules and register adapters to access backends
 
 ```sh
 yarn add @luma.gl/core
-yarn add @luma.gl/webgl
-yarn add @luma.gl/webgpu
+yarn add @luma.gl/core
+yarn add @luma.gl/core
 ```
 
 To create a WebGPU device:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 luma.registerAdapters([webgpuAdapter]);
 const device = await luma.createDevice({type: 'webgpu', createCanvasContext: ...});
@@ -84,8 +84,8 @@ Pre-register devices
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
 const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: ...});
@@ -136,7 +136,15 @@ To create a Device instance, the application calls `luma.createDevice()`.
 - `...deviceProps`: See [`DeviceProps`](./device.md#deviceprops) for device specific options.
 
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
-luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
+luma.gl prefers WebGPU. If the browser exposes WebGPU but `navigator.gpu.requestAdapter()`
+returns `null`, luma.gl uses a supported, registered WebGL2 adapter when available.
+An explicit `type: 'webgpu'` reports the adapter error. Errors after acquiring a WebGPU
+adapter, such as a rejected device request, propagate for either selection mode.
+
+When `debug` is enabled in a browser and device creation fails, luma.gl displays the error in a
+browser alert. To enable debugging from a browser URL, including on a mobile device, append the
+`debug` query parameter (for example, `?debug`). An explicit `debug` prop passed to
+`createDevice()` takes precedence over this default.
 
 Note: A specific device type is available and supported if both of the following are true:
 1. The backend module has been registered
@@ -204,3 +212,9 @@ Since WebGL2 is a essentially a superset of WebGL1, a library written for WebGL 
 ## Remarks
 
 - At least one backend must be imported and registered with `luma.registerAdapters()` for `luma.createDevice()` or `luma.attachDevice()` calls to succeed (unless `Device` implementations are supplied to those calls).
+
+### Device ownership
+
+`device.ownsHandle` reports whether the wrapper owns its native handle. A newly created device owns its handle by default, except when using implicit WebGL device reuse. A newly attached device borrows the handle by default. Pass `ownsHandle: true` when attaching to transfer ownership, or `ownsHandle: false` when creating to retain the native handle after wrapper teardown. Reusing an existing wrapper uses its original ownership setting. When multiple consumers share a canvas, leave destruction to the canvas owner.
+
+Call `device.destroy()` once all consumers have finished. An owned WebGPU device destroys its native GPUDevice. An owned WebGL device requests context loss if the extension is available. Destroying a borrowed wrapper leaves its native handle available for another wrapper. Existing WebGL callers relying on implicit device reuse retain their previous teardown behavior until they specify ownership.

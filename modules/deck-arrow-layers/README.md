@@ -3,7 +3,7 @@
 ## Overview
 
 Private deck.gl layers backed by the Arrow adapters and `GPUVector` objects from
-`@luma.gl/arrow`.
+`@luma.gl/graph/arrow`.
 
 The layers intentionally do not use deck.gl `AttributeManager` for Arrow columns.
 Arrow data is converted once into `GPUVector`/`GPUTable` inputs and bound directly
@@ -99,7 +99,7 @@ the supplied graph and existing layout; it does not transfer ownership or add an
 dependency to this package. Omitting the optional configuration retains the regular exact-layout
 constructor shown above.
 
-The graph algorithms remain in `@luma.gl/gpgpu/gpu-graph`; only this existing private adapter
+The graph algorithms remain in `@luma.gl/graph/gpu-graph-algorithms`; only this existing private adapter
 package depends on deck.gl. Its diagnostics report actual resident populations, visible edge
 detail, CPU encoding, and frame cadence without inventing GPU timings or claiming convergence for
 a fixed iteration budget.

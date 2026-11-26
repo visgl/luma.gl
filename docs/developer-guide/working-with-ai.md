@@ -15,7 +15,7 @@ Do not ask an agent to rely on its memory of luma.gl APIs. First give it the app
 and ask it to identify the installed package versions:
 
 ```bash
-npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/webgpu @luma.gl/webgl
+npm ls @luma.gl/core @luma.gl/engine @luma.gl/shaders @luma.gl/core/webgpu @luma.gl/core/webgl
 ```
 
 Use the equivalent command for the project's package manager. The agent should then
@@ -35,8 +35,8 @@ Give the agent the smallest API surface appropriate to the task:
 | Level | Start here when | Typical packages |
 | --- | --- | --- |
 | Engine API | Building a rendered application, model, animation loop, geometry, picking, or common GPU transform | `@luma.gl/engine` plus one or more adapters |
-| Core GPU API | Managing devices, buffers, textures, pipelines, bindings, render passes, or compute passes directly | `@luma.gl/core`, `@luma.gl/webgpu`, `@luma.gl/webgl` |
-| Shader API | Assembling reusable shader modules, hooks, plugins, or matching WGSL and GLSL implementations | `@luma.gl/shadertools`, usually with Engine or Core |
+| Core GPU API | Managing devices, buffers, textures, pipelines, bindings, render passes, or compute passes directly | `@luma.gl/core`, `@luma.gl/core/webgpu`, `@luma.gl/core/webgl` |
+| Shader API | Assembling reusable shader modules, hooks, plugins, or matching WGSL and GLSL implementations | `@luma.gl/shaders`, usually with Engine or Core |
 
 Most applications should start with `Model` and `AnimationLoop` from Engine, then use
 Core resources only where explicit control is useful. Shader tooling composes shader

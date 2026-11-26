@@ -58,7 +58,8 @@ let applicationReason: string | false = 'initial frame';
 const loop = new AnimationLoop({
   device,
   onRender() {
-    const reason = applicationReason || model.needsRedraw();
+    const modelReason = model.needsRedraw();
+    const reason = applicationReason || modelReason;
     applicationReason = false;
 
     if (!reason) {

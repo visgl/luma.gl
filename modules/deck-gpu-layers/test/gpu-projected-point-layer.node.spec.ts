@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  COORDINATE_SYSTEM,
   OrthographicViewport,
   WebMercatorViewport,
   type LayerContext,
@@ -11,11 +10,11 @@ import {
 } from '@deck.gl/core';
 import {GPUProjectedPointLayer} from '@deck.gl-community/gpu-layers';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {ProjectionRenderTransform} from '@luma.gl/experimental/gpu-project/crs';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {ProjectionRenderTransform} from '@luma.gl/graph/gpu-project-crs';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
-import {makeTableTransform} from '../../experimental/test/gpu-project/projection-table-fixtures';
+import {makeTableTransform} from '../../graph/test/gpu-project/projection-table-fixtures';
 
 function makeLayer() {
   const device = new NullDevice({});
@@ -79,7 +78,7 @@ it('picking retains physical chunk identity and uses the current CPU transform w
     expect(getSourcePosition).toHaveBeenCalledExactlyOnceWith(1);
     expect(layer.getPickingInfo({info: {index: -1} as PickingInfo}).projection).toBeUndefined();
     expect(getSourcePosition).toHaveBeenCalledOnce();
-    expect(layer.props.coordinateSystem).toBe(COORDINATE_SYSTEM.CARTESIAN);
+    expect(layer.props.coordinateSystem).toBe('cartesian');
   } finally {
     positions.destroy();
     validity.destroy();

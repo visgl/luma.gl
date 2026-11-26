@@ -10,7 +10,7 @@ import {BloomExample} from '@site/src/examples';
 Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model), and [`SwapFramebuffers`](/docs/api-reference/engine/compute/swap) to manage the pass chain.
 
 For the descriptor types, see
-[`ShaderPass`](/docs/api-reference/shadertools/shader-pass). For the authoring
+[`ShaderPass`](/docs/api-reference/shaders/shader-pass). For the authoring
 model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
 
 <BloomExample embedded showStats={false} />

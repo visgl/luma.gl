@@ -14,8 +14,8 @@ import {
 } from '@deck.gl/core';
 import {Buffer, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import type {GPUVector, VertexList} from '@luma.gl/gpgpu/gpu-data';
-import {PathStorageModel} from '@luma.gl/experimental/models';
+import type {GPUVector, VertexList} from '@luma.gl/graph/gpu-data';
+import {PathStorageModel} from '@luma.gl/engine/models';
 import {
   getGPUVectorPickingProvenance,
   type GPUVectorLayerPickingInfo
@@ -259,6 +259,7 @@ export class GPUPathLayer extends Layer<GPUPathLayerProps> {
       ? undefined
       : normalizeColor(this.props.getColor ?? [0, 0, 0, 255]);
     const model = new PathStorageModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_PATH_SHADER}),
       id: `${this.id}-model`,
       shaderLayout: GPU_PATH_SHADER_LAYOUT,

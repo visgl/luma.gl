@@ -137,7 +137,7 @@ performance; GPURaster does not promise that every analytical operation outruns 
 ## Import the optional subpath
 
 ```ts
-import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
@@ -203,11 +203,11 @@ import {
   type GPURasterTileLease,
   type GPURasterTileRequest,
   type GPURasterTileSource
-} from '@luma.gl/experimental/gpu-raster';
+} from '@luma.gl/graph/gpu-raster';
 ```
 
 The `./gpu-raster` subpath is an explicit opt-in. Its runtime symbols are not exported from
-`@luma.gl/experimental`, and the existing experimental package remains private.
+the `@luma.gl/graph` root. The raster APIs are available through the explicit subpath.
 
 ## Quick start: analyze valid observations on the GPU
 

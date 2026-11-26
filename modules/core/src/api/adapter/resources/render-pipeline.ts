@@ -1,0 +1,228 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {Device} from '../device';
+import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
+import type {
+  ShaderLayout,
+  Bindings,
+  BindingsByGroup,
+  UniformBlockLayout
+} from '../types/shader-layout';
+import type {BufferLayout} from '../types/buffer-layout';
+import type {
+  TextureFormatColor,
+  TextureFormatDepthStencil
+} from '../../../shadertypes/texture-types/texture-formats';
+import {textureFormatDecoder} from '../../../shadertypes/texture-types/texture-format-decoder';
+import {hasStencilWriteOperation, resolveStencilFace} from '../types/stencil-state';
+import type {Shader} from './shader';
+import type {SharedRenderPipeline} from './shared-render-pipeline';
+import type {RenderPass} from './render-pass';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
+import {VertexArray} from './vertex-array';
+import {TransformFeedback} from './transform-feedback';
+
+export type RenderPipelineProps = DeviceResourceProps & {
+  // Shaders and shader layout
+
+  /** Compiled vertex shader */
+  vs?: Shader | null;
+  /** Name of vertex shader stage main function (defaults to 'main'). WGSL only */
+  vertexEntryPoint?: string; //
+  /** Constant values to apply to compiled vertex shader. Do not require re-compilation. (WGSL only) */
+  vsConstants?: Record<string, number>; // WGSL only
+  /** Compiled fragment shader */
+  fs?: Shader | null;
+  /** Name of fragment shader stage main function (defaults to 'main'). WGSL only */
+  fragmentEntryPoint?: string; // WGSL only
+  /** Constant values to apply to compiled fragment shader. Do not require re-compilation. (WGSL only) */
+  fsConstants?: Record<string, number>;
+
+  /** Describes the attributes and bindings exposed by the pipeline shader(s). */
+  shaderLayout?: ShaderLayout | null;
+  /** Describes the buffers accepted by this pipeline and how they are mapped to shader attributes. */
+  bufferLayout?: BufferLayout[]; // Record<string, Omit<BufferLayout, 'name'>
+
+  /** Determines how vertices are read from the 'vertex' attributes */
+  topology?: PrimitiveTopology;
+
+  // color attachment information (needed on WebGPU)
+
+  /** Color attachments expected by this pipeline. Defaults to [device.preferredColorFormat]. Array needs not be contiguous. */
+  colorAttachmentFormats?: (TextureFormatColor | null)[];
+  /** Depth attachment expected by this pipeline. Defaults to device.preferredDepthFormat, if depthWriteEnables parameter is set */
+  depthStencilAttachmentFormat?: TextureFormatDepthStencil;
+
+  /** Parameters that are controlled by pipeline */
+  parameters?: RenderPipelineParameters;
+
+  /** Transform feedback varyings captured when linking a WebGL render pipeline. WebGL only. */
+  varyings?: string[];
+  /** Transform feedback buffer mode used when linking a WebGL render pipeline. WebGL only. */
+  bufferMode?: number;
+
+  /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
+  disableWarnings?: boolean;
+
+  /** Internal hook for backend-specific shared pipeline implementations. */
+  _sharedRenderPipeline?: SharedRenderPipeline;
+
+  /** @internal Host-side layouts for shader-module GLSL uniform blocks. */
+  _uniformBlockLayouts?: UniformBlockLayout[];
+
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
+  bindings?: Bindings;
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
+  bindGroups?: BindingsByGroup;
+};
+
+/** Resolves the explicit or inferred format used by the native render pipeline and its cache key. */
+export function getPipelineDepthStencilFormat(
+  device: Device,
+  props: RenderPipelineProps
+): TextureFormatDepthStencil | undefined {
+  const parameters = props.parameters ?? {};
+  const front = resolveStencilFace(parameters, parameters.stencilFront);
+  const back = resolveStencilFace(parameters, parameters.stencilBack);
+  const usesStencil =
+    (front.compare !== undefined && front.compare !== 'always') ||
+    (back.compare !== undefined && back.compare !== 'always') ||
+    hasStencilWriteOperation(front) ||
+    hasStencilWriteOperation(back);
+  const format = usesStencil
+    ? (props.depthStencilAttachmentFormat ?? parameters.depthFormat ?? 'depth24plus-stencil8')
+    : (parameters.depthFormat ?? props.depthStencilAttachmentFormat);
+  if (format && usesStencil) {
+    const aspect = textureFormatDecoder.getInfo(format).attachment;
+    if (aspect !== 'stencil' && aspect !== 'depth-stencil') {
+      throw new Error('Active stencil state requires a stencil attachment format.');
+    }
+  }
+  const preferredFormat = device.preferredDepthFormat;
+  return (
+    format ??
+    (parameters.depthWriteEnabled
+      ? preferredFormat === 'depth16'
+        ? 'depth16unorm'
+        : preferredFormat
+      : undefined)
+  );
+}
+
+/**
+ * A compiled and linked shader program
+ */
+export abstract class RenderPipeline extends DeviceResource<RenderPipelineProps> {
+  override get [Symbol.toStringTag](): string {
+    return 'RenderPipeline';
+  }
+
+  abstract readonly vs: Shader;
+  abstract readonly fs: Shader | null;
+
+  /** The merged layout */
+  shaderLayout: ShaderLayout;
+  /** Buffer map describing buffer interleaving etc */
+  readonly bufferLayout: BufferLayout[];
+  /** The linking status of the pipeline. 'pending' if linking is asynchronous, and on production */
+  linkStatus: 'pending' | 'success' | 'error' = 'pending';
+  /** The hash of the pipeline */
+  hash: string = '';
+  /** Optional shared backend implementation */
+  sharedRenderPipeline: SharedRenderPipeline | null = null;
+
+  /** Whether shader or pipeline compilation/linking is still in progress */
+  get isPending(): boolean {
+    return (
+      this.linkStatus === 'pending' ||
+      this.vs.compilationStatus === 'pending' ||
+      this.fs?.compilationStatus === 'pending'
+    );
+  }
+
+  /** Whether shader or pipeline compilation/linking has failed */
+  get isErrored(): boolean {
+    return (
+      this.linkStatus === 'error' ||
+      this.vs.compilationStatus === 'error' ||
+      this.fs?.compilationStatus === 'error'
+    );
+  }
+
+  constructor(device: Device, props: RenderPipelineProps) {
+    super(device, props, RenderPipeline.defaultProps);
+    this.shaderLayout = this.props.shaderLayout!;
+    this.bufferLayout = this.props.bufferLayout || [];
+    this.sharedRenderPipeline = this.props._sharedRenderPipeline || null;
+  }
+
+  /**
+   * @deprecated Use RenderPass.setPipeline(), setBindings(), setVertexArray(), and draw().
+   * Will be removed in the next major release.
+   */
+  abstract draw(options: {
+    /** Render pass to draw into (targeting screen or framebuffer) */
+    renderPass?: RenderPass;
+    /** Parameters to be set during draw call. Note that most parameters can only be overridden in WebGL. */
+    parameters?: RenderPipelineParameters;
+    /** Topology. Note can only be overridden in WebGL. */
+    topology?: PrimitiveTopology;
+    /** vertex attributes */
+    vertexArray: VertexArray;
+    /** Use instanced rendering? */
+    isInstanced?: boolean;
+    /** Number of "rows" in 'instance' buffers */
+    instanceCount?: number;
+    /** Number of "rows" in 'vertex' buffers */
+    vertexCount?: number;
+    /** Number of "rows" in index buffer */
+    indexCount?: number;
+    /** First vertex to draw from */
+    firstVertex?: number;
+    /** First index to draw from */
+    firstIndex?: number;
+    /** First instance to draw from */
+    firstInstance?: number;
+    baseVertex?: number;
+    /** Transform feedback. WebGL only. */
+    transformFeedback?: TransformFeedback;
+    /** @deprecated Set bindings on RenderPass instead. */
+    bindings?: Bindings;
+    /** @deprecated Set bindings on RenderPass instead. */
+    bindGroups?: BindingsByGroup;
+    /** Optional stable cache keys for backend bind-group reuse */
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
+    /** WebGL-only uniforms */
+    uniforms?: Record<string, unknown>;
+  }): boolean;
+
+  static override defaultProps: Required<RenderPipelineProps> = {
+    ...DeviceResource.defaultProps,
+
+    vs: null,
+    vertexEntryPoint: 'vertexMain',
+    vsConstants: {},
+
+    fs: null,
+    fragmentEntryPoint: 'fragmentMain',
+    fsConstants: {},
+
+    shaderLayout: null,
+    bufferLayout: [],
+    topology: 'triangle-list',
+
+    colorAttachmentFormats: undefined!,
+    depthStencilAttachmentFormat: undefined!,
+
+    parameters: {},
+    varyings: undefined!,
+    bufferMode: undefined!,
+    disableWarnings: false,
+    _sharedRenderPipeline: undefined!,
+    _uniformBlockLayouts: [],
+    bindings: undefined!,
+    bindGroups: undefined!
+  };
+}

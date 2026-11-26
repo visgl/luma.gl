@@ -28,7 +28,7 @@ type VolumeLabUserInterfaceProps = {
   onSettingsChange: (settings: VolumeLabDisplaySettings) => void;
 };
 
-/** Owns the controls and compact readback status for the LuCIM volume lab. */
+/** Owns the controls and compact readback status for the GPU Volume Algorithms volume lab. */
 export class VolumeLabUserInterface {
   readonly panels: ExamplePanelManager;
 
@@ -44,7 +44,7 @@ export class VolumeLabUserInterface {
     this.panels = new ExamplePanelManager({
       panel: makeHtmlCustomPanel({
         id: 'lucim-volume-lab-controls',
-        title: 'LuCIM Volume Lab',
+        title: 'GPU Volume Algorithms Volume Lab',
         html: this.getControlsHtml(),
         onRender: root => this.attachControls(root)
       })
@@ -205,13 +205,13 @@ function makeRangeControl(
 
 function getInput(root: HTMLElement, selector: string): HTMLInputElement {
   const element = root.querySelector<HTMLInputElement>(selector);
-  if (!element) throw new Error(`Missing LuCIM Volume Lab input ${selector}`);
+  if (!element) throw new Error(`Missing GPU Volume Algorithms Volume Lab input ${selector}`);
   return element;
 }
 
 function getElement(root: HTMLElement, selector: string): HTMLElement {
   const element = root.querySelector<HTMLElement>(selector);
-  if (!element) throw new Error(`Missing LuCIM Volume Lab element ${selector}`);
+  if (!element) throw new Error(`Missing GPU Volume Algorithms Volume Lab element ${selector}`);
   return element;
 }
 

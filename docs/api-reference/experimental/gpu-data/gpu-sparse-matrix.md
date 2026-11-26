@@ -1,6 +1,6 @@
 # GPU sparse matrices
 
-Sparse matrices store only nonzero entries. Jarnevon's initial sparse substrate uses two complementary representations.
+Sparse matrices store only nonzero entries. The sparse matrix APIs uses two complementary representations.
 
 ## COO: construction
 

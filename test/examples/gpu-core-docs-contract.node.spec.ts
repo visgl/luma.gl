@@ -108,7 +108,16 @@ describe('GPU module documentation contract', () => {
     ).filter(
       filename =>
         filename.endsWith('.md') &&
-        !['README.md', 'concepts.md', 'recipes.md', 'tutorial.md'].includes(filename)
+        ![
+          'README.md',
+          'concepts.md',
+          'recipes.md',
+          'tutorial.md',
+          'webgpu-foundations.md',
+          'execution-techniques.md',
+          'debugging.md',
+          'resources.md'
+        ].includes(filename)
     );
 
     const contractSource = readFileSync(
@@ -172,7 +181,9 @@ describe('GPU module documentation contract', () => {
           tableOfContentsIdentifiers.has(getTableOfContentsIdentifier(documentationPath!)),
           `${tab.href} must appear in docs/table-of-contents.json`
         ).toBe(true);
-        expect(readFileSync(documentationPath!, 'utf8')).toContain(`active="${tab.id}"`);
+        const source = readFileSync(documentationPath!, 'utf8');
+        if (tab.href === '/docs/api-reference/graph') expect(source).toContain('# Graph');
+        else expect(source).toContain(`active="${tab.id}"`);
       }
     }
   });
@@ -238,23 +249,23 @@ describe('GPU module documentation contract', () => {
   test('mentions every exported GPU module operation in its documentation family', () => {
     const contracts = [
       {
-        source: 'modules/gpgpu/src/gpu-core/index.ts',
+        source: 'modules/graph/src/gpu-core/index.ts',
         documentation: 'docs/api-reference/experimental/gpu-core'
       },
       {
-        source: 'modules/experimental/src/gpu-trace/index.ts',
+        source: 'modules/graph/src/gpu-trace/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/experimental/src/gpu-dataframe/index.ts',
+        source: 'modules/graph/src/gpu-dataframe/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/gpgpu/src/gpu-graph/index.ts',
+        source: 'modules/graph/src/gpu-graph-algorithms/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/experimental/src/gpu-raster/index.ts',
+        source: 'modules/graph/src/gpu-raster/index.ts',
         documentation: 'docs/api-reference/experimental/gpu-raster'
       }
     ] as const;
@@ -283,6 +294,7 @@ function collectTableOfContentsIdentifiers(value: unknown): string[] {
   const record = value as Record<string, unknown>;
   return [
     ...(typeof record.id === 'string' ? [record.id] : []),
+    ...collectTableOfContentsIdentifiers(record.link),
     ...collectTableOfContentsIdentifiers(record.items)
   ];
 }

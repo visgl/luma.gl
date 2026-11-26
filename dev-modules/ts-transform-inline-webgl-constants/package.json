@@ -1,0 +1,6 @@
+{
+  "name": "@luma.gl/ts-transform-inline-webgl-constants",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.cjs"
+}

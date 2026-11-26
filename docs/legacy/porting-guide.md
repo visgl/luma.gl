@@ -150,7 +150,7 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 
 **`@luma.gl/core`**
 
-- The core module is no longer an umbrella module that simply re-exports exports from other modules.
+- The core module is no longer an umbrella module that simply re-exports symbols from other modules.
 - It now provides the abstract luma.gl `Device` API (for which `@luma.gl/webgpu` and `@luma.gl/webgl` provide backends).
 
 **`@luma.gl/engine`**
@@ -173,7 +173,7 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 **`@luma.gl/experimental`**
 
 - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
-- glTF exports have been moved to `@luma.gl/gltf`.
+- glTF exports have been moved to `@luma.gl/engine/gltf`.
 
 **`@luma.gl/gltools`** (removed, no longer needed, see [Upgrade Guide](/docs/upgrade-guide))
 

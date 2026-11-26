@@ -36,7 +36,7 @@ export const GLTF_REFERENCE_CAPTURE_SCENARIOS = [
     id: 'material-extension',
     model: 'BumpMaterial',
     route:
-      '/examples/showcase/gltf?gltf-reference=1&model=BumpMaterial&variant=glTF&file=BumpMaterial.gltf&yaw=0.35&pitch=-0.15&distance=1',
+      '/examples/gltf/asset-studio?gltf-reference=1&model=BumpMaterial&variant=glTF&file=BumpMaterial.gltf&yaw=0.35&pitch=-0.15&distance=1',
     camera: {yaw: 0.35, pitch: -0.15, distanceMultiplier: 1},
     rendering: {
       animation: 'disabled',
@@ -51,7 +51,7 @@ export const GLTF_REFERENCE_CAPTURE_SCENARIOS = [
     id: 'animation-studio',
     model: 'RobotExpressive',
     route:
-      '/examples/showcase/gltf?gltf-reference=1&model=RobotExpressive&variant=glTF-Binary&file=RobotExpressive.glb&yaw=0.2&pitch=-0.1&distance=1.4&studio=1&actors=3&actor=1&clip=Walking&animation-time=0.65&speed=1.25&loop=repeat&morph=Angry&morph-weight=0.6',
+      '/examples/gltf/asset-studio?gltf-reference=1&model=RobotExpressive&variant=glTF-Binary&file=RobotExpressive.glb&yaw=0.2&pitch=-0.1&distance=1.4&studio=1&actors=3&actor=1&clip=Walking&animation-time=0.65&speed=1.25&loop=repeat&morph=Angry&morph-weight=0.6',
     camera: {yaw: 0.2, pitch: -0.1, distanceMultiplier: 1.4},
     rendering: {
       animation: 'fixed-studio-state',

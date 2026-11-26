@@ -1,0 +1,88 @@
+[
+  {
+    "stage": "authored-render",
+    "fixture": "AuthoredGrid",
+    "objectCount": 19,
+    "adapter": {
+      "type": "webgpu",
+      "vendor": "apple",
+      "renderer": "",
+      "version": "",
+      "gpu": "apple",
+      "gpuType": "unknown",
+      "gpuBackend": "unknown",
+      "gpuArchitecture": "metal-3",
+      "fallback": false,
+      "featureLevel": "core",
+      "subgroupMinSize": 32,
+      "subgroupMaxSize": 32,
+      "shadingLanguage": "wgsl",
+      "shadingLanguageVersion": 100
+    },
+    "browserVersion": "151.0.7922.34",
+    "softwareGpuRequested": false,
+    "viewport": {
+      "width": 960,
+      "height": 640
+    },
+    "samples": 60,
+    "warmup": 30,
+    "renderedFrames": 61,
+    "acceptedSteps": 80,
+    "gpuPublishedModels": 57,
+    "frameMilliseconds": {
+      "p50": 16.600000000000364,
+      "p95": 18.100000000000364
+    },
+    "budgetMilliseconds": 50,
+    "revisionsAfterEdits": 2,
+    "nativeExport": true,
+    "presentedPixelsChanged": true,
+    "runtimeErrors": [],
+    "correct": true,
+    "qualified": true
+  },
+  {
+    "stage": "authored-render",
+    "fixture": "AnimatedScale",
+    "objectCount": 3,
+    "adapter": {
+      "type": "webgpu",
+      "vendor": "apple",
+      "renderer": "",
+      "version": "",
+      "gpu": "apple",
+      "gpuType": "unknown",
+      "gpuBackend": "unknown",
+      "gpuArchitecture": "metal-3",
+      "fallback": false,
+      "featureLevel": "core",
+      "subgroupMinSize": 32,
+      "subgroupMaxSize": 32,
+      "shadingLanguage": "wgsl",
+      "shadingLanguageVersion": 100
+    },
+    "browserVersion": "151.0.7922.34",
+    "softwareGpuRequested": false,
+    "viewport": {
+      "width": 960,
+      "height": 640
+    },
+    "samples": 60,
+    "warmup": 30,
+    "renderedFrames": 61,
+    "acceptedSteps": 123,
+    "gpuPublishedModels": 9,
+    "frameMilliseconds": {
+      "p50": 16.699999999999818,
+      "p95": 17.600000000000364
+    },
+    "budgetMilliseconds": 50,
+    "revisionsAfterEdits": 2,
+    "nativeExport": true,
+    "presentedPixelsChanged": true,
+    "runtimeErrors": [],
+    "correct": true,
+    "qualified": true
+  }
+]

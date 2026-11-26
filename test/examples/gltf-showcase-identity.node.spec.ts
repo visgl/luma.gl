@@ -11,14 +11,14 @@ describe('glTF module and showcase identity', () => {
     const homepage = readFileSync(path.join(process.cwd(), 'website/src/pages/index.jsx'), 'utf8');
     const featuredExamples = homepage.match(/const\s+FEATURED_EXAMPLES\s*=\s*\[([\s\S]*?)\n\];/);
     const showcase = readFileSync(
-      path.join(process.cwd(), 'website/content/examples/showcase/gltf.mdx'),
+      path.join(process.cwd(), 'website/content/examples/gltf/asset-studio.mdx'),
       'utf8'
     );
 
     expect(featuredExamples).not.toBeNull();
     expect(featuredExamples![1]).toMatch(/title:\s*'glTF Asset Studio'/);
-    expect(featuredExamples![1]).toMatch(/route:\s*'showcase\/gltf'/);
-    expect(featuredExamples![1]).toMatch(/image:\s*'showcase\/gltf\.jpg'/);
+    expect(featuredExamples![1]).toMatch(/route:\s*'gltf\/asset-studio'/);
+    expect(featuredExamples![1]).toMatch(/image:\s*'gltf\/asset-studio\.jpg'/);
     expect(featuredExamples![1]).toMatch(/standards-first glTF/i);
     expect(featuredExamples![1]).toMatch(/backends:\s*\['webgpu',\s*'webgl2'\]/);
     expect(showcase).toMatch(/title:\s*glTF Asset Studio/);
@@ -27,7 +27,7 @@ describe('glTF module and showcase identity', () => {
 
   test('describes glTF as an animated physical-asset and interchange module', () => {
     const packageMetadata = JSON.parse(
-      readFileSync(path.join(process.cwd(), 'modules/gltf/package.json'), 'utf8')
+      readFileSync(path.join(process.cwd(), 'modules/engine/package.json'), 'utf8')
     );
     const moduleDocumentation = readFileSync(
       path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
@@ -42,17 +42,15 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
 
-    expect(packageMetadata.description).toMatch(/physical materials[\s\S]*animation/i);
-    expect(packageMetadata.keywords).toEqual(
-      expect.arrayContaining(['gltf', 'glb', 'webgpu', 'pbr', 'animation'])
-    );
+    expect(packageMetadata.exports['./gltf'].import).toBe('./dist/gltf/index.js');
+    expect(packageMetadata.exports['./gltf-physics'].import).toBe('./dist/gltf/physics/index.js');
     expect(moduleDocumentation).toMatch(/standards-first asset runtime/i);
     expect(interchangeDocumentation).toContain('KHR_animation_pointer');
     expect(interchangeDocumentation).toContain('EXT_mesh_gpu_instancing');
     expect(tabs).toContain('/docs/api-reference/gltf/gltf-interchange');
   });
 
-  test('documents existing loader-owned capabilities without claiming unsupported extensions', () => {
+  test('documents loading and luma-owned postprocessing without claiming unsupported extensions', () => {
     const overview = readFileSync(
       path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
       'utf8'
@@ -62,7 +60,7 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
     const packageOverview = readFileSync(
-      path.join(process.cwd(), 'modules/gltf/README.md'),
+      path.join(process.cwd(), 'modules/engine/src/gltf/README.md'),
       'utf8'
     );
     const capabilities = readFileSync(
@@ -70,7 +68,11 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
 
-    expect(overview).toMatch(/^## What loaders\.gl already provides$/m);
+    expect(overview).toMatch(/^## Loading and postprocessing$/m);
+    expect(overview).toContain(
+      '`@luma.gl/engine/gltf` owns its glTF document types and `postProcessGLTF()`'
+    );
+    expect(overview).toContain('Existing loaders.gl postprocessed');
     for (const capability of [
       'GLTFLoader',
       'postProcessGLTF()',
@@ -92,7 +94,7 @@ describe('glTF module and showcase identity', () => {
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_mesh_features" support="\*️⃣">/);
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_structural_metadata" support="\*️⃣">/);
     expect(capabilities).toMatch(
-      /Meshopt compression[^\n]*@loaders\.gl\/gltf[^\n]*EXT_meshopt_compression[^\n]*KHR_meshopt_compression/
+      /Meshopt compression[^\n]*@loaders\.gl\/scene\/gltf[^\n]*EXT_meshopt_compression[^\n]*KHR_meshopt_compression/
     );
 
     for (const documentation of [overview, extensionSupport, packageOverview]) {

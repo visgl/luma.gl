@@ -19,6 +19,30 @@ For scenegraph-specific guidance, see the
 [Scenegraph guide](/docs/api-guide/engine/scenegraph). For bind-group ownership,
 see the [Bind Groups guide](/docs/api-guide/gpu/gpu-bindings).
 
+luma.gl owns the material implementations described here. The glTF converter maps authored
+factors, textures, and extensions onto those shared materials; retained ANARI scenes use the
+same PBR shader implementation.
+
+## Material capabilities
+
+Each capability page explains the native material inputs and includes an existing glTF asset
+example. Core material features are documented alongside advanced surface and volume effects.
+
+| Capability | Pages |
+| --- | --- |
+| Surface color and coverage | [Base color](./features/base-color.mdx), [opacity](./features/opacity.mdx), [double-sided surfaces](./features/double-sided.mdx) |
+| Metallic and rough surfaces | [Metallic](./features/metallic.mdx), [roughness](./features/roughness.mdx) |
+| Self-emission | [Emission](./features/emission.mdx), [emissive strength](./features/emissive-strength.mdx) |
+| Surface detail | [Normal mapping](./features/normal-mapping.mdx), [bump mapping](./features/bump-mapping.mdx), [ambient occlusion](./features/occlusion.mdx) |
+| Light response | [Unlit](./features/unlit.mdx), [specular](./features/specular.mdx), [index of refraction](./features/index-of-refraction.mdx) |
+| Layered and directional response | [Clearcoat](./features/clearcoat.mdx), [sheen](./features/sheen.mdx), [anisotropy](./features/anisotropy.mdx), [iridescence](./features/iridescence.mdx) |
+| Transmission and volumes | [Transmission](./features/transmission.mdx), [thickness and attenuation](./features/volume.mdx), [dispersion](./features/dispersion.mdx) |
+| Translucency and scattering | [Diffuse transmission](./features/diffuse-transmission.mdx), [volume scattering](./features/volume-scattering.mdx), [thin-wall scattering](./features/thin-wall-scattering.mdx) |
+| Texture inputs and lighting | [Coordinates and transforms](./features/texture-coordinates.mdx), [lightmaps](./features/lightmaps.mdx), [environment lighting](/docs/api-reference/anari/pbr-environment) |
+
+See [glTF material conversion](/docs/api-reference/gltf/gltf-materials) for importer contracts
+and [ANARI materials](/docs/api-reference/anari/anari-materials-and-lights) for retained parameters.
+
 ## What Is a Material?
 
 A material describes how a surface responds to light and how its surface colors
@@ -37,7 +61,7 @@ This distinction helps keep material APIs focused:
   - `lambertMaterial`
   - `phongMaterial`
   - `gouraudMaterial`
-  - a possible future `unlitMaterial`
+  - `unlitMaterial`
   - a possible future `normalMaterial` used for debugging or inspection
 - Not-just-material concerns:
   - wireframe rendering
@@ -57,6 +81,7 @@ The current built-in lighting materials target different tradeoffs:
 
 | Material | Surface Model | Relative Cost | Typical Use |
 | --- | --- | --- | --- |
+| [`unlitMaterial`](/docs/api-reference/shaders/shader-modules/unlit-material) | Preserves supplied RGBA without lighting | No lighting dependencies or material uniforms | Raster imagery, diagrams, UI surfaces, and baked artwork |
 | `lambertMaterial` | Diffuse-only matte shading with no specular highlights | Fastest of the lit stock materials | Clean visualizations, extruded solids, and scenes where glossy highlights would add noise |
 | `phongMaterial` | Simple specular model with per-fragment lighting | Fast | General-purpose lit surfaces when you want readable highlights without full PBR complexity |
 | `gouraudMaterial` | Simple specular model with per-vertex lighting | Faster than `phongMaterial`, but lower quality | Large or simple meshes where lower cost matters more than highlight accuracy |
@@ -64,13 +89,36 @@ The current built-in lighting materials target different tradeoffs:
 
 In practice:
 
+- choose `unlitMaterial` when colors must remain independent of lights and the camera
 - choose `lambertMaterial` when you want a matte result and the cleanest visual output
 - choose `phongMaterial` when you want simple shiny highlights and solid default quality
 - choose `gouraudMaterial` when you want a cheaper approximation of Phong-style lighting
 - choose `pbrMaterial` when the scene or asset needs material textures and more realistic shading
 
-All four stock material families also support `unlit?: boolean` when you want
+The four lit stock material families also support `unlit?: boolean` when you want
 to keep the same material family on a model but skip lighting calculations.
+
+## Dedicated unlit shaders
+
+Add `unlitMaterial` to a `Model`'s shader modules and call
+`unlitMaterial_getColor(surfaceColor)` with RGBA in either WGSL or GLSL. It returns
+that color unchanged. The application still owns texture sampling, color factors,
+alpha blending, and output color-space conversion.
+
+Unlike a lit material with `{unlit: true}`, the dedicated module includes no light
+uniforms, material bindings, normal calculations, or lighting dependencies. This
+reduces the shader/resource requirements for surfaces that are always unlit;
+it does not promise a specific rendering speedup. Application-owned normal
+attributes and varyings must be removed separately if unused.
+
+Use the existing `unlit` flag when lighting needs to toggle without changing the
+shader. Selecting the dedicated module instead requires a matching shader/pipeline
+variant. Its common Phong/Gouraud evaluation functions support shader migration;
+include only one material family at a time. Existing PBR and glTF unlit materials
+continue to use their own flag and texture processing.
+
+See the [`unlitMaterial` reference](/docs/api-reference/shaders/shader-modules/unlit-material)
+for shader signatures and the resource contract.
 
 ## Materials In The Binding Model
 
@@ -83,3 +131,9 @@ In the current luma.gl convention:
 That means a material is the natural owner of per-surface uniform buffers,
 textures, and samplers that can be reused across many draws, while scene-level
 state like lighting stays outside the material itself.
+
+## Explore engine features
+
+Learn each material aspect and rendering capability through its API and a live sample in the
+[engine feature guide](/docs/api-guide/engine/features). glTF core and extension mappings are
+described within each feature page; the Materials section is organized by shading capability rather than source format.

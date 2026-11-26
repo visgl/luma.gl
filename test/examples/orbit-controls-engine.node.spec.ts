@@ -18,11 +18,11 @@ const ORBIT_CONTROL_EXAMPLES = [
   'examples/experimental/text-space-crawl/app.ts',
   'examples/experimental/volumetric-fire-forge/app.ts',
   'examples/experimental/webxr-kaleidoscope/app.ts',
-  'examples/showcase/scene/app.ts',
-  'examples/showcase/scene/playground.ts',
+  'examples/anari/scenes/app.ts',
+  'examples/anari/scenes/playground.ts',
   'examples/showcase/gaussian-splats/app.ts',
   'examples/showcase/globe/app.ts',
-  'examples/showcase/gltf/gltf-catalog-app.ts',
+  'examples/gltf/asset-studio/gltf-catalog-app.ts',
   'examples/showcase/lightstorm-megacity/app.ts',
   'examples/showcase/packet-spraying/app.ts',
   'examples/showcase/tempest-ocean/app.ts',
@@ -42,14 +42,9 @@ describe('engine-owned orbit camera controls', () => {
     expect(implementationSource).toContain('export type OrbitControlsProps');
   });
 
-  test('retains the previous experimental import as an engine compatibility alias', () => {
-    const compatibilitySource = readRepositoryFile(
-      'modules/experimental/src/controls/orbit-controls.ts'
-    );
-
-    expect(compatibilitySource).toContain("export {OrbitControls} from '@luma.gl/engine'");
-    expect(compatibilitySource).toContain('OrbitControlsProps, OrbitPosition');
-    expect(compatibilitySource).not.toContain('export class OrbitControls');
+  test('keeps OrbitControls out of the experimental controls entry point', () => {
+    const experimental = readRepositoryFile('modules/engine/src/experimental/controls/index.ts');
+    expect(experimental).not.toContain('OrbitControls');
   });
 
   test.each(ORBIT_CONTROL_EXAMPLES)('%s imports orbit controls from the engine', examplePath => {

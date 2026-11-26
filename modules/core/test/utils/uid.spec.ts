@@ -1,4 +1,4 @@
-import {uid} from '@luma.gl/core/utils/uid';
+import {uid} from '../../src/api/utils/uid';
 import {expect, it} from 'vitest';
 
 it('Utils#uid', () => {

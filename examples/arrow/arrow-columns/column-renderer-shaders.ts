@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type ShaderLayout} from '@luma.gl/core';
-import {type ShaderModule} from '@luma.gl/shadertools';
+import {type ShaderModule} from '@luma.gl/shaders';
 
 export const COLUMN_VERTEX_COUNT = 54;
 export const CELL_GEOMETRY_POINT_COUNT = 7;

@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {waterMaterial} from '../../../shadertools/src/modules/lighting/water-material/water-material';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
+import {waterMaterial} from '../../../shaders/src/modules/lighting/water-material/water-material';
 import {Buffer, Texture, type ShaderLayout} from '../../../core/src';
 import {DynamicBuffer, DynamicTexture, MaterialFactory, type TextureBindingSource} from '../../src';
 

@@ -168,7 +168,7 @@ const weightTrack = new AnimationTrack({
 });
 ```
 
-glTF-specific accessor decoding, morph-target discovery, and animation-channel parsing belong to `@luma.gl/gltf`. The engine helpers only operate on decoded numeric arrays and generic engine geometry.
+glTF-specific accessor decoding, morph-target discovery, and animation-channel parsing belong to `@luma.gl/engine/gltf`. The engine helpers only operate on decoded numeric arrays and generic engine geometry.
 
 ## Related Documentation
 

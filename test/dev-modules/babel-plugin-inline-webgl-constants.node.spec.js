@@ -39,7 +39,7 @@ const TEST_CASES = [
   {
     title: 'remove import',
     input: `
-      import {GL} from '@luma.gl/constants';
+      import {GL} from '@luma.gl/core/webgl-constants';
       const x = GL.FLOAT;
     `,
     output: 'const x = 5126;'
@@ -47,11 +47,11 @@ const TEST_CASES = [
   {
     title: 'remove import specifier',
     input: `
-      import {GL, UnknownItem} from '@luma.gl/constants';
+      import {GL, UnknownItem} from '@luma.gl/core/webgl-constants';
       const x = GL.FLOAT;
     `,
     output: `
-      import { UnknownItem } from '@luma.gl/constants';
+      import { UnknownItem } from '@luma.gl/core/webgl-constants';
       const x = 5126;
     `
   }

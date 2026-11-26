@@ -1,3 +1,4 @@
+import '../../examples/example-infobox.css';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
 import {describe, expect, test, vi} from 'vitest';
@@ -16,11 +17,11 @@ import {
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
-import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
+import {makeGltfSettingsSchema} from '../../examples/gltf/asset-studio/app';
 import {
   formatGLTFCrowdInfo,
   isAnimatedGLTFCatalogModel
-} from '../../examples/showcase/gltf/gltf-catalog-app';
+} from '../../examples/gltf/asset-studio/gltf-catalog-app';
 import {
   type EffectState,
   flattenEffectSettings,
@@ -259,9 +260,10 @@ describe('ExampleSettingsPanelManager', () => {
   });
 
   test.each([
-    'cinematic',
-    'light'
-  ] as const)('renders shared source code with the inherited %s visual theme', async appearance => {
+    ['cinematic', undefined],
+    ['light', undefined],
+    ['cinematic', ['gltf/features/app.ts']]
+  ] as const)('renders shared source code with the inherited %s visual theme', async (appearance, sourcePaths) => {
     const exampleWindow = window as Window & {website?: boolean};
     const previousWebsiteState = exampleWindow.website;
     const previousUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -278,6 +280,7 @@ describe('ExampleSettingsPanelManager', () => {
       panelManager = new ExamplePanelManager({
         panel: makeExampleTabbedPanel({
           id: 'themed-source-tabs',
+          sourcePaths,
           title: 'Themed example source',
           panels: [
             makeHtmlCustomPanel({
@@ -299,6 +302,11 @@ describe('ExampleSettingsPanelManager', () => {
       sourceButton.click();
 
       await vi.waitFor(() => {
+        if (sourcePaths)
+          expect(fetchMock).toHaveBeenCalledWith(
+            '/example-assets/gltf/features/app.ts',
+            expect.objectContaining({signal: expect.any(AbortSignal)})
+          );
         const sourceViewer = document.querySelector<HTMLElement>('[data-example-source-viewer]');
         expect(sourceViewer?.textContent).toContain('export const sourceTheme = true;');
         expect(sourceViewer?.style.background).toContain('var(--luma-example-surface');
@@ -1035,3 +1043,52 @@ function getRequiredElement<T extends Element>(root: ParentNode, selector: strin
   }
   return element;
 }
+
+describe('standalone infobox panels', () => {
+  test.each([
+    'Lightmap Baking',
+    'PBR Shadows',
+    'Prefiltered environment'
+  ])('keeps the %s title visible while collapsing and refreshing content', async title => {
+    const shell = document.createElement('aside');
+    shell.className = 'luma-example-infobox';
+    shell.dataset.infoBoxAppearance = 'cinematic';
+    shell.innerHTML = makeExamplePanelHostHtml();
+    const host = shell.querySelector<HTMLElement>('[data-example-panel-host]')!;
+    host.dataset.examplePanelTitle = title;
+    host.id = `collapse-${title.replaceAll(' ', '-')}`;
+    document.body.append(shell);
+    const manager = new ExamplePanelManager({
+      hostId: host.id,
+      panel: makeHtmlCustomPanel({
+        id: 'collapse-content',
+        title: 'Info',
+        html: '<input aria-label="Retained value" value="retained">'
+      })
+    });
+    try {
+      manager.mount();
+      const button = host.querySelector<HTMLButtonElement>('button[aria-expanded]')!;
+      expect(button.textContent).toContain(title);
+      expect(getComputedStyle(button).color).toBe(EXAMPLE_THEME_TOKENS.cinematic.text);
+      expect(button.querySelector('[aria-hidden]')?.checkVisibility()).toBe(true);
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      button.click();
+      await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('false'));
+      const input = host.querySelector<HTMLInputElement>('input')!;
+      expect(input.checkVisibility()).toBe(false);
+      manager.refresh();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      button.click();
+      await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('true'));
+      const refreshedInput = host.querySelector<HTMLInputElement>('input')!;
+      expect(refreshedInput.checkVisibility()).toBe(true);
+      expect(refreshedInput.value).toBe('retained');
+      expect(button.textContent).toContain(title);
+    } finally {
+      manager.finalize();
+      expect(host.childElementCount).toBe(0);
+      shell.remove();
+    }
+  });
+});

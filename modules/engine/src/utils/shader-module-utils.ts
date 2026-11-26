@@ -7,7 +7,7 @@ import {
   getGLSLUniformBlocks,
   getShaderModuleUniformBlockName,
   type ShaderModule
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 type AnyShaderLayout = ShaderLayout | ComputeShaderLayout;
 

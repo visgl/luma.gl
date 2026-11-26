@@ -5,6 +5,11 @@ import {GPUCoreCompilerAnatomy} from '@site/src/components/docs/gpu-core-compile
 
 <GPUCoreDocsTabs active="concepts" />
 
+This page covers the lower-level `GPUCommandGraph` lifecycle. For named runtime inputs and
+operation-defined results, start with [Getting started with graphs](/docs/api-reference/graph/getting-started).
+Reusable `GPUGraph.compile(device)` creates a program whose `prepare()` resolves each invocation;
+the fixed shapes described below apply to the resulting command graph.
+
 ## Overview
 
 GPU Core separates reusable GPU operations from application lifecycle. Contributors declare logical

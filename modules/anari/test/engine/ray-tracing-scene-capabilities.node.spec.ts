@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {getRayTracingSceneCapabilities} from '@luma.gl/anari';
+import {expect, it} from 'vitest';
+
+it('reports implemented software tracing separately from planned material transport', () => {
+  const capabilities = getRayTracingSceneCapabilities({type: 'webgpu'});
+  expect(capabilities.supported).toBe(true);
+  expect(capabilities.hardwareRayTracing).toBe(false);
+  expect(capabilities.transport).toEqual({
+    maximumDiffuseBounces: 8,
+    modes: ['diffuse', 'pbr'],
+    specular: true,
+    transmission: true,
+    explicitEmitterSampling: true,
+    emitterSelection: ['uniform', 'power']
+  });
+  expect(capabilities.materialTextures).toBe(true);
+  expect(capabilities.texturedAlphaMask).toBe(true);
+  expect(capabilities.alphaModes).toEqual(['OPAQUE', 'MASK']);
+  expect(capabilities.debugViews).toEqual([
+    'color',
+    'normal',
+    'cameraDistance',
+    'identity',
+    'history',
+    'variance'
+  ]);
+  expect(getRayTracingSceneCapabilities({type: 'webgl'}).supported).toBe(false);
+  expect(getRayTracingSceneCapabilities({type: 'null'}).supported).toBe(false);
+});

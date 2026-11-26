@@ -7,7 +7,7 @@ import {
   createBloomCompositeShaderPass,
   createSSRCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -25,9 +25,10 @@ import {
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
-import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/experimental';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+} from '@luma.gl/graph/gpu-core';
+import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/anari';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

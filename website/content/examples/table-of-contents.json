@@ -11,6 +11,8 @@
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
       "showcase/instancing",
+      "showcase/the-river-remembers",
+      "showcase/canyon-echo",
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -27,19 +29,65 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
-      },
-      "showcase/gltf",
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
       }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "glTF standard features",
+    "items": [
+      "gltf/asset-studio",
+      "gltf/clearcoat",
+      "gltf/sheen",
+      "gltf/iridescence",
+      "gltf/anisotropy",
+      "tutorials/hello-gltf",
+      "deck/gltf-interactivity"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "glTF proposed features",
+    "items": [
+      "showcase/gltf-audio",
+      "showcase/gltf-audio-graph",
+      "showcase/gltf-audio-environment",
+      "showcase/gltf-billboard",
+      "showcase/gltf-lightmap",
+      "showcase/gltf-area-lights",
+      "showcase/gltf-scatter"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "ANARI",
+    "items": [
+      "anari/scenes"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Physics",
+    "items": [
+      "experimental/gpu-sphere-world",
+      "experimental/gpu-sphere-scale",
+      "experimental/gpu-pool",
+      "experimental/gpu-rigid-body-world",
+      "experimental/newtons-cradle",
+      "experimental/dominoes",
+      "experimental/wrecking-ball",
+      "experimental/physics-stress",
+      "experimental/physics-batch",
+      "gltf/physics",
+      "gltf/authored-scene-stress",
+      "gltf/marionette-theater"
     ]
   },
   {
     "type": "category",
     "label": "WebGPU",
     "items": [
+      "experimental/vector-observatory",
       "showcase/lightstorm-megacity",
       "showcase/llm-network",
       "experimental/lucim-volume-lab",
@@ -90,9 +138,11 @@
         "label": "GPGPU Graph",
         "items": [
           "v10/gpgpu",
+          "v10/gpu-simple-graph",
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
           "experimental/gpu-graph-explorer",
+          "experimental/gpu-timeseries",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
           {
@@ -133,6 +183,9 @@
             "id": "experimental/gpu-parquet-constellation",
             "label": "GPU Parse: Parquet Constellation"
           },
+          "experimental/gpu-geometry",
+          "experimental/gpu-pointcloud",
+          "experimental/gpu-pointcloud-octree",
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
         ]
@@ -156,6 +209,10 @@
       },
       "api/multi-canvas",
       "api/cubemap",
+      "api/prefiltered-environment",
+      "api/pbr-shadows",
+      "api/lightmap-baking",
+      "api/baked-cornell-box",
       "api/texture-3d",
       {
         "type": "doc",
@@ -169,6 +226,16 @@
         "label": "Texture Video"
       },
       "api/render-bundles"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Three.js",
+    "items": [
+      "three/galactic-vortex",
+      "experimental/offroad-buggy",
+      "three/deck-layers",
+      "experimental/three"
     ]
   },
   {
@@ -187,12 +254,11 @@
       "tutorials/hello-triangle-geometry",
       "tutorials/hello-cube",
       "tutorials/lighting",
-      "tutorials/hello-gltf",
       "tutorials/two-cubes",
       "tutorials/instanced-cubes",
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
-      "tutorials/shader-hooks",
+      "tutorials/shader-injection",
       "tutorials/shader-plugins",
       "tutorials/slang-shaders",
       "tutorials/slang-particles",
@@ -254,33 +320,12 @@
   },
   {
     "type": "category",
-    "label": "Visual Effects - deck.gl v10",
-    "items": [
-      "deck/weather",
-      "deck/soft-shadows",
-      "deck/globe-clouds",
-      "deck/city-scene",
-      "deck/flow-particles",
-      "deck/point-glow",
-      "deck/hdr-night-lighting",
-      "deck/global-illumination",
-      "deck/light-shafts",
-      "deck/ambient-occlusion",
-      "deck/depth-of-field",
-      "deck/sketch-edges",
-      "deck/scene-buffers",
-      "deck/pattern-fills",
-      "deck/styled-paths"
-    ]
-  },
-  {
-    "type": "category",
     "label": "GPU Graph Layers - deck.gl v10",
     "items": [
       {
         "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
+        "id": "deck/gpu-spatial-taxi",
+        "label": "GPU Project + GPU Spatial: Taxi Explorer"
       },
       {
         "type": "doc",

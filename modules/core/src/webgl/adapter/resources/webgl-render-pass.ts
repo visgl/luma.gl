@@ -1,0 +1,440 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {writesStencil} from '../../../api/adapter/types/stencil-state';
+import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core/types';
+import type {
+  Bindings,
+  BindingsByGroup,
+  Buffer,
+  RenderBundle,
+  RenderPassBindingOptions,
+  RenderPassDrawOptions,
+  RenderPipeline,
+  UniformValue,
+  VertexArray
+} from '../../../index';
+import {
+  flattenBindingsByGroup,
+  normalizeBindingsByGroup,
+  RenderPass,
+  RenderPassProps,
+  RenderPassParameters,
+  log
+} from '../../../index';
+import {WebGLDevice} from '../webgl-device';
+import {GL, GLParameters} from '../../../webgl-constants/index';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
+import {setGLParameters} from '../../context/parameters/unified-parameter-api';
+import {WEBGLQuerySet} from './webgl-query-set';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
+import {WEBGLBuffer} from './webgl-buffer';
+import {WEBGLRenderPipeline} from './webgl-render-pipeline';
+import {WEBGLTransformFeedback} from './webgl-transform-feedback';
+import {getGLDrawMode} from '../helpers/webgl-topology-utils';
+import {withDeviceAndGLParameters} from '../converters/device-parameters';
+
+/** WebGL snapshot fields preserve independent stencil faces and disabled scissor bounds. */
+export type WebGLRenderPassParameters = RenderPassParameters & {
+  /** Whether scissorRect is enabled when restoring a snapshot. */
+  scissorTest?: boolean;
+  /** Back-face reference accompanying stencilReference in a snapshot. */
+  stencilBackReference?: number;
+};
+
+export class WEBGLRenderPass extends RenderPass {
+  readonly device: WebGLDevice;
+  readonly handle = null;
+
+  /** Parameters that should be applied before each draw call */
+  glParameters: GLParameters = {};
+
+  /** Pipeline used by subsequent draw commands. */
+  pipeline: WEBGLRenderPipeline | null = null;
+
+  /** Complete binding set used by subsequent draw commands. */
+  bindings: Bindings = {};
+  private bindingsPipeline: WEBGLRenderPipeline | null = null;
+
+  /** Vertex array used by subsequent draw commands. */
+  vertexArray: VertexArray | null = null;
+
+  constructor(device: WebGLDevice, props: RenderPassProps) {
+    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
+      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
+      throw new Error('clip-control-webgl');
+    }
+    super(device, props);
+    this.device = device;
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+    const isDefaultFramebuffer = !webglFramebuffer || webglFramebuffer.handle === null;
+
+    if (isDefaultFramebuffer) {
+      // Treat an explicit wrapper around the default framebuffer the same as the
+      // implicit default path so draw buffer and viewport state stay valid.
+      device.getDefaultCanvasContext()._resizeDrawingBufferIfNeeded();
+    }
+
+    // If no viewport is provided, apply reasonably defaults
+    let viewport: NumberArray4 | undefined;
+    if (!props?.parameters?.viewport) {
+      if (!isDefaultFramebuffer && webglFramebuffer) {
+        // Set the viewport to the size of the framebuffer
+        const {width, height} = webglFramebuffer;
+        viewport = [0, 0, width, height];
+      } else {
+        // Instead of using our own book-keeping, we can just read the values from the WebGL context
+        const [width, height] = device.getDefaultCanvasContext().getDrawingBufferSize();
+        viewport = [0, 0, width, height];
+      }
+    }
+
+    // TODO - do parameters (scissorRect) affect the clear operation?
+    this.device.pushState();
+    this.setParameters({viewport, ...this.props.parameters});
+
+    // Specify mapping of draw buffer locations to color attachments
+    if (!isDefaultFramebuffer && webglFramebuffer?.colorAttachments.length) {
+      const drawBuffers = webglFramebuffer.colorAttachments.map((_, i) => GL.COLOR_ATTACHMENT0 + i);
+      this.device.gl.drawBuffers(drawBuffers);
+    } else if (isDefaultFramebuffer) {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
+      this.device.gl.drawBuffers([GL.BACK]);
+    }
+
+    // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
+    this.clear();
+
+    if (this.props.timestampQuerySet && this.props.beginTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.beginTimestampIndex);
+    }
+  }
+
+  end(): void {
+    if (this.destroyed) {
+      return;
+    }
+    if (this.props.timestampQuerySet && this.props.endTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
+    }
+    if (this.props.stencilStoreOp === 'discard' && !this.props.stencilReadOnly) {
+      const {gl} = this.device;
+      const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+      const view = framebuffer?.depthStencilAttachment;
+      if (framebuffer?.handle) {
+        if ((view?.props.format ?? view?.texture.format)?.includes('stencil')) {
+          gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL_ATTACHMENT]);
+        }
+      } else if (gl.getContextAttributes()?.stencil) {
+        gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL]);
+      }
+    }
+    this.device.popState();
+    // should add commands to CommandEncoder.
+    this.destroy();
+  }
+
+  pushDebugGroup(groupLabel: string): void {}
+  popDebugGroup(): void {}
+  insertDebugMarker(markerLabel: string): void {}
+
+  // beginOcclusionQuery(queryIndex: number): void;
+  // endOcclusionQuery(): void;
+
+  /** @throws Always throws because WebGL does not support render bundles. */
+  executeBundles(_bundles: Iterable<RenderBundle>): void {
+    throw new Error('Render bundles are only supported in WebGPU');
+  }
+
+  /**
+   * Maps RenderPass parameters to GL parameters
+   */
+  setParameters(parameters: WebGLRenderPassParameters = {}): void {
+    const glParameters: GLParameters = {...this.glParameters};
+
+    // Framebuffers are specified using parameters in WebGL
+    glParameters.framebuffer = this.props.framebuffer || null;
+
+    if (this.props.depthReadOnly) {
+      glParameters.depthMask = !this.props.depthReadOnly;
+    }
+
+    if (this.props.stencilReadOnly) {
+      glParameters.stencilMask = 0;
+    }
+
+    glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
+
+    if (this.props.clipDepthMode) {
+      glParameters[GL.CLIP_DEPTH_MODE_EXT] =
+        this.props.clipDepthMode === 'zero-to-one'
+          ? GL.ZERO_TO_ONE_EXT
+          : GL.NEGATIVE_ONE_TO_ONE_EXT;
+    }
+
+    // Map the four renderpass parameters to WebGL parameters
+    if (parameters.viewport) {
+      glParameters.viewport = parameters.viewport.slice(0, 4) as NumberArray4;
+      if (parameters.viewport.length === 6) {
+        glParameters.depthRange = parameters.viewport.slice(4) as [number, number];
+      }
+    }
+    if (parameters.scissorRect === null) {
+      glParameters.scissorTest = false;
+    } else if (parameters.scissorRect) {
+      glParameters.scissorTest = parameters.scissorTest ?? true;
+      glParameters.scissor = [...parameters.scissorRect] as NumberArray4;
+    }
+    if (parameters.blendConstant) {
+      glParameters.blendColor = [...parameters.blendConstant] as NumberArray4;
+    }
+    if (parameters.stencilReference !== undefined) {
+      glParameters[GL.STENCIL_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_BACK_REF] =
+        parameters.stencilBackReference ?? parameters.stencilReference;
+    }
+
+    this.glParameters = glParameters;
+
+    setGLParameters(this.device.gl, glParameters);
+  }
+
+  override getParameters(): WebGLRenderPassParameters {
+    const get = (parameter: number) => this.device.gl.getParameter(parameter);
+    return {
+      viewport: [...get(GL.VIEWPORT), ...get(GL.DEPTH_RANGE)] as NumberArray6,
+      scissorRect: [...get(GL.SCISSOR_BOX)] as NumberArray4,
+      scissorTest: get(GL.SCISSOR_TEST) as boolean,
+      blendConstant: [...get(GL.BLEND_COLOR)] as NumberArray4,
+      stencilReference: get(GL.STENCIL_REF) as number,
+      stencilBackReference: get(GL.STENCIL_BACK_REF) as number
+    };
+  }
+
+  setPipeline(pipeline: RenderPipeline): void {
+    this.pipeline = pipeline as WEBGLRenderPipeline;
+  }
+
+  setBindings(bindings: Bindings | BindingsByGroup, _options?: RenderPassBindingOptions): void {
+    if (!this.pipeline) {
+      throw new Error('Call setPipeline() before setBindings()');
+    }
+    this.bindings = flattenBindingsByGroup(
+      normalizeBindingsByGroup(this.pipeline.shaderLayout, bindings)
+    );
+    this.bindingsPipeline = this.pipeline;
+  }
+
+  setVertexArray(vertexArray: VertexArray): void {
+    this.vertexArray = vertexArray;
+  }
+
+  draw(options: RenderPassDrawOptions): boolean {
+    const pipeline = this.pipeline;
+    const vertexArray = this.vertexArray;
+    if (!pipeline) {
+      throw new Error('Call setPipeline() before draw()');
+    }
+    if (pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== pipeline) {
+      throw new Error('RenderPass.setBindings() must be called after setPipeline() before draw()');
+    }
+
+    pipeline._syncLinkStatus();
+    const {
+      parameters = pipeline.props.parameters,
+      topology = pipeline.props.topology,
+      vertexCount,
+      indexCount,
+      instanceCount,
+      isInstanced = false,
+      firstVertex = 0,
+      firstIndex = 0,
+      transformFeedback,
+      uniforms = pipeline.uniforms
+    } = options;
+
+    if (this.props.stencilReadOnly && writesStencil(parameters)) {
+      throw new Error('A stencil-writing pipeline cannot draw in a stencil read-only pass.');
+    }
+
+    const glDrawMode = getGLDrawMode(topology);
+    const isIndexed = Boolean(vertexArray?.indexBuffer);
+    if (indexCount !== undefined && !isIndexed) {
+      // indexCount requires an index buffer on the vertex array; attribute-less draws must use vertexCount
+      throw new Error('RenderPass.draw(): indexCount without index buffer');
+    }
+    const glIndexType = (vertexArray?.indexBuffer as WEBGLBuffer)?.glIndexType;
+    // Indexed draws start at `firstIndex` like WebGPU drawIndexed(); WebGL has no base vertex, so `firstVertex` only applies to non-indexed draws
+    const indexByteOffset = firstIndex * (glIndexType === GL.UNSIGNED_INT ? 4 : 2);
+    const indexedDrawCount = indexCount ?? vertexCount ?? 0;
+
+    if (pipeline.linkStatus !== 'success') {
+      log.info(2, `RenderPipeline:${pipeline.id}.draw() aborted - waiting for shader linking`)();
+      return false;
+    }
+    if (!pipeline._areTexturesRenderable(this.bindings)) {
+      log.info(2, `RenderPipeline:${pipeline.id}.draw() aborted - textures not yet loaded`)();
+      return false;
+    }
+
+    this.device.gl.useProgram(pipeline.handle);
+    vertexArray?.bindBeforeRender(this);
+
+    const webglTransformFeedback = transformFeedback as WEBGLTransformFeedback | undefined;
+    if (webglTransformFeedback) {
+      webglTransformFeedback.begin(topology);
+    }
+
+    pipeline._applyBindings(this.bindings, {disableWarnings: pipeline.props.disableWarnings});
+    pipeline._applyUniforms(uniforms as Record<string, UniformValue>);
+
+    withDeviceAndGLParameters(this.device, parameters, this.glParameters, () => {
+      if (isIndexed && isInstanced) {
+        this.device.gl.drawElementsInstanced(
+          glDrawMode,
+          indexedDrawCount,
+          glIndexType,
+          indexByteOffset,
+          instanceCount || 0
+        );
+      } else if (isIndexed) {
+        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, indexByteOffset);
+      } else if (isInstanced) {
+        this.device.gl.drawArraysInstanced(
+          glDrawMode,
+          firstVertex,
+          vertexCount || 0,
+          instanceCount || 0
+        );
+      } else {
+        this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
+      }
+
+      if (webglTransformFeedback) {
+        webglTransformFeedback.end();
+      }
+    });
+
+    vertexArray?.unbindAfterRender(this);
+    return true;
+  }
+
+  /** @throws Always throws because WebGL does not expose indirect drawing. */
+  drawIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
+  }
+
+  /** @throws Always throws because WebGL does not expose indirect drawing. */
+  drawIndexedIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
+  }
+
+  beginOcclusionQuery(queryIndex: number): void {
+    const webglQuerySet = this.props.occlusionQuerySet as WEBGLQuerySet;
+    webglQuerySet?.beginOcclusionQuery();
+  }
+
+  override endOcclusionQuery(): void {
+    const webglQuerySet = this.props.occlusionQuerySet as WEBGLQuerySet;
+    webglQuerySet?.endOcclusionQuery();
+  }
+
+  // PRIVATE
+
+  /**
+   * Optionally clears depth, color and stencil buffers based on parameters
+   */
+  protected clear(): void {
+    const glParameters: GLParameters = {...this.glParameters};
+
+    let clearMask = 0;
+
+    if (this.props.clearColors) {
+      this.props.clearColors.forEach((color, drawBufferIndex) => {
+        if (color) {
+          this.clearColorBuffer(drawBufferIndex, color);
+        }
+      });
+    }
+
+    if (this.props.clearColor !== false && this.props.clearColors === undefined) {
+      clearMask |= GL.COLOR_BUFFER_BIT;
+      glParameters.clearColor = this.props.clearColor;
+    }
+    if (this.props.clearDepth !== false) {
+      clearMask |= GL.DEPTH_BUFFER_BIT;
+      glParameters.clearDepth = this.props.clearDepth;
+    }
+
+    if (clearMask !== 0) {
+      // Temporarily set any clear "colors" and call clear
+      withGLParameters(this.device.gl, glParameters, () => {
+        this.device.gl.clear(clearMask);
+      });
+    }
+    if (!this.props.stencilReadOnly && this.props.clearStencil !== false) {
+      withGLParameters(
+        this.device.gl,
+        {
+          ...glParameters,
+          clearStencil: this.props.clearStencil,
+          stencilMask: 0xffffffff,
+          scissorTest: false
+        },
+        () => this.device.gl.clear(GL.STENCIL_BUFFER_BIT)
+      );
+    }
+  }
+
+  /**
+   * WebGL2 - clear a specific color buffer
+   */
+  protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
+    withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
+      // Method selection per OpenGL ES 3 docs
+      switch (value.constructor) {
+        case Int8Array:
+        case Int16Array:
+        case Int32Array:
+          this.device.gl.clearBufferiv(GL.COLOR, drawBuffer, value);
+          break;
+        case Uint8Array:
+        case Uint8ClampedArray:
+        case Uint16Array:
+        case Uint32Array:
+          this.device.gl.clearBufferuiv(GL.COLOR, drawBuffer, value);
+          break;
+        case Float32Array:
+        case Float16Array:
+          this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value as Float32Array);
+          break;
+        default:
+          throw new Error('invalid color');
+      }
+    });
+  }
+
+  /*
+  clearDepthStencil() {
+      case GL.DEPTH:
+        this.device.gl.clearBufferfv(GL.DEPTH, 0, [value]);
+        break;
+
+      case GL_STENCIL:
+        this.device.gl.clearBufferiv(GL.STENCIL, 0, [value]);
+        break;
+
+      case GL.DEPTH_STENCIL:
+        const [depth, stencil] = value;
+        this.device.gl.clearBufferfi(GL.DEPTH_STENCIL, 0, depth, stencil);
+        break;
+
+      default:
+        assert(false, ERR_ARGUMENTS);
+    }
+  });
+  */
+}

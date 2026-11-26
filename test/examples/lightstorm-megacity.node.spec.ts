@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {makeDeferredPointLightBufferData} from '@luma.gl/experimental';
-import {Matrix4} from '@math.gl/core';
+import {makeDeferredPointLightBufferData} from '@luma.gl/anari';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   LIGHTSTORM_GRID_SPACING,
   LIGHTSTORM_INSTANCE_WORD_COUNT,

@@ -1,6 +1,6 @@
 import React, {type ReactNode, useEffect, useId, useState} from 'react';
 
-import {runGPUWorkgroupReductionBenchmark, type GPUWorkgroupReductionBenchmarkPathReport, type GPUWorkgroupReductionBenchmarkReport} from '@luma.gl/gpgpu/gpu-core';
+import {runGPUWorkgroupReductionBenchmark, type GPUWorkgroupReductionBenchmarkPathReport, type GPUWorkgroupReductionBenchmarkReport} from '@luma.gl/graph/gpu-core';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';

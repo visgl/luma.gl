@@ -5,7 +5,7 @@ import {SpatialBenchmark} from '@site/src/components/docs/spatial-benchmark';
 
 <ExperimentalDocsTabs active="geospatial" />
 
-The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU
+The `@luma.gl/graph/geospatial` entry point provides small, side-effect-free WebGPU
 algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output
 projection and distance kernels plus a flat grid index and point-query workflow:
 
@@ -26,8 +26,8 @@ and nearest-linestring APIs, grid index, and point query consume fixed-width fla
 objects in V1.
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUHaversineDistance} from '@luma.gl/experimental/geospatial';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUHaversineDistance} from '@luma.gl/graph/geospatial';
 
 const graph = new GPUCommandGraph(device);
 
@@ -311,4 +311,4 @@ generate their candidate dispatch dimensions on the GPU.
 - [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [GPUGridIndex](/docs/api-reference/experimental/gpu-core/gpu-grid-index)
 - [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision)
-- [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
+- [`fp64arithmetic`](/docs/api-reference/shaders/shader-modules/fp64-arithmetic)

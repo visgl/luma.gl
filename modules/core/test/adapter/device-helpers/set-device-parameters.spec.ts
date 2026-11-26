@@ -3,11 +3,16 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 import {Parameters} from '@luma.gl/core';
-import {GL, GLParameters} from '@luma.gl/webgl/constants';
-import {setDeviceParameters, getGLParameters, resetGLParameters, WebGLDevice} from '@luma.gl/webgl';
+import {GL, GLParameters} from '@luma.gl/core/webgl-constants';
+import {
+  setDeviceParameters,
+  getGLParameters,
+  resetGLParameters,
+  WebGLDevice
+} from '@luma.gl/core/webgl';
 
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 

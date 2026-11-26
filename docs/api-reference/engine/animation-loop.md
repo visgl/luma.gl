@@ -29,7 +29,7 @@ for interaction, animation, resize, asynchronous results, or another visible sta
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {AnimationLoop} from '@luma.gl/engine';
 
 const animationLoop = new AnimationLoop({

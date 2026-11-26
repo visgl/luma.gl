@@ -1,0 +1,5191 @@
+{
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.036749000000000004,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.2999999523162842,
+            "gpuMilliseconds": 0.040998,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.27481799999999995,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.14090899999999998,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.035332,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.062871,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 386.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.3999998569488525,
+        "p95": 1.6000001430511475
+      },
+      "encodingMilliseconds": {
+        "p50": 0.3000001907348633,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.01683,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.017334,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.12024100000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.06149400000000001,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.016292,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.02554,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 3,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 289.90000009536743,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.0999999046325684,
+        "p95": 1.2999999523162842
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.017748,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.028083,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.20115600000000003,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000028610229492,
+            "gpuMilliseconds": 0.082539,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022206999999999998,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.045372,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 3,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 271.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.1000001430511475,
+        "p95": 1.2999999523162842
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.015667999999999998,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.017209,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.11111800000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.062161999999999995,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.014374000000000001,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.025373,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 292.59999990463257,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.0999999046325684,
+        "p95": 1.3999998569488525
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.014663,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.016082,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.11020200000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.054619,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.013376,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.023624000000000003,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 305.2999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1,
+        "p95": 1.2000000476837158
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sleeping",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.014414,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.017625000000000002,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.13061399999999998,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.060873,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.015876,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.027372,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 3,
+          "maximumAcceptedSteps": 3,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 291.60000014305115,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1,
+        "p95": 1.1000001430511475
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 0,
+      "bodyStepsPerSecond": 0,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "sleeping",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            0
+          ],
+          "activeBodies": [
+            0,
+            0
+          ],
+          "touchedBuckets": [
+            0,
+            0
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            0
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            32
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.017082,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.019287000000000002,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.2999999523162842,
+            "gpuMilliseconds": 0.136074,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.06566399999999999,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.017457,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.027332,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 386.10000014305115,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.5,
+        "p95": 1.8000001907348633
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 2870.8790757491706,
+      "bodyStepsPerSecond": 91868.13042397346,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            11
+          ],
+          "activeBodies": [
+            0,
+            352
+          ],
+          "touchedBuckets": [
+            0,
+            99
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            28160
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            120
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.016832,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023372,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.17186,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.2999999523162842,
+            "gpuMilliseconds": 0.072325,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.018872,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.035705,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 24,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 288.59999990463257,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 3.299999952316284
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 238723.92568200958,
+      "bodyStepsPerSecond": 7639165.621824306,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            1024
+          ],
+          "activeBodies": [
+            0,
+            32768
+          ],
+          "touchedBuckets": [
+            0,
+            8583
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            2621440
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            8224
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.015710000000000002,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.017374999999999998,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.128491,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.06099500000000001,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.0155,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.024707,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 24,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 279.2000000476837,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.4000000953674316,
+        "p95": 4.400000095367432
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.39999985694885254
+      },
+      "worldStepsPerSecond": 187437.38052326415,
+      "bodyStepsPerSecond": 5997996.176744453,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            1024
+          ],
+          "activeBodies": [
+            0,
+            32768
+          ],
+          "touchedBuckets": [
+            0,
+            8583
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            2621440
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            8224
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.013832,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.015957,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.112953,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.058161000000000004,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.014331,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023582,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 291.30000019073486,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.1000001430511475,
+        "p95": 1.4000000953674316
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 3609.6718123407463,
+      "bodyStepsPerSecond": 115509.49799490388,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            11
+          ],
+          "activeBodies": [
+            0,
+            352
+          ],
+          "touchedBuckets": [
+            0,
+            99
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            28160
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            120
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020375,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.022499,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.2999999523162842,
+            "gpuMilliseconds": 0.153162,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.072496,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.019373,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.032208,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 11,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 300.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.1999998092651367,
+        "p95": 1.6000001430511475
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 3460.2649361751287,
+      "bodyStepsPerSecond": 110728.47795760412,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            11
+          ],
+          "activeBodies": [
+            0,
+            352
+          ],
+          "touchedBuckets": [
+            0,
+            99
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            28160
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            120
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "wake-storm",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.014042,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.01575,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.11037100000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.055289000000000005,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.013456,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022207,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 0,
+        "activeBodies": 0,
+        "instanceSummary": {
+          "enabled": 1024,
+          "active": 0,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 24,
+          "maximumAcceptedSteps": 24,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 289.90000009536743,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.1000001430511475,
+        "p95": 3.299999952316284
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 250398.97024530303,
+      "bodyStepsPerSecond": 8012767.047849697,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "wake-storm",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 0,
+          "activeBodies": 0,
+          "touchedBuckets": 0,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 0,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 32,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            0,
+            1024
+          ],
+          "activeBodies": [
+            0,
+            32768
+          ],
+          "touchedBuckets": [
+            0,
+            8583
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            0,
+            2621440
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            32,
+            8224
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.019416,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.116287,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.246618,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.06875099999999999,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.022501000000000004,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.164454,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 1,
+        "activeBodies": 33,
+        "instanceSummary": {
+          "enabled": 1,
+          "active": 1,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 802.2999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.4000000953674316,
+        "p95": 1.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 701.0834858523359,
+      "bodyStepsPerSecond": 23135.755033127083,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 1,
+          "activeBodies": 33,
+          "touchedBuckets": 7,
+          "visitedContacts": 53,
+          "claimedContacts": 2,
+          "journaledContacts": 55,
+          "bodySnapshotBytes": 2640,
+          "contactSnapshotBytes": 22880,
+          "allocatorSnapshotBytes": 700,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            1,
+            1
+          ],
+          "activeBodies": [
+            33,
+            33
+          ],
+          "touchedBuckets": [
+            7,
+            7
+          ],
+          "visitedContacts": [
+            5,
+            95
+          ],
+          "claimedContacts": [
+            0,
+            5
+          ],
+          "journaledContacts": [
+            5,
+            95
+          ],
+          "bodySnapshotBytes": [
+            2640,
+            2640
+          ],
+          "contactSnapshotBytes": [
+            2080,
+            39520
+          ],
+          "allocatorSnapshotBytes": [
+            100,
+            1180
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020581,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.139076,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.25611,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.071871,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020665,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.232697,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 264,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 121,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 5.245208740234375e-06,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 183.20000004768372,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.4000000953674316,
+        "p95": 1.6000001430511475
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 5590.8513561988775,
+      "bodyStepsPerSecond": 184498.09475456298,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 264,
+          "touchedBuckets": 56,
+          "visitedContacts": 424,
+          "claimedContacts": 16,
+          "journaledContacts": 440,
+          "bodySnapshotBytes": 21120,
+          "contactSnapshotBytes": 183040,
+          "allocatorSnapshotBytes": 5376,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            264,
+            264
+          ],
+          "touchedBuckets": [
+            56,
+            56
+          ],
+          "visitedContacts": [
+            40,
+            760
+          ],
+          "claimedContacts": [
+            0,
+            40
+          ],
+          "journaledContacts": [
+            40,
+            760
+          ],
+          "bodySnapshotBytes": [
+            21120,
+            21120
+          ],
+          "contactSnapshotBytes": [
+            16640,
+            316160
+          ],
+          "allocatorSnapshotBytes": [
+            576,
+            9216
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023580999999999998,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.139663,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.27357400000000004,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.07349900000000001,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023167,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.22424199999999997,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 264,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 121,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 4.649162292480469e-06,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 183.90000009536743,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.5,
+        "p95": 1.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 5590.851347730245,
+      "bodyStepsPerSecond": 184498.09447509807,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 264,
+          "touchedBuckets": 56,
+          "visitedContacts": 424,
+          "claimedContacts": 16,
+          "journaledContacts": 440,
+          "bodySnapshotBytes": 21120,
+          "contactSnapshotBytes": 183040,
+          "allocatorSnapshotBytes": 5376,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            264,
+            264
+          ],
+          "touchedBuckets": [
+            56,
+            56
+          ],
+          "visitedContacts": [
+            40,
+            760
+          ],
+          "claimedContacts": [
+            0,
+            40
+          ],
+          "journaledContacts": [
+            40,
+            760
+          ],
+          "bodySnapshotBytes": [
+            21120,
+            21120
+          ],
+          "contactSnapshotBytes": [
+            16640,
+            316160
+          ],
+          "allocatorSnapshotBytes": [
+            576,
+            9216
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.017916,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.116038,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.24761900000000003,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.068245,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.021417000000000002,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.159951,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 1,
+        "activeBodies": 33,
+        "instanceSummary": {
+          "enabled": 1,
+          "active": 1,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 184.39999985694885,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.3000001907348633,
+        "p95": 1.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 743.2432324673854,
+      "bodyStepsPerSecond": 24527.02667142372,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 1,
+          "activeBodies": 33,
+          "touchedBuckets": 7,
+          "visitedContacts": 53,
+          "claimedContacts": 2,
+          "journaledContacts": 55,
+          "bodySnapshotBytes": 2640,
+          "contactSnapshotBytes": 22880,
+          "allocatorSnapshotBytes": 700,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            1,
+            1
+          ],
+          "activeBodies": [
+            33,
+            33
+          ],
+          "touchedBuckets": [
+            7,
+            7
+          ],
+          "visitedContacts": [
+            5,
+            95
+          ],
+          "claimedContacts": [
+            0,
+            5
+          ],
+          "journaledContacts": [
+            5,
+            95
+          ],
+          "bodySnapshotBytes": [
+            2640,
+            2640
+          ],
+          "contactSnapshotBytes": [
+            2080,
+            39520
+          ],
+          "allocatorSnapshotBytes": [
+            100,
+            1180
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.017834,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.116412,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.24769900000000003,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.06687,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.020499,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.155078,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 1,
+        "activeBodies": 33,
+        "instanceSummary": {
+          "enabled": 1,
+          "active": 1,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 179.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.3999998569488525,
+        "p95": 1.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 596.5292830850698,
+      "bodyStepsPerSecond": 19685.466341807303,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 1,
+          "activeBodies": 33,
+          "touchedBuckets": 7,
+          "visitedContacts": 53,
+          "claimedContacts": 2,
+          "journaledContacts": 55,
+          "bodySnapshotBytes": 2640,
+          "contactSnapshotBytes": 22880,
+          "allocatorSnapshotBytes": 700,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            1,
+            1
+          ],
+          "activeBodies": [
+            33,
+            33
+          ],
+          "touchedBuckets": [
+            7,
+            7
+          ],
+          "visitedContacts": [
+            5,
+            95
+          ],
+          "claimedContacts": [
+            0,
+            5
+          ],
+          "journaledContacts": [
+            5,
+            95
+          ],
+          "bodySnapshotBytes": [
+            2640,
+            2640
+          ],
+          "contactSnapshotBytes": [
+            2080,
+            39520
+          ],
+          "allocatorSnapshotBytes": [
+            100,
+            1180
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 8,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 120,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "pile",
+        "pairsPerBody": 16,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023748000000000002,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.139452,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.26781699999999997,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.069999,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.021458,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.22273900000000002,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 264,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 121,
+          "maximumAcceptedSteps": 121,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 4.5299530029296875e-06,
+        "maximumBallisticError": 0,
+        "passed": true,
+        "scope": "Finite states and world equivalence only; no dense-contact accuracy claim."
+      },
+      "setupMilliseconds": 180,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.4000000953674316,
+        "p95": 1.5999999046325684
+      },
+      "encodingMilliseconds": {
+        "p50": 0.20000004768371582,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 5655.526926428609,
+      "bodyStepsPerSecond": 186632.3885721441,
+      "beforeReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 8,
+        "bodies": 264,
+        "worldBufferBytes": 4011048,
+        "graphTransientBytes": 3168,
+        "residentBytes": 4022828,
+        "checkpointBytes": 8612,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "pile",
+      "workSummary": {
+        "samples": 110,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 264,
+          "touchedBuckets": 56,
+          "visitedContacts": 424,
+          "claimedContacts": 16,
+          "journaledContacts": 440,
+          "bodySnapshotBytes": 21120,
+          "contactSnapshotBytes": 183040,
+          "allocatorSnapshotBytes": 5376,
+          "residentInstances": 8,
+          "residentBodies": 264,
+          "contactCapacity": 4096
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            264,
+            264
+          ],
+          "touchedBuckets": [
+            56,
+            56
+          ],
+          "visitedContacts": [
+            40,
+            760
+          ],
+          "claimedContacts": [
+            0,
+            40
+          ],
+          "journaledContacts": [
+            40,
+            760
+          ],
+          "bodySnapshotBytes": [
+            21120,
+            21120
+          ],
+          "contactSnapshotBytes": [
+            16640,
+            316160
+          ],
+          "allocatorSnapshotBytes": [
+            576,
+            9216
+          ],
+          "residentInstances": [
+            8,
+            8
+          ],
+          "residentBodies": [
+            264,
+            264
+          ],
+          "contactCapacity": [
+            4096,
+            4096
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 128,
+        "bodies": 32,
+        "activeFraction": 0.0625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.3000001907348633,
+            "gpuMilliseconds": 0.022790000000000005,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.070498,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.156785,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.073579,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.023084,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020249,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 826.8000001907349,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.6000001430511475
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 6240.249619268589,
+      "bodyStepsPerSecond": 199687.98781659486,
+      "beforeReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency128",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 128,
+          "residentBodies": 4096,
+          "contactCapacity": 8192
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            128,
+            128
+          ],
+          "residentBodies": [
+            4096,
+            4096
+          ],
+          "contactCapacity": [
+            8192,
+            8192
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 128,
+        "bodies": 32,
+        "activeFraction": 0.0625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.02229,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.07495399999999999,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.148992,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.069909,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022872,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.022122000000000003,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 200.79999995231628,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.3999998569488525
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 6633.49914983019,
+      "bodyStepsPerSecond": 212271.97279456607,
+      "beforeReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency128",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 128,
+          "residentBodies": 4096,
+          "contactCapacity": 8192
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            128,
+            128
+          ],
+          "residentBodies": [
+            4096,
+            4096
+          ],
+          "contactCapacity": [
+            8192,
+            8192
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 128,
+        "bodies": 32,
+        "activeFraction": 0.0625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022705999999999997,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.072871,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.15465600000000002,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.07320100000000002,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022581,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.021082,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 201.40000009536743,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.7000000476837158
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 6134.969298232687,
+      "bodyStepsPerSecond": 196319.01754344598,
+      "beforeReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 128,
+        "bodies": 4096,
+        "worldBufferBytes": 9493416,
+        "graphTransientBytes": 49152,
+        "residentBytes": 9550920,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency128",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 128,
+          "residentBodies": 4096,
+          "contactCapacity": 8192
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            128,
+            128
+          ],
+          "residentBodies": [
+            4096,
+            4096
+          ],
+          "contactCapacity": [
+            8192,
+            8192
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 512,
+        "bodies": 32,
+        "activeFraction": 0.015625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.027791000000000003,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.10053700000000002,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.20203500000000002,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.39999985694885254,
+            "gpuMilliseconds": 0.09466300000000004,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.029538000000000002,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.029498,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 915.1999998092651,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.7000000476837158,
+        "p95": 1.7999999523162842
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 4848.4848624965925,
+      "bodyStepsPerSecond": 155151.51559989096,
+      "beforeReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency512",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 512,
+          "residentBodies": 16384,
+          "contactCapacity": 32768
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            512,
+            512
+          ],
+          "residentBodies": [
+            16384,
+            16384
+          ],
+          "contactCapacity": [
+            32768,
+            32768
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 512,
+        "bodies": 32,
+        "activeFraction": 0.015625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022081,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.075163,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.166114,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.071826,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.021792,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.021416,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 255.70000004768372,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.3999998569488525
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 6399.999975585938,
+      "bodyStepsPerSecond": 204799.99921875002,
+      "beforeReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency512",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 512,
+          "residentBodies": 16384,
+          "contactCapacity": 32768
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            512,
+            512
+          ],
+          "residentBodies": [
+            16384,
+            16384
+          ],
+          "contactCapacity": [
+            32768,
+            32768
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 512,
+        "bodies": 32,
+        "activeFraction": 0.015625,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.055788000000000004,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.20682,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.3653970000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.18161200000000002,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.052497,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.058707,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 247,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.5999999046325684,
+        "p95": 1.7000000476837158
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 5221.932170143854,
+      "bodyStepsPerSecond": 167101.82944460333,
+      "beforeReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 512,
+        "bodies": 16384,
+        "worldBufferBytes": 37972392,
+        "graphTransientBytes": 196608,
+        "residentBytes": 38177352,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency512",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 512,
+          "residentBodies": 16384,
+          "contactCapacity": 32768
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            512,
+            512
+          ],
+          "residentBodies": [
+            16384,
+            16384
+          ],
+          "contactCapacity": [
+            32768,
+            32768
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.0078125,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.2999997138977051,
+            "gpuMilliseconds": 0.022955999999999997,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.079329,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.3000001907348633,
+            "gpuMilliseconds": 0.14441400000000001,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.07137,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022664,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.024456,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 385.30000019073486,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2999999523162842,
+        "p95": 1.4000000953674316
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.40000009536743164
+      },
+      "worldStepsPerSecond": 6230.529544111483,
+      "bodyStepsPerSecond": 199376.94541156746,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency1024",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.0078125,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.023457,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.10000014305114746,
+            "gpuMilliseconds": 0.081287,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.19999980926513672,
+            "gpuMilliseconds": 0.13911800000000002,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.20000004768371582,
+            "gpuMilliseconds": 0.07154100000000001,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020331,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.023039999999999998,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 286.2999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.5999999046325684
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.39999985694885254
+      },
+      "worldStepsPerSecond": 6220.8398641206895,
+      "bodyStepsPerSecond": 199066.87565186206,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency1024",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.0078125,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 8,
+      "profile": {
+        "groups": {
+          "scheduling": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020666,
+            "nodes": 5
+          },
+          "broadPhase": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.072784,
+            "nodes": 5
+          },
+          "solver": {
+            "cpuEncodeMilliseconds": 0.3000001907348633,
+            "gpuMilliseconds": 0.129281,
+            "nodes": 17
+          },
+          "rollback": {
+            "cpuEncodeMilliseconds": 0.09999990463256836,
+            "gpuMilliseconds": 0.068704,
+            "nodes": 13
+          },
+          "other": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.020248,
+            "nodes": 3
+          },
+          "contacts": {
+            "cpuEncodeMilliseconds": 0,
+            "gpuMilliseconds": 0.022583,
+            "nodes": 3
+          }
+        },
+        "gpuTimestampsAvailable": true,
+        "computePasses": 46,
+        "graphNodes": 46,
+        "declaredCommands": 63,
+        "annotatedNodes": 46,
+        "scope": "One additional instrumented step after quality sampling. GPU timings are unavailable without timestamp-query; copy timings are CPU-only. This sample is excluded from latency and throughput."
+      },
+      "scheduler": {
+        "activeInstances": 8,
+        "activeBodies": 256,
+        "instanceSummary": {
+          "enabled": 8,
+          "active": 8,
+          "sharedFailures": 0,
+          "minimumAcceptedSteps": 0,
+          "maximumAcceptedSteps": 61,
+          "rejectedSteps": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 272.2000000476837,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 1.2000000476837158,
+        "p95": 1.3000001907348633
+      },
+      "encodingMilliseconds": {
+        "p50": 0.2999999523162842,
+        "p95": 0.3000001907348633
+      },
+      "worldStepsPerSecond": 6700.167525593895,
+      "bodyStepsPerSecond": 214405.36081900465,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75944360,
+        "graphTransientBytes": 393216,
+        "residentBytes": 76345928,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "workScope": "Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.",
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.",
+      "suiteCase": "residency1024",
+      "workSummary": {
+        "samples": 50,
+        "last": {
+          "activeInstances": 8,
+          "activeBodies": 256,
+          "touchedBuckets": 72,
+          "visitedContacts": 0,
+          "claimedContacts": 0,
+          "journaledContacts": 0,
+          "bodySnapshotBytes": 20480,
+          "contactSnapshotBytes": 0,
+          "allocatorSnapshotBytes": 96,
+          "residentInstances": 1024,
+          "residentBodies": 32768,
+          "contactCapacity": 65536
+        },
+        "ranges": {
+          "activeInstances": [
+            8,
+            8
+          ],
+          "activeBodies": [
+            256,
+            256
+          ],
+          "touchedBuckets": [
+            72,
+            72
+          ],
+          "visitedContacts": [
+            0,
+            0
+          ],
+          "claimedContacts": [
+            0,
+            0
+          ],
+          "journaledContacts": [
+            0,
+            0
+          ],
+          "bodySnapshotBytes": [
+            20480,
+            20480
+          ],
+          "contactSnapshotBytes": [
+            0,
+            0
+          ],
+          "allocatorSnapshotBytes": [
+            96,
+            96
+          ],
+          "residentInstances": [
+            1024,
+            1024
+          ],
+          "residentBodies": [
+            32768,
+            32768
+          ],
+          "contactCapacity": [
+            65536,
+            65536
+          ]
+        }
+      }
+    }
+  ],
+  "aggregation": "Per-instance status rows and per-frame work samples summarized as counts and ranges; all latency, quality and stage-profile results retained.",
+  "sourceCommit": "c842bd734564a746b031b0c97c4c5fe460dd2b6c"
+}

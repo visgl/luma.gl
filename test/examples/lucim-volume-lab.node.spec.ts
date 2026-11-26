@@ -8,7 +8,7 @@ import {
   makeVolumeLabDataset
 } from '../../examples/experimental/lucim-volume-lab/volume-lab-data';
 
-describe('LuCIM Volume Lab synthetic fixture', () => {
+describe('GPU Volume Algorithms Volume Lab synthetic fixture', () => {
   test('creates deterministic CT-like density, physical metadata, and independent validity', () => {
     const first = makeVolumeLabDataset();
     const second = makeVolumeLabDataset();
