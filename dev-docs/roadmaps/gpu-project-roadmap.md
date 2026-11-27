@@ -42,15 +42,18 @@ P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
 [#3402](https://github.com/visgl/luma.gl/pull/3402):
 `ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
 that borrows source batches and materializes derived positions/validity in a caller-owned graph.
-P.9a.4 (inline rendering/deck adapter) is proposed separately in
-[#3403](https://github.com/visgl/luma.gl/pull/3403), not assumed landed here.
+This change implements the bounded Cartesian consumer in P.9a.4: `ProjectionRenderTransform` and
+`GPUProjectedPointLayer` share the retained CPU transform and adaptive GPU plan, explicit frame
+conversion, invalid-row rejection and borrowed chunk ownership. Altitude and map/globe views are
+rejected, not silently interpreted. Real-consumer/cross-vendor measurements are next in P.8a.2;
+geographic viewport integration is separate P.9a.5 coverage. Neither needs a new native formula.
 [#3404](https://github.com/visgl/luma.gl/pull/3404) landed P.8a.2a's production table benchmark
 foundation. [#3405](https://github.com/visgl/luma.gl/pull/3405) covers **all P.5 items** and extends that benchmark through 4M
 rows, with separate GPU-resident and CPU-round-trip ratios. Native Lambert/Albers are explicit
 Float32 optimizations; high-precision adaptive coverage remains the default. P.5b qualifies bounded
 spherical gnomonic/orthographic domains, not geometry clipping or new native kernels.
 This P.8 change adds fixed-arithmetic routing measurements, opt-in indexed routing, conservative
-domain partitions and an exact-capture execution selector. Inline-render evidence waits for #3403;
+domain partitions and an exact-capture execution selector. Inline-render evidence is the next measurement step;
 external-vendor captures remain pending rather than inferred from the local adapter.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
@@ -241,7 +244,7 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.8a.1 — alpha.13 CPU/GPU rebaseline | Evidence: scalar, reusable-output, contiguous flat and strided/column CPU APIs against inline/materialized GPU paths | Upgraded math.gl and existing harness; no new kernels required | Separate preparation, fitting/compile, first-use, allocation, upload/readback and resident execution; match domains, validity, accuracy and consumer work; record version/API/layout | Landed in #3401 | Complete |
 | P.8a.2 — Consumer, routing and cross-vendor evidence | Evidence umbrella; implementation slices below | P.8a.1; P.9a.3/P.9a.4 for consumers | Reproducible workloads, transfer boundaries and precision budgets; no extrapolation from one device | Partial | — |
 | P.8a.2a — Table-consumer transfer and batching evidence | Evidence, not optimization: production CPU/GPU table adapters; resident, upload/project and round-trip paths | Landed P.9a.3 | Row/batch-size sweeps through 4M, valid/invalid rows, explicit memory/setup; separate resident-data and CPU-memory comparisons at a fixed error budget | Landed in #3404/#3405; local device only | Complete |
-| P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | **Blocked on #3403**; this PR targets master, by explicit request | Medium |
+| P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | Pending measurements | Medium |
 | P.8a.2c — Routing attribution and cross-vendor qualification | Evidence, not optimization: fixed-fit lookup-only and full-program measurements | Existing harness and available hardware | Report routing/build/storage costs separately; qualify precision on each adapter before timing | Implemented runner; local capture and reproducible external-vendor protocol; **external captures pending** | Partial evidence |
 | P.8b.1 — Indexed patch routing | **Optimization only**: opt-in conservative stackless index, same evaluator and first-match semantics | P.8a.2 routing evidence | Indexed/scan paths agree at boundaries and invalid seams; include routing storage/build costs and measured benefit | Implemented; default remains scan; per-workload/device qualification required | Complete implementation |
 | P.8b.2 — Discontinuous-domain partitioning | Coverage: explicit disjoint branches, conservative disk cells and source-segment clipping | Caller-declared domains, independent forward/inverse providers | Strict per-patch guards preserve gaps; unresolved curved cells are rejected, not sampled; inverse plans are independent | Implemented bounded point/segment coverage; exact curved clipping and polygon reconstruction remain caller-owned | Complete bounded scope |
@@ -249,8 +252,9 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.9a.1 — Provider preparation boundary | Caller-prepared synchronous transforms without an engine-catalogue import | Adaptive compiler and program contracts | Eager/preloaded providers share double-single, inverse-domain and failure contracts; bundle/no-implicit-loading tests pass | Landed in #3399; alpha.13 migration in #3400 | Complete |
 | P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Landed in #3401 | Complete |
 | P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: ProjectionTableTransform and GPUProjectionTable expose explicit CPU/GPU execution | P.9a.2 and P.3d.2 for metadata inputs | Preserved/empty batches, offsets, source identity, explicit masks, batch-atomic CPU failures, borrowed inputs, caller submission and explicit output encodings; UTM CPU/hardware regressions | Landed in #3402 | Complete |
-| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Proposed in #3403 | Medium–large |
-| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider and table boundaries implemented; inline consumer remains | — |
+| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU picking and the same planned transform in a real Cartesian point consumer | P.9a.2; P.3d.2 for coordinate metadata | Explicit origin/axes/units before float32 narrowing; masked rows discarded; CPU/materialized/inline comparison and lifecycle regression | Implemented for 2D non-geospatial Cartesian views; altitude/map/globe explicitly rejected | Medium–large |
+| P.9a.5 — Geographic viewport adapter | Coverage/interoperability, **not optimization only**: deck map/globe common-space and altitude contracts | P.9a.4 | Explicit CRS-to-deck mapping, viewport rebasing/invalidation and altitude policy; compare CPU/GPU picking across zoom and seams without implicit inverse guesses | Planned | Medium–large |
+| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.5, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Table and bounded Cartesian inline consumers implemented; geographic views remain P.9a.5 | — |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -275,12 +279,13 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    GPU materialization is not a synchronous CPU `ProjectionInstance`. No native-kernel or
    3D/datum/grid coverage is implied. Bulk failures remain different from GPU row validity;
    benchmark adapters explicitly compact validated rows and propagate coordinate exceptions.
-2. **P.9a.3 landed; P.8a.2a measures it. Next land P.9a.4, then P.8a.2b/P.8a.2c.** The table
+2. **P.8a.2a measures the table consumer. The Cartesian adapter enables P.8a.2b.** The table
    consumer preserves batches and uses explicit CPU/GPU selection without hidden uploads/readbacks.
    CPU exceptions abort the current batch rather than exposing a bulk API's partially committed prefix;
-   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. Add the inline workload.
-   The deck adapter must distinguish CRS projected coordinates from deck common space and give
-   altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
+   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. The inline point
+   layer subtracts destination origins before narrowing, discards invalid rows and supplies retained
+   CPU picking metadata. P.9a.5 must map projected coordinates into geographic deck common space;
+   the current Cartesian adapter rejects map/globe views and altitude rather than implying 3D support.
    No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
    Axis-swap fixtures alone are not production consumers.
 3. **P.5 landed in #3405; P.8 mechanisms are implemented here without changing defaults.** The

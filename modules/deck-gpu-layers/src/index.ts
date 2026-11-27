@@ -11,6 +11,11 @@ export {GPULineLayer, type GPULineLayerProps} from './layers/gpu-line-layer';
 export {GPUIconLayer, type GPUIconLayerProps} from './layers/gpu-icon-layer';
 export {GPUArcLayer, type GPUArcLayerProps} from './layers/gpu-arc-layer';
 export {GPUPointCloudLayer, type GPUPointCloudLayerProps} from './layers/gpu-point-cloud-layer';
+export {
+  GPUProjectedPointLayer,
+  type GPUProjectedPointLayerProps,
+  type GPUProjectedPointPickingInfo
+} from './layers/gpu-projected-point-layer';
 export {GPUColumnLayer, type GPUColumnLayerProps} from './layers/gpu-column-layer';
 export {GPUGridCellLayer, type GPUGridCellLayerProps} from './layers/gpu-grid-cell-layer';
 export {
