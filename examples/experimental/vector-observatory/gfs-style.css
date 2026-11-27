@@ -1,0 +1,12 @@
+/* luma.gl
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+ */
+.gfs-playback { position: absolute; z-index: 2; bottom: 42px; left: 40px; right: 40px; display: flex; align-items: center; gap: 12px; color: #b4c5ce; font: 12px system-ui; }
+.gfs-playback input { flex: 1; min-width: 60px; accent-color: #7ef5db; }
+.gfs-playback button, .gfs-playback select { border: 1px solid #355565; border-radius: 5px; padding: 8px; background: #102331; color: #e0f1f6; }
+.gfs-playback button:disabled { opacity: .4; }
+.gfs-results { width: 100%; border-collapse: collapse; font: 11px/1.6 system-ui; }
+.gfs-results th, .gfs-results td { text-align: right; border-bottom: 1px solid #355565; padding: 5px; }
+.gfs-results th:first-child, .gfs-results td:first-child { text-align: left; }
+@media (max-width: 600px) { .gfs-playback { left: 12px; right: 12px; gap: 6px; flex-wrap: wrap; } .gfs-playback label { display: none; } .gfs-playback input { width: 35%; } .gfs-playback button, .gfs-playback select { padding: 6px; font-size: 11px; } }

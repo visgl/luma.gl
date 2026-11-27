@@ -72,3 +72,76 @@ uses wrapped bilinear sampling to avoid a visible texture seam. Earth imagery re
 
 Scientific capabilities and remaining qualification work are tracked in the
 [advection roadmap](../../../dev-docs/roadmaps/advection-roadmap.md).
+
+### Archived GFS trajectory lab
+
+Select **GFS Atlantic · archived model winds**, or open `gfs.html` on the same
+example server. Both pages are included in the standalone and website builds.
+The regional map shows the pinned 2016-11-20 00:00–06:00 UTC NOAA GFS 10 m wind
+archive, decoded from Mapbox's quantized PNGs. It is model data, not observations.
+The Info panel retains the data license and links the exact source revision.
+
+RK45 advances four reference releases plus 1,024 interior background particles
+on the GPU. A fixed ring captures 73 common horizons at five-minute intervals;
+one explicit trajectory readback supplies Canvas2D playback. The map shows the full regional
+field and trajectories, while desktop insets magnify each qualified release.
+White dashed tracks connect the independently refined CPU hourly samples. Error
+is compared at those common hourly horizons only. Playback does not integrate
+particles or read live GPU buffers, and is bounded to the archived six hours.
+
+Pause, scrub, change playback speed, or replay the retained release. **Export CSV**
+builds a native Apache Arrow table and passes it directly to loaders.gl `CSVWriter`,
+saving the four reference identities with UTC timestamps, elapsed seconds,
+longitude/latitude, age, generation and hourly reference error. Empty error cells
+mean no independent reference exists at that five-minute horizon. Graph and Trace
+inspect actual RK45 encodings; Diagnostics includes termination counts and per-release
+error. The history and tracer remain alive for inspection until page teardown.
+
+**Accuracy / cost** runs a warmup followed by two samples of seven variants:
+baseline, tighter/looser local tolerance, shorter steps, 2°/3° decimation, and a
+frozen initial snapshot. The second pass reverses order. GPU time measures compute;
+wall time includes setup, counter synchronization, capture and final readback.
+Four-particle timing measures latency, not large-release throughput. JSON export
+includes backend metadata, source revision, settings, errors, work counts and
+memory. Cancellation keeps completed samples. Grid decimation and frozen snapshots
+change the sampled field and are not pure integrator comparisons.
+
+Reproduce the same sweep without the UI:
+
+```bash
+LUMA_TEST_BROWSER_BENCHMARKS=true yarn test-headless --no-coverage --silent=false modules/graph/test/experimental/simulation/scientific-flow-gfs-benchmark.spec.ts
+```
+
+A local Apple/Metal run found 0.64 m maximum hourly error at the baseline settings,
+2.23 m with 60-second steps, and identical results for 0.1/1/10 m tolerances while
+the 300-second cap dominated. Smaller steps can accumulate more float32 error;
+tighter local tolerance alone does not establish better total trajectory accuracy.
+The 2°/3° decimations differed from the original-grid reference by about 31/57 km;
+freezing the initial field differed by 113 km. These are fixture-specific sensitivity
+measurements, not meteorological accuracy or hardware-independent performance claims.
+
+### loaders.gl writer integration
+
+The export lazily loads `apache-arrow`, `encodeText` from `@loaders.gl/core`, and
+`CSVWriter` from `@loaders.gl/tables/csv`. It passes a bare native Arrow table to
+the writer, with Uint32 identities/generations, Float64 physical quantities and
+nullable Float64 reference errors. `time_utc` is explicit ISO-UTC UTF-8 text, so
+CSV consumers do not need an external schema to recover its timezone. No custom
+CSV quoting or serialization remains.
+
+The integration audit against loaders.gl 5.0.1 and current upstream identified
+two follow-ups, neither of which blocks this export:
+
+- [`encodeTableAsText`](https://github.com/visgl/loaders.gl/blob/master/modules/core/src/lib/api/encode-table.ts)
+  still accepts the legacy structural `Table` type instead of the writer's inferred
+  data type. Aligning table convenience APIs with `WriterDataType` would make native
+  Arrow calls type-safe. `encodeText` already has the correct generic contract.
+- [`CSVWriter`](https://github.com/visgl/loaders.gl/blob/master/modules/tables/src/csv/lib/encoders/encode-csv.ts)
+  formats Arrow timestamp values as the epoch numbers returned by Arrow row access.
+  A documented, opt-in schema-aware timestamp formatting policy would allow ISO-UTC
+  output without preparing a UTF-8 column. Existing numeric behavior should remain
+  compatible, with tests for timestamp units, nulls, precision and timezone metadata.
+
+The published writer already quotes commas, quotes, CR/LF and Unicode correctly;
+this example does not need an escaping workaround. Batched writing is outside this
+bounded 292-row export and is not a prerequisite for it.

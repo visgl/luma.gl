@@ -152,6 +152,7 @@ const browserBenchmarkTestPatterns = [
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
 
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
+  'modules/graph/test/experimental/simulation/scientific-flow-gfs-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',
