@@ -28,6 +28,11 @@
 
 - **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
 
+- `GPUTable.detachBatches()` and `packBatches()` give each view of a buffer shared by both
+  batch groups its own reference, so the groups can be destroyed in any order.
+  `GPUData.transferBufferOwnership()` now rejects a target that already owns a reference.
+  [GPUData ownership](./api-reference/graph/gpu-data.mdx#ownership)
+
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4
