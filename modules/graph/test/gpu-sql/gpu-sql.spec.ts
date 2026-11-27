@@ -647,6 +647,86 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
+it('GPUSQL evaluates joined expressions and runtime parameters across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const leftArrow = createGPUSQLArrowTable();
+  const rightBatches = [
+    arrow.tableFromArrays({
+      identifier: Uint32Array.of(40),
+      score: arrow.vectorFromArray([null], new arrow.Float32())
+    }).batches[0],
+    arrow.tableFromArrays({
+      identifier: Uint32Array.of(20),
+      score: arrow.vectorFromArray([2.5], new arrow.Float32())
+    }).batches[0]
+  ];
+  const rightArrow = new arrow.Table(rightBatches);
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, leftArrow),
+    ownership: 'owned'
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, rightArrow),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  const rightByKey = new Map(Array.from(rightArrow, row => [row.identifier, row.score]));
+  try {
+    for (const joinType of ['LEFT', 'INNER'] as const) {
+      const query = context.query(
+        `SELECT COALESCE(a.score, :fallback) AS adjusted, t.fare + a.score AS total,
+                t.identifier, a.score AS score
+         FROM trips AS t ${joinType} JOIN accounts AS a ON t.identifier = a.identifier`,
+        {parameters: {fallback: 0}}
+      );
+      const result = query.compile(new GPUCommandGraph(device));
+      try {
+        for (const fallback of [7, -2]) {
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder, {fallback});
+          device.submit(encoder.finish());
+          const output = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            dictionaries: result.dictionaries,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          const expected = Array.from(leftArrow)
+            .filter(row => joinType === 'LEFT' || rightByKey.has(row.identifier))
+            .map(row => {
+              const score = rightByKey.get(row.identifier) ?? null;
+              return [
+                score ?? fallback,
+                score === null || row.fare == null ? null : row.fare + score,
+                row.identifier,
+                score
+              ];
+            });
+          expect(output.schema.fields.map(field => field.name)).toEqual([
+            'adjusted',
+            'total',
+            'identifier',
+            'score'
+          ]);
+          expect(output.batches.map(batch => batch.numRows)).toEqual(
+            joinType === 'LEFT' ? [2, 0, 3] : [1, 0, 1]
+          );
+          expect(
+            Array.from(output, row => [row.adjusted, row.total, row.identifier, row.score])
+          ).toEqual(expected);
+        }
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
 it('GPU SQL and typed joins project nullable packed right vectors with and without staging', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

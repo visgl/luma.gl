@@ -334,6 +334,7 @@ export function compileGPUDataFrameQuery<
           derivedViews,
           controls,
           output: mask,
+          length: mask.length,
           plan
         });
       }
@@ -430,7 +431,8 @@ function validateGPUQueryBatchCapacity<T extends GPUTypeMap>(
 /** Rejects predicates that exceed portable device storage-buffer binding capacity. */
 function validateGPUQueryBindingCapacity(
   plan: GPUQueryExpressionShaderPlan,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  writesMask = true
 ): void {
   const sourceCount = plan.columns.reduce(
     (bindingCount, column) => bindingCount + 1 + (column.nullable ? 1 : 0),
@@ -440,7 +442,8 @@ function validateGPUQueryBindingCapacity(
     (bindingCount, output) => bindingCount + 1 + (output.nullable ? 1 : 0),
     0
   );
-  const bindingCount = sourceCount + outputCount + (plan.controls.length > 0 ? 1 : 0) + 1;
+  const bindingCount =
+    sourceCount + outputCount + (plan.controls.length > 0 ? 1 : 0) + Number(writesMask);
   if (bindingCount > graph.device.limits.maxStorageBuffersPerShaderStage) {
     throw new Error('GPUDataFrame filter exceeds the available WebGPU storage-buffer bindings');
   }
@@ -731,9 +734,83 @@ export function addGPUDataFrameResultPredicate<T extends GPUTypeMap>(
       derivedViews: new Map(),
       controls,
       output: chunk,
+      length: chunk.length,
       plan
     });
   }
+}
+
+/** Projects derived values over an already produced, source-aligned table. @internal */
+export function addGPUDataFrameResultProjection<T extends GPUTypeMap>(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  id: string,
+  source: GPUDataFrame<T>,
+  columns: readonly (keyof T & string)[],
+  derivedColumns: readonly GPUDataFrameDerivedColumn[],
+  ownedVectors: GPUVector[]
+) {
+  const plan = makeGPUQueryExpressionShaderPlan(source, [], derivedColumns, columns);
+  validateGPUQueryBindingCapacity(plan, graph, false);
+  const lengths = source.batches.map(batch => batch.numRows);
+  const outputs = plan.outputs.map(output => {
+    const values = createGPUQueryOutputVector(
+      graph.device,
+      `${id}-value-${output.index}`,
+      lengths,
+      output.format,
+      false,
+      true
+    );
+    ownedVectors.push(values);
+    const validity =
+      output.nullable && lengths.length
+        ? createGPUQueryOutputVector(
+            graph.device,
+            `${id}-validity-${output.index}`,
+            lengths,
+            'uint32'
+          )
+        : undefined;
+    if (validity) ownedVectors.push(validity);
+    return {plan: output, values, validity};
+  });
+  const sourceViews = importGPUQuerySourceViews(graph, source, plan, id);
+  const derivedViews = importGPUQueryDerivedViews(graph, outputs, id);
+  const controls =
+    plan.controls.length && source.numRows
+      ? createTransientView(
+          graph,
+          id + '-controls',
+          'uint32',
+          plan.controls.length * 2,
+          Buffer.STORAGE | Buffer.COPY_DST
+        )
+      : undefined;
+  if (controls) addGPUQueryControlUpload(graph, id, controls, plan);
+  for (const [batchIndex, length] of lengths.entries()) {
+    if (!length) continue;
+    addGPUQueryPredicatePass(graph, {
+      id: `${id}-batch-${batchIndex}`,
+      batchIndex,
+      length,
+      columns: plan.columns,
+      sourceViews,
+      derivedViews,
+      controls,
+      plan
+    });
+  }
+  const allValidity = selectGPUQueryValidity<T>(source as unknown as GPUDataFrame, outputs);
+  const validity: GPUDataFrameValidity<T> = {};
+  const dictionaries: GPUDataFrameDictionaries<T> = {};
+  for (const name of columns) {
+    const mask = allValidity[name];
+    const dictionary = source.dictionaries[name];
+    if (mask) validity[name] = mask;
+    if (dictionary) dictionaries[name] = dictionary;
+  }
+  const table = createGPUQueryDerivedTable<T, T>(source.table, columns, outputs);
+  return {table, validity, dictionaries, destroy: () => table.destroy()};
 }
 
 /** Emits one closed-AST expression kernel for one preserved, nonempty source record batch. */
@@ -746,7 +823,8 @@ function addGPUQueryPredicatePass(
     sourceViews: ReadonlyMap<string, GPUQuerySourceView>;
     derivedViews: ReadonlyMap<string, GPUQueryDerivedView>;
     controls?: GraphDataView<'uint32'>;
-    output: GraphDataView<'uint32'>;
+    output?: GraphDataView<'uint32'>;
+    length: number;
     plan: GPUQueryExpressionShaderPlan;
   }
 ): void {
@@ -845,21 +923,23 @@ function addGPUQueryPredicatePass(
     }
   }
 
-  declarations.push(`const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;`);
-  declarations.push(
-    `@group(0) @binding(${bindingIndex}) var<storage, read_write> outputMask: array<u32>;`
-  );
-  bindings['outputMask'] = props.output;
-  resources.push({buffer: props.output, usage: 'storage-write'});
+  if (props.output) {
+    declarations.push(`const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;`);
+    declarations.push(
+      `@group(0) @binding(${bindingIndex}) var<storage, read_write> outputMask: array<u32>;`
+    );
+    bindings['outputMask'] = props.output;
+    resources.push({buffer: props.output, usage: 'storage-write'});
+  }
 
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUDataFrame filtering',
-    props.output.length,
+    props.length,
     LU_QUERY_WORKGROUP_SIZE,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${props.output.length}u;
+const ELEMENT_COUNT: u32 = ${props.length}u;
 ${declarations.join('\n')}
 ${props.plan.helpers.join('\n')}
 
@@ -874,7 +954,7 @@ fn main(
   }
   ${props.plan.statements.join('\n  ')}
   ${derivedWrites.join('\n  ')}
-  outputMask[OUTPUT_OFFSET + index] = select(0u, 1u, ${props.plan.condition});
+  ${props.output ? `outputMask[OUTPUT_OFFSET + index] = select(0u, 1u, ${props.plan.condition});` : ''}
 }`;
 
   graph.addComputePass({
