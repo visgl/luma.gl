@@ -10,18 +10,18 @@ import {depthAwareBlur} from './depth-aware-blur';
 import {depthHelpers} from './screen-space-shader-helpers';
 
 export type SSAOCompositeShaderPassOptions = {
-	normalSource?: 'reconstruct-from-depth' | 'normal-texture';
-	/** Fractional intermediate framebuffer resolution. Defaults to full resolution. */
-	resolutionScale?: number;
+  normalSource?: 'reconstruct-from-depth' | 'normal-texture';
+  /** Fractional intermediate framebuffer resolution. Defaults to full resolution. */
+  resolutionScale?: number;
 };
 
 type SSAOUniforms = {
-	nearPlane: number;
-	farPlane: number;
-	radius: number;
-	bias: number;
-	intensity: number;
-	useNormalTexture: number;
+  nearPlane: number;
+  farPlane: number;
+  radius: number;
+  bias: number;
+  intensity: number;
+  useNormalTexture: number;
 };
 
 type SSAOBindings = {depthTexture?: Texture; normalTexture?: Texture};
@@ -73,61 +73,61 @@ fn ssaoEvaluate_sampleColor(
 `;
 
 export const ssaoEvaluate = {
-	name: 'ssaoEvaluate',
-	source: ssaoEvaluateSource,
-	bindingLayout: [
-		{name: 'depthTexture', group: 0},
-		{name: 'normalTexture', group: 0}
-	],
-	props: {} as Partial<SSAOUniforms> & SSAOBindings,
-	uniforms: {} as SSAOUniforms,
-	bindings: {} as SSAOBindings,
-	uniformTypes: {
-		nearPlane: 'f32',
-		farPlane: 'f32',
-		radius: 'f32',
-		bias: 'f32',
-		intensity: 'f32',
-		useNormalTexture: 'f32'
-	},
-	propTypes: {
-		nearPlane: {value: 0.1},
-		farPlane: {value: 200},
-		radius: {value: 7, min: 1, softMax: 32},
-		bias: {value: 0.03, min: 0, softMax: 0.2},
-		intensity: {value: 1.35, min: 0, softMax: 4},
-		useNormalTexture: {value: 0, min: 0, max: 1, private: true}
-	},
-	passes: [{sampler: true}]
+  name: 'ssaoEvaluate',
+  source: ssaoEvaluateSource,
+  bindingLayout: [
+    {name: 'depthTexture', group: 0},
+    {name: 'normalTexture', group: 0}
+  ],
+  props: {} as Partial<SSAOUniforms> & SSAOBindings,
+  uniforms: {} as SSAOUniforms,
+  bindings: {} as SSAOBindings,
+  uniformTypes: {
+    nearPlane: 'f32',
+    farPlane: 'f32',
+    radius: 'f32',
+    bias: 'f32',
+    intensity: 'f32',
+    useNormalTexture: 'f32'
+  },
+  propTypes: {
+    nearPlane: {value: 0.1},
+    farPlane: {value: 200},
+    radius: {value: 7, min: 1, softMax: 32},
+    bias: {value: 0.03, min: 0, softMax: 0.2},
+    intensity: {value: 1.35, min: 0, softMax: 4},
+    useNormalTexture: {value: 0, min: 0, max: 1, private: true}
+  },
+  passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
 export function createSSAOCompositeShaderPass(
-	options: SSAOCompositeShaderPassOptions = {}
+  options: SSAOCompositeShaderPassOptions = {}
 ): CompositeShaderPass<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
-	const scale = options.resolutionScale ?? 1;
-	const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
-	const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
-	if (!useNormalTexture) {
-		evaluateInputs['normalTexture'] = 'previous';
-	}
-	const resolved = resolveEffect(ssao);
-	return {
-		...resolved,
-		renderTargets: {
-			ssaoRaw: {...ssao.resources.ssaoRaw, scale: [scale, scale]},
-			ssaoScratch: {...ssao.resources.ssaoScratch, scale: [scale, scale]},
-			ssaoBlurred: {...ssao.resources.ssaoBlurred, scale: [scale, scale]}
-		},
-		steps: [
-			{...resolved.steps[0], inputs: evaluateInputs, uniforms: {useNormalTexture}},
-			...resolved.steps.slice(1)
-		]
-	};
+  const scale = options.resolutionScale ?? 1;
+  const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
+  const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
+  if (!useNormalTexture) {
+    evaluateInputs['normalTexture'] = 'previous';
+  }
+  const resolved = resolveEffect(ssao);
+  return {
+    ...resolved,
+    renderTargets: {
+      ssaoRaw: {...ssao.resources.ssaoRaw, scale: [scale, scale]},
+      ssaoScratch: {...ssao.resources.ssaoScratch, scale: [scale, scale]},
+      ssaoBlurred: {...ssao.resources.ssaoBlurred, scale: [scale, scale]}
+    },
+    steps: [
+      {...resolved.steps[0], inputs: evaluateInputs, uniforms: {useNormalTexture}},
+      ...resolved.steps.slice(1)
+    ]
+  };
 }
 
 export const ssaoComposite = {
-	name: 'ssaoComposite',
-	source: /* wgsl */ `\
+  name: 'ssaoComposite',
+  source: /* wgsl */ `\
 struct ssaoCompositeUniforms {
   debugMode: f32,
 };
@@ -144,47 +144,47 @@ fn ssaoComposite_sampleColor(
   let contactOcclusion = smoothstep(0.03, 0.5, rawOcclusion);
   return vec4f(color.rgb * (1.0 - contactOcclusion * 0.48), color.a);
 }`,
-	bindingLayout: [{name: 'ambientOcclusionTexture', group: 0}],
-	uniformTypes: {debugMode: 'f32'},
-	propTypes: {debugMode: {value: 0, min: 0, max: 1, private: true}},
-	passes: [{sampler: true}]
+  bindingLayout: [{name: 'ambientOcclusionTexture', group: 0}],
+  uniformTypes: {debugMode: 'f32'},
+  propTypes: {debugMode: {value: 0, min: 0, max: 1, private: true}},
+  passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
 /** SSAO with normals reconstructed from the scene depth input. */
 export const ssao = {
-	name: 'ssaoCompositeShaderPass',
-	resources: {
-		ssaoRaw: {scale: [1, 1], format: 'rgba8unorm'},
-		ssaoScratch: {scale: [1, 1], format: 'rgba8unorm'},
-		ssaoBlurred: {scale: [1, 1], format: 'rgba8unorm'}
-	},
-	passes: [
-		{
-			kind: 'fullscreen',
-			shaderPass: ssaoEvaluate,
-			inputs: {sourceTexture: 'previous', normalTexture: 'previous'},
-			output: 'ssaoRaw',
-			uniforms: {useNormalTexture: 0}
-		},
-		{
-			kind: 'fullscreen',
-			shaderPass: depthAwareBlur,
-			inputs: {sourceTexture: 'ssaoRaw'},
-			output: 'ssaoScratch',
-			uniforms: {direction: [1, 0]}
-		},
-		{
-			kind: 'fullscreen',
-			shaderPass: depthAwareBlur,
-			inputs: {sourceTexture: 'ssaoScratch'},
-			output: 'ssaoBlurred',
-			uniforms: {direction: [0, 1]}
-		},
-		{
-			kind: 'fullscreen',
-			shaderPass: ssaoComposite,
-			inputs: {sourceTexture: 'previous', ambientOcclusionTexture: 'ssaoBlurred'},
-			output: 'previous'
-		}
-	]
+  name: 'ssaoCompositeShaderPass',
+  resources: {
+    ssaoRaw: {scale: [1, 1], format: 'rgba8unorm'},
+    ssaoScratch: {scale: [1, 1], format: 'rgba8unorm'},
+    ssaoBlurred: {scale: [1, 1], format: 'rgba8unorm'}
+  },
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: ssaoEvaluate,
+      inputs: {sourceTexture: 'previous', normalTexture: 'previous'},
+      output: 'ssaoRaw',
+      uniforms: {useNormalTexture: 0}
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: depthAwareBlur,
+      inputs: {sourceTexture: 'ssaoRaw'},
+      output: 'ssaoScratch',
+      uniforms: {direction: [1, 0]}
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: depthAwareBlur,
+      inputs: {sourceTexture: 'ssaoScratch'},
+      output: 'ssaoBlurred',
+      uniforms: {direction: [0, 1]}
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: ssaoComposite,
+      inputs: {sourceTexture: 'previous', ambientOcclusionTexture: 'ssaoBlurred'},
+      output: 'previous'
+    }
+  ]
 } satisfies EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'>;
