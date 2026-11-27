@@ -1941,7 +1941,15 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     let areaNormal = cross(secondPosition - firstPosition, thirdPosition - firstPosition);
     let twiceArea = length(areaNormal);
     if (twiceArea <= 0.00000001) { return vec3<f32>(0.0); }
-    lightNormal = areaNormal / twiceArea;
+    // A mirrored glTF instance reverses front winding. Transform the local
+    // geometric normal like traversal does, while keeping the world-space area.
+    if (isOneSidedTriangle(emitter)) {
+      let localAreaNormal = cross(triangle.secondPosition.xyz - triangle.firstPosition.xyz,
+        triangle.thirdPosition.xyz - triangle.firstPosition.xyz);
+      lightNormal = normalize((transpose(emitter.inverseTransform) * vec4<f32>(localAreaNormal, 0.0)).xyz);
+    } else {
+      lightNormal = areaNormal / twiceArea;
+    }
     inverseAreaDensity = 0.5 * twiceArea * f32(triangleCount) * inverseSelectionProbability;
   }
   let position = ray.origin + ray.direction * hit.distance;
