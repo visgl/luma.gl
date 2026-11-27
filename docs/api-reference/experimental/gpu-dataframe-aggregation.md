@@ -84,3 +84,5 @@ filters, null masks, derived columns, and repeated query parameters apply before
 ### Partitioned mean accumulation
 
 Pass `{maxMeanScratchBytes: budget}` to `groupBy` to cap the temporary count buffer used by mean aggregation. The GPU scans the source for each contiguous key range, reuses one count buffer per mean operation, and writes each partition into the final result. Choose a budget of at least four bytes. Source data, output vectors, and row masks have their own memory costs.
+
+Use `{maxReductionScratchBytes: budget}` to cap the combined temporary partial buffers per deterministic SUM or AVG. SUM uses one partial array and AVG uses a sum array and a count array. The GPU reuses the allocated buffers across key ranges. The minimum depends on the largest input chunk. For a one-column partial plan, supply at least four bytes for SUM or eight for AVG. Smaller budgets may increase the number of passes. Reusing the same execution plan preserves the floating-point reduction order.

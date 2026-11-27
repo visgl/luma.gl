@@ -115,7 +115,8 @@ export function compileGPUDataFrameObservedAggregation(
   ordering?: readonly GPUGlobalSortKey[],
   having?: GPUExpression<boolean, string>,
   join?: GPUAggregateJoin,
-  maxMeanScratchBytes?: number
+  maxMeanScratchBytes?: number,
+  maxReductionScratchBytes?: number
 ): CompiledGPUDataFrameGroupedAggregation {
   if (source.numRows > 0) validateGPUGroupingCapacity(source, source.numRows, graph);
   validateGPUGroupingSourceColumns(
@@ -140,7 +141,8 @@ export function compileGPUDataFrameObservedAggregation(
           true,
           ordering,
           having,
-          maxMeanScratchBytes
+          maxMeanScratchBytes,
+          maxReductionScratchBytes
         );
       return join ? prepareGPUJoinAggregation(source, context, join, prepare) : prepare(context);
     }
@@ -165,7 +167,8 @@ export function compileGPUDataFrameGroupedAggregation<
   ordering?: readonly GPUGlobalSortKey<keyof Result & string>[],
   having?: GPUExpression<boolean, string>,
   join?: GPUAggregateJoin,
-  maxMeanScratchBytes?: number
+  maxMeanScratchBytes?: number,
+  maxReductionScratchBytes?: number
 ): CompiledGPUDataFrameGroupedAggregation<Result> {
   validateGPUGroupingCapacity(source, groupCount, graph);
   validateGPUGroupingSourceColumns(source, [key], definitions);
@@ -186,7 +189,8 @@ export function compileGPUDataFrameGroupedAggregation<
           false,
           ordering,
           having,
-          maxMeanScratchBytes
+          maxMeanScratchBytes,
+          maxReductionScratchBytes
         );
       return join ? prepareGPUJoinAggregation(source, context, join, prepare) : prepare(context);
     }
@@ -248,7 +252,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
   observed = false,
   orderBy?: readonly GPUGlobalSortKey<keyof Result & string>[],
   having?: GPUExpression<boolean, string>,
-  maxMeanScratchBytes?: number
+  maxMeanScratchBytes?: number,
+  maxReductionScratchBytes?: number
 ): GPUDataFrameQueryExtensionResult<Result, CompiledGPUDataFrameGroupedAggregation<Result>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-group`;
@@ -387,7 +392,8 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           mask: state.mask,
           output: graph.importGPUVector(`${metricId}-output`, output).data[0],
           operation: definition.operation,
-          maxMeanScratchBytes
+          maxMeanScratchBytes,
+          maxReductionScratchBytes
         })
       );
     }

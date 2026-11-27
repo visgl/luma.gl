@@ -78,6 +78,8 @@ type GPUGroupAggregationBaseProps = {
   mask?: GPUGroupAggregationMask;
   /** Upper bound on mean count scratch, in bytes. Partitions the output key domain. */
   maxMeanScratchBytes?: number;
+  /** Combined byte limit for deterministic SUM and AVG partial buffers. */
+  maxReductionScratchBytes?: number;
 };
 
 /** Properties for graph-native dense group aggregation. */
@@ -131,6 +133,7 @@ export class GPUGroupAggregation {
   /** Maximum number of groups using one shared count scratch buffer. */
   readonly meanPartitionSize: number;
   private readonly maxMeanScratchBytes?: number;
+  private readonly maxReductionScratchBytes?: number;
 
   /** Creates and validates a dense group-aggregation description. */
   constructor(props: GPUGroupAggregationProps) {
@@ -142,6 +145,13 @@ export class GPUGroupAggregation {
     this.operation = props.operation ?? 'count';
     const budget = props.maxMeanScratchBytes;
     this.maxMeanScratchBytes = budget;
+    this.maxReductionScratchBytes = props.maxReductionScratchBytes;
+    if (
+      this.maxReductionScratchBytes !== undefined &&
+      (!Number.isSafeInteger(this.maxReductionScratchBytes) || this.maxReductionScratchBytes < 4)
+    ) {
+      throw new Error(`${this.id} reduction scratch budget requires at least four bytes`);
+    }
     if (budget !== undefined && (!Number.isSafeInteger(budget) || budget < 4)) {
       throw new Error(`${this.id} mean scratch budget requires at least four bytes`);
     }
@@ -265,6 +275,7 @@ export class GPUGroupAggregation {
           output,
           operation,
           maxMeanScratchBytes: this.maxMeanScratchBytes,
+          maxReductionScratchBytes: this.maxReductionScratchBytes,
           partitionSize: operation === 'mean' ? this.meanPartitionSize : output.length
         })
       );
@@ -685,25 +696,51 @@ function addGroupSumNodes<Parameters>(
     output: GraphDataView<'float32'>;
     operation: GPUGroupSumOperation;
     maxMeanScratchBytes?: number;
+    maxReductionScratchBytes?: number;
     partitionSize: number;
   }
 ): readonly GPUCommandNode<Parameters>[] {
   const {limits} = graph.device;
+  const chunkLengths = props.keyChunks.map(chunk => chunk.length);
+  const arrayCount = props.operation === 'mean' ? 2 : 1;
+  const maxScratchBytes = Math.min(
+    props.maxReductionScratchBytes === undefined
+      ? Infinity
+      : Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize),
+    (props.maxReductionScratchBytes ?? Infinity) / arrayCount,
+    props.operation === 'mean' ? (props.maxMeanScratchBytes ?? Infinity) : Infinity
+  );
+  let partitionSize = props.partitionSize;
+  if (props.maxReductionScratchBytes !== undefined) {
+    const minimumColumns = chunkLengths.reduce(
+      (columns, length) =>
+        Math.max(
+          columns,
+          Math.ceil(length / (SUM_TILE_ROW_COUNT * MAXIMUM_SUM_TILES_PER_WORKGROUP))
+        ),
+      1
+    );
+    partitionSize = Math.min(
+      partitionSize,
+      MAXIMUM_SUM_GROUP_COUNT,
+      Math.floor(maxScratchBytes / (minimumColumns * UINT32_BYTE_LENGTH))
+    );
+    if (partitionSize < 1) {
+      throw new Error(`${props.id} reduction scratch budget cannot fit one group`);
+    }
+  }
   const plan = getGPUGroupSumPlan(
-    props.keyChunks.map(chunk => chunk.length),
-    props.partitionSize,
+    chunkLengths,
+    partitionSize,
     props.operation,
     limits.maxComputeWorkgroupStorageSize || MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH,
-    props.operation === 'mean' ? props.maxMeanScratchBytes : undefined
+    maxScratchBytes
   );
   // Sort keys pack the group above an 8-bit tile lane, and partials must fit one storage binding.
   if (
-    props.partitionSize > MAXIMUM_SUM_GROUP_COUNT ||
+    partitionSize > MAXIMUM_SUM_GROUP_COUNT ||
     plan.partialCount * UINT32_BYTE_LENGTH >
-      Math.min(
-        limits.maxStorageBufferBindingSize,
-        props.operation === 'mean' ? (props.maxMeanScratchBytes ?? Infinity) : Infinity
-      )
+      Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize, maxScratchBytes)
   ) {
     throw new Error(`${props.id} sum partials exceed device limits`);
   }
@@ -719,8 +756,8 @@ function addGroupSumNodes<Parameters>(
       : undefined;
 
   const nodes: GPUCommandNode<Parameters>[] = [];
-  for (let firstGroup = 0; firstGroup < props.output.length; firstGroup += props.partitionSize) {
-    const groupCount = Math.min(props.partitionSize, props.output.length - firstGroup);
+  for (let firstGroup = 0; firstGroup < props.output.length; firstGroup += partitionSize) {
+    const groupCount = Math.min(partitionSize, props.output.length - firstGroup);
     const output =
       groupCount === props.output.length
         ? props.output
