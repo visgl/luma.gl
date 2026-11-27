@@ -2,7 +2,7 @@
 
 > **AsyncTextureProps** = [`DynamicTextureProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps.md)
 
-Defined in: [modules/engine/src/index.ts:302](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/index.ts#L302)
+Defined in: [modules/engine/src/index.ts:307](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/index.ts#L307)
 
 ## Deprecated[​](#deprecated "Direct link to Deprecated")
 

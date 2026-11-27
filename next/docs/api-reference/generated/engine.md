@@ -112,6 +112,7 @@
 * [ClipSpaceProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ClipSpaceProps.md)
 * [ComputationProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ComputationProps.md)
 * [ConeGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ConeGeometryProps.md)
+* [ConfigurableEffectDefinition](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ConfigurableEffectDefinition.md)
 * [CubeGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/CubeGeometryProps.md)
 * [CylinderGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/CylinderGeometryProps.md)
 * [DepthSortedTraversalContext](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/DepthSortedTraversalContext.md)
@@ -244,6 +245,7 @@
 
 * [applyMorphTargets](https://luma.gl/next/docs/api-reference/generated/engine/functions/applyMorphTargets.md)
 * [cancelAnimationFramePolyfill](https://luma.gl/next/docs/api-reference/generated/engine/functions/cancelAnimationFramePolyfill.md)
+* [configureEffect](https://luma.gl/next/docs/api-reference/generated/engine/functions/configureEffect.md)
 * [createAreaLightLTCTextures](https://luma.gl/next/docs/api-reference/generated/engine/functions/createAreaLightLTCTextures.md)
 * [createParametricAudioResponse](https://luma.gl/next/docs/api-reference/generated/engine/functions/createParametricAudioResponse.md)
 * [createSkinJointPaletteResource](https://luma.gl/next/docs/api-reference/generated/engine/functions/createSkinJointPaletteResource.md)

@@ -814,7 +814,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: DirectionalLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/DirectionalLightModel.md): Defined in22
 - [Class: DynamicBuffer](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicBuffer.md): Defined in45
 - [Class: DynamicTexture](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture.md): Defined in37
-- [Class: EffectRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/EffectRenderer.md): Defined in93
+- [Class: EffectRenderer<Options>](https://luma.gl/next/docs/api-reference/generated/engine/classes/EffectRenderer.md): Defined in128
 - [Class: Geometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/Geometry.md): Defined in20
 - [Class: GeometryNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GeometryNode.md): Defined in12
 - [Class: GPUGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUGeometry.md): Defined in39
@@ -857,6 +857,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: VideoTexture](https://luma.gl/next/docs/api-reference/generated/engine/classes/VideoTexture.md): Defined in32
 - [Function: applyMorphTargets()](https://luma.gl/next/docs/api-reference/generated/engine/functions/applyMorphTargets.md): applyMorphTargets(baseAttributes, targets, weights): MorphTargetAttributes
 - [Function: cancelAnimationFramePolyfill()](https://luma.gl/next/docs/api-reference/generated/engine/functions/cancelAnimationFramePolyfill.md): cancelAnimationFramePolyfill(timerId): void
+- [Function: configureEffect()](https://luma.gl/next/docs/api-reference/generated/engine/functions/configureEffect.md): configureEffect\(effect, options?): EffectDefinition\
 - [Function: createAreaLightLTCTextures()](https://luma.gl/next/docs/api-reference/generated/engine/functions/createAreaLightLTCTextures.md): createAreaLightLTCTextures(device): object
 - [Function: createParametricAudioResponse()](https://luma.gl/next/docs/api-reference/generated/engine/functions/createParametricAudioResponse.md): createParametricAudioResponse(context, parameters): AudioBuffer
 - [Function: createSkinJointPaletteResource()](https://luma.gl/next/docs/api-reference/generated/engine/functions/createSkinJointPaletteResource.md): createSkinJointPaletteResource(device, id, jointMatrices): Texture \| Buffer
@@ -939,6 +940,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: ClipSpaceProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ClipSpaceProps.md): ClipSpaceProps = Omit\ & object
 - [Type Alias: ComputationProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ComputationProps.md): ComputationProps = Omit\ & object
 - [Type Alias: ConeGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ConeGeometryProps.md): ConeGeometryProps = Omit\ & object
+- [Type Alias: ConfigurableEffectDefinition<Options, TargetName>](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ConfigurableEffectDefinition.md): ConfigurableEffectDefinition\ = object
 - [Type Alias: CubeGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/CubeGeometryProps.md): CubeGeometryProps = object
 - [Type Alias: CylinderGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/CylinderGeometryProps.md): CylinderGeometryProps = Omit\ & object
 - [Type Alias: DepthSortedTraversalContext](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/DepthSortedTraversalContext.md): DepthSortedTraversalContext = object
@@ -949,7 +951,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: DynamicTextureProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps.md): DynamicTextureProps = Omit\ & TextureDataAsyncProps & object
 - [Type Alias: EffectDefinition<TargetName>](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectDefinition.md): EffectDefinition\ = object
 - [Type Alias: EffectPass<TargetName>](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectPass.md): EffectPass\ = CompositeShaderPass\\["steps"\]\[number\] & object
-- [Type Alias: EffectRendererProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRendererProps.md): EffectRendererProps = Omit\ & object
+- [Type Alias: EffectRendererProps<Options>](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRendererProps.md): EffectRendererProps\ = Omit\ & object
 - [Type Alias: GeometryAttribute](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryAttribute.md): GeometryAttribute = object
 - [Type Alias: GeometryAttributeInput](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryAttributeInput.md): GeometryAttributeInput = GeometryAttribute \| TypedArray
 - [Type Alias: GeometryNodeProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryNodeProps.md): GeometryNodeProps = ScenegraphNodeProps & object

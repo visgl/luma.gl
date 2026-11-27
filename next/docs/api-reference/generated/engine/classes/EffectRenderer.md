@@ -1,6 +1,6 @@
-# Class: EffectRenderer
+# Class: EffectRenderer\<Options>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L93)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L128)
 
 Runs a chain of reusable fullscreen effects for a single device.
 
@@ -10,13 +10,19 @@ Resize to the desired output size before rendering. Supply scene textures and pe
 
 * [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md)
 
+## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
+
+### Options[​](#options "Direct link to Options")
+
+`Options` *extends* readonly `unknown`\[] = readonly `unknown`\[]
+
 ## Constructors[​](#constructors "Direct link to Constructors")
 
 ### Constructor[​](#constructor "Direct link to Constructor")
 
-> **new EffectRenderer**(`device`, `__namedParameters`): `EffectRenderer`
+> **new EffectRenderer**<`Options`>(`device`, `__namedParameters`): `EffectRenderer`<`Options`>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L94)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L131)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -26,11 +32,11 @@ Defined in: [modules/engine/src/passes/effect-renderer.ts:94](https://github.com
 
 ##### \_\_namedParameters[​](#__namedparameters "Direct link to __namedParameters")
 
-[`EffectRendererProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRendererProps.md)
+[`EffectRendererProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRendererProps.md)<`Options`>
 
 #### Returns[​](#returns "Direct link to Returns")
 
-`EffectRenderer`
+`EffectRenderer`<`Options`>
 
 #### Overrides[​](#overrides "Direct link to Overrides")
 
@@ -130,7 +136,7 @@ Records the shader-pass chain and presentation into a caller-owned command encod
 
 `CommandEncoder`
 
-##### options[​](#options "Direct link to options")
+##### options[​](#options-1 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
@@ -158,7 +164,7 @@ Records the shader-pass chain into a caller-owned command encoder. The encoder m
 
 `CommandEncoder`
 
-##### options[​](#options-1 "Direct link to options")
+##### options[​](#options-2 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
@@ -180,7 +186,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://gith
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
-##### options[​](#options-2 "Direct link to options")
+##### options[​](#options-3 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
@@ -204,7 +210,7 @@ Runs the shaderPasses in sequence on the sourceTexture and returns a texture wit
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
-##### options[​](#options-3 "Direct link to options")
+##### options[​](#options-4 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
