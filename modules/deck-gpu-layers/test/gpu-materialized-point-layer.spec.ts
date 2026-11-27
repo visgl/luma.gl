@@ -16,9 +16,8 @@ import {prepareCRSProjection, ProjectionRenderTransform} from '@luma.gl/graph/gp
 import {cellToLatLng, latLngToCell} from 'h3-js';
 import {expect, it, vi} from 'vitest';
 
-it.each([false, true])(
-  'updates only dirty resident H3 chunks and reuses materialized output for camera changes and picks (grouped %s)',
-  async (groupChunks, context) => {
+for (const groupChunks of [false, true]) {
+  it(`updates only dirty resident H3 chunks and reuses materialized output for camera changes and picks (grouped ${groupChunks})`, async context => {
     const device = await getWebGPUTestDevice();
     if (
       !device ||
@@ -185,6 +184,5 @@ it.each([false, true])(
       replacement.destroy();
       cells.destroy();
     }
-  },
-  60000
-);
+  }, 60000);
+}
