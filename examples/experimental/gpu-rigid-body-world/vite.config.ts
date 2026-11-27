@@ -4,6 +4,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        gripper: `${__dirname}/gripper.html`,
         armContact: `${__dirname}/arm-contact.html`,
         index: `${__dirname}/index.html`,
         wreckingBall: `${__dirname}/wrecking-ball.html`

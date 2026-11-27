@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {PanelManager} from '@deck.gl-community/panels';
+import {
+  applyPanelTheme,
+  BoxPanelContainer,
+  PanelManager,
+  PANEL_THEME_SLEEK_DARK
+} from '@deck.gl-community/panels';
 import {
   configurePanelHostElement,
   makeExampleTabbedPanel,
@@ -30,37 +35,59 @@ export function createRigidBodyPanel(
       document.body.append(content);
     };
   };
-  const manager = new PanelManager({parentElement: host});
-  manager.setProps({
-    components: [
-      new InfoBoxPanelContainer({
+  const actions = document.querySelector<HTMLElement>('#lab-actions');
+  const content = document.querySelector<HTMLElement>('#lab-canvas');
+  if (actions) applyPanelTheme(host, PANEL_THEME_SLEEK_DARK);
+  const manager = new PanelManager({
+    parentElement: host,
+    ...(content ? {contentElement: content} : {})
+  });
+  const tabs = makeExampleTabbedPanel({
+    id: 'lab-tabs',
+    theme: 'dark',
+    panels: [
+      makeHtmlCustomPanel({
+        id: 'lab-controls-panel',
+        title: 'Settings',
+        html: '',
+        onRender: root => mount(controls, root)
+      }),
+      makeHtmlCustomPanel({
+        id: 'lab-details-panel',
+        title: 'Info',
+        html: '',
+        onRender: root => mount(details, root)
+      }),
+      diagnostics.inspectorPanel.panel,
+      diagnostics.tracePanel.panel
+    ]
+  });
+  const shell = actions
+    ? new BoxPanelContainer({
+        id: 'gripper-box',
+        title,
+        placement: 'top-left',
+        side: 'left',
+        pinnable: true,
+        defaultOpen: false,
+        offsetPx: 12,
+        widthPx: 340,
+        panel: tabs,
+        headerPanel: makeHtmlCustomPanel({
+          id: 'lab-actions-panel',
+          title: 'Gripper controls',
+          html: '',
+          onRender: root => mount(actions, root)
+        })
+      })
+    : new InfoBoxPanelContainer({
         title,
         subtitle,
         websiteBaseUrl: '/',
         appearance: 'cinematic',
-        panel: makeExampleTabbedPanel({
-          id: 'lab-tabs',
-          theme: 'dark',
-          panels: [
-            makeHtmlCustomPanel({
-              id: 'lab-controls-panel',
-              title: 'Settings',
-              html: '',
-              onRender: root => mount(controls, root)
-            }),
-            makeHtmlCustomPanel({
-              id: 'lab-details-panel',
-              title: 'Info',
-              html: '',
-              onRender: root => mount(details, root)
-            }),
-            diagnostics.inspectorPanel.panel,
-            diagnostics.tracePanel.panel
-          ]
-        })
-      })
-    ]
-  });
+        panel: tabs
+      });
+  manager.setProps({components: [shell]});
   return {
     update() {
       manager.onRedraw({viewports: [], layers: []});

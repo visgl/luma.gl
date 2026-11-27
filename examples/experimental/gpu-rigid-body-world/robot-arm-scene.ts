@@ -24,7 +24,8 @@ export class RobotArmScene {
   constructor(
     device: Device,
     world: {poseMatrices: Buffer | null; count: number},
-    treeBodies?: GPURigidBody[]
+    treeBodies?: GPURigidBody[],
+    gripper = false
   ) {
     this.renderer = new SceneRenderer(device);
     const bindings = new Map<ScenegraphNode, ScenegraphTransformBinding>();
@@ -69,6 +70,44 @@ export class RobotArmScene {
       if (!isStatic)
         bindings.set(node, {matrixIndex: treeBodies ? body - 2 : body, localMatrix: matrix});
     };
+    if (gripper) {
+      const teal = material('payload-teal', [0.034, 0.57, 0.52, 1], 0.18, 0.31);
+      add('workbench', 0, cube, bench, [0, 0, 0], [2.4, 2.4, 0.12]);
+      for (const angle of [0, 1]) {
+        const center = [1.4 * Math.cos(angle), 1.4 * Math.sin(angle)];
+        for (const sign of [-1, 1]) {
+          add(
+            'bay-x-' + angle + '-' + sign,
+            0,
+            cube,
+            steel,
+            [center[0] + sign * 0.34, center[1], 0.122],
+            [0.009, 0.35, 0.002]
+          );
+          add(
+            'bay-y-' + angle + '-' + sign,
+            0,
+            cube,
+            steel,
+            [center[0], center[1] + sign * 0.34, 0.122],
+            [0.35, 0.009, 0.002]
+          );
+        }
+      }
+      add('pedestal', 1, cube, graphite, [0, 0, 0.05], [0.15, 0.16, 0.46]);
+      add('foot', 1, cube, steel, [0, 0, -0.35], [0.26, 0.26, 0.05]);
+      add('turret', 2, sphere, steel, [0, 0, 0], [0.16, 0.16, 0.16]);
+      add('boom', 3, cube, enamel, [0, 0, 0], [0.7, 0.09, 0.085]);
+      add('palm', 3, cube, graphite, [0.7, 0, 0], [0.1, 0.46, 0.075]);
+      for (const body of [4, 5]) {
+        add('finger-' + body, body, cube, steel, [0, 0, 0.37], [0.046, 0.043, 0.37]);
+        add('pad-' + body, body, sphere, graphite, [0, 0, 0], [0.095, 0.095, 0.095]);
+        add('knuckle-' + body, body, sphere, enamel, [0, 0, 0.74], [0.095, 0.095, 0.095]);
+      }
+      add('free-workpiece', 6, cube, teal, [0, 0, 0], [0.19, 0.2, 0.24]);
+      add('workpiece-stripe', 6, cube, steel, [0, 0, 0.14], [0.191, 0.201, 0.012]);
+      return;
+    }
     add('bench', 0, cube, bench, [0, 0, 0], [6, 3, 0.15]);
     add('column', 1, cube, graphite, [0, 0, 0], [0.22, 0.32, 1]);
     add('mounting-plate', 1, cube, steel, [0, 0, -0.94], [0.45, 0.44, 0.06]);

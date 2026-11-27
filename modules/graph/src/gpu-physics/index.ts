@@ -168,5 +168,6 @@ export {
   GPUArticulationTree,
   type GPUArticulationLink,
   type GPUArticulationContact,
+  type GPUArticulationPayload,
   type GPUArticulationDrive
 } from './gpu-articulation-tree';
