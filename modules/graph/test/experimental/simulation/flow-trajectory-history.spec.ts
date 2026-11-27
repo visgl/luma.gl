@@ -54,3 +54,16 @@ it('trajectory history retains chronological GPU frames across overwrite and res
     for (const source of sources) source.destroy();
   }
 });
+
+it('trajectory history rejects allocations beyond the storage binding limit', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  expect(
+    () =>
+      new FlowTrajectoryHistory(device, {
+        particleCount: 1,
+        capacity: Math.floor(device.limits.maxStorageBufferBindingSize / 16) + 1
+      })
+  ).toThrow();
+  expect(() => new FlowTrajectoryHistory(device, {particleCount: 1, capacity: 0})).toThrow();
+});

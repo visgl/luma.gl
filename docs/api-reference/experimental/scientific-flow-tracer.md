@@ -195,7 +195,10 @@ import {FlowTrajectoryHistory} from '@luma.gl/graph/experimental-simulation';
 
 const history = new FlowTrajectoryHistory(device, {
   particleCount: tracer.particleCount,
-  capacity: 32
+  capacity: Math.min(32, Math.floor(
+    Math.min(device.limits.maxBufferSize, device.limits.maxStorageBufferBindingSize) /
+    (tracer.particleCount * 16)
+  ))
 });
 let result = await tracer.advance(1);
 while (!result.complete) result = await tracer.continue();
@@ -207,7 +210,9 @@ device.submit(encoder.finish());
 history.destroy();
 ```
 
-Memory is exactly `capacity * particleCount * 16` bytes. Each frame preserves
+Memory is exactly `capacity * particleCount * 16` bytes and must fit both
+`maxBufferSize` and `maxStorageBufferBindingSize`; oversized histories are rejected
+before allocating. Capacity must be at least one. Each frame preserves
 normalized x/y, age and generation, with particle identity given by its index.
 Recording beyond capacity overwrites the oldest frame. `frames` returns detached
 CPU metadata (`time`, `byteOffset`, `sequence`), not particle readback. Times must

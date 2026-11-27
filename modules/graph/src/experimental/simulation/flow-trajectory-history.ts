@@ -35,7 +35,12 @@ export class FlowTrajectoryHistory {
     this.capacity = props.capacity;
     this.frameByteLength = props.particleCount * 16;
     const byteLength = this.frameByteLength * this.capacity;
-    assert(Number.isSafeInteger(byteLength) && byteLength <= device.limits.maxBufferSize);
+    // The public buffer can be bound as one storage resource, without caller-side slicing.
+    assert(
+      Number.isSafeInteger(byteLength) &&
+        byteLength <= device.limits.maxBufferSize &&
+        byteLength <= device.limits.maxStorageBufferBindingSize
+    );
     this.buffer = device.createBuffer({
       id: 'flow-trajectory-history',
       byteLength,
