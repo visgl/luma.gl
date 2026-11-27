@@ -115,6 +115,8 @@ type GPUGroupAggregationProps = {
 
   maxMeanScratchBytes?: number;
 
+  maxReductionScratchBytes?: number;
+
 } & (
 
   | {output: GraphDataView<'uint32'>; operation?: 'count'; values?: never}
@@ -136,7 +138,7 @@ type GPUGroupAggregationProps = {
 
 The graph owns no persistent result buffer, performs no submission, and introduces no readback. Out-of-range keys are ignored so callers can use a sentinel such as `0xffffffff` for missing or unmapped values.
 
-For mean, `maxMeanScratchBytes` caps the partial count array in bytes. The partial sum array has the same size. When one column cannot cover the output within the budget, the operation processes successive key ranges using the same scratch buffers.
+For mean, `maxMeanScratchBytes` caps the partial count array in bytes. The partial sum array has the same size. When one column cannot cover the output within the budget, the operation processes successive key ranges using the same scratch buffers. Set `maxReductionScratchBytes` to cap the sum of both allocations for AVG, or the single sum allocation for SUM. If the budget cannot hold the partials for one group, graph construction fails. A compiled plan uses a fixed floating-point reduction order across executions.
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
