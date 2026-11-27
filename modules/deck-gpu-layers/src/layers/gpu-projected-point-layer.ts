@@ -257,7 +257,8 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
   }
 }
 
-function getProjectedPointShader(entryPoint: string): string {
+/** Shared point raster and picking shader for inline and already-local coordinates. @internal */
+export function getProjectedPointShader(entryPoint?: string): string {
   return /* wgsl */ `
 struct ProjectedPointStyle {
   color: vec4f,
@@ -272,22 +273,28 @@ struct ProjectedPointVertex {
   @location(2) @interpolate(flat) valid: u32,
 };
 @vertex fn vertexMain(
-  @location(0) positions: vec4u,
+  @location(0) positions: ${entryPoint ? 'vec4u' : 'vec2f'},
   @location(1) validity: u32,
   @builtin(vertex_index) vertexIndex: u32,
   @builtin(instance_index) instanceIndex: u32
 ) -> ProjectedPointVertex {
   let corners = array<vec2f, 6>(vec2f(-1, -1), vec2f(1, -1), vec2f(-1, 1), vec2f(-1, 1), vec2f(1, -1), vec2f(1, 1));
   let corner = corners[vertexIndex];
-  let projected = ${entryPoint}(positions, validity);
+  ${
+    entryPoint
+      ? `let projected = ${entryPoint}(positions, validity);
   let commonPosition = vec3f(projected.position, 0.0);
+  let valid = projected.valid;`
+      : `let commonPosition = vec3f(positions, 0.0);
+  let valid = validity;`
+  }
   var clipPosition = project_position_to_clipspace(commonPosition, vec3f(0.0), vec3f(0.0));
   clipPosition = vec4f(clipPosition.xy + project_pixel_size_to_clipspace(corner * projectedPointStyle.pointSize * 0.5) * clipPosition.w, clipPosition.zw);
   let pickingIndex = instanceIndex + projectedPointStyle.rowIndexOffset + 1u;
   let pickingColor = vec3f(f32(pickingIndex % 256u), f32((pickingIndex / 256u) % 256u), f32((pickingIndex / 65536u) % 256u)) / 255.0;
   geometry.worldPosition = commonPosition;
   geometry.pickingColor = pickingColor;
-  return ProjectedPointVertex(clipPosition, corner, pickingColor, projected.valid);
+  return ProjectedPointVertex(clipPosition, corner, pickingColor, valid);
 }
 @fragment fn fragmentMain(input: ProjectedPointVertex) -> @location(0) vec4f {
   if (input.valid == 0u || dot(input.corner, input.corner) > 1.0) { discard; }
