@@ -107,15 +107,13 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
         input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
         inputValidity: validInput?.data[batchIndex]
       }));
-      const scratchBytes = input.length * Uint32Array.BYTES_PER_ELEMENT * (validInput ? 2 : 1);
-      const projectionChunks =
-        reusePackedChunks && scratchBytes <= remainingScratchBytes
-          ? packGPUJoinProjectionChunks(graph, id, format, chunks)
-          : chunks;
-      if (projectionChunks !== chunks) remainingScratchBytes -= scratchBytes;
+      const projection = reusePackedChunks
+        ? stageGPUJoinProjectionRanges(graph, id, format, chunks, remainingScratchBytes)
+        : {chunks, scratchBytes: 0};
+      remainingScratchBytes -= projection.scratchBytes;
       for (const [leftBatch, rows] of matchedRows.data.entries()) {
         if (!rows.length) continue;
-        for (const [chunkIndex, chunk] of projectionChunks.entries()) {
+        for (const [chunkIndex, chunk] of projection.chunks.entries()) {
           addGPUJoinProjectionPass(graph, `${id}-${leftBatch}-${chunkIndex}`, {
             ...chunk,
             rows,
@@ -143,31 +141,72 @@ type GPUJoinProjectionChunk = {
   inputValidity?: GraphDataView<'uint32'>;
 };
 
-/** Copies a dense right row-ID range into per-column graph scratch for reuse by every left batch. */
-function packGPUJoinProjectionChunks(
+/** Stages consecutive copyable chunks within both the device binding limit and remaining budget. */
+function stageGPUJoinProjectionRanges(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
   format: GPUAnalyticsScalarFormat,
-  chunks: GPUJoinProjectionChunk[]
-): GPUJoinProjectionChunk[] {
-  const first = chunks[0].first;
-  let length = 0;
-  for (const chunk of chunks) {
-    if (
-      chunk.first !== first + length ||
-      !(chunk.input.buffer.usage & Buffer.COPY_SRC) ||
-      (chunk.inputValidity && !(chunk.inputValidity.buffer.usage & Buffer.COPY_SRC))
-    ) {
-      return chunks;
-    }
-    length += chunk.input.length;
-  }
-  const byteLength = length * Uint32Array.BYTES_PER_ELEMENT;
+  chunks: GPUJoinProjectionChunk[],
+  maxScratchBytes: number
+): {chunks: GPUJoinProjectionChunk[]; scratchBytes: number} {
+  const projectionChunks: GPUJoinProjectionChunk[] = [];
   const {maxBufferSize, maxStorageBufferBindingSize} = graph.device.limits;
-  if (chunks.length < 2 || byteLength > Math.min(maxBufferSize, maxStorageBufferBindingSize)) {
-    return chunks;
+  const wordBytes = Uint32Array.BYTES_PER_ELEMENT;
+  const maxBindingRows = Math.floor(
+    Math.min(maxBufferSize, maxStorageBufferBindingSize) / wordBytes
+  );
+  let scratchBytes = 0;
+  for (let start = 0; start < chunks.length; ) {
+    const firstChunk = chunks[start];
+    const bytesPerRow = wordBytes * (firstChunk.inputValidity ? 2 : 1);
+    const maxRows = Math.min(
+      maxBindingRows,
+      Math.floor((maxScratchBytes - scratchBytes) / bytesPerRow)
+    );
+    let end = start;
+    let length = 0;
+    while (end < chunks.length) {
+      const chunk = chunks[end];
+      if (
+        chunk.first !== firstChunk.first + length ||
+        length + chunk.input.length > maxRows ||
+        !(chunk.input.buffer.usage & Buffer.COPY_SRC) ||
+        (chunk.inputValidity && !(chunk.inputValidity.buffer.usage & Buffer.COPY_SRC))
+      ) {
+        break;
+      }
+      length += chunk.input.length;
+      end++;
+    }
+    if (end - start < 2) {
+      projectionChunks.push(firstChunk);
+      start++;
+      continue;
+    }
+    projectionChunks.push(
+      packGPUJoinProjectionRange(
+        graph,
+        `${id}-range-${start}`,
+        format,
+        chunks.slice(start, end),
+        length
+      )
+    );
+    scratchBytes += length * bytesPerRow;
+    start = end;
   }
+  return {chunks: projectionChunks, scratchBytes};
+}
 
+/** Copies one contiguous right row-ID range into graph scratch for reuse by every left batch. */
+function packGPUJoinProjectionRange(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  id: string,
+  format: GPUAnalyticsScalarFormat,
+  chunks: GPUJoinProjectionChunk[],
+  length: number
+): GPUJoinProjectionChunk {
+  const first = chunks[0].first;
   const usage = Buffer.STORAGE | Buffer.COPY_DST;
   const input = createTransientView(graph, `${id}-packed-values`, format, length, usage);
   const inputValidity = chunks[0].inputValidity
@@ -218,7 +257,7 @@ function packGPUJoinProjectionChunks(
       })
     });
   }
-  return [{first, input, inputValidity}];
+  return {first, input, inputValidity};
 }
 
 /** Writes one matching right chunk, comparing unsigned source IDs without wraparound. */

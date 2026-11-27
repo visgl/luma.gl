@@ -647,7 +647,7 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
-it('GPUSQL reuses packed right projection across fixed-row batch layouts', async () => {
+it('GPUSQL stages partial right projection ranges across fixed-row batch layouts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
@@ -674,13 +674,21 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
     ownership: 'owned'
   });
   try {
-    for (const [rightBatchCount, budget, stagedColumns, expectedScratchBytes] of [
-      [1, undefined, 0, 0],
-      [2, undefined, 2, 384],
-      [8, 384, 2, 384],
-      [8, 383, 1, 256],
-      [8, 128, 1, 128],
-      [8, 0, 0, 0]
+    for (const [
+      rightBatchCount,
+      budget,
+      expectedProjectionRanges,
+      expectedCopyPasses,
+      expectedScratchBytes,
+      gap
+    ] of [
+      [1, undefined, 2, 0, 0],
+      [2, undefined, 2, 4, 384],
+      [8, 384, 2, 16, 384],
+      [8, 384, 4, 16, 384, 100],
+      [8, 383, 3, 15, 368],
+      [8, 128, 13, 4, 128],
+      [8, 0, 16, 0, 0]
     ] as const) {
       const right = new GPUDataFrame({
         ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(rightRows, rightBatchCount)),
@@ -695,6 +703,12 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
         expect(right.numRows).toBe(rowCount);
         expect(left.batches).toHaveLength(leftBatchCount);
         expect(right.batches).toHaveLength(rightBatchCount);
+        if (gap) {
+          for (const batch of right.batches.slice(rightBatchCount / 2)) {
+            if (!batch.sourceInfo) throw new Error('Expected Arrow source-row IDs');
+            batch.sourceInfo.sourceRowIndexOffset += gap;
+          }
+        }
         const result = new GPUSQLContext({trips: left, accounts: right})
           .query(
             'SELECT a.score, a.identifier AS account FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier',
@@ -705,13 +719,11 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
           const projectionPasses = addComputePass.mock.calls.filter(([pass]) =>
             pass.id.includes('-join-projection-')
           );
-          expect(projectionPasses).toHaveLength(
-            leftBatchCount * (stagedColumns + (2 - stagedColumns) * rightBatchCount)
-          );
+          expect(projectionPasses).toHaveLength(leftBatchCount * expectedProjectionRanges);
           const packingPasses = addCopyPass.mock.calls.filter(([pass]) =>
             pass.id.includes('-join-projection-')
           );
-          expect(packingPasses).toHaveLength(stagedColumns * rightBatchCount);
+          expect(packingPasses).toHaveLength(expectedCopyPasses);
           const scratchBytes = createTransientBuffer.mock.calls
             .map(([buffer]) => buffer)
             .filter(buffer => buffer.id.includes('-join-projection-'))
