@@ -146,3 +146,17 @@ Call `context.query(sql).explain()` to inspect the bound execution route, projec
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Core](/docs/api-reference/experimental/gpu-core)
 - [Arrow](/docs/api-reference/arrow)
+
+
+## Benchmark right-side projection
+
+Run the opt-in WebGPU benchmark with fixed row counts and varying right batch counts:
+
+```sh
+yarn test-browser-benchmarks modules/graph/test/gpu-sql/gpu-join-projection-benchmark.spec.ts
+```
+
+The benchmark checks result parity and records projection compute passes, copy passes, and staging
+bytes. It separately reports graph compilation, command encoding, and the wall time from encoding
+to GPU completion. Separate GPU timestamp runs measure the graph's compute passes when the device exposes timestamp
+queries. Native copies contribute to wall time. Arrow readback runs outside the timed samples.
