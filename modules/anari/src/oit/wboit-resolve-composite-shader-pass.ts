@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '@luma.gl/engine';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
@@ -63,15 +64,20 @@ vec4 wboitResolve_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
 } as const satisfies ShaderPass<WBOITResolveBindings, Record<string, never>, WBOITResolveBindings>;
 
 /** Creates the fullscreen weighted-blended OIT resolve pipeline. */
+/** Resolves the scene buffers with the wboitResolve shader. */
+export const wboitResolveEffect: EffectDefinition<never> = {
+  name: 'wboitResolveCompositeShaderPass',
+  resources: {},
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: wboitResolve,
+      inputs: {sourceTexture: 'previous'},
+      output: 'previous'
+    }
+  ]
+};
+
 export function createWBOITResolveCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: 'wboitResolveCompositeShaderPass',
-    steps: [
-      {
-        shaderPass: wboitResolve,
-        inputs: {sourceTexture: 'previous'},
-        output: 'previous'
-      }
-    ]
-  };
+  return {name: wboitResolveEffect.name, steps: wboitResolveEffect.passes.map(pass => ({...pass}))};
 }

@@ -105,6 +105,36 @@ definition for analytic fog with frame uniforms, or configure
 `volumetricFog` with `{mode: 'height'}`. Selection outlines sample a
 caller-provided `selectionTexture` mask.
 
+## Resolve scene buffers
+
+ANARI exposes fullscreen definitions for deferred direct lighting, ambient
+lighting, clustered deferred lighting, weighted blended transparency, and
+A-buffer transparency. Import them from `@luma.gl/anari`.
+
+```ts
+import {EffectRenderer} from '@luma.gl/engine';
+import {clusteredDeferredLightingEffect} from '@luma.gl/anari';
+
+const lighting = new EffectRenderer(device, {
+  effects: [clusteredDeferredLightingEffect],
+  colorFormat: 'rgba16float'
+});
+
+lighting.resize([width, height]);
+const litColor = lighting.renderToTexture({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: {...gBuffer.getShaderPassBindings(), ...clusteredLightBindings},
+  uniforms: lightingUniforms
+});
+```
+
+The scene renderer supplies and owns the G-buffer or transparency captures.
+The resolve samples those resources and writes the color result. For A-buffer
+resolve, use `{effect: aBufferResolveEffect, configuration: {maxFragmentsPerPixel}}`
+and match the limit used to capture fragments. The higher-level A-buffer,
+weighted blended transparency, and deferred scene renderers wire their own
+inputs automatically.
+
 ## Author an effect
 
 Start with a fullscreen shader that follows the

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ConfigurableEffectDefinition} from '@luma.gl/engine';
 import type {Buffer} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
@@ -158,23 +159,38 @@ fn aBufferResolve_sampleColor(
 }
 
 /** Creates the fullscreen resolve pipeline used for each captured A-buffer slice. */
+export const DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL = 12;
+
+/** Resolves captured A-buffer fragments using a configured per-pixel sort limit. */
+export const aBufferResolveEffect: ConfigurableEffectDefinition<
+  ABufferResolveCompositeShaderPassOptions,
+  never
+> = {
+  name: 'aBufferResolveCompositeShaderPass',
+  configure(options = {maxFragmentsPerPixel: DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL}) {
+    const maxFragmentsPerPixel = Math.floor(options.maxFragmentsPerPixel);
+    if (maxFragmentsPerPixel < 1) {
+      throw new Error('maxFragmentsPerPixel must be at least 1.');
+    }
+
+    return {
+      name: 'aBufferResolveCompositeShaderPass',
+      resources: {},
+      passes: [
+        {
+          kind: 'fullscreen',
+          shaderPass: createABufferResolveShaderPass(maxFragmentsPerPixel),
+          inputs: {sourceTexture: 'previous'},
+          output: 'previous'
+        }
+      ]
+    };
+  }
+};
+
 export function createABufferResolveCompositeShaderPass(
   options: ABufferResolveCompositeShaderPassOptions
 ): CompositeShaderPass {
-  const maxFragmentsPerPixel = Math.floor(options.maxFragmentsPerPixel);
-  if (maxFragmentsPerPixel < 1) {
-    throw new Error('maxFragmentsPerPixel must be at least 1.');
-  }
-
-  const shaderPass = createABufferResolveShaderPass(maxFragmentsPerPixel);
-  return {
-    name: 'aBufferResolveCompositeShaderPass',
-    steps: [
-      {
-        shaderPass,
-        inputs: {sourceTexture: 'previous'},
-        output: 'previous'
-      }
-    ]
-  };
+  const effect = aBufferResolveEffect.configure(options);
+  return {name: effect.name, steps: effect.passes};
 }

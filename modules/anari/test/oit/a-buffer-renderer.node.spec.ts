@@ -4,11 +4,12 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {configureEffect, Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
   aBuffer,
   aBufferPlugin,
+  aBufferResolveEffect,
   createABufferResolveCompositeShaderPass,
   getABufferSlicePlan,
   getABufferSupport
@@ -42,8 +43,13 @@ it('aBuffer plugin exposes the WGSL module only', () => {
   void 0;
 });
 
-it('A-buffer resolve is packaged as a CompositeShaderPass', () => {
+it('A-buffer resolves with the same shader through either definition', () => {
   const pipeline = createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 8});
+  const effect = configureEffect(aBufferResolveEffect, {maxFragmentsPerPixel: 8});
+  expect(effect.passes).toEqual(pipeline.steps);
+  expect(configureEffect(aBufferResolveEffect).passes[0].shaderPass.source).toEqual(
+    createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 12}).steps[0].shaderPass.source
+  );
   expect(pipeline.steps.length, 'resolve pipeline has one fullscreen step').toBe(1);
   expect(pipeline.steps[0].shaderPass.name, 'pipeline uses the resolve pass').toBe(
     'aBufferResolve'

@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Texture, type TextureFormatColor} from '@luma.gl/core';
-import {type ModelProps, type ScenegraphNode, ShaderPassRenderer} from '@luma.gl/engine';
+import {type ModelProps, type ScenegraphNode, EffectRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumberArray3} from '@math.gl/core/types';
 import {
-  createDeferredLightingCompositeShaderPass,
+  deferredLightingEffect,
   type DeferredPointLight,
   MAX_DEFERRED_POINT_LIGHTS,
   makeDeferredPointLightBufferData
@@ -106,7 +106,7 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
 export class DeferredSceneRenderer extends SceneRenderer {
   private readonly buffers = new Map<string, GBuffer>();
   private readonly pointLightBuffer: Buffer;
-  private readonly lightingRenderer: ShaderPassRenderer;
+  private readonly lightingRenderer: EffectRenderer;
   private forwardRenderer: SceneRenderer | null = null;
   private readonly lastDeferredFrameIdentifiers = new Set<string>();
 
@@ -120,8 +120,8 @@ export class DeferredSceneRenderer extends SceneRenderer {
       data: makeDeferredPointLightBufferData([], MAX_DEFERRED_POINT_LIGHTS),
       usage: Buffer.STORAGE | Buffer.COPY_DST
     });
-    this.lightingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [createDeferredLightingCompositeShaderPass()],
+    this.lightingRenderer = new EffectRenderer(device, {
+      effects: [deferredLightingEffect],
       colorFormat: 'rgba16float',
       flipY: true
     });

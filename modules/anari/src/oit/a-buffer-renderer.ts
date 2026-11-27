@@ -12,15 +12,17 @@ import {
   type TextureFormatColor,
   type TextureView
 } from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {type ABufferShaderModuleProps} from './a-buffer';
-import {createABufferResolveCompositeShaderPass} from './a-buffer-resolve-composite-shader-pass';
+import {
+  aBufferResolveEffect,
+  DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL
+} from './a-buffer-resolve-composite-shader-pass';
 
 const A_BUFFER_HEAD_POINTER_HEADER_BYTE_LENGTH = 8;
 const A_BUFFER_HEAD_POINTER_BYTE_LENGTH = 4;
 const A_BUFFER_FRAGMENT_BYTE_LENGTH = 16;
 const DEFAULT_AVERAGE_FRAGMENTS_PER_PIXEL = 4;
-const DEFAULT_MAX_FRAGMENTS_PER_PIXEL = 12;
 let nextABufferResourceId = 0;
 
 function makeABufferResourceId(prefix: string): string {
@@ -120,7 +122,7 @@ export class ABufferRenderer {
   readonly device: Device;
   readonly props: ResolvedABufferRendererProps;
 
-  private readonly resolveRenderer: ShaderPassRenderer;
+  private readonly resolveRenderer: EffectRenderer;
   private slicePlan: ABufferSlicePlan | null = null;
   private headPointerInitBuffer: Buffer | null = null;
   private headPointers: Buffer | null = null;
@@ -135,12 +137,13 @@ export class ABufferRenderer {
 
     this.device = device;
     this.props = resolveABufferRendererProps(props);
-    this.resolveRenderer = new ShaderPassRenderer(device, {
+    this.resolveRenderer = new EffectRenderer(device, {
       colorFormat: props.colorFormat,
-      shaderPasses: [
-        createABufferResolveCompositeShaderPass({
-          maxFragmentsPerPixel: this.props.maxFragmentsPerPixel
-        })
+      effects: [
+        {
+          effect: aBufferResolveEffect,
+          configuration: {maxFragmentsPerPixel: this.props.maxFragmentsPerPixel}
+        }
       ]
     });
   }
@@ -363,7 +366,7 @@ function resolveABufferRendererProps(props: ABufferRendererProps): ResolvedABuff
     props.averageFragmentsPerPixel ?? DEFAULT_AVERAGE_FRAGMENTS_PER_PIXEL
   );
   const maxFragmentsPerPixel = Math.floor(
-    props.maxFragmentsPerPixel ?? DEFAULT_MAX_FRAGMENTS_PER_PIXEL
+    props.maxFragmentsPerPixel ?? DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL
   );
   const maxBufferByteLength = Math.floor(props.maxBufferByteLength ?? Number.MAX_SAFE_INTEGER);
 
