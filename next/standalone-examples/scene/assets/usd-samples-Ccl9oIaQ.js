@@ -10586,7 +10586,10 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
 }
 `,bindingLayout:[{name:`glowHalf`,group:0},{name:`glowQuarter`,group:0},{name:`glowEighth`,group:0}],uniforms:{},bindings:{},uniformTypes:{intensity:`f32`},propTypes:{intensity:{value:1,min:0,softMax:3}},passes:[{sampler:!0}]},inputs:{sourceTexture:`previous`,glowHalf:`blurHalf`,glowQuarter:`blurQuarter`,glowEighth:`blurEighth`},output:`previous`,uniforms:{intensity:1}}]};gv({levelNames:[`Half`,`Quarter`],colorFormat:`rgba16float`,threshold:.8,softKnee:.5,fireflyReduction:0,exposure:1,exposureCompensation:0});var wv={name:`advancedCopy`,source:`fn advancedCopy_sampleColor(
   sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f
-) -> vec4f { return textureSample(sourceTexture, sourceTextureSampler, texCoord); }`,passes:[{sampler:!0}]},Tv=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],Ev={name:`cameraReprojectionTaaCompositeShaderPass`,resources:{cameraReprojectionTaaHistoryColor:{format:`rgba16float`,lifetime:`history`,initialize:`original`},cameraReprojectionTaaHistoryDepth:{format:`rgba16float`,lifetime:`history`,initialize:{clearColor:[1,0,0,1]}}},passes:[{kind:`fullscreen`,shaderPass:{name:`cameraReprojectionTaaResolve`,source:`\
+) -> vec4f { return textureSample(sourceTexture, sourceTextureSampler, texCoord); }`,fs:`
+vec4 advancedCopy_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  return texture(sourceTexture, texCoord);
+}`,passes:[{sampler:!0}]},Tv=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],Ev={name:`cameraReprojectionTaaCompositeShaderPass`,resources:{cameraReprojectionTaaHistoryColor:{format:`rgba16float`,lifetime:`history`,initialize:`original`},cameraReprojectionTaaHistoryDepth:{format:`rgba16float`,lifetime:`history`,initialize:{clearColor:[1,0,0,1]}}},passes:[{kind:`fullscreen`,shaderPass:{name:`cameraReprojectionTaaResolve`,source:`\
 ${ih}
 const CAMERA_REPROJECTION_TAA_EPSILON: f32 = 0.00001;
 

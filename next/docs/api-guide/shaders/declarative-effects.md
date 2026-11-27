@@ -50,6 +50,21 @@ The effects run in array order. SSAO samples the scene depth and updates the col
 
 To use camera-reprojection TAA, add `cameraReprojectionTaa` between SSAO and bloom. Supply the camera matrices and jitter each frame as `cameraReprojectionTaaResolve` uniforms. After a camera cut, call `resetHistory()` before rendering the next frame. See the [camera-reprojection shader definition](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/effects/passes/screen-space/camera-reprojection-temporal-antialiasing.ts) for its camera uniform types.
 
+The other fullscreen definitions include `motionBlur`, `taa`, and `depthOfField`. Motion blur and standard TAA use the scene velocity texture. Depth of field uses scene depth and the `dof` camera and lens uniforms. For a display-ready chain, place `toneMappingEffect` after HDR bloom and `fxaaEffect` after tone mapping.
+
+## Apply glfx image filters[​](#apply-glfx-image-filters "Direct link to Apply glfx image filters")
+
+Import `sepiaEffect`, `vignetteEffect`, or another glfx definition from `@luma.gl/engine/effects` and add it to the stack. Use uniforms keyed by the shader name, for example `uniforms: {sepia: {amount: 0.6}}`.
+
+| Category | Definitions                                                                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adjust   | `brightnessContrastEffect`, `denoiseEffect`, `hueSaturationEffect`, `noiseEffect`, `persistence`, `sepiaEffect`, `vibranceEffect`, `vignetteEffect` |
+| Blur     | `bloomEffect`, `gaussianBlurEffect`, `tiltShiftEffect`, `triangleBlurEffect`, `zoomBlurEffect`                                                      |
+| Stylize  | `colorHalftoneEffect`, `dotScreenEffect`, `edgeWorkEffect`, `hexagonalPixelateEffect`, `inkEffect`, `magnifyEffect`                                 |
+| Warp     | `bulgePinchEffect`, `swirlEffect`                                                                                                                   |
+
+Use `bloomEffect` for the simple image filter and `bloomLow` for the HDR pyramid. Separable and repeated glfx filters declare both draws and reuse the shared color chain between them.
+
 ## Author an effect[​](#author-an-effect "Direct link to Author an effect")
 
 Start with a fullscreen shader that follows the [shader pass convention](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). Declare a pass for each draw and route each shader's inputs to the textures it samples. This example adjusts contrast and then applies a vignette, reusing two built-in shaders.
