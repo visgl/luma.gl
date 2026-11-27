@@ -71,7 +71,14 @@ fn screenSpaceOutline_sampleColor(
   return mix(sourceColor, screenSpaceOutline.color, edge * screenSpaceOutline.color.a);
 }`,
   fs: /* glsl */ `\
-layout(std140) uniform screenSpaceOutlineUniforms { vec4 color; float thickness; float depthThreshold; float normalThreshold; float useNormalTexture; float useDiagonalSamples; } screenSpaceOutline;
+layout(std140) uniform screenSpaceOutlineUniforms {
+  vec4 color;
+  float thickness;
+  float depthThreshold;
+  float normalThreshold;
+  float useNormalTexture;
+  float useDiagonalSamples;
+} screenSpaceOutline;
 uniform sampler2D depthTexture;
 uniform sampler2D normalTexture;
 vec3 screenSpaceOutline_depthNormal(vec2 uv, vec2 texSize) {
@@ -169,7 +176,11 @@ function configureOutline(options: OutlineCompositeShaderPassOptions = {}): Effe
 const imageOutlinePass = {
   name: 'imageOutline',
   source: /* wgsl */ `\
-struct imageOutlineUniforms { color: vec4f, thickness: f32, useDiagonalSamples: f32, };
+struct imageOutlineUniforms {
+  color: vec4f,
+  thickness: f32,
+  useDiagonalSamples: f32,
+};
 @group(0) @binding(auto) var<uniform> imageOutline: imageOutlineUniforms;
 fn imageOutline_sampleColor(sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f) -> vec4f {
   let texel = imageOutline.thickness / texSize;
@@ -181,7 +192,11 @@ fn imageOutline_sampleColor(sourceTexture: texture_2d<f32>, sourceTextureSampler
   return vec4f(mix(center.rgb, imageOutline.color.rgb, coverage), center.a);
 }`,
   fs: /* glsl */ `\
-layout(std140) uniform imageOutlineUniforms { vec4 color; float thickness; float useDiagonalSamples; } imageOutline;
+layout(std140) uniform imageOutlineUniforms {
+  vec4 color;
+  float thickness;
+  float useDiagonalSamples;
+} imageOutline;
 vec4 imageOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   vec2 texel = imageOutline.thickness / texSize;
   vec4 center = texture(sourceTexture, texCoord);
