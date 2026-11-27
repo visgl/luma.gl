@@ -17,10 +17,13 @@ export type DeviceType = 'webgl' | 'webgpu-core' | 'webgpu-max' | 'webgpu-compat
 export type CanvasContextProfile = 'default' | 'high-dynamic-range';
 export type DeviceRequestOptions = {
   xrCompatible?: boolean;
+  /** Requests `featureLevel: 'compatibility-max'` for `'webgpu-compatibility'` devices. */
+  compatibilityMax?: boolean;
 };
 type DeviceCacheKey =
   | `${DeviceType}:${CanvasContextProfile}`
-  | `${DeviceType}:${CanvasContextProfile}:xr-compatible`;
+  | `${DeviceType}:${CanvasContextProfile}:${'xr-compatible' | 'compatibility-max'}`
+  | `${DeviceType}:${CanvasContextProfile}:xr-compatible:compatibility-max`;
 
 const WEBGPU_FEATURE_LEVELS = {
   'webgpu-core': 'core',
@@ -59,14 +62,17 @@ export async function createDevice(
 ): Promise<Device> {
   const resolvedCanvasContextProfile = resolveCanvasContextProfile(type, canvasContextProfile);
   const xrCompatible = options.xrCompatible === true && isWebGPUDeviceType(type);
-  const cacheKey: DeviceCacheKey = xrCompatible
-    ? `${type}:${resolvedCanvasContextProfile}:xr-compatible`
-    : `${type}:${resolvedCanvasContextProfile}`;
+  const compatibilityMax = options.compatibilityMax === true && type === 'webgpu-compatibility';
+  const cacheKey = getDeviceCacheKey(type, resolvedCanvasContextProfile, {
+    xrCompatible,
+    compatibilityMax
+  });
   cachedDevice[cacheKey] ||= (async () => {
     const device = await luma.createDevice({
       adapters: [webgl2Adapter, webgpuAdapter],
       ...getDeviceRequestProps(type),
       ...(xrCompatible ? {xrCompatible: true} : {}),
+      ...(compatibilityMax ? {featureLevel: 'compatibility-max' as const} : {}),
       debugGPUTime: true,
       createCanvasContext: {
         container: getCanvasContainer(),
@@ -100,6 +106,21 @@ export async function createDevice(
     }
     throw error;
   }
+}
+
+function getDeviceCacheKey(
+  type: DeviceType,
+  canvasContextProfile: CanvasContextProfile,
+  options: Required<DeviceRequestOptions>
+): DeviceCacheKey {
+  const baseKey = `${type}:${canvasContextProfile}` as const;
+  if (options.xrCompatible && options.compatibilityMax) {
+    return `${baseKey}:xr-compatible:compatibility-max`;
+  }
+  if (options.xrCompatible) {
+    return `${baseKey}:xr-compatible`;
+  }
+  return options.compatibilityMax ? `${baseKey}:compatibility-max` : baseKey;
 }
 
 export async function createPresentationDevice(type: DeviceType): Promise<Device> {

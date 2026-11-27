@@ -6,6 +6,7 @@ import {expect, it} from 'vitest';
 import {
   getEffectiveWebGPUFeatureLevel,
   getRequiredWebGPUFeatures,
+  getRequestedWebGPULimits,
   getRequiredWebGPULimits,
   getWebGPUFeatureLevel,
   getWebGPURequestAdapterOptions
@@ -41,6 +42,55 @@ it('getRequiredWebGPULimits reads non-enumerable supported limits directly', () 
   void 0;
 });
 
+it('getRequestedWebGPULimits selects deterministic limits for each feature level', () => {
+  const supportedLimits = {
+    maxStorageBuffersInVertexStage: 10,
+    maxStorageBuffersPerShaderStage: 10,
+    maxComputeInvocationsPerWorkgroup: 1024
+  } as unknown as GPUSupportedLimits;
+  const expectedAdapterLimits = {
+    maxStorageBuffersInVertexStage: 10,
+    maxStorageBuffersPerShaderStage: 10,
+    maxComputeInvocationsPerWorkgroup: 1024
+  };
+
+  expect(
+    getRequestedWebGPULimits(supportedLimits, 'core'),
+    'core keeps the spec default limits'
+  ).toEqual({});
+  expect(
+    getRequestedWebGPULimits(supportedLimits, 'compatibility'),
+    'compatibility keeps compatibility default limits'
+  ).toEqual({});
+  expect(
+    getRequestedWebGPULimits(supportedLimits, 'best-available'),
+    'best-available keeps default limits whether or not it upgrades to core'
+  ).toEqual({});
+  expect(getRequestedWebGPULimits(supportedLimits, 'max'), 'max requests adapter limits').toEqual(
+    expectedAdapterLimits
+  );
+  expect(
+    getRequestedWebGPULimits(supportedLimits, 'compatibility-max'),
+    'compatibility-max requests adapter limits'
+  ).toEqual(expectedAdapterLimits);
+
+  for (const featureLevel of [
+    'core',
+    'compatibility',
+    'best-available',
+    'max',
+    'compatibility-max'
+  ] as const) {
+    expect(
+      getRequestedWebGPULimits(supportedLimits, featureLevel, {
+        maxStorageBuffersInVertexStage: 4,
+        maxBufferSize: 4096
+      }),
+      `${featureLevel} applies explicit limits on top of profile limits`
+    ).toMatchObject({maxStorageBuffersInVertexStage: 4, maxBufferSize: 4096});
+  }
+});
+
 it('WebGPUAdapter feature level helpers map luma props to WebGPU requests', () => {
   expect(getWebGPUFeatureLevel({}), 'defaults to core').toBe('core');
   expect(getWebGPUFeatureLevel({featureLevel: 'max'}), 'explicit level is returned').toBe('max');
@@ -68,6 +118,10 @@ it('WebGPUAdapter feature level helpers map luma props to WebGPU requests', () =
   expect(
     getWebGPURequestAdapterOptions({featureLevel: 'best-available'}),
     'best available starts from a compatibility adapter'
+  ).toEqual({featureLevel: 'compatibility'});
+  expect(
+    getWebGPURequestAdapterOptions({featureLevel: 'compatibility-max'}),
+    'compatibility-max requests a compatibility adapter'
   ).toEqual({featureLevel: 'compatibility'});
 
   void 0;
@@ -108,6 +162,10 @@ it('WebGPUAdapter feature helpers keep requested profiles separate', () => {
     getRequiredWebGPUFeatures(compatibilityFeatures, 'best-available'),
     'best available stays compatibility when core is unavailable'
   ).toEqual([]);
+  expect(
+    getRequiredWebGPUFeatures(coreFeatures, 'compatibility-max'),
+    'compatibility-max requests adapter features without opting into core'
+  ).toEqual(['texture-compression-bc']);
 
   expect(
     getEffectiveWebGPUFeatureLevel('compatibility', compatibilityFeatures),
@@ -125,6 +183,14 @@ it('WebGPUAdapter feature helpers keep requested profiles separate', () => {
     getEffectiveWebGPUFeatureLevel('best-available', compatibilityFeatures),
     'best available reports compatibility when core is unavailable'
   ).toBe('compatibility');
+  expect(
+    getEffectiveWebGPUFeatureLevel('compatibility-max', compatibilityFeatures),
+    'compatibility-max reports compatibility'
+  ).toBe('compatibility');
+  expect(
+    getEffectiveWebGPUFeatureLevel('compatibility-max', coreFeatures),
+    'compatibility-max reports core when the browser returns a core device'
+  ).toBe('core');
 
   void 0;
 });
