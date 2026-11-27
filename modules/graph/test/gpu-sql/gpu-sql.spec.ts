@@ -22,7 +22,7 @@ import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 it('GPUSQL executes Arrow filters, derived columns, global ordering, and selected Arrow output on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
@@ -643,6 +643,80 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
     }
   } finally {
     right.destroy();
+    left.destroy();
+  }
+});
+
+it('GPUSQL schedules more right projection passes as fixed rows span more right batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const rowCount = 32;
+  const leftBatchCount = 8;
+  const identifiers = Uint32Array.from({length: rowCount}, (_, row) => row);
+  const scores = Float32Array.from(identifiers, identifier => identifier * 0.5);
+  const leftRows = arrow.tableFromArrays({identifier: identifiers});
+  const rightRows = arrow.tableFromArrays({identifier: identifiers, score: scores});
+  const batchRows = (table: arrow.Table, batchCount: number) => {
+    const rowsPerBatch = table.numRows / batchCount;
+    return new arrow.Table(
+      Array.from({length: batchCount}, (_, batchIndex) =>
+        table.slice(batchIndex * rowsPerBatch, (batchIndex + 1) * rowsPerBatch)
+      ).flatMap(batch => batch.batches)
+    );
+  };
+
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(leftRows, leftBatchCount)),
+    ownership: 'owned'
+  });
+  try {
+    for (const [rightBatchCount, expectedPasses] of [
+      [1, 8],
+      [2, 16],
+      [8, 64]
+    ] as const) {
+      const right = new GPUDataFrame({
+        ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(rightRows, rightBatchCount)),
+        ownership: 'owned'
+      });
+      const graph = new GPUCommandGraph(device);
+      const addComputePass = vi.spyOn(graph, 'addComputePass');
+      try {
+        expect(left.numRows).toBe(rowCount);
+        expect(right.numRows).toBe(rowCount);
+        expect(left.batches).toHaveLength(leftBatchCount);
+        expect(right.batches).toHaveLength(rightBatchCount);
+        const result = new GPUSQLContext({trips: left, accounts: right})
+          .query(
+            'SELECT a.score FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier'
+          )
+          .compile(graph);
+        try {
+          const projectionPasses = addComputePass.mock.calls.filter(([pass]) =>
+            pass.id.includes('-join-projection-')
+          );
+          expect(projectionPasses).toHaveLength(expectedPasses);
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder);
+          device.submit(encoder.finish());
+          const output = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          expect(output.batches).toHaveLength(leftBatchCount);
+          expect(Array.from(output.getChild('score') ?? [])).toEqual(Array.from(scores));
+        } finally {
+          result.destroy();
+        }
+      } finally {
+        addComputePass.mockRestore();
+        right.destroy();
+      }
+    }
+  } finally {
     left.destroy();
   }
 });
