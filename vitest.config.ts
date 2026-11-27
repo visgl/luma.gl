@@ -145,6 +145,7 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts',
   'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
 
