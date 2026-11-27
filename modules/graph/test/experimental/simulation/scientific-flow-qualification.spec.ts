@@ -215,3 +215,33 @@ for (const conservativeMask of [false, true]) {
     }
   });
 }
+
+it('preserves analytic eastward travel across the supported latitude range', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  // Binary fractions make latitude reconstruction exact on both CPU and GPU.
+  const verticals = [0, 0.03125, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 0.96875, 1];
+  const tracer = new ScientificFlowTracer(device, {
+    input: {
+      ...makeField(2, () => 20),
+      geographic: {longitudeStart: 0, latitudeStart: -85, longitudeStep: 90, latitudeStep: 170}
+    },
+    positions: Float32Array.from(verticals.flatMap(vertical => [0, vertical])),
+    tolerance: 1,
+    maximumTimeStep: 3600
+  });
+  try {
+    await advance(tracer, 3600);
+    const bytes = await tracer.output.readAsync();
+    const particles = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+    for (let index = 0; index < verticals.length; index++) {
+      const latitude = -85 + 170 * verticals[index];
+      const metresPerDegree = ((6371008.8 * Math.PI) / 180) * Math.cos((latitude * Math.PI) / 180);
+      const distance = particles[index * 4] * 90 * metresPerDegree;
+      expect(Math.abs(distance - 20 * 3600)).toBeLessThan(0.2);
+      expect(particles[index * 4 + 1]).toBe(verticals[index]);
+    }
+  } finally {
+    tracer.destroy();
+  }
+});

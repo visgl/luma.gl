@@ -108,7 +108,7 @@ fn physicalError(error: vec2<f32>, position: vec2<f32>) -> f32 {
   var scale = parameters.domain.zw;
   if ((parameters.counters.y & 1u) != 0u) {
     let latitude = parameters.domain.y + parameters.domain.w * position.y;
-    scale *= 111195.08 * vec2<f32>(cos(radians(latitude)), 1.0);
+    scale *= 111195.08 * vec2<f32>(latitudeCosine(latitude), 1.0);
   }
   return length(error * scale);
 }

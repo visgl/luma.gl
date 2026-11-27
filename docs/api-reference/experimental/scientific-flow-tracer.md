@@ -260,6 +260,7 @@ for (const snapshot of snapshots) {
 The offline GFS Atlantic fixture checks four six-hour releases at hourly horizons
 against an independent double-precision CPU RK4 reference. With a 1 m local
 RK45 tolerance and 300-second maximum step, every retained point must be within
-5 m of the reference. The reference's 15-second and 30-second integrations agree
-within 0.0013 m. This qualifies a pinned, 8-bit-quantized model-wind archive, not
+5 m of the reference. Geographic conversion uses a bounded latitude cosine
+polynomial to avoid backend-dependent trigonometric drift. The reference's
+15-second and 30-second integrations agree within 0.0013 m. This qualifies a pinned, 8-bit-quantized model-wind archive, not
 observations or unquantized GFS. See the [fixture provenance and reproduction guide](https://github.com/visgl/luma.gl/blob/master/modules/graph/test/experimental/simulation/fixtures/README.md).
