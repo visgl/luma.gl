@@ -295,8 +295,8 @@ export const bokehDof = {
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
 
 /** Circular-aperture depth of field using the frame's scene depth and camera uniforms. */
-export const bokehDofEffect: EffectDefinition<never> = {
+export const bokehDofEffect = {
   name: bokehDof.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: bokehDof, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
