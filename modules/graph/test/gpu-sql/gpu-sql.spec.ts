@@ -647,6 +647,77 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
+it('GPUSQL projects nullable packed three-component rows with and without staging', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const positionType = new arrow.FixedSizeList(
+    3,
+    new arrow.Field('item', new arrow.Float32(), false)
+  );
+  const first = arrow.tableFromArrays({
+    identifier: Uint32Array.of(40, 50),
+    position: arrow.vectorFromArray([[4, 40, -4], null], positionType)
+  });
+  const second = arrow.tableFromArrays({
+    identifier: Uint32Array.of(20),
+    position: arrow.vectorFromArray([[2, 20, -2]], positionType)
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(
+      device,
+      new arrow.Table([...first.batches, ...second.batches])
+    ),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [budget, expectedScratch] of [
+      [47, 0],
+      [48, 48]
+    ] as const) {
+      const graph = new GPUCommandGraph(device);
+      const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
+      const result = context
+        .query(
+          'SELECT a.position AS location FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
+          {maxJoinProjectionScratchBytes: budget}
+        )
+        .compile(graph);
+      try {
+        const scratch = createTransientBuffer.mock.calls
+          .map(([buffer]) => buffer)
+          .filter(buffer => buffer.id.includes('-join-projection-'))
+          .reduce((total, buffer) => total + buffer.byteLength, 0);
+        expect(scratch).toBe(expectedScratch);
+        expect(result.table.gpuVectors.location.format).toBe('float32x3');
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(output.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+        expect(
+          Array.from(output.getChild('location') ?? [], value => value && Array.from(value))
+        ).toEqual([null, [2, 20, -2], null, [4, 40, -4], null]);
+      } finally {
+        createTransientBuffer.mockRestore();
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
 it('GPUSQL shares right projection storage and work across aliases and batch layouts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
