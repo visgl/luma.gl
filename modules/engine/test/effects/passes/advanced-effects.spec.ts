@@ -21,6 +21,7 @@ import {
   createGTAOCompositeShaderPass,
   createHDRAutoExposureCompositeShaderPass,
   createOutlineCompositeShaderPass,
+  outlines,
   createSSAOCompositeShaderPass,
   gaussianBlurEffect,
   sepiaEffect,
@@ -340,8 +341,15 @@ it('advanced effects expose composable pipeline shapes', () => {
     'depth reconstruction mode supplies a harmless fallback normal binding'
   ).toBe('previous');
 
-  const outlines = createOutlineCompositeShaderPass({normalSource: 'normal-texture'});
-  expect(outlines.steps[0].output, 'outlines compose into previous').toBe('previous');
+  const outlinePassDefinition = createOutlineCompositeShaderPass({normalSource: 'normal-texture'});
+  expect(outlinePassDefinition.steps[0].output, 'outlines compose into previous').toBe('previous');
+  expect(outlines.name, 'outlines exposes a declarative configurable definition').toBe(
+    'outlineCompositeShaderPass'
+  );
+  expect(
+    createOutlineCompositeShaderPass({mode: 'image', quality: 'fast'}).name,
+    'image outlines remain configurable through the declarative definition'
+  ).toBe('imageOutlineCompositeShaderPass');
 
   const taa = createTAACompositeShaderPass();
   expect(taa.renderTargets?.taaHistoryColor.lifetime, 'TAA retains color').toBe('history');
