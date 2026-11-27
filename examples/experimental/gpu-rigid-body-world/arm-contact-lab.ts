@@ -65,6 +65,12 @@ try {
     pick?.command(index);
     const label = document.querySelector<HTMLOutputElement>('#phase');
     if (label) label.value = GRIPPER_PHASES[index];
+    const advance = document.querySelector<HTMLButtonElement>('#advance');
+    if (advance) {
+      advance.textContent = index < 5 ? 'Next · ' + GRIPPER_PHASES[index + 1] : 'Complete';
+      advance.disabled = index === GRIPPER_PHASES.length - 1;
+      document.querySelector<HTMLButtonElement>('#cycle')!.disabled = advance.disabled;
+    }
   };
   if (pick) {
     const advance = document.querySelector<HTMLButtonElement>('#advance')!;
@@ -74,7 +80,6 @@ try {
     };
     document.querySelector<HTMLButtonElement>('#cycle')!.onclick = () => {
       cycling = true;
-      selectPhase(phase);
     };
     document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => location.reload();
     const grip = document.querySelector<HTMLSelectElement>('#friction')!;
