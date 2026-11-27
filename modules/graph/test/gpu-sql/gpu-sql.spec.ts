@@ -742,13 +742,19 @@ it('GPU SQL and typed joins project nullable packed right vectors with and witho
   }
 });
 
-it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch cap', async () => {
+it.each([
+  {layout: 'mixed', copyableSecondChunk: true},
+  {layout: 'storage-only', copyableSecondChunk: false}
+])('GPUSQL stages $layout right chunks only when two left batches save a compute pass', async ({
+  copyableSecondChunk
+}) => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
   const leftRows = arrow.tableFromArrays({identifier: Uint32Array.of(20, 50, 40, 10)});
-  const leftArrow = new arrow.Table(
-    Array.from({length: 4}, (_, index) => leftRows.slice(index, index + 1).batches[0])
-  );
+  const leftArrow = new arrow.Table([
+    leftRows.slice(0, 2).batches[0],
+    leftRows.slice(2, 4).batches[0]
+  ]);
   const left = new GPUDataFrame({
     ...makeGPUAnalyticsTableFromArrowTable(device, leftArrow),
     ownership: 'owned'
@@ -766,7 +772,7 @@ it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch
           position: new GPUData({
             buffer: device.createBuffer({
               data: Float32Array.of(identifier, -identifier, index),
-              usage: Buffer.STORAGE | (index ? Buffer.COPY_SRC : 0)
+              usage: Buffer.STORAGE | (index === 1 && copyableSecondChunk ? Buffer.COPY_SRC : 0)
             }),
             format: 'float32x3',
             length: 1,
@@ -788,7 +794,7 @@ it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch
         new GPUData({
           buffer: device.createBuffer({
             data: Uint32Array.of(value),
-            usage: Buffer.STORAGE | (index ? Buffer.COPY_SRC : 0)
+            usage: Buffer.STORAGE | (index === 1 && copyableSecondChunk ? Buffer.COPY_SRC : 0)
           }),
           format: 'uint32',
           length: 1,
@@ -806,7 +812,7 @@ it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch
   try {
     for (const [budget, stageCount] of [
       [0, 0],
-      [32, 1]
+      [32, Number(copyableSecondChunk)]
     ] as const) {
       const graph = new GPUCommandGraph(device);
       const compute = vi.spyOn(graph, 'addComputePass');
@@ -830,7 +836,7 @@ it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch
           compute.mock.calls.filter(
             ([pass]) => pass.id.includes('-join-projection-') && !pass.id.includes('-pack-')
           )
-        ).toHaveLength(stageCount ? 4 : 8);
+        ).toHaveLength(stageCount ? 2 : 4);
         const encoder = device.createCommandEncoder();
         result.encode(encoder);
         device.submit(encoder.finish());

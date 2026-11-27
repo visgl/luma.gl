@@ -80,8 +80,6 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   }
 
   const leftBatchCount = lengths.filter(length => length > 0).length;
-  // Three left batches amortize even a two-chunk range staged entirely with compute passes.
-  const allowComputeStaging = leftBatchCount > 2;
   let remainingScratchBytes = maxScratchBytes;
   const projectedSources = new Map(
     sources.map((source, columnIndex) => {
@@ -118,7 +116,7 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
                 format,
                 chunks,
                 remainingScratchBytes,
-                allowComputeStaging
+                leftBatchCount
               )
             : {chunks, scratchBytes: 0};
         remainingScratchBytes -= projection.scratchBytes;
@@ -165,14 +163,14 @@ type GPUJoinProjectionChunk = {
   inputValidity?: GraphDataView<'uint32'>;
 };
 
-/** Stages consecutive copyable chunks within both the device binding limit and remaining budget. */
+/** Stages consecutive chunks when they fit the budget and reduce the compute pass count. */
 function stageGPUJoinProjectionRanges(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
   format: GPUVectorWGSLFormat,
   chunks: GPUJoinProjectionChunk[],
   maxScratchBytes: number,
-  allowComputeStaging: boolean
+  leftBatchCount: number
 ): {chunks: GPUJoinProjectionChunk[]; scratchBytes: number} {
   const projectionChunks: GPUJoinProjectionChunk[] = [];
   const {maxBufferSize, maxStorageBufferBindingSize} = graph.device.limits;
@@ -190,19 +188,19 @@ function stageGPUJoinProjectionRanges(
     );
     let end = start;
     let length = 0;
+    let stagingComputePasses = 0;
     while (end < chunks.length) {
       const chunk = chunks[end];
-      if (
-        chunk.first !== firstChunk.first + length ||
-        length + chunk.input.length > maxRows ||
-        (!allowComputeStaging && !canCopyGPUJoinProjectionChunk(chunk))
-      ) {
+      if (chunk.first !== firstChunk.first + length || length + chunk.input.length > maxRows) {
         break;
       }
       length += chunk.input.length;
+      if (!canCopyGPUJoinProjectionChunk(chunk)) stagingComputePasses++;
       end++;
     }
-    if (end - start < 2) {
+    // One staged gather per left batch replaces one gather per original right chunk.
+    const savedGatherPasses = leftBatchCount * (end - start - 1);
+    if (stagingComputePasses >= savedGatherPasses) {
       projectionChunks.push(firstChunk);
       start++;
       continue;
