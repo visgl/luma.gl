@@ -3,8 +3,8 @@
 <style>
 html,body{margin:0;height:100%;background:#e6e9e4;font:13px system-ui}canvas{width:100%;height:100%;display:block;touch-action:none}#info{position:fixed;inset:16px;pointer-events:none;z-index:10}#info .luma-example-infobox{pointer-events:auto}#lab-controls,#lab-details{color:var(--luma-infobox-text);line-height:1.5}#lab-controls label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}#lab-controls .toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#lab-controls #scene{width:100%;min-width:0}#lab-controls output{display:block;font-size:11px;white-space:pre-line;margin:8px 0;color:var(--luma-infobox-muted)}#startup-error{position:fixed;bottom:16px;left:16px;color:#982b21;background:#fff;padding:8px}#startup-error:empty{display:none}a{color:#9ed9ed}
 </style>  <script type="module" crossorigin src="./assets/wgsl-interface-scan-BeLN4x0P.js"></script>
-  <script type="module" crossorigin src="./assets/robot-arm-scene-XDPNaKiM.js"></script>
-  <script type="module" crossorigin src="./assets/main-DCHDshkp.js"></script>
+  <script type="module" crossorigin src="./assets/robot-arm-scene-BPvYrK6d.js"></script>
+  <script type="module" crossorigin src="./assets/main-DG9J4D7t.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/robot-arm-scene-BPDZ69hs.css">
 </head><body>
 <canvas id="world"></canvas><div id="info"></div>
@@ -14,7 +14,7 @@ html,body{margin:0;height:100%;background:#e6e9e4;font:13px system-ui}canvas{wid
 <label>Payload (kg)<input id="arm-payload" type="range" min="0.25" max="6" step="0.25" value="1"></label>
 <label>Elbow target (°)<input id="arm-angle" type="range" min="-60" max="45" value="0"></label>
 <label>Elbow cap (N·m)<input id="arm-torque" type="range" min="5" max="150" value="150"></label>
-<a href="./arm-contact.html">Try the 3 kg work-stop comparison</a><output id="arm-reading"></output></fieldset>
+<a href="./arm-contact.html">Try the 3 kg work-stop comparison</a><a href="./gripper.html">Try pick and place</a><output id="arm-reading"></output></fieldset>
 <label>Solver <select id="solver"><option value="parallel">Parallel</option><option value="ordered">Ordered reference</option></select></label>
 <label>Iterations <select id="iterations"><option>8</option><option>16</option><option selected>32</option><option>64</option></select></label><button id="push">Push first box</button>
 <label>Domino sound<input id="sound" type="checkbox"></label><label>Auto-play scenarios<input id="auto-play" type="checkbox"></label><output id="playback-status" role="status"></output>

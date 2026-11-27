@@ -129,3 +129,25 @@ const arm = new GPUArticulationTree({
 ```
 
 After registering the tree, a renderer can consume `arm.poseMatrices` in link order. After stepping, `readSimulationDiagnostics().then(status => status.normalForce)` reports the compressive reaction in newtons. In the Robot arm scenario, open **Try the 3 kg work-stop comparison** to switch solvers and press or lift the load.
+
+### Carrying a free workpiece[​](#carrying-a-free-workpiece "Direct link to Carrying a free workpiece")
+
+A two-finger tool can support a free box through friction. Give the tree a `payload` with the initial world-space center, box half-extents, mass and two spherical pads identified by link ID. Each pad is centered on its link's center of mass. The horizontal support plane sets the resting height. For example, with a one-kilogram workpiece:
+
+```
+const payload = {
+
+  position: [1.4, 0, 0.24], halfExtents: [0.19, 0.2, 0.24], mass: 1,
+
+  pads: [{link: 'left', radius: 0.095}, {link: 'right', radius: 0.095}],
+
+  friction: 0.9, supportHeight: 0, supportFriction: 0.65
+
+} satisfies GPUArticulationPayload;
+
+const tree = new GPUArticulationTree({links, base, payload, publishMatrices: true});
+```
+
+Drive the finger joints inward to build normal force. Tangential impulses are limited by pad friction and the current normal impulse. The impulses act on the fingers and the free box, including its rotation. Opening the fingers releases the workpiece. The final record in `readState()` and the final published matrix belong to the box.
+
+Open **Try pick and place** in the Robot arm lab. Use **Next phase** to examine the grip, lift, carry, lower and release, or **Run cycle** to play the sequence. Switch to frictionless pads and repeat to see the load stay on the bench during lift.

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
-import {AccordeonPanel} from '@deck.gl-community/panels';
+import {AccordionPanel} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -61,8 +61,8 @@ export default class SpectralWaveLab extends AnimationLoopTemplate {
   }
 }
 
-function makeInfoPanel(stats: SpectralWaveLabStats): AccordeonPanel {
-  return new AccordeonPanel({
+function makeInfoPanel(stats: SpectralWaveLabStats): AccordionPanel {
+  return new AccordionPanel({
     id: 'spectral-wave-lab-info',
     title: 'Spectral Lab — Two Views of One Wave',
     panels: [
