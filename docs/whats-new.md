@@ -26,6 +26,9 @@
   `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing.
   [Weighted routes](./api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
 
+- WebGPU Cartesian point rendering and CPU picking share a prepared CRS transform. The GPU
+  subtracts the destination origin before narrowing to float32 and draws directly from borrowed
+  coordinate buffers. [GPU Project](./api-reference/experimental/gpu-project.md#inline-cartesian-rendering-and-cpu-picking)
 - **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.

@@ -9,9 +9,9 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
-  // Deck integration packages are scheduled for removal; omit their module suites.
+  // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',

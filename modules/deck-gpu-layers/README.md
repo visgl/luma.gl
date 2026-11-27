@@ -2,7 +2,21 @@
 
 Reusable deck.gl layers for geographic rendering that consume caller-owned GPU buffers.
 
-## Spatial points
+## Inline CRS-projected points
+
+`GPUProjectedPointLayer` renders raw binary64 coordinate pairs (`GPUVector<'uint32x4'>`) through a
+prepared `ProjectionRenderTransform`, with an aligned `GPUVector<'uint32'>` validity mask. It borrows
+vertex buffers and preserves their physical chunks. Projection and origin subtraction use the shared
+platform-selected double-single implementation before narrowing local render coordinates to float32.
+
+Use a non-geospatial Cartesian viewport such as `OrthographicView`, with explicit destination origin,
+axis order and signed unit scales. Map/globe viewports, model matrices, extra coordinate origins and
+altitude transforms are intentionally unsupported. The caller's `getSourcePosition(rowIndex)` CPU
+mirror provides exact retained-transform picking metadata without reading the input buffers back.
+
+See [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project#inline-cartesian-rendering-and-cpu-picking)
+for the frame, validity, invalidation and ownership contracts. This is interoperability coverage,
+not a native projection optimization or a claim of GPU speedup.
 
 ## GPUVector layer core
 

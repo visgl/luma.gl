@@ -33,6 +33,7 @@ import {
   validateGPUAnalyticsSource
 } from './gpu-analytics-compiler-utils';
 import type {GPUDataFrame} from './gpu-data-frame';
+import {projectGPUJoinColumns, type GPUJoinRightColumn} from './gpu-join-projection';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import type {GPUDataFrameJoinType, GPUDataFrameNormalizedJoinOptions} from './gpu-join-query';
@@ -172,7 +173,8 @@ export function compileGPUDataFrameJoin<
   options: GPUDataFrameNormalizedJoinOptions,
   joinType: GPUDataFrameJoinType,
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
-  resultColumns?: readonly (keyof Selection & string)[]
+  resultColumns?: readonly (keyof Selection & string)[],
+  rightColumns: readonly GPUJoinRightColumn[] = []
 ): CompiledGPUDataFrameJoin<Selection, Right> {
   validateGPUJoinSources(source, right, options, graph);
   const retainedRight = right.select(right.columnNames);
@@ -184,7 +186,7 @@ export function compileGPUDataFrameJoin<
       CompiledGPUDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
       prepare: context =>
-        addGPUJoinToGraph(context, retainedRight, options, joinType, resultColumns)
+        addGPUJoinToGraph(context, retainedRight, options, joinType, resultColumns, rightColumns)
     });
   } catch (error) {
     retainedRight.destroy();
@@ -265,7 +267,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
   right: GPUDataFrame<Right>,
   options: GPUDataFrameNormalizedJoinOptions,
   joinType: GPUDataFrameJoinType,
-  resultColumns?: readonly (keyof Left & string)[]
+  resultColumns: readonly (keyof Left & string)[] | undefined,
+  rightColumns: readonly GPUJoinRightColumn[]
 ): GPUDataFrameQueryExtensionResult<Left, CompiledGPUDataFrameJoin<Left, Right>> {
   const ownedVectors: GPUVector[] = [];
   const id = `${context.queryId}-${joinType}-join`;
@@ -405,7 +408,19 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
       indexStatistics: indexState.indexStatistics,
       contractViolation: indexState.contractViolation
     };
-    const projection = resultColumns && projectGPUDataFrameQueryResult(context, resultColumns);
+    const projection =
+      resultColumns &&
+      (rightColumns.length
+        ? projectGPUJoinColumns(
+            context,
+            right,
+            resultColumns,
+            rightColumns,
+            matchedRightRows,
+            matches,
+            ownedVectors
+          )
+        : projectGPUDataFrameQueryResult(context, resultColumns));
     return {
       table: projection?.table ?? context.table,
       validity: projection?.validity ?? context.validity,

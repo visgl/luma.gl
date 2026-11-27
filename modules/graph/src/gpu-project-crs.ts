@@ -9,6 +9,7 @@ export {
   prepareCRSProjectionAsync,
   createCRSProjectionCPUBenchmarks,
   ProjectionTableTransform,
+  ProjectionRenderTransform,
   ProjectionTableError,
   ProjectionPlanningError
 } from './gpu-project/crs';
@@ -17,6 +18,8 @@ export type {
   PreparedCRSProjectionResult,
   ProjectionTableBatch,
   ProjectedTableBatch,
+  ProjectionRenderFrame,
+  ProjectedRenderPosition,
   ProjectionPlanningReason,
   ProjectionPlanningResult,
   AdaptiveProjectionOptions,
