@@ -647,7 +647,7 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
-it('GPUSQL projects nullable packed three-component rows with and without staging', async () => {
+it('GPU SQL and typed joins project nullable packed right vectors with and without staging', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
   const left = new GPUDataFrame({
@@ -674,19 +674,39 @@ it('GPUSQL projects nullable packed three-component rows with and without stagin
     ownership: 'owned'
   });
   const context = new GPUSQLContext({trips: left, accounts: right});
+  const selectedLeft = left.select(['identifier']);
+  const join = selectedLeft.leftJoin(right, {leftOn: 'identifier', rightOn: 'identifier'});
   try {
-    for (const [budget, expectedScratch] of [
-      [47, 0],
-      [48, 48]
+    expect(() =>
+      join.compileWithRightColumns(new GPUCommandGraph(device), {
+        rightColumns: {identifier: 'position'}
+      })
+    ).toThrow(/invalid or already selected/);
+    expect(() =>
+      join.compileWithRightColumns(new GPUCommandGraph(device), {
+        rightColumns: {location: 'position'},
+        maxJoinProjectionScratchBytes: -1
+      })
+    ).toThrow(/nonnegative safe integer/);
+    for (const [budget, expectedScratch, typed] of [
+      [47, 0, false],
+      [48, 48, false],
+      [47, 0, true],
+      [48, 48, true]
     ] as const) {
       const graph = new GPUCommandGraph(device);
       const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
-      const result = context
-        .query(
-          'SELECT a.position AS location FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
-          {maxJoinProjectionScratchBytes: budget}
-        )
-        .compile(graph);
+      const result = typed
+        ? join.compileWithRightColumns(graph, {
+            rightColumns: {location: 'position'},
+            maxJoinProjectionScratchBytes: budget
+          })
+        : context
+            .query(
+              'SELECT a.position AS location FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
+              {maxJoinProjectionScratchBytes: budget}
+            )
+            .compile(graph);
       try {
         const scratch = createTransientBuffer.mock.calls
           .map(([buffer]) => buffer)
@@ -703,6 +723,9 @@ it('GPUSQL projects nullable packed three-component rows with and without stagin
           rowIndices: result.rowIndices,
           selectedCounts: result.selectedCounts
         });
+        expect(output.schema.fields.map(field => field.name)).toEqual(
+          typed ? ['identifier', 'location'] : ['location']
+        );
         expect(output.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
         expect(
           Array.from(output.getChild('location') ?? [], value => value && Array.from(value))
@@ -714,6 +737,7 @@ it('GPUSQL projects nullable packed three-component rows with and without stagin
     }
   } finally {
     right.destroy();
+    selectedLeft.destroy();
     left.destroy();
   }
 });
