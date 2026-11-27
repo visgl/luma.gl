@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {EffectDefinition} from '../../../../passes/effect-renderer';
+import type {
+  ConfigurableEffectDefinition,
+  EffectDefinition,
+  EffectPass
+} from '../../../../passes/effect-renderer';
 
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
 import type {
@@ -1110,10 +1114,39 @@ export const bloomLow: EffectDefinition<
   ]
 };
 
+/**
+ * Configurable multiscale HDR bloom. Settings select level count, reconstruction,
+ * optional history and lens stages, and the initial compute or fragment path.
+ */
+export const hdrBloom: ConfigurableEffectDefinition<BloomCompositeShaderPassOptions> = {
+  name: bloomCompositeShaderPass.name,
+  configure(options = {}) {
+    const {name, renderTargets, steps, extractionSteps, compute} = buildBloomPyramid(options);
+    const initialPasses = {
+      fragment: extractionSteps.map(toBloomEffectPass)
+    };
+    return {
+      name,
+      resources: renderTargets,
+      initialPasses: {...initialPasses, ...(compute ? {compute} : {})},
+      passes: steps.filter(step => !extractionSteps.includes(step)).map(toBloomEffectPass)
+    };
+  }
+};
+
+function toBloomEffectPass(step: CompositeShaderPassStep): EffectPass {
+  return {...step, kind: 'fullscreen'};
+}
+
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
 export function createBloomCompositeShaderPass(
   options: BloomCompositeShaderPassOptions = {}
 ): CompositeShaderPass {
+  const {name, renderTargets, steps, compute} = buildBloomPyramid(options);
+  return {name, renderTargets, steps, ...(compute ? {compute} : {})};
+}
+
+function buildBloomPyramid(options: BloomCompositeShaderPassOptions) {
   const resolutionScale = options.resolutionScale ?? 1;
   const colorFormat = options.colorFormat ?? 'rgba16float';
   const energyConserving = options.energyConserving ?? false;
@@ -1165,6 +1198,7 @@ export function createBloomCompositeShaderPass(
   const levels = BLOOM_PYRAMID_LEVELS.slice(0, BLOOM_QUALITY_LEVELS[quality]);
   const renderTargets: Record<string, ShaderPassRenderTarget> = {};
   const steps: CompositeShaderPassStep[] = [];
+  const extractionSteps: CompositeShaderPassStep[] = [];
   const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
     scale: [scale * resolutionScale, scale * resolutionScale],
     format: colorFormat,
@@ -1184,21 +1218,24 @@ export function createBloomCompositeShaderPass(
       renderTargets[blurTarget] = makeRenderTarget(level.scale);
     }
 
+    let extractionStep: CompositeShaderPassStep;
     if (levelIndex === 0) {
-      steps.push({
+      extractionStep = {
         shaderPass: bloomExtractPass,
         inputs: {sourceTexture: 'previous'},
         output: extractionTarget,
         uniforms: {threshold, softKnee, fireflyReduction, exposure, exposureCompensation}
-      });
+      };
     } else {
       const previousLevel = levels[levelIndex - 1];
-      steps.push({
+      extractionStep = {
         shaderPass: bloomDownsamplePass,
         inputs: {sourceTexture: `extract${previousLevel.name}`},
         output: extractionTarget
-      });
+      };
     }
+    extractionSteps.push(extractionStep);
+    steps.push(extractionStep);
 
     if (blurAlgorithm === 'gaussian') {
       steps.push(
@@ -1308,6 +1345,7 @@ export function createBloomCompositeShaderPass(
     name: bloomCompositeShaderPass.name,
     renderTargets,
     steps,
+    extractionSteps,
     ...(downsample !== 'render'
       ? {
           compute: createBloomComputePyramid({

@@ -65,6 +65,27 @@ export type EffectDefinition<TargetName extends string = string> = {
   passes: EffectPass<TargetName>[];
 };
 
+/**
+ * A reusable effect whose resource descriptors or pass sequence depend on options.
+ * Configure it when constructing the stack or when topology changes. Per-frame
+ * uniforms and external textures are supplied to the renderer separately.
+ */
+export type ConfigurableEffectDefinition<Options, TargetName extends string = string> = {
+  /** Name of the effect being configured. */
+  name: string;
+
+  /** Returns resources and passes for one configuration. */
+  configure(options?: Options): EffectDefinition<TargetName>;
+};
+
+/** Resolves a configurable effect for use in an EffectRenderer chain. */
+export function configureEffect<Options, TargetName extends string>(
+  effect: ConfigurableEffectDefinition<Options, TargetName>,
+  options?: NoInfer<Options>
+): EffectDefinition<TargetName> {
+  return effect.configure(options);
+}
+
 /** @internal Lowers an effect definition to the fullscreen renderer's execution format. */
 export function resolveEffect<TargetName extends string>(
   effect: EffectDefinition<TargetName>

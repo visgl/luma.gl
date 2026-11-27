@@ -67,7 +67,8 @@ export type {
 export {
   bloomCompositeShaderPass,
   bloomLow,
-  createBloomCompositeShaderPass
+  createBloomCompositeShaderPass,
+  hdrBloom
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export type {
   DofProps,
@@ -195,7 +196,7 @@ export {
   ssrTrace
 } from './passes/screen-space/screen-space-reflections';
 export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
-export {createSSAOCompositeShaderPass, ssao} from './passes/screen-space/ssao';
+export {createSSAOCompositeShaderPass, ssao, ssaoEffect} from './passes/screen-space/ssao';
 export {createTAACompositeShaderPass, taa} from './passes/screen-space/temporal-antialiasing';
 export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
 
@@ -205,11 +206,12 @@ export {
   ssrCameraDepthHistoryCopy
 } from './passes/screen-space/ssr-camera-temporal';
 export type {SSRCameraTemporalUniforms} from './passes/screen-space/ssr-camera-temporal';
-export {heightFogPass} from './passes/screen-space/height-fog';
+export {heightFog, heightFogPass} from './passes/screen-space/height-fog';
 export type {HeightFogPassProps, HeightFogPassUniforms} from './passes/screen-space/height-fog';
 export type {VolumetricFogCompositeShaderPassOptions} from './passes/screen-space/volumetric-fog';
 export {
   selectionOutline,
+  selectionOutlineEffect,
   type SelectionOutlineProps,
   type SelectionOutlineUniforms
 } from './passes/screen-space/selection-outline';
@@ -238,3 +240,13 @@ export {
   bulgePinchEffect,
   swirlEffect
 } from './glfx-effects';
+
+// Configurable fullscreen effects.
+export {outlines} from './passes/screen-space/outlines';
+export {gtao} from './passes/screen-space/gtao';
+export {ssr} from './passes/screen-space/screen-space-reflections';
+export {ssgi} from './passes/screen-space/screen-space-global-illumination';
+export {hdrAutoExposure} from './passes/screen-space/hdr-auto-exposure';
+export {clusteredVolumetricLighting} from './passes/screen-space/clustered-volumetric-lighting';
+export {volumetricFog} from './passes/screen-space/volumetric-fog';
+export {contactShadows} from '../lighting/contact-shadow-composite';

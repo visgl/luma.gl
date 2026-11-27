@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {createBloomCompositeShaderPass} from '@luma.gl/engine/effects';
+import {configureEffect} from '@luma.gl/engine';
+import {createBloomCompositeShaderPass, hdrBloom} from '@luma.gl/engine/effects';
 import {WgslReflect} from 'wgsl_reflect';
 import {expect, it} from 'vitest';
 
@@ -203,4 +204,15 @@ it('HDR bloom can scatter every source pixel without additive energy duplication
     'physical composition redistributes source energy instead of adding another copy'
   ).toMatch(/mix\(\s*sourceColor\.rgb,\s*glowColor \* bloomComposite\.tint/);
   void 0;
+});
+
+it('declares the same pyramid outputs for compute and fragment HDR bloom', () => {
+  const effect = configureEffect(hdrBloom, {quality: 'ultra', temporalStability: 0.6});
+  const initialPasses = effect.initialPasses;
+  expect(initialPasses?.fragment.map(pass => pass.output)).toEqual(
+    Object.values(initialPasses?.compute?.outputs ?? {})
+  );
+  expect(initialPasses?.fragment).toHaveLength(5);
+  expect(effect.resources['bloomGlowHistory'].lifetime).toBe('history');
+  expect(configureEffect(hdrBloom, {downsample: 'render'}).initialPasses?.compute).toBeUndefined();
 });
