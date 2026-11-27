@@ -69,6 +69,42 @@ Use `bloomEffect` for the simple image filter and `bloomLow` for the HDR
 pyramid. Separable and repeated glfx filters declare both draws and reuse the
 shared color chain between them.
 
+## Configure an effect
+
+Use `{effect, configuration}` for settings that affect resources or pass order
+when building the stack. The renderer resolves the definition once at construction. Keep animated controls in the render call's
+`uniforms` so they can change without reallocating those resources.
+
+```ts
+import {EffectRenderer} from '@luma.gl/engine';
+import {hdrBloom, ssaoEffect, ssr} from '@luma.gl/engine/effects';
+
+const renderer = new EffectRenderer(device, {
+  effects: [
+    {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+    {effect: ssr, configuration: {reprojection: 'camera', quality: 'fast'}},
+    {effect: hdrBloom, configuration: {quality: 'ultra', downsample: 'auto'}}
+  ],
+  colorFormat: 'rgba16float'
+});
+```
+
+Use `configureEffect` to resolve a definition separately when you want to
+inspect or reuse its configured resources and passes.
+
+Supply each effect's scene bindings at render time. SSAO in normal-texture
+mode needs the normal texture in addition to depth. Camera-reprojected SSR
+also needs camera uniforms. HDR bloom automatically selects fused compute on
+eligible WebGPU devices. Its fragment alternative produces the same named
+pyramid levels for the shared downstream passes.
+
+The configurable catalog also includes `outlines`, `selectionOutlineEffect`,
+`gtao`, `ssgi`, `hdrAutoExposure`, `volumetricFog`,
+`clusteredVolumetricLighting`, and `contactShadows`. Use the `heightFog`
+definition for analytic fog with frame uniforms, or configure
+`volumetricFog` with `{mode: 'height'}`. Selection outlines sample a
+caller-provided `selectionTexture` mask.
+
 ## Author an effect
 
 Start with a fullscreen shader that follows the

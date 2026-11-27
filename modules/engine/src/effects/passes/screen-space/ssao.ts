@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import {depthAwareBlur} from './depth-aware-blur';
 import {depthHelpers} from './screen-space-shader-helpers';
 
@@ -101,26 +105,38 @@ export const ssaoEvaluate = {
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createSSAOCompositeShaderPass(
+/** Screen-space ambient occlusion with configurable normal input and target size. */
+export const ssaoEffect: ConfigurableEffectDefinition<
+  SSAOCompositeShaderPassOptions,
+  'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
+> = {
+  name: 'ssaoCompositeShaderPass',
+  configure: configureSSAO
+};
+
+export function createSSAOCompositeShaderPass(options: SSAOCompositeShaderPassOptions = {}) {
+  return resolveEffect(ssaoEffect.configure(options));
+}
+
+function configureSSAO(
   options: SSAOCompositeShaderPassOptions = {}
-): CompositeShaderPass<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
+): EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
   const scale = options.resolutionScale ?? 1;
   const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
   const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
   if (!useNormalTexture) {
     evaluateInputs['normalTexture'] = 'previous';
   }
-  const resolved = resolveEffect(ssao);
   return {
-    ...resolved,
-    renderTargets: {
+    ...ssao,
+    resources: {
       ssaoRaw: {...ssao.resources.ssaoRaw, scale: [scale, scale]},
       ssaoScratch: {...ssao.resources.ssaoScratch, scale: [scale, scale]},
       ssaoBlurred: {...ssao.resources.ssaoBlurred, scale: [scale, scale]}
     },
-    steps: [
-      {...resolved.steps[0], inputs: evaluateInputs, uniforms: {useNormalTexture}},
-      ...resolved.steps.slice(1)
+    passes: [
+      {...ssao.passes[0], inputs: evaluateInputs, uniforms: {useNormalTexture}},
+      ...ssao.passes.slice(1)
     ]
   };
 }

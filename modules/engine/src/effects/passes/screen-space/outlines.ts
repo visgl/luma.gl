@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {depthHelpers} from './screen-space-shader-helpers';
 
@@ -82,9 +87,12 @@ fn screenSpaceOutline_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createOutlineCompositeShaderPass(
-  options: OutlineCompositeShaderPassOptions = {}
-): CompositeShaderPass {
+export const outlines: ConfigurableEffectDefinition<OutlineCompositeShaderPassOptions> = {
+  name: 'outlineCompositeShaderPass',
+  configure: configureOutline
+};
+
+function configureOutline(options: OutlineCompositeShaderPassOptions = {}): EffectDefinition {
   const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
   const inputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
   if (!useNormalTexture) {
@@ -92,6 +100,21 @@ export function createOutlineCompositeShaderPass(
   }
   return {
     name: 'outlineCompositeShaderPass',
-    steps: [{shaderPass: outlinePass, inputs, output: 'previous', uniforms: {useNormalTexture}}]
+    resources: {},
+    passes: [
+      {
+        kind: 'fullscreen' as const,
+        shaderPass: outlinePass,
+        inputs,
+        output: 'previous',
+        uniforms: {useNormalTexture}
+      }
+    ]
   };
+}
+
+export function createOutlineCompositeShaderPass(
+  options: OutlineCompositeShaderPassOptions = {}
+): CompositeShaderPass {
+  return resolveEffect(outlines.configure(options));
 }

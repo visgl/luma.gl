@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
@@ -257,9 +262,22 @@ fn hdrAutoExposureApply_sampleColor(
 >;
 
 /** Builds a logarithmic luminance pyramid, persistent adaptation, and HDR exposure resolve. */
-export function createHDRAutoExposureCompositeShaderPass(
+export const hdrAutoExposure: ConfigurableEffectDefinition<
+  HDRAutoExposureCompositeShaderPassOptions,
+  | 'hdrLuminanceQuarter'
+  | 'hdrLuminanceSixteenth'
+  | 'hdrLuminanceSixtyFourth'
+  | 'hdrLuminanceTwoFiftySixth'
+  | 'hdrLuminanceThousandth'
+  | 'hdrExposureHistory'
+> = {
+  name: 'hdrAutoExposureCompositeShaderPass',
+  configure: configureHDRAutoExposure
+};
+
+function configureHDRAutoExposure(
   options: HDRAutoExposureCompositeShaderPassOptions = {}
-): CompositeShaderPass<
+): EffectDefinition<
   | 'hdrLuminanceQuarter'
   | 'hdrLuminanceSixteenth'
   | 'hdrLuminanceSixtyFourth'
@@ -276,7 +294,7 @@ export function createHDRAutoExposureCompositeShaderPass(
 
   return {
     name: 'hdrAutoExposureCompositeShaderPass',
-    renderTargets: {
+    resources: {
       hdrLuminanceQuarter: {
         scale: [meteringScale, meteringScale],
         format: 'rgba16float'
@@ -304,33 +322,39 @@ export function createHDRAutoExposureCompositeShaderPass(
         initialize: {clearColor: [initialExposure, 1, 1, 1]}
       }
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrLuminanceExtract,
         inputs: {sourceTexture: 'previous'},
         output: 'hdrLuminanceQuarter'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrLuminanceReduce,
         inputs: {sourceTexture: 'hdrLuminanceQuarter'},
         output: 'hdrLuminanceSixteenth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrLuminanceReduce,
         inputs: {sourceTexture: 'hdrLuminanceSixteenth'},
         output: 'hdrLuminanceSixtyFourth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrLuminanceReduce,
         inputs: {sourceTexture: 'hdrLuminanceSixtyFourth'},
         output: 'hdrLuminanceTwoFiftySixth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrLuminanceReduce,
         inputs: {sourceTexture: 'hdrLuminanceTwoFiftySixth'},
         output: 'hdrLuminanceThousandth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrAutoExposureAdapt,
         inputs: {
           sourceTexture: 'hdrLuminanceThousandth',
@@ -339,10 +363,24 @@ export function createHDRAutoExposureCompositeShaderPass(
         output: 'hdrExposureHistory'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: hdrAutoExposureApply,
         inputs: {sourceTexture: 'previous', exposureTexture: 'hdrExposureHistory'},
         output: 'previous'
       }
     ]
   };
+}
+
+export function createHDRAutoExposureCompositeShaderPass(
+  options: HDRAutoExposureCompositeShaderPassOptions = {}
+): CompositeShaderPass<
+  | 'hdrLuminanceQuarter'
+  | 'hdrLuminanceSixteenth'
+  | 'hdrLuminanceSixtyFourth'
+  | 'hdrLuminanceTwoFiftySixth'
+  | 'hdrLuminanceThousandth'
+  | 'hdrExposureHistory'
+> {
+  return resolveEffect(hdrAutoExposure.configure(options));
 }

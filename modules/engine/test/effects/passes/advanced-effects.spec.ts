@@ -24,7 +24,7 @@ import {
   createSSAOCompositeShaderPass,
   gaussianBlurEffect,
   sepiaEffect,
-  ssao,
+  ssaoEffect,
   createSSGICompositeShaderPass,
   createSSRCompositeShaderPass,
   createTAACompositeShaderPass,
@@ -841,7 +841,13 @@ it('advanced effects compose in order with existing effects', async () => {
     device.submit();
 
     const effectRenderer = new EffectRenderer(device, {
-      effects: [ssao, cameraReprojectionTaa, bloomLow, gaussianBlurEffect, sepiaEffect],
+      effects: [
+        {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+        cameraReprojectionTaa,
+        bloomLow,
+        gaussianBlurEffect,
+        sepiaEffect
+      ],
       colorFormat: 'rgba16float',
       flipY: false
     });
@@ -849,7 +855,7 @@ it('advanced effects compose in order with existing effects', async () => {
       effectRenderer.resize([width, height]);
       for (let frameIndex = 0; frameIndex < 2; frameIndex++) {
         expect(
-          effectRenderer.renderToTexture({sourceTexture, bindings: {depthTexture}})
+          effectRenderer.renderToTexture({sourceTexture, bindings: {depthTexture, normalTexture}})
         ).toBeTruthy();
       }
       device.submit();

@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
@@ -507,16 +512,24 @@ fn gtaoAmbientComposite_sampleColor(
 >;
 
 /** Creates a temporally stabilized horizon-based ambient-occlusion pipeline. */
-export function createGTAOCompositeShaderPass(
+export const gtao: ConfigurableEffectDefinition<
+  GTAOCompositeShaderPassOptions,
+  'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
+> = {
+  name: 'gtaoCompositeShaderPass',
+  configure: configureGTAO
+};
+
+function configureGTAO(
   options: GTAOCompositeShaderPassOptions = {}
-): CompositeShaderPass<
+): EffectDefinition<
   'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
 > {
   const scale = options.resolutionScale ?? 1;
   const composite = options.composition === 'ambient-only' ? gtaoAmbientComposite : gtaoComposite;
   return {
     name: 'gtaoCompositeShaderPass',
-    renderTargets: {
+    resources: {
       gtaoRaw: {scale: [scale, scale], format: 'rgba8unorm'},
       gtaoHistory: {
         scale: [scale, scale],
@@ -533,13 +546,15 @@ export function createGTAOCompositeShaderPass(
       gtaoScratch: {scale: [scale, scale], format: 'rgba8unorm'},
       gtaoBlurred: {scale: [scale, scale], format: 'rgba8unorm'}
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: gtaoEvaluate,
         inputs: {sourceTexture: 'previous'},
         output: 'gtaoRaw'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: gtaoTemporal,
         inputs: {
           sourceTexture: 'gtaoRaw',
@@ -549,27 +564,39 @@ export function createGTAOCompositeShaderPass(
         output: 'gtaoHistory'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: gtaoDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'gtaoHistoryDepth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: depthAwareBlur,
         inputs: {sourceTexture: 'gtaoHistory'},
         output: 'gtaoScratch',
         uniforms: {direction: [1, 0], radius: 3, spatialSigma: 2.5, depthSigma: 0.008}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: depthAwareBlur,
         inputs: {sourceTexture: 'gtaoScratch'},
         output: 'gtaoBlurred',
         uniforms: {direction: [0, 1], radius: 3, spatialSigma: 2.5, depthSigma: 0.008}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: composite,
         inputs: {sourceTexture: 'previous', ambientOcclusionTexture: 'gtaoBlurred'},
         output: 'previous'
       }
     ]
   };
+}
+
+export function createGTAOCompositeShaderPass(
+  options: GTAOCompositeShaderPassOptions = {}
+): CompositeShaderPass<
+  'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
+> {
+  return resolveEffect(gtao.configure(options));
 }
