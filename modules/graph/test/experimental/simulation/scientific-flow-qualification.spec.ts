@@ -109,7 +109,7 @@ it('qualifies temporal interpolation convergence independently of RK45 tolerance
 });
 
 for (const conservativeMask of [false, true]) {
-  it(`RK45 swept mask policy is explicit at a diagonal corner (${conservativeMask})`, async context => {
+  it(`RK45 crosses a clear diagonal without checking adjacent cells (${conservativeMask})`, async context => {
     const device = await getTestDevice('webgpu');
     if (!device) return context.skip();
     const input = makeField(4, () => 0.1);
@@ -128,10 +128,9 @@ for (const conservativeMask of [false, true]) {
       for (let dispatch = 0; !result.complete && dispatch < 100; dispatch++)
         result = await tracer.continue();
       expect(result.complete).toBe(true);
-      expect(result.missingData).toBe(conservativeMask ? 1 : 0);
+      expect(result.missingData).toBe(0);
       const position = await readPosition(tracer);
-      if (conservativeMask) expect(position[0]).toBeLessThan(1 / 3);
-      else expect(position[0]).toBeCloseTo(0.35, 5);
+      expect(position[0]).toBeCloseTo(0.35, 5);
       expect(position[3]).toBe(1);
     } finally {
       tracer.destroy();
@@ -182,5 +181,67 @@ it('conservative masks respect snapshot weights and stop before a masked strip',
     expect((await readPosition(temporalTracer))[2]).toBe(0);
   } finally {
     temporalTracer.destroy();
+  }
+});
+
+for (const conservativeMask of [false, true]) {
+  it(`RK45 detects a brief masked-cell crossing between stages (${conservativeMask})`, async context => {
+    const device = await getTestDevice('webgpu');
+    if (!device) return context.skip();
+    const input = makeField(4, () => 0.1);
+    input.northward.fill(0.1);
+    input.valid[2] = 0;
+    const tracer = new ScientificFlowTracer(device, {
+      input,
+      bounds: [0, 0, 1, 1],
+      // Cross column 1 at t=.12 and row 1 at t=.13; no RK stage lands between them.
+      positions: new Float32Array([1 / 3 - 0.012, 1 / 3 - 0.013]),
+      tolerance: 1e-6,
+      minimumTimeStep: 0.0001,
+      conservativeMask
+    });
+    try {
+      let result = await tracer.advance(0.3);
+      for (let dispatch = 0; !result.complete && dispatch < 100; dispatch++)
+        result = await tracer.continue();
+      expect(result.complete).toBe(true);
+      expect(result.missingData).toBe(conservativeMask ? 1 : 0);
+      const position = await readPosition(tracer);
+      if (conservativeMask) expect(position[0]).toBeLessThan(1 / 3);
+      else expect(position[0]).toBeCloseTo(1 / 3 + 0.018, 5);
+      expect(position[3]).toBe(1);
+    } finally {
+      tracer.destroy();
+    }
+  });
+}
+
+it('preserves analytic eastward travel across the supported latitude range', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  // Binary fractions make latitude reconstruction exact on both CPU and GPU.
+  const verticals = [0, 0.03125, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 0.96875, 1];
+  const tracer = new ScientificFlowTracer(device, {
+    input: {
+      ...makeField(2, () => 20),
+      geographic: {longitudeStart: 0, latitudeStart: -85, longitudeStep: 90, latitudeStep: 170}
+    },
+    positions: Float32Array.from(verticals.flatMap(vertical => [0, vertical])),
+    tolerance: 1,
+    maximumTimeStep: 3600
+  });
+  try {
+    await advance(tracer, 3600);
+    const bytes = await tracer.output.readAsync();
+    const particles = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+    for (let index = 0; index < verticals.length; index++) {
+      const latitude = -85 + 170 * verticals[index];
+      const metresPerDegree = ((6371008.8 * Math.PI) / 180) * Math.cos((latitude * Math.PI) / 180);
+      const distance = particles[index * 4] * 90 * metresPerDegree;
+      expect(Math.abs(distance - 20 * 3600)).toBeLessThan(0.2);
+      expect(particles[index * 4 + 1]).toBe(verticals[index]);
+    }
+  } finally {
+    tracer.destroy();
   }
 });

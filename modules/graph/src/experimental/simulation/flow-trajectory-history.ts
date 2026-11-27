@@ -14,6 +14,12 @@ export type FlowTrajectoryFrame = {
   sequence: number;
 };
 
+/** Explicit CPU readback of one retained frame. The particle array is independent of GPU storage. */
+export type FlowTrajectorySnapshot = FlowTrajectoryFrame & {
+  /** Interleaved normalized x/y, age and generation, in stable particle-index order. */
+  particles: Float32Array;
+};
+
 /** Fixed-memory GPU ring of normalized x/y, age and generation particle snapshots. */
 export class FlowTrajectoryHistory {
   /** Owned storage buffer; renderers may borrow it until destroy(). */
@@ -26,6 +32,8 @@ export class FlowTrajectoryHistory {
   private readonly retainedFrames: FlowTrajectoryFrame[] = [];
   /** Next capture sequence. */
   private sequence = 0;
+  /** Outstanding explicit readbacks that must complete before destruction. */
+  private pendingReadbacks = 0;
 
   /** Allocate capacity * particleCount * 16 bytes, without allocating particle arrays on the CPU. */
   constructor(device: Device, props: {particleCount: number; capacity: number}) {
@@ -75,6 +83,47 @@ export class FlowTrajectoryHistory {
     this.retainedFrames.push({time, byteOffset, sequence: this.sequence++});
   }
 
+  /**
+   * Explicitly read retained frames in chronological order. Reads only populated slots,
+   * in at most two contiguous ranges. Submit recorded commands before calling this.
+   * Subsequent captures/reset do not change this snapshot; await it before destroy().
+   */
+  async readFrames(): Promise<FlowTrajectorySnapshot[]> {
+    assert(!this.buffer.destroyed);
+    const frames = this.frames;
+    if (frames.length === 0) return [];
+    const firstOffset = frames[0].byteOffset;
+    const firstCount = Math.min(frames.length, this.capacity - firstOffset / this.frameByteLength);
+    const ranges = [{byteOffset: firstOffset, count: firstCount}];
+    if (firstCount < frames.length) ranges.push({byteOffset: 0, count: frames.length - firstCount});
+    this.pendingReadbacks++;
+    try {
+      // Queue both copies before yielding, so later captures cannot overwrite one range
+      // between readbacks. Returned views share CPU allocations but never overlap.
+      const bytes = await Promise.all(
+        ranges.map(range =>
+          this.buffer.readAsync(range.byteOffset, range.count * this.frameByteLength)
+        )
+      );
+      const snapshots: FlowTrajectorySnapshot[] = [];
+      for (let rangeIndex = 0; rangeIndex < ranges.length; rangeIndex++) {
+        for (let frameIndex = 0; frameIndex < ranges[rangeIndex].count; frameIndex++) {
+          snapshots.push({
+            ...frames[snapshots.length],
+            particles: new Float32Array(
+              bytes[rangeIndex].buffer,
+              bytes[rangeIndex].byteOffset + frameIndex * this.frameByteLength,
+              this.frameByteLength / 4
+            )
+          });
+        }
+      }
+      return snapshots;
+    } finally {
+      this.pendingReadbacks--;
+    }
+  }
+
   /** Forget retained metadata, without clearing GPU bytes or submitting commands. */
   reset(): void {
     assert(!this.buffer.destroyed);
@@ -84,6 +133,7 @@ export class FlowTrajectoryHistory {
 
   /** Release only the owned history buffer, never captured source buffers. */
   destroy(): void {
+    assert(this.pendingReadbacks === 0); // Await explicit readbacks before releasing history.
     this.buffer.destroy();
     this.retainedFrames.length = 0;
   }

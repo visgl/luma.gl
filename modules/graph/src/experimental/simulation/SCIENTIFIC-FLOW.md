@@ -114,7 +114,8 @@ An unsteady double gyre on a 129² grid with 0.125-second snapshots is compared
 against an independent double-precision CPU trajectory using continuous analytic
 velocities and 2000 RK4 steps: normalized position error must stay below 1e-4 after
 one second. This qualifies synthetic trajectories; it is not validation against
-observational ocean data. Real-data qualification fixtures remain follow-up work. The opt-in
+observational ocean data. An offline quantized GFS model-wind fixture now compares hourly GPU trajectories
+with a refined independent CPU reference; observational qualification remains follow-up work. The opt-in
 `scientific-flow-benchmark.spec.ts` measures RK4/RK45 accuracy and GPU compute
 timestamps; it excludes counter readback and rendering. Higher integrator order alone cannot remove spatial or temporal
 interpolation error. Run with:
@@ -129,10 +130,13 @@ The [dedicated advection roadmap](../../../../../dev-docs/roadmaps/advection-roa
 tracks scientific qualification separately from visual features. Manufactured
 shear and time-quadratic tests now isolate spatial/temporal interpolation error
 from RK45 integration error. `conservativeMask: true` opts the adaptive tracer
-into swept interpolation-footprint checks; this can stop early at diagonal mask
-corners and does not implement coastline reflection or sliding.
+into crossed-cell interpolation checks, including short intersections between
+RK stages. Simultaneous diagonal crossings do not test adjacent unvisited cells.
+This does not implement curved-path collision, coastline reflection or sliding.
 
 `FlowTrajectoryHistory` retains GPU particle snapshots in a fixed-capacity ring.
 It records copies into a caller-owned encoder without submission or readback.
+`readFrames()` explicitly reads populated slots in chronological order using at
+most two contiguous ranges.
 See the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md)
 for synchronization, memory costs and completed-horizon capture.
