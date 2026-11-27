@@ -512,13 +512,13 @@ fn gtaoAmbientComposite_sampleColor(
 >;
 
 /** Creates a temporally stabilized horizon-based ambient-occlusion pipeline. */
-export const gtao: ConfigurableEffectDefinition<
-  GTAOCompositeShaderPassOptions,
-  'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
-> = {
+export const gtao = {
   name: 'gtaoCompositeShaderPass',
   configure: configureGTAO
-};
+} as const satisfies ConfigurableEffectDefinition<
+  GTAOCompositeShaderPassOptions,
+  'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
+>;
 
 function configureGTAO(
   options: GTAOCompositeShaderPassOptions = {}

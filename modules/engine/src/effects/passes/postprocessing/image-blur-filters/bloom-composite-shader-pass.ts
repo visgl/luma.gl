@@ -960,15 +960,7 @@ const bloomLowExtractionUniforms = {
 };
 
 /** Two-level HDR bloom with explicit compute and fragment extraction alternatives. */
-export const bloomLow: EffectDefinition<
-  | 'extractHalf'
-  | 'blurHalfScratch'
-  | 'blurHalf'
-  | 'extractQuarter'
-  | 'blurQuarterScratch'
-  | 'blurQuarter'
-  | 'glow'
-> = {
+export const bloomLow = {
   name: 'bloomLow',
   resources: {
     extractHalf: {
@@ -1112,13 +1104,21 @@ export const bloomLow: EffectDefinition<
       }
     }
   ]
-};
+} as const satisfies EffectDefinition<
+  | 'extractHalf'
+  | 'blurHalfScratch'
+  | 'blurHalf'
+  | 'extractQuarter'
+  | 'blurQuarterScratch'
+  | 'blurQuarter'
+  | 'glow'
+>;
 
 /**
  * Configurable multiscale HDR bloom. Settings select level count, reconstruction,
  * optional history and lens stages, and the initial compute or fragment path.
  */
-export const hdrBloom: ConfigurableEffectDefinition<BloomCompositeShaderPassOptions> = {
+export const hdrBloom = {
   name: bloomCompositeShaderPass.name,
   configure(options = {}) {
     const {name, renderTargets, steps, extractionSteps, compute} = buildBloomPyramid(options);
@@ -1132,7 +1132,7 @@ export const hdrBloom: ConfigurableEffectDefinition<BloomCompositeShaderPassOpti
       passes: steps.filter(step => !extractionSteps.includes(step)).map(toBloomEffectPass)
     };
   }
-};
+} as const satisfies ConfigurableEffectDefinition<BloomCompositeShaderPassOptions>;
 
 function toBloomEffectPass(step: CompositeShaderPassStep): EffectPass {
   return {...step, kind: 'fullscreen'};

@@ -185,13 +185,15 @@ inputs automatically.
 Start with a fullscreen shader that follows the
 [shader pass convention](../../api-reference/engine/passes/shader-pass-renderer.md).
 Declare a pass for each draw and route each shader's inputs to the textures it
-samples. This example adjusts contrast and then applies a vignette, reusing two built-in shaders.
+samples. Use `as const satisfies EffectDefinition<...>` to check the definition
+while preserving its literal names and pass structure. This example adjusts
+contrast and then applies a vignette, reusing two built-in shaders.
 
 ```ts
 import type {EffectDefinition} from '@luma.gl/engine';
 import {brightnessContrast, vignette} from '@luma.gl/engine/effects';
 
-export const softVignette: EffectDefinition<'adjusted'> = {
+export const softVignette = {
   name: 'softVignette',
   resources: {
     adjusted: {}
@@ -211,7 +213,7 @@ export const softVignette: EffectDefinition<'adjusted'> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<'adjusted'>;
 ```
 
 - **Resources** are private to each occurrence of the effect. Set the texture

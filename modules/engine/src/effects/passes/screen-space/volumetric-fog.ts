@@ -83,13 +83,12 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export const volumetricFog: ConfigurableEffectDefinition<VolumetricFogCompositeShaderPassOptions> =
-  {
-    name: 'volumetricFogCompositeShaderPass',
-    configure(options = {}) {
-      return options.mode === 'height' ? heightFog : configureVolumetricFog();
-    }
-  };
+export const volumetricFog = {
+  name: 'volumetricFogCompositeShaderPass',
+  configure(options = {}) {
+    return options.mode === 'height' ? heightFog : configureVolumetricFog();
+  }
+} as const satisfies ConfigurableEffectDefinition<VolumetricFogCompositeShaderPassOptions>;
 
 function configureVolumetricFog(): EffectDefinition<'fogHistory'> {
   return {

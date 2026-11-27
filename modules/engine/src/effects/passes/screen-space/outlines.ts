@@ -130,10 +130,10 @@ vec4 screenSpaceOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export const outlines: ConfigurableEffectDefinition<OutlineCompositeShaderPassOptions> = {
+export const outlines = {
   name: 'outlineCompositeShaderPass',
   configure: configureOutline
-};
+} as const satisfies ConfigurableEffectDefinition<OutlineCompositeShaderPassOptions>;
 
 function configureOutline(options: OutlineCompositeShaderPassOptions = {}): EffectDefinition {
   const mode = options.mode ?? 'depth-normal';

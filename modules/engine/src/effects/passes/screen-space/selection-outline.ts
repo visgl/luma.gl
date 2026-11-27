@@ -69,7 +69,7 @@ vec4 selectionOutline_sampleColor(sampler2D sourceTexture, vec2 sourceSize, vec2
 } as const satisfies ShaderPass<SelectionOutlineProps, SelectionOutlineUniforms>;
 
 /** Selection mask outline with optional color and thickness defaults. */
-export const selectionOutlineEffect: ConfigurableEffectDefinition<SelectionOutlineProps, never> = {
+export const selectionOutlineEffect = {
   name: 'selectionOutline',
   configure(options = {}) {
     return {
@@ -85,4 +85,4 @@ export const selectionOutlineEffect: ConfigurableEffectDefinition<SelectionOutli
       ]
     };
   }
-};
+} as const satisfies ConfigurableEffectDefinition<SelectionOutlineProps, never>;

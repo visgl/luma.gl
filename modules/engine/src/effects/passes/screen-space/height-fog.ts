@@ -145,7 +145,7 @@ vec4 heightFogPass_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCo
 >;
 
 /** Analytic height fog; set the height and scattering parameters through frame uniforms. */
-export const heightFog: EffectDefinition<never> = {
+export const heightFog = {
   name: 'heightFogCompositeShaderPass',
   resources: {},
   passes: [
@@ -156,4 +156,4 @@ export const heightFog: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;

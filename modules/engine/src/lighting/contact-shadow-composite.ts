@@ -18,13 +18,13 @@ import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 /** Builds the quality-scaled trace, bilateral cleanup, and direct-light composite pipeline. */
 export type ContactShadowCompositeShaderPassOptions = {quality?: 'low' | 'balanced' | 'cinematic'};
 
-export const contactShadows: ConfigurableEffectDefinition<
-  ContactShadowCompositeShaderPassOptions,
-  'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'
-> = {
+export const contactShadows = {
   name: 'contactShadowCompositeShaderPass',
   configure: configureContactShadow
-};
+} as const satisfies ConfigurableEffectDefinition<
+  ContactShadowCompositeShaderPassOptions,
+  'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'
+>;
 
 function configureContactShadow(
   options: ContactShadowCompositeShaderPassOptions = {}

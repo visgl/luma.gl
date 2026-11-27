@@ -984,8 +984,8 @@ export const fxaa = {
 } as const satisfies ShaderPass<FXAAProps, FXAAUniforms, {}>;
 
 /** Fast approximate antialiasing for the fullscreen effect chain. */
-export const fxaaEffect: EffectDefinition<never> = {
+export const fxaaEffect = {
   name: 'fxaa',
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: fxaa, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;

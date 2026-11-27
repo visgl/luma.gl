@@ -262,7 +262,10 @@ fn hdrAutoExposureApply_sampleColor(
 >;
 
 /** Builds a logarithmic luminance pyramid, persistent adaptation, and HDR exposure resolve. */
-export const hdrAutoExposure: ConfigurableEffectDefinition<
+export const hdrAutoExposure = {
+  name: 'hdrAutoExposureCompositeShaderPass',
+  configure: configureHDRAutoExposure
+} as const satisfies ConfigurableEffectDefinition<
   HDRAutoExposureCompositeShaderPassOptions,
   | 'hdrLuminanceQuarter'
   | 'hdrLuminanceSixteenth'
@@ -270,10 +273,7 @@ export const hdrAutoExposure: ConfigurableEffectDefinition<
   | 'hdrLuminanceTwoFiftySixth'
   | 'hdrLuminanceThousandth'
   | 'hdrExposureHistory'
-> = {
-  name: 'hdrAutoExposureCompositeShaderPass',
-  configure: configureHDRAutoExposure
-};
+>;
 
 function configureHDRAutoExposure(
   options: HDRAutoExposureCompositeShaderPassOptions = {}

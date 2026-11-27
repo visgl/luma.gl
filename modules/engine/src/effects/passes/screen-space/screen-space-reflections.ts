@@ -658,10 +658,10 @@ fn ssrComposite_sampleColor(
 type SSRRenderTarget = 'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection';
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
-export const ssr: ConfigurableEffectDefinition<SSRCompositeShaderPassOptions> = {
+export const ssr = {
   name: 'ssrCompositeShaderPass',
   configure: configureSSR
-};
+} as const satisfies ConfigurableEffectDefinition<SSRCompositeShaderPassOptions>;
 
 function configureSSR(options: SSRCompositeShaderPassOptions = {}): EffectDefinition {
   const quality = options.quality ? SSR_QUALITY_PRESETS[options.quality] : undefined;
