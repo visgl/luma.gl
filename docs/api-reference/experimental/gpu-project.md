@@ -248,6 +248,13 @@ Zero input validity, non-finite intermediates, and rejected domains produce zero
 The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
 buffer. Input, output, and validity columns remain caller-owned.
 
+Set `groupChunks: true` on `GPUProjectionProgram` to pair nonempty chunks of a
+`GraphVectorView` in one dispatch. The program binds the existing position, output and validity
+views directly. Physical chunks and their byte offsets stay intact. This is opt-in and requires at
+least nine compute storage bindings. Adapters below that limit dispatch each chunk individually.
+A trailing chunk and pairs that share a graph buffer or exceed the dispatch limits also use the
+individual path. Parameter updates still reuse the existing graph.
+
 `projection.isCompatible(nextProjection)` checks whether the generated shader and parameter layout
 are unchanged. `contributor.updateProjection(nextProjection)` then writes the new parameters without
 rebuilding or submitting the graph. Numeric parameters and same-sized adaptive plans can change;

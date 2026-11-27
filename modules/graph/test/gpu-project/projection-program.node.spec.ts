@@ -5,6 +5,7 @@
 import {describe, expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shaders';
 import {
@@ -83,6 +84,64 @@ describe('projection programs', () => {
     input.destroy();
     output.destroy();
     device.destroy();
+  });
+
+  it.each([
+    [false, 9, 3],
+    [true, 8, 3],
+    [true, 9, 2]
+  ])('pairs nonempty chunks only with opt-in and sufficient storage bindings (%s, %s)', (groupChunks, limit, count) => {
+    const device = new NullDevice({});
+    Object.defineProperty(device, 'type', {value: 'webgpu'});
+    Object.defineProperty(device.limits, 'maxComputeWorkgroupsPerDimension', {value: 65_535});
+    Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {value: limit});
+    const graph = new GPUCommandGraph(device);
+    const makeVector = (name: string) =>
+      new GPUVector({
+        type: 'data',
+        name,
+        format: 'float32x2',
+        ownsData: true,
+        data: [3, 0, 5, 2].map(
+          length =>
+            new GPUData({
+              format: 'float32x2',
+              length,
+              ownsBuffer: true,
+              buffer: device.createBuffer({
+                byteLength: Math.max(length, 1) * 8,
+                usage: Buffer.STORAGE
+              })
+            })
+        )
+      });
+    const input = makeVector('input');
+    const output = makeVector('output');
+    const addPass = vi.spyOn(graph, 'addComputePass');
+    const program = new GPUProjectionProgram({
+      groupChunks,
+      projection: compileProjectionProgram({precision: 'local-f32', operations: []}),
+      positions: graph.importGPUVector('input', input),
+      output: graph.importGPUVector('output', output)
+    });
+    try {
+      program.addToGraph(graph);
+      expect(addPass).toHaveBeenCalledTimes(count);
+      expect(addPass.mock.calls.map(([pass]) => pass.id)).toEqual(
+        count === 2
+          ? ['gpu-projection-program-chunks-0-2', 'gpu-projection-program-chunk-3']
+          : [
+              'gpu-projection-program-chunk-0',
+              'gpu-projection-program-chunk-2',
+              'gpu-projection-program-chunk-3'
+            ]
+      );
+    } finally {
+      program.destroy();
+      input.destroy();
+      output.destroy();
+      device.destroy();
+    }
   });
 
   it('inverts noncommuting operations in reverse order', () => {
