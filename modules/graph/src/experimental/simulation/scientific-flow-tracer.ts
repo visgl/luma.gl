@@ -33,7 +33,7 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   timeRange?: readonly [number, number];
   /** Absolute local position-error tolerance: bounds units, or metres for lnglat. */
   tolerance: number;
-  /** Reject swept interpolation footprints touching missing samples, conservatively near corners. */
+  /** Reject trials whose accepted chord crosses an interpolation cell with missing samples. */
   conservativeMask?: boolean;
   minimumTimeStep?: number;
   maximumTimeStep?: number;

@@ -22,29 +22,34 @@ Cartesian atlas coordinates, not pole-crossing spherical transport.
 The existing tests cover rotations, geographic units, temporal interpolation,
 masks, snapshot rotation, dispatch budgets and periodic longitude. The opt-in
 accuracy/cost benchmark reports GPU compute time, excluding readback and rendering.
-No observational-data qualification or general speedup claim is established.
+A pinned quantized GFS model-wind fixture supplies independent CPU trajectory
+references. No observational-data qualification or general speedup claim is established.
 
 ## Delivery tranches
 
-Each row is independently reviewable. “Implemented” describes code in this change;
-remaining portions are deliberately separate deliverables.
+Each row is independently reviewable. A1–A3 shipped in #3956. The next PR adds
+A4, B1a and B3a; broader qualification and boundary policies remain separate deliverables.
 
 | Tranche | Status | Deliverable and exit evidence |
 | --- | --- | --- |
-| A1 — Separate error sources | Implemented | Manufactured spatial shear and time-quadratic fields compare RK45 with exact solutions for both sampled and continuous fields. Grid/snapshot refinement reduces interpolation error independently of integrator tolerance. |
-| A2 — Conservative mask footprint | Implemented, RK45 opt-in | `conservativeMask` checks the interpolation footprint enclosing each accepted chord. Tests distinguish stage-only and conservative behavior at diagonal masked corners. It may stop early and is not exact coastline collision. |
-| A3 — Bounded trajectory history | Implemented | `FlowTrajectoryHistory` records GPU copies into a fixed-capacity ring, with chronological offsets/timestamps, stable particle slots and explicit oldest-frame overwrite. Tests verify GPU contents, wraparound, reset and borrowed-source ownership. No hidden submission/readback. |
-| B1 — Real-data qualification | Next | Commit a small redistributable, versioned ocean/wind fixture with source, license, checksum, units and preprocessing recipe. Compare retained trajectories against a pinned independent CPU/Parcels run; publish error versus grid, snapshot spacing and runtime. No live service required by CI. |
-| B2 — True spherical transport | Planned after B1 | Integrate sphere positions and tangent velocities with a defined pole sampling convention. Exact solid-body rotations must cross both poles and the antimeridian without identity changes; report radius and trajectory drift. Keep atlas rendering separate from solver coordinates. |
-| B3 — Boundary policies | Planned after A2 | Explicit stop, reflect and slip semantics, segment/cell intersection and coastline event localization. Qualify thin barriers, diagonal corners, narrow channels and temporal mask changes; do not silently change defaults. |
+| A1 — Separate error sources | Shipped | Manufactured spatial shear and time-quadratic fields compare RK45 with exact solutions for both sampled and continuous fields. Grid/snapshot refinement reduces interpolation error independently of integrator tolerance. |
+| A2 — Conservative mask footprint | Shipped in #3956, refined by B3a | `conservativeMask` checks the interpolation footprint enclosing each accepted chord. Tests distinguish stage-only and conservative behavior at diagonal masked corners. It may stop early and is not exact coastline collision. |
+| A3 — Bounded trajectory history | Shipped | `FlowTrajectoryHistory` records GPU copies into a fixed-capacity ring, with chronological offsets/timestamps, stable particle slots and explicit oldest-frame overwrite. Tests verify GPU contents, wraparound, reset and borrowed-source ownership. No hidden submission/readback. |
+| A4 — Explicit trajectory readback | Implemented | `readFrames()` returns chronological CPU snapshots with at most two contiguous reads of populated slots. Tests cover empty/partial/wrapped history, reset during readback and destruction protection. |
+| B1a — Archived model-wind fixture | Implemented | Pinned six-hour GFS Atlantic fixture with retained ISC notice, source hashes and a regeneration script. Four releases at hourly horizons must agree with an independent refined CPU RK4 reference within 5 m. Tests run offline. |
+| B1b — Broader real-data qualification | Next | Publish grid/snapshot/tolerance-versus-cost sweeps, hardware details and observational/ocean fixtures. The quantized GFS fixture establishes agreement on that stored model field, not meteorological accuracy or Parcels parity. |
+| B2 — True spherical transport | Planned after B1a | Integrate sphere positions and tangent velocities with a defined pole sampling convention. Exact solid-body rotations must cross both poles and the antimeridian without identity changes; report radius and trajectory drift. Keep atlas rendering separate from solver coordinates. |
+| B3a — Crossed-cell mask traversal | Implemented | Bounded traversal checks cells actually entered by an accepted chord, detecting brief masked intersections between RK stages and avoiding adjacent-cell false positives at simultaneous corners. Periodic seams remain qualified. |
+| B3b — Boundary policies | Planned after B3a | Explicit stop, reflect and slip semantics, segment/cell intersection and coastline event localization. Qualify thin barriers, diagonal corners, narrow channels and temporal mask changes; do not silently change defaults. |
 | C1 — Staggered grids | Planned | Rectilinear Arakawa C-grid sampling with face locations, masks and flux semantics preserved. Compare against independent manufactured divergence-free fields before curvilinear grids and vector-basis rotation. |
 | C2 — GPU scheduling | Planned after A3 | Active-particle compaction and adaptive work queues preserving stable IDs; batch counter synchronization. Compare sparse/dense releases at equal error and report dispatch, readback, memory and end-to-end costs separately. |
 | C3 — 3D transport | Planned after C1 | Explicit vertical units, coordinate transforms and time-varying vertical grids. Validate vertical shear, analytic 3D flow and boundary crossings before adding diffusion. |
 | C4 — Stochastic transport | Planned after C3 | Reproducible counter-based random streams keyed by particle ID, time step and seed. Qualify ensemble mean/variance and convergence; deterministic advection tests do not establish diffusion accuracy. |
 
-Recommended order: A1–A3, B1, B2. Ocean applications should prioritize B3/C1;
-large interactive releases should prioritize C2. A2 does not complete B3, and A3
-does not complete C2. Real-data qualification remains open after this PR.
+Recommended order: B1b, B2. Ocean applications should prioritize B3b/C1;
+large interactive releases should prioritize C2. Chord traversal does not complete
+B3b, and retained/readable history does not complete C2. Broader real-data
+qualification remains open after the GFS fixture.
 
 ## Architecture and acceptance gates
 

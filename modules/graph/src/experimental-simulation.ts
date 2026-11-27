@@ -36,6 +36,7 @@ export type {
   ScientificFlowTracerProps,
   ScientificFlowTraceResult,
   FlowTrajectoryFrame,
+  FlowTrajectorySnapshot,
   MLSMPMFluidFixedPointBounds,
   MLSMPMFluidForce,
   MLSMPMFluidSimulationProps,

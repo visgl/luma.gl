@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 import {FlowTrajectoryHistory} from '@luma.gl/graph/experimental-simulation';
@@ -66,4 +66,48 @@ it('trajectory history rejects allocations beyond the storage binding limit', as
       })
   ).toThrow();
   expect(() => new FlowTrajectoryHistory(device, {particleCount: 1, capacity: 0})).toThrow();
+});
+
+it('explicit history readback spans only retained slots and survives later captures', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const history = new FlowTrajectoryHistory(device, {particleCount: 1, capacity: 2});
+  const source = device.createBuffer({byteLength: 16, usage: Buffer.COPY_SRC | Buffer.COPY_DST});
+  const read = vi.spyOn(history.buffer, 'readAsync');
+  try {
+    expect(await history.readFrames()).toEqual([]);
+    expect(read).not.toHaveBeenCalled();
+    for (let frame = 0; frame < 3; frame++) {
+      source.write(new Float32Array([frame / 10, 0.5, frame, 1]));
+      const encoder = device.createCommandEncoder();
+      history.record(encoder, source, frame);
+      device.submit(encoder.finish());
+    }
+    const pending = history.readFrames();
+    expect(read.mock.calls).toEqual([
+      [16, 16],
+      [0, 16]
+    ]);
+    expect(() => history.destroy()).toThrow();
+    history.reset();
+    source.write(new Float32Array([0.9, 0.5, 0, 2]));
+    const encoder = device.createCommandEncoder();
+    history.record(encoder, source, 0);
+    device.submit(encoder.finish());
+    const frames = await pending;
+    expect(frames.map(frame => frame.time)).toEqual([1, 2]);
+    expect(frames.map(frame => frame.particles[2])).toEqual([1, 2]);
+    expect(frames[0].particles[0]).toBeCloseTo(0.1, 6);
+    expect(frames[1].particles[0]).toBeCloseTo(0.2, 6);
+    read.mockClear();
+    const current = await history.readFrames();
+    expect(read.mock.calls).toEqual([[0, 16]]);
+    expect(current[0].particles[0]).toBeCloseTo(0.9, 6);
+    current[0].particles[0] = -1;
+    expect((await history.readFrames())[0].particles[0]).toBeCloseTo(0.9, 6);
+  } finally {
+    read.mockRestore();
+    history.destroy();
+    source.destroy();
+  }
 });

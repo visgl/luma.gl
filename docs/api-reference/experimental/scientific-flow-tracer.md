@@ -172,18 +172,18 @@ raw consecutive x coordinates can jump from near one to near zero.
 
 ## Conservative mask footprints
 
-Set `conservativeMask: true` to check every grid sample in the interpolation
-rectangle swept by each proposed accepted chord, in addition to RK-stage checks.
+Set `conservativeMask: true` to check all four interpolation corners of every
+grid cell crossed by each proposed accepted chord, in addition to RK-stage checks.
 The default remains stage-only validation. Missing samples reject the trial and
 reduce its timestep; failure at the minimum timestep reports `MissingData` and
 retains the last accepted position. Longitude footprints wrap when periodic
 longitude is enabled. Both snapshots contribute when their temporal weights do.
 
-This is deliberately conservative: a diagonal chord can be rejected by a missing
-sample beside its path. It does not resolve the curved path between stages,
+Traversal advances both axes at a simultaneous grid-corner crossing, avoiding
+false stops in adjacent cells that the chord does not enter. It detects short cell
+intersections between RK stages. It does not resolve the curved path between stages,
 localize coastline impact, reflect particles or provide slip boundaries. Use it
-when avoiding unsupported interpolation footprints is preferable to approaching
-masked corners closely.
+when all interpolation cells along an accepted chord must have valid samples.
 
 ## Retaining GPU trajectories
 
@@ -230,3 +230,36 @@ Periodic trajectories still require seam-aware rendering.
 The [advection roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/advection-roadmap.md) separates
 implemented qualification/history from real-data validation, true spherical
 transport, grid extensions and GPU scheduling work.
+
+
+### Explicit trajectory readback
+
+Call `await history.readFrames()` when CPU trajectories are needed for comparison,
+export or analysis. It returns chronological `FlowTrajectorySnapshot` objects:
+`time`, `sequence`, the original GPU `byteOffset`, and `particles` containing
+interleaved normalized x/y, age and generation. Readback uses at most two contiguous
+ranges and transfers only populated slots, including after ring wraparound.
+An empty history returns an empty array without GPU work.
+
+Submit all recorded captures before calling it. Both readback copies are queued
+before the method yields; subsequent captures or `reset()` do not change the
+returned snapshot. Returned arrays are independent of GPU storage. Await every
+outstanding readback before `destroy()`; premature destruction is rejected.
+`record()` and the `frames` getter continue to perform no readback.
+
+```ts
+const snapshots = await history.readFrames();
+for (const snapshot of snapshots) {
+  const firstParticleX = snapshot.particles[0];
+  console.log(snapshot.time, firstParticleX);
+}
+```
+
+### Archived wind qualification
+
+The offline GFS Atlantic fixture checks four six-hour releases at hourly horizons
+against an independent double-precision CPU RK4 reference. With a 1 m local
+RK45 tolerance and 300-second maximum step, every retained point must be within
+5 m of the reference. The reference's 15-second and 30-second integrations agree
+within 0.0013 m. This qualifies a pinned, 8-bit-quantized model-wind archive, not
+observations or unquantized GFS. See the [fixture provenance and reproduction guide](https://github.com/visgl/luma.gl/blob/master/modules/graph/test/experimental/simulation/fixtures/README.md).

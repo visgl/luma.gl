@@ -50,4 +50,4 @@ export {
 } from './mls-mpm-fluid-simulation';
 
 export {FlowTrajectoryHistory} from './flow-trajectory-history';
-export type {FlowTrajectoryFrame} from './flow-trajectory-history';
+export type {FlowTrajectoryFrame, FlowTrajectorySnapshot} from './flow-trajectory-history';

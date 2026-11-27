@@ -42,6 +42,7 @@ export {
   ScientificFlowTracer,
   FlowTrajectoryHistory,
   type FlowTrajectoryFrame,
+  type FlowTrajectorySnapshot,
   ScientificParticleStatus,
   type ScientificFlowTracerProps,
   type ScientificFlowTraceResult,

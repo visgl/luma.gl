@@ -49,27 +49,38 @@ fn fraction(elapsed: f32) -> f32 {
   return mix(parameters.temporal.x, parameters.temporal.y,
     clamp(elapsed / max(parameters.temporal.z, 1e-30), 0.0, 1.0));
 }
-// Validate every interpolation corner in the rectangle enclosing the accepted
-// chord. Conservative at diagonal corners; not an exact curved-path collision.
+// Visit the interpolation cells crossed by the accepted chord. Simultaneous
+// crossings advance both axes, avoiding false collisions beside diagonal corners.
+// This still does not reconstruct the curved trajectory between RK stages.
 fn sweptMask(field: texture_2d<f32>, start: vec2<f32>, end: vec2<f32>) -> f32 {
-  let dimensions = vec2<i32>(textureDimensions(field));
-  let gridScale = vec2<f32>(dimensions - vec2<i32>(1));
-  let low = vec2<i32>(floor(min(start, end) * gridScale));
-  let high = vec2<i32>(floor(max(start, end) * gridScale)) + vec2<i32>(1);
-  // Reject unexpected footprints rather than silently truncating the check.
-  if (any(high - low > vec2<i32>(4))) {return 0.0;}
-  for (var row = low.y; row <= high.y; row++) {
-    for (var column = low.x; column <= high.x; column++) {
-      var sampleColumn = column;
-      if ((parameters.counters.y & 2u) != 0u) {
-        let period = dimensions.x - 1;
-        sampleColumn = ((column % period) + period) % period;
-      }
-      let coordinate = clamp(vec2<i32>(sampleColumn, row), vec2<i32>(0), dimensions - vec2<i32>(1));
-      if (textureLoad(field, coordinate, 0).z < 0.5) {return 0.0;}
+  let gridScale = vec2<f32>(textureDimensions(field) - vec2<u32>(1));
+  let gridStart = start * gridScale;
+  let displacement = (end - start) * gridScale;
+  // Keep traversal bounded even if a future integrator changes the travel cap.
+  if (any(abs(displacement) > vec2<f32>(4.0))) {return 0.0;}
+  var crossing = vec2<f32>(1e30);
+  var stride = vec2<f32>(1e30);
+  for (var axis = 0u; axis < 2u; axis++) {
+    if (displacement[axis] != 0.0) {
+      let boundary = floor(gridStart[axis]) + select(0.0, 1.0, displacement[axis] > 0.0);
+      crossing[axis] = max(0.0, (boundary - gridStart[axis]) / displacement[axis]);
+      stride[axis] = 1.0 / abs(displacement[axis]);
     }
   }
-  return 1.0;
+  var previousFraction = 0.0;
+  for (var cell = 0u; cell < 12u; cell++) {
+    let nextFraction = min(1.0, min(crossing.x, crossing.y));
+    if (nextFraction > previousFraction) {
+      let position = mix(start, end, (previousFraction + nextFraction) * 0.5);
+      let validity = sampleField(field, position).z;
+      if (validity < 0.5) {return validity;}
+    }
+    if (nextFraction >= 1.0) {return 1.0;}
+    if (crossing.x <= nextFraction) {crossing.x += stride.x;}
+    if (crossing.y <= nextFraction) {crossing.y += stride.y;}
+    previousFraction = nextFraction;
+  }
+  return 0.0;
 }
 fn segmentValidity(start: vec2<f32>, end: vec2<f32>, startFraction: f32, endFraction: f32) -> f32 {
   if ((parameters.counters.y & 4u) == 0u) {return 1.0;}

@@ -109,7 +109,7 @@ it('qualifies temporal interpolation convergence independently of RK45 tolerance
 });
 
 for (const conservativeMask of [false, true]) {
-  it(`RK45 swept mask policy is explicit at a diagonal corner (${conservativeMask})`, async context => {
+  it(`RK45 crosses a clear diagonal without checking adjacent cells (${conservativeMask})`, async context => {
     const device = await getTestDevice('webgpu');
     if (!device) return context.skip();
     const input = makeField(4, () => 0.1);
@@ -128,10 +128,9 @@ for (const conservativeMask of [false, true]) {
       for (let dispatch = 0; !result.complete && dispatch < 100; dispatch++)
         result = await tracer.continue();
       expect(result.complete).toBe(true);
-      expect(result.missingData).toBe(conservativeMask ? 1 : 0);
+      expect(result.missingData).toBe(0);
       const position = await readPosition(tracer);
-      if (conservativeMask) expect(position[0]).toBeLessThan(1 / 3);
-      else expect(position[0]).toBeCloseTo(0.35, 5);
+      expect(position[0]).toBeCloseTo(0.35, 5);
       expect(position[3]).toBe(1);
     } finally {
       tracer.destroy();
@@ -184,3 +183,35 @@ it('conservative masks respect snapshot weights and stop before a masked strip',
     temporalTracer.destroy();
   }
 });
+
+for (const conservativeMask of [false, true]) {
+  it(`RK45 detects a brief masked-cell crossing between stages (${conservativeMask})`, async context => {
+    const device = await getTestDevice('webgpu');
+    if (!device) return context.skip();
+    const input = makeField(4, () => 0.1);
+    input.northward.fill(0.1);
+    input.valid[2] = 0;
+    const tracer = new ScientificFlowTracer(device, {
+      input,
+      bounds: [0, 0, 1, 1],
+      // Cross column 1 at t=.12 and row 1 at t=.13; no RK stage lands between them.
+      positions: new Float32Array([1 / 3 - 0.012, 1 / 3 - 0.013]),
+      tolerance: 1e-6,
+      minimumTimeStep: 0.0001,
+      conservativeMask
+    });
+    try {
+      let result = await tracer.advance(0.3);
+      for (let dispatch = 0; !result.complete && dispatch < 100; dispatch++)
+        result = await tracer.continue();
+      expect(result.complete).toBe(true);
+      expect(result.missingData).toBe(conservativeMask ? 1 : 0);
+      const position = await readPosition(tracer);
+      if (conservativeMask) expect(position[0]).toBeLessThan(1 / 3);
+      else expect(position[0]).toBeCloseTo(1 / 3 + 0.018, 5);
+      expect(position[3]).toBe(1);
+    } finally {
+      tracer.destroy();
+    }
+  });
+}
