@@ -187,3 +187,9 @@ Top-level RAD metadata contains source page ranges, but not spatial page bounds.
 * [Gaussian splats overview](https://luma.gl/next/docs/api-reference/splats.md)
 * [Gaussian splat showcase](https://luma.gl/next/examples/showcase/gaussian-splats)
 * [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
+
+### Drawing pages in a host render pass[​](#drawing-pages-in-a-host-render-pass "Direct link to Drawing pages in a host render pass")
+
+Each `GPUPagedSplatPage` can override the renderer's `modelViewProjectionMatrix` and `cameraPosition` for its own source coordinate frame. Its `alphaScale` multiplies the renderer's opacity scale, and its linear RGB `colorScale` tints the result of color evaluation.
+
+Call `renderer.prepare(commandEncoder)` before opening the host render pass, then call `renderer.draw(renderPass, parameters)` inside it. The draw uses the host attachment formats and sample count. The optional pipeline parameters apply to that draw, and the caller retains ownership of the pass and command submission.
