@@ -353,9 +353,10 @@ export class WebGPURenderPass extends RenderPass {
         storeOp: this.props.discard ? 'discard' : 'store',
         resolveTarget: this.props.resolveTargets?.[index]
           ? (this.props.resolveTargets[index] as WebGPUTextureView).handle
-          : undefined,
-        // ...colorAttachment,
-        view: colorAttachment.handle
+          : framebuffer.multisampledColors?.[index]
+            ? colorAttachment.handle
+            : undefined,
+        view: framebuffer.multisampledColors?.[index]?.handle ?? colorAttachment.handle
       })
     );
 

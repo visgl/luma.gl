@@ -125,13 +125,20 @@ export class WEBGLRenderPass extends RenderPass {
       const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
       const view = framebuffer?.depthStencilAttachment;
       if (framebuffer?.handle) {
-        if ((view?.props.format ?? view?.texture.format)?.includes('stencil')) {
+        const format = framebuffer.multisampleHandle
+          ? framebuffer.props.depthStencilAttachment
+          : (view?.props.format ?? view?.texture.format);
+        if (
+          framebuffer.hasStencilRenderbuffer ||
+          (typeof format === 'string' && format.includes('stencil'))
+        ) {
           gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL_ATTACHMENT]);
         }
       } else if (gl.getContextAttributes()?.stencil) {
         gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL]);
       }
     }
+    (this.props.framebuffer as WEBGLFramebuffer | null)?.resolveMultisampleColors();
     this.device.popState();
     // should add commands to CommandEncoder.
     this.destroy();
@@ -156,7 +163,8 @@ export class WEBGLRenderPass extends RenderPass {
     const glParameters: GLParameters = {...this.glParameters};
 
     // Framebuffers are specified using parameters in WebGL
-    glParameters.framebuffer = this.props.framebuffer || null;
+    const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+    glParameters.framebuffer = framebuffer?.multisampleHandle ?? framebuffer;
 
     if (this.props.depthReadOnly) {
       glParameters.depthMask = !this.props.depthReadOnly;
@@ -393,7 +401,7 @@ export class WEBGLRenderPass extends RenderPass {
    * WebGL2 - clear a specific color buffer
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
-    withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
+    withGLParameters(this.device.gl, {framebuffer: this.glParameters.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int8Array:

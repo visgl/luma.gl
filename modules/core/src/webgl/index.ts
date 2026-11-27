@@ -10,7 +10,6 @@
 
 // Types
 export type {WebGLDeviceLimits} from './adapter/device-helpers/webgl-device-limits';
-export {GL} from '../webgl-constants/webgl-constants';
 export type {
   GLTextureTarget,
   GLTextureCubeMapTarget,

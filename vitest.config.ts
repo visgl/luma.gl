@@ -151,6 +151,7 @@ const browserBenchmarkTestPatterns = [
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
+  'modules/graph/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
@@ -173,7 +174,10 @@ const browserIncludePatterns = browserTestGroup === 'render-conformance'
   : browserTestGroup === 'compute'
     ? COMPUTE_TEST_PATTERNS
     : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'];
-const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
+// Upstream Istanbul sends the full coverage map for each test file.
+const reuseComputeContext =
+  process.env.LUMA_TEST_BROWSER_COVERAGE !== 'true' &&
+  ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
   ...getReleaseQualificationExcludes(browserTestGroup),

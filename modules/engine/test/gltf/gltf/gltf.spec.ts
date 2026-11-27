@@ -8,7 +8,7 @@ import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import '@loaders.gl/core/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 import {
   postProcessGLTF,
   type GLTFPostprocessed,

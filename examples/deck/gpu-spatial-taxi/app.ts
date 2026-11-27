@@ -11,7 +11,8 @@ import {
 } from '@deck.gl/core';
 import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import {GPUSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {loadTaxiPointResidentWindow} from '../../showcase/billion-point-spatial-atlas/taxi-resident-window';
 import {
@@ -112,6 +113,7 @@ export function createGPUSpatialTaxiDeck(
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
   const loadingIndicator = createLoadingIndicator(container);
   const basemapContainer = createBasemapContainer(container);
+  maplibregl.setWorkerUrl(maplibreWorkerUrl);
   const map = new maplibregl.Map({
     container: basemapContainer,
     style: BASEMAP_STYLE,

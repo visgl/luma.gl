@@ -334,6 +334,7 @@ export type WebGLDeviceFeature =
   | 'polygon-offset-clamp-webgl'
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'stencil-texturing-webgl' // Sample a stencil aspect as an unsigned integer texture.
   | 'clip-control-webgl' // RenderPassProps.clipDepthMode 'zero-to-one' (EXT_clip_control)
 
   // GLSL extension features

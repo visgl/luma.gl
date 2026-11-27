@@ -120,6 +120,49 @@ for (const resolutionScale of [undefined, 1]) {
         }
         const originalCenter = getOcclusionCenter(clear, blocked);
         expect(Array.from(await read(false))).toEqual(Array.from(clear));
+        if (mode === 'ssao' && resolutionScale === 1) {
+          async function getTiltedPlaneVisibility(rotation: Matrix4) {
+            const modelMatrix = new Matrix4(rotation).scale([6, 6, 1]);
+            models[0].shaderInputs.setProps({
+              pbrProjection: {
+                modelMatrix,
+                normalMatrix: rotation,
+                modelViewProjectionMatrix: new Matrix4(projection)
+                  .multiplyRight(view)
+                  .multiplyRight(modelMatrix)
+              }
+            });
+            const visibility = await read(false);
+            const rowBytes = Math.ceil((surface.width * 4) / 256) * 256;
+            const centerRow = Math.floor(surface.height / 2);
+            const centerColumn = Math.floor(surface.width / 2);
+            const sampleRadius = 4;
+            let total = 0;
+            for (let row = centerRow - sampleRadius; row <= centerRow + sampleRadius; row++) {
+              for (
+                let column = centerColumn - sampleRadius;
+                column <= centerColumn + sampleRadius;
+                column++
+              ) {
+                total += visibility[row * rowBytes + column * 4];
+              }
+            }
+            return total / (2 * sampleRadius + 1) ** 2;
+          }
+          // Equal tilts along the two screen axes should have similar unoccluded visibility.
+          const verticalTilt = await getTiltedPlaneVisibility(new Matrix4().rotateX(-Math.PI / 4));
+          const horizontalTilt = await getTiltedPlaneVisibility(new Matrix4().rotateY(Math.PI / 4));
+          expect(Math.abs(verticalTilt - horizontalTilt)).toBeLessThan(5);
+          models[0].shaderInputs.setProps({
+            pbrProjection: {
+              modelMatrix: matrices[0],
+              normalMatrix: new Matrix4(),
+              modelViewProjectionMatrix: new Matrix4(projection)
+                .multiplyRight(view)
+                .multiplyRight(matrices[0])
+            }
+          });
+        }
         const previous = record(false);
         device.submit();
         surface.resize({width: 97, height: 73});

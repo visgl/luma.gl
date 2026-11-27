@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 import {RenderPass, log} from '@luma.gl/core';
 import {type AnimationLoopMode, AnimationProps, ClipSpace} from '@luma.gl/engine';
 import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/engine/gltf';
