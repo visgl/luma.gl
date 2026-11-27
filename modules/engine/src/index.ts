@@ -193,7 +193,7 @@ export type {
   ShaderPassSourceTexture
 } from './passes/shader-pass-renderer';
 export {ShaderPassRenderer} from './passes/shader-pass-renderer';
-export type {EffectDefinition, EffectRendererProps} from './passes/effect-renderer';
+export type {EffectDefinition, EffectPass, EffectRendererProps} from './passes/effect-renderer';
 export {EffectRenderer} from './passes/effect-renderer';
 
 export {Swap} from './compute/swap';

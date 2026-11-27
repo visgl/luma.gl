@@ -12,27 +12,27 @@ import {temporalHelpers} from './screen-space-shader-helpers';
 
 /** Uniforms needed to reproject a static-world pixel into the previous camera frame. */
 export type CameraReprojectionTAAUniforms = {
-  /**
-   * Inverse of the current unjittered view-projection matrix.
-   * Jitter is supplied separately in UV units.
-   */
-  inverseViewProjectionMatrix: Readonly<NumberArray16>;
-  /** Previous unjittered view-projection matrix. */
-  previousViewProjectionMatrix: Readonly<NumberArray16>;
-  /** Fraction of validated history blended into the current frame. */
-  historyWeight: number;
-  /** Maximum normalized-device-depth disagreement before history is rejected. */
-  depthThreshold: number;
-  /** Current projection jitter in UV units. */
-  currentJitter: [number, number];
-  /** Previous projection jitter in UV units. */
-  previousJitter: [number, number];
+	/**
+	 * Inverse of the current unjittered view-projection matrix.
+	 * Jitter is supplied separately in UV units.
+	 */
+	inverseViewProjectionMatrix: Readonly<NumberArray16>;
+	/** Previous unjittered view-projection matrix. */
+	previousViewProjectionMatrix: Readonly<NumberArray16>;
+	/** Fraction of validated history blended into the current frame. */
+	historyWeight: number;
+	/** Maximum normalized-device-depth disagreement before history is rejected. */
+	depthThreshold: number;
+	/** Current projection jitter in UV units. */
+	currentJitter: [number, number];
+	/** Previous projection jitter in UV units. */
+	previousJitter: [number, number];
 };
 
 type CameraReprojectionTAABindings = {
-  depthTexture?: Texture;
-  historyTexture?: Texture;
-  previousDepthTexture?: Texture;
+	depthTexture?: Texture;
+	historyTexture?: Texture;
+	previousDepthTexture?: Texture;
 };
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
@@ -44,8 +44,8 @@ const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0
  * history must be reset by the caller.
  */
 export const cameraReprojectionTaaResolve = {
-  name: 'cameraReprojectionTaaResolve',
-  source: /* wgsl */ `\
+	name: 'cameraReprojectionTaaResolve',
+	source: /* wgsl */ `\
 ${temporalHelpers}
 const CAMERA_REPROJECTION_TAA_EPSILON: f32 = 0.00001;
 
@@ -138,41 +138,41 @@ fn cameraReprojectionTaaResolve_sampleColor(
   );
   return vec4f(resolvedColor, currentColor.a);
 }`,
-  bindingLayout: [
-    {name: 'historyTexture', group: 0},
-    {name: 'depthTexture', group: 0},
-    {name: 'previousDepthTexture', group: 0}
-  ],
-  props: {} as Partial<CameraReprojectionTAAUniforms> & CameraReprojectionTAABindings,
-  uniforms: {} as CameraReprojectionTAAUniforms,
-  bindings: {} as CameraReprojectionTAABindings,
-  uniformTypes: {
-    inverseViewProjectionMatrix: 'mat4x4<f32>',
-    previousViewProjectionMatrix: 'mat4x4<f32>',
-    historyWeight: 'f32',
-    depthThreshold: 'f32',
-    currentJitter: 'vec2<f32>',
-    previousJitter: 'vec2<f32>'
-  },
-  propTypes: {
-    inverseViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
-    previousViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
-    historyWeight: {value: 0.9, min: 0, max: 0.98},
-    depthThreshold: {value: 0.0025, min: 0.00001, softMax: 0.05},
-    currentJitter: {value: [0, 0], private: true},
-    previousJitter: {value: [0, 0], private: true}
-  },
-  passes: [{sampler: true}]
+	bindingLayout: [
+		{name: 'historyTexture', group: 0},
+		{name: 'depthTexture', group: 0},
+		{name: 'previousDepthTexture', group: 0}
+	],
+	props: {} as Partial<CameraReprojectionTAAUniforms> & CameraReprojectionTAABindings,
+	uniforms: {} as CameraReprojectionTAAUniforms,
+	bindings: {} as CameraReprojectionTAABindings,
+	uniformTypes: {
+		inverseViewProjectionMatrix: 'mat4x4<f32>',
+		previousViewProjectionMatrix: 'mat4x4<f32>',
+		historyWeight: 'f32',
+		depthThreshold: 'f32',
+		currentJitter: 'vec2<f32>',
+		previousJitter: 'vec2<f32>'
+	},
+	propTypes: {
+		inverseViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
+		previousViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
+		historyWeight: {value: 0.9, min: 0, max: 0.98},
+		depthThreshold: {value: 0.0025, min: 0.00001, softMax: 0.05},
+		currentJitter: {value: [0, 0], private: true},
+		previousJitter: {value: [0, 0], private: true}
+	},
+	passes: [{sampler: true}]
 } as const satisfies ShaderPass<
-  Partial<CameraReprojectionTAAUniforms> & CameraReprojectionTAABindings,
-  CameraReprojectionTAAUniforms,
-  CameraReprojectionTAABindings
+	Partial<CameraReprojectionTAAUniforms> & CameraReprojectionTAABindings,
+	CameraReprojectionTAAUniforms,
+	CameraReprojectionTAABindings
 >;
 
 /** Copies current device depth into a filterable history texture for the next frame. */
 export const cameraReprojectionTaaDepthHistoryCopy = {
-  name: 'cameraReprojectionTaaDepthHistoryCopy',
-  source: /* wgsl */ `\
+	name: 'cameraReprojectionTaaDepthHistoryCopy',
+	source: /* wgsl */ `\
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 
@@ -185,8 +185,8 @@ fn cameraReprojectionTaaDepthHistoryCopy_sampleColor(
   let depth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
   return vec4f(depth, 0.0, 0.0, 1.0);
 }`,
-  bindingLayout: [{name: 'depthTexture', group: 0}],
-  passes: [{sampler: true}]
+	bindingLayout: [{name: 'depthTexture', group: 0}],
+	passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
 /**
@@ -196,47 +196,47 @@ fn cameraReprojectionTaaDepthHistoryCopy_sampleColor(
  * renderer history after resize, camera cuts, or moving-object topology changes.
  */
 export const cameraReprojectionTaa = {
-    name: 'cameraReprojectionTaaCompositeShaderPass',
-    resources: {
-      cameraReprojectionTaaHistoryColor: {
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: 'original'
-      },
-      cameraReprojectionTaaHistoryDepth: {
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [1, 0, 0, 1]}
-      }
-    },
-    passes: [
-      {
-        kind: 'fullscreen',
-        shaderPass: cameraReprojectionTaaResolve,
-        inputs: {
-          sourceTexture: 'previous',
-          historyTexture: 'cameraReprojectionTaaHistoryColor',
-          previousDepthTexture: 'cameraReprojectionTaaHistoryDepth'
-        },
-        output: 'cameraReprojectionTaaHistoryColor'
-      },
-      {
-        kind: 'fullscreen',
-        shaderPass: copyPass,
-        inputs: {sourceTexture: 'cameraReprojectionTaaHistoryColor'},
-        output: 'previous'
-      },
-      {
-        kind: 'fullscreen',
-        shaderPass: cameraReprojectionTaaDepthHistoryCopy,
-        inputs: {sourceTexture: 'previous'},
-        output: 'cameraReprojectionTaaHistoryDepth'
-      }
-    ]
-  } satisfies EffectDefinition<
-  'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
+	name: 'cameraReprojectionTaaCompositeShaderPass',
+	resources: {
+		cameraReprojectionTaaHistoryColor: {
+			format: 'rgba16float',
+			lifetime: 'history',
+			initialize: 'original'
+		},
+		cameraReprojectionTaaHistoryDepth: {
+			format: 'rgba16float',
+			lifetime: 'history',
+			initialize: {clearColor: [1, 0, 0, 1]}
+		}
+	},
+	passes: [
+		{
+			kind: 'fullscreen',
+			shaderPass: cameraReprojectionTaaResolve,
+			inputs: {
+				sourceTexture: 'previous',
+				historyTexture: 'cameraReprojectionTaaHistoryColor',
+				previousDepthTexture: 'cameraReprojectionTaaHistoryDepth'
+			},
+			output: 'cameraReprojectionTaaHistoryColor'
+		},
+		{
+			kind: 'fullscreen',
+			shaderPass: copyPass,
+			inputs: {sourceTexture: 'cameraReprojectionTaaHistoryColor'},
+			output: 'previous'
+		},
+		{
+			kind: 'fullscreen',
+			shaderPass: cameraReprojectionTaaDepthHistoryCopy,
+			inputs: {sourceTexture: 'previous'},
+			output: 'cameraReprojectionTaaHistoryDepth'
+		}
+	]
+} satisfies EffectDefinition<
+	'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
 >;
 
 export function createCameraReprojectionTAACompositeShaderPass() {
-  return resolveEffect(cameraReprojectionTaa);
+	return resolveEffect(cameraReprojectionTaa);
 }
