@@ -165,3 +165,56 @@ include browser queue synchronization and are medians of separate measurements.
 Repeat on a non-Apple WebGPU adapter before generalizing. For P.8d, a controlled prototype
 would reduce dispatch count without repacking source chunks and test whether the same benefit
 appears in the real GPU producer-to-render path from P.9a.6.
+
+## P.8d grouped dispatch
+
+The tested pairing binds two source position buffers, two source validity buffers, and their
+corresponding output buffers directly in one dispatch. Whole workgroups select a physical
+chunk, and every lane evaluates the same projection program. The input and output chunks
+retain their byte layout and identity. No coordinate copying or repacking is involved; the
+benchmark preloads coordinates once and measures updates to the existing output buffers.
+The paired kernel needs nine storage bindings, and the tested Apple WebGPU adapter reports ten.
+The timing fixture uses zero-offset chunks and includes a shorter final chunk in its
+correctness sweep. The production API also supports the graph views’ binding offsets.
+
+Run the production opt-in path against the default one-dispatch-per-chunk path:
+
+```sh
+VITE_GPU_PROJECT_GROUPED_CHUNKS=2 \
+VITE_GPU_PROJECT_RENDER_ROWS=16384 \
+VITE_GPU_PROJECT_RENDER_BATCH_ROWS=256,512,1024,2048,4096 \
+LUMA_TEST_BROWSER_BENCHMARKS=true \
+yarn exec vitest run --project headless --reporter=verbose --silent=false \
+  gpu-projected-point-performance.spec.ts
+```
+
+November 27, 2026. Apple WebGPU, headless Chromium 151.0.0.0. Captured with the production opt-in path.
+Synchronized medians in milliseconds. Both versions use one compute pass and one submission.
+
+| Rows per chunk | Dispatches before → after | Baseline update | Paired update | Baseline update + draw | Paired update + draw |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 256 | 64 → 32 | 46.40 | 24.00 | 46.70 | 25.40 |
+| 512 | 32 → 16 | 22.80 | 12.00 | 24.00 | 19.70 |
+| 1,024 | 16 → 8 | 12.30 | 6.80 | 15.70 | 11.20 |
+| 2,048 | 8 → 4 | 6.90 | 4.40 | 10.90 | 11.80 |
+| 4,096 | 4 → 2 | 6.50 | 5.80 | 10.90 | 10.20 |
+
+The coordinate and validity words matched the production GPU path bit-for-bit after both
+updates. The offscreen raster matched CPU, probed picks preserved row and chunk identity, and
+masked rows missed. A separate 16,383-row case exercised a partial final chunk.
+
+An earlier prototype used a generated single-chunk shader as a control. Its parameter-buffer
+strategy matched the paired version. Synchronized update medians:
+
+| Rows per chunk | Production shader | Generated shader with one chunk per dispatch |
+| ---: | ---: | ---: |
+| 256 | 44.60 | 44.60 |
+| 512 | 22.60 | 22.70 |
+| 1024 | 11.30 | 11.50 |
+| 2048 | 7.80 | 7.90 |
+| 4096 | 5.30 | 4.10 |
+
+Pairing helped most for chunks with few workgroups. These results support reducing dispatch
+count for small resident chunks on this adapter. Production qualification still needs the
+real producer-to-render path, non-Apple devices, and a fallback for binding limits. The
+prototype leaves the production graph and inline policy unchanged.

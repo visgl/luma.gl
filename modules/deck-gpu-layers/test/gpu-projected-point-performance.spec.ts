@@ -48,7 +48,18 @@ const TOLERANCE_METERS = 0.0005;
 const WARMUP_ITERATIONS = 2;
 const MEASURED_ITERATIONS = 7;
 const renderCounts = [1, 4] as const;
-const modes = ['cpu', 'cpu-round-trip', 'materialized', 'materialized-resident', 'inline'] as const;
+const modes = [
+  'cpu',
+  'cpu-round-trip',
+  'materialized',
+  'materialized-resident',
+  'materialized-grouped',
+  'inline'
+] as const;
+const groupedChunkCount = Number(import.meta.env['VITE_GPU_PROJECT_GROUPED_CHUNKS'] ?? 0);
+if (![0, 1, 2].includes(groupedChunkCount)) {
+  throw new Error('Expected zero, one, or two chunks per dispatch');
+}
 const residentSweep = import.meta.env['VITE_GPU_PROJECT_RENDER_RESIDENT_ONLY'] === 'true';
 const attributeResidentCost = import.meta.env['VITE_GPU_PROJECT_RENDER_ATTRIBUTION'] === 'true';
 type Mode = (typeof modes)[number];
@@ -195,9 +206,18 @@ for (const rowCount of rowCounts) {
       ] as const;
       let referenceFrames: Uint8Array[] | undefined;
       const paths = [];
+      let referenceWords: Uint32Array[][] | undefined;
       for (const mode of modes) {
+        if (mode === 'materialized-grouped' && !groupedChunkCount) continue;
+        if (
+          groupedChunkCount &&
+          mode !== 'cpu' &&
+          mode !== 'materialized-resident' &&
+          mode !== 'materialized-grouped'
+        )
+          continue;
         if ((residentSweep || attributeResidentCost) && mode === 'inline') continue;
-        const {frames, ...report} = await measurePath(
+        const {frames, words, ...report} = await measurePath(
           device,
           mode,
           inputs,
@@ -207,6 +227,11 @@ for (const rowCount of rowCounts) {
           referenceFrames
         );
         referenceFrames ??= frames;
+        if (mode === 'materialized-resident') referenceWords = words;
+        if (mode === 'materialized-grouped') {
+          expect(words).toHaveLength(2);
+          expect(words).toEqual(referenceWords);
+        }
         paths.push(report);
       }
       console.log(
@@ -227,6 +252,8 @@ for (const rowCount of rowCounts) {
           warmupIterations: WARMUP_ITERATIONS,
           measuredIterations: MEASURED_ITERATIONS,
           toleranceMeters: TOLERANCE_METERS,
+          storageBindings: device.limits.maxStorageBuffersPerShaderStage,
+          groupedChunkCount,
           paths
         })}`
       );
@@ -305,8 +332,10 @@ async function measurePath(
   const vertexUsage = Buffer.VERTEX | Buffer.COPY_DST;
   const cpuRoundTrip = mode === 'cpu-round-trip';
   const cpuProjection = mode === 'cpu' || cpuRoundTrip;
-  const resident = mode === 'materialized-resident';
-  const gpuUsage = vertexUsage | Buffer.STORAGE | (cpuRoundTrip ? Buffer.COPY_SRC : 0);
+  const grouped = mode === 'materialized-grouped';
+  const resident = mode === 'materialized-resident' || grouped;
+  const gpuUsage =
+    vertexUsage | Buffer.STORAGE | (cpuRoundTrip || groupedChunkCount ? Buffer.COPY_SRC : 0);
   const raw =
     mode === 'cpu' ? undefined : allocateVector(device, inputs[0], 'uint32x4', 16, gpuUsage);
   const inputValidity = cpuProjection
@@ -330,17 +359,30 @@ async function measurePath(
   const graphs = (resident ? [raw!, secondRaw!] : mode === 'materialized' ? [raw!] : []).map(
     positions => {
       const graph = new GPUCommandGraph(device);
-      for (const [index, chunk] of positions.data.entries()) {
+      if (groupedChunkCount) {
         const program = new GPUProjectionProgram({
-          id: `cartesian-${index}`,
+          groupChunks: grouped && groupedChunkCount === 2,
           projection: transform.compiled,
-          positions: importChunk(graph, `raw-${index}`, chunk),
-          inputValidity: importChunk(graph, `mask-${index}`, inputValidity!.data[index]),
-          output: importChunk(graph, `local-${index}`, local!.data[index]),
-          validity: importChunk(graph, `validity-${index}`, outputValidity!.data[index])
+          positions: graph.importGPUVector('positions', positions),
+          inputValidity: graph.importGPUVector('input-validity', inputValidity!),
+          output: graph.importGPUVector('output', local!),
+          validity: graph.importGPUVector('validity', outputValidity!)
         });
         programs.push(program);
         program.addToGraph(graph);
+      } else {
+        for (const [index, chunk] of positions.data.entries()) {
+          const program = new GPUProjectionProgram({
+            id: `cartesian-${index}`,
+            projection: transform.compiled,
+            positions: importChunk(graph, `raw-${index}`, chunk),
+            inputValidity: importChunk(graph, `mask-${index}`, inputValidity!.data[index]),
+            output: importChunk(graph, `local-${index}`, local!.data[index]),
+            validity: importChunk(graph, `validity-${index}`, outputValidity!.data[index])
+          });
+          programs.push(program);
+          program.addToGraph(graph);
+        }
       }
       return graph.compile();
     }
@@ -525,6 +567,7 @@ async function measurePath(
     ];
     const frames: Uint8Array[] = [];
     const changedPixels: number[] = [];
+    const words: Uint32Array[][] = [];
     const pickQueries: ReturnType<typeof getPickQuery>[] = [];
     for (const index of inputs.keys()) {
       if (cpuRoundTrip) await applyReadbackInput(index);
@@ -548,6 +591,16 @@ async function measurePath(
       expect(mismatched / litPixels).toBeLessThanOrEqual(0.005);
       changedPixels.push(mismatched);
       frames.push(pixels);
+      if (groupedChunkCount && resident) {
+        const result = [];
+        for (const vector of [local!, outputValidity!]) {
+          for (const chunk of vector.data) {
+            const bytes = await getGPUDataBuffer(chunk).readAsync();
+            result.push(new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4));
+          }
+        }
+        words.push(result);
+      }
       for (const row of pickedRows) {
         const position = transform.projectPosition(getSourcePosition(row))!;
         const query = getPickQuery(position.common);
@@ -614,7 +667,13 @@ async function measurePath(
       }
     }
     let attribution;
-    if (resident && attributeResidentCost) {
+    if (resident && groupedChunkCount) {
+      const dispatches =
+        grouped && device.limits.maxStorageBuffersPerShaderStage >= 9
+          ? Math.ceil(inputs[0].length / groupedChunkCount)
+          : inputs[0].length;
+      attribution = {active: await measureResidentCost(device, graphs, dispatches, true)};
+    } else if (resident && attributeResidentCost) {
       const active = await measureResidentCost(device, graphs, inputs[0].length);
       // Preserve the dispatch and bindings while bypassing projection math for all rows.
       for (const chunk of inputValidity!.data) {
@@ -639,6 +698,7 @@ async function measurePath(
         0
       ),
       scenarios,
+      words,
       frames
     };
   } finally {
@@ -663,13 +723,14 @@ async function measureResidentCost(
   device: WebGPUDevice,
   graphs: CompiledGPUCommandGraph<void>[],
   chunkCount: number,
-  masked = false
+  coalescedOnly = false
 ) {
   const modes = ['coalesced', 'split', 'timestamped'] as const;
   type Schedule = (typeof modes)[number];
   const hasTimestamps = device.features.has('timestamp-query');
   const schedules = modes.filter(
-    schedule => schedule === 'coalesced' || (!masked && (schedule === 'split' || hasTimestamps))
+    schedule =>
+      schedule === 'coalesced' || (!coalescedOnly && (schedule === 'split' || hasTimestamps))
   );
   const samplesBySchedule = new Map(
     schedules.map(schedule => [
