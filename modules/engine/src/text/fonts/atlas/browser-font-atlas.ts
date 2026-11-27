@@ -73,12 +73,22 @@ const CACHE_LIMIT = 3;
 
 let cache = new LRUCache<FontAtlas>(CACHE_LIMIT);
 
-/** Increases the process-wide generated atlas LRU capacity. */
+/** Resets the shared generated atlas cache to the requested capacity. */
 export function setFontAtlasCacheLimit(limit: number): void {
+  validateCacheLimit(limit);
+  cache = new LRUCache(limit);
+}
+
+/** Ensures the shared generated atlas cache can hold at least this many entries. */
+export function ensureFontAtlasCacheCapacity(limit: number): void {
+  validateCacheLimit(limit);
+  cache.grow(limit);
+}
+
+function validateCacheLimit(limit: number): void {
   if (!Number.isFinite(limit) || limit < CACHE_LIMIT) {
     throw new Error(`Font atlas cache limit must be at least ${CACHE_LIMIT}`);
   }
-  cache = new LRUCache(limit);
 }
 
 /** Applies stable browser-font defaults without constructing an atlas. */
