@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
-import type {ShaderLayout} from '@luma.gl/core';
+import {expect, it, vi} from 'vitest';
+import type {Buffer, ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
@@ -639,3 +639,79 @@ function makeMatrixVector(device: NullDevice, rowCount: number): GPUVector<'floa
     ownsData: true
   });
 }
+
+it('GPUTableShaderBindings rejects storage views at unaligned byte offsets', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'limits', {
+    value: {...device.limits, minStorageBufferOffsetAlignment: 256}
+  });
+  const buffer = device.createBuffer({byteLength: 512});
+  const makeBatch = (byteOffset: number, length = 1) =>
+    new GPURecordBatch({
+      gpuData: {
+        positions: new GPUData({
+          buffer,
+          format: 'float32x2',
+          length,
+          stride: 2,
+          byteOffset,
+          byteStride: 8
+        })
+      }
+    });
+  const makeTable = (byteOffset: number) => new GPUTable({batches: [makeBatch(byteOffset)]});
+  const shaderLayout = {
+    attributes: [],
+    bindings: [{name: 'positions', type: 'read-only-storage', group: 0, location: 0}]
+  } satisfies ShaderLayout;
+  const gpuInputSchema = GPU_INPUT_SCHEMA.slice(0, 1);
+
+  const getActiveBufferCount = () =>
+    device.statsManager.getStats('Resource Counts').get('Buffers Active').count;
+  const baselineBufferCount = getActiveBufferCount();
+  const unalignedMessage =
+    'GPUTableShaderBindings "positions" batch 0 starts at byte 8, which is not a multiple of minStorageBufferOffsetAlignment (256)';
+
+  // A view that starts inside a shared buffer cannot be bound at its own byte offset.
+  const unalignedTable = makeTable(8);
+  expect(
+    () => new GPUTableShaderBindings(device, {table: unalignedTable, gpuInputSchema, shaderLayout})
+  ).toThrow(unalignedMessage);
+  expect(getActiveBufferCount(), 'failed construction releases its buffers').toBe(
+    baselineBufferCount
+  );
+
+  const alignedTable = makeTable(256);
+  const aligned = new GPUTableShaderBindings(device, {
+    table: alignedTable,
+    gpuInputSchema,
+    shaderLayout
+  });
+  expect(aligned.batches[0].bindings.positions).toMatchObject({offset: 256});
+  const preparedBufferCount = getActiveBufferCount();
+  const rowMultiplierBuffer = aligned.batches[0].bindings.gpuTableColumns as Buffer;
+  const rowMultiplierWrite = vi.spyOn(rowMultiplierBuffer, 'write');
+  expect(() => aligned.updateBindings(unalignedTable)).toThrow(unalignedMessage);
+  expect(getActiveBufferCount(), 'failed update keeps reused buffers only').toBe(
+    preparedBufferCount
+  );
+  expect(
+    rowMultiplierWrite,
+    'failed update leaves reused buffers unwritten'
+  ).not.toHaveBeenCalled();
+  expect(aligned.table).toBe(alignedTable);
+  rowMultiplierWrite.mockRestore();
+
+  // Callers skip zero-row batches, so their offsets are not checked.
+  const emptyBatchTable = new GPUTable({batches: [makeBatch(256), makeBatch(8, 0)]});
+  aligned.updateBindings(emptyBatchTable);
+  expect(aligned.batches.map(batch => batch.numRows)).toEqual([1, 0]);
+  aligned.updateBindings(alignedTable);
+
+  aligned.destroy();
+  expect(getActiveBufferCount(), 'destroy returns to baseline').toBe(baselineBufferCount);
+  alignedTable.destroy();
+  unalignedTable.destroy();
+  emptyBatchTable.destroy();
+  buffer.destroy();
+});

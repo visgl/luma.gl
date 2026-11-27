@@ -20,7 +20,7 @@ import {
   type GPUInputDeclaration,
   type GPUInputSchema
 } from './gpu-input-schema';
-import {GPUConstant} from '@luma.gl/graph/gpu-data';
+import {assertStorageBufferOffsetAligned, GPUConstant} from '@luma.gl/graph/gpu-data';
 import type {GPUData} from '@luma.gl/graph/gpu-data';
 import type {GPUTable} from '../table/gpu-table';
 import {getGPUVectorFormatInfo, isFixedSizeListGPUVectorFormat} from '@luma.gl/graph/gpu-data';
@@ -97,13 +97,26 @@ export class GPUTableShaderBindings {
       throw new Error('GPUTableShaderBindings has been destroyed');
     }
     validateGPUInputVectors('GPUTableShaderBindings', this.gpuInputSchema, table.gpuColumns);
-    const prepared = prepareBindings(
-      this.device,
-      table,
-      this.gpuInputSchema,
-      this.shaderLayout,
-      this.ownedBuffers
-    );
+    const nextOwnedBuffers = new Map<string, OwnedBuffer>();
+    let prepared: PreparedBindings;
+    try {
+      prepared = prepareBindings(
+        this.device,
+        table,
+        this.gpuInputSchema,
+        this.shaderLayout,
+        this.ownedBuffers,
+        nextOwnedBuffers
+      );
+    } catch (error) {
+      // Release buffers allocated by the failed preparation; reused buffers stay owned.
+      for (const [key, ownedBuffer] of nextOwnedBuffers) {
+        if (this.ownedBuffers.get(key)?.buffer !== ownedBuffer.buffer) {
+          ownedBuffer.buffer.destroy();
+        }
+      }
+      throw error;
+    }
 
     for (const [key, ownedBuffer] of this.ownedBuffers) {
       if (prepared.ownedBuffers.get(key)?.buffer !== ownedBuffer.buffer) {
@@ -145,7 +158,8 @@ function prepareBindings(
   table: GPUTable,
   gpuInputSchema: GPUInputSchema,
   shaderLayout: ShaderLayout,
-  reusableBuffers: Map<string, OwnedBuffer>
+  reusableBuffers: Map<string, OwnedBuffer>,
+  ownedBuffers: Map<string, OwnedBuffer>
 ): PreparedBindings {
   const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
   const storageBindingNames = new Set(
@@ -161,7 +175,8 @@ function prepareBindings(
   const storageInputs = gpuInputSchema.filter(
     input => input.storageBindingName && storageBindingNames.has(input.storageBindingName)
   );
-  const ownedBuffers = new Map<string, OwnedBuffer>();
+  // Check storage views before any reused buffer is written, so a failed update leaves them intact.
+  assertStorageOffsetsAligned(device, table, storageInputs);
   const varyingLayouts = getVaryingAttributeLayouts(table, attributeInputs);
   const constantAttributes: Record<string, TypedArray> = {};
   const constantLayouts: BufferLayout[] = [];
@@ -306,6 +321,29 @@ function prepareBindings(
       0
     )
   };
+}
+
+/** Checks that every varying storage view in a non-empty batch starts at an aligned byte offset. */
+function assertStorageOffsetsAligned(
+  device: Device,
+  table: GPUTable,
+  storageInputs: GPUInputSchema
+): void {
+  table.batches.forEach((batch, batchIndex) => {
+    for (const input of storageInputs) {
+      const data = batch.gpuData[input.columnName];
+      if (data && !table.gpuConstants[input.columnName]) {
+        assertStorageBufferOffsetAligned(
+          device,
+          'GPUTableShaderBindings',
+          input.columnName,
+          batchIndex,
+          data.byteOffset,
+          batch.numRows
+        );
+      }
+    }
+  });
 }
 
 function sortBufferLayoutsByShaderLocation(

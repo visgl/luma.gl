@@ -6,6 +6,7 @@ import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Kernel, type KernelProps} from '../../execution/compute/kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
+  assertStorageBufferOffsetAligned,
   isFixedSizeListGPUVectorFormat,
   type GPUData,
   type GPUVector
@@ -59,6 +60,8 @@ export class GPUTableComputation {
     assertNoDuplicateBindingNames(inputVectors, bindings);
 
     const batchState = getGPUTableComputationBatchState(inputVectors);
+    // Reject unaligned views before any work can be recorded.
+    assertInputVectorOffsetsAligned(device, inputVectors, batchState);
     const baseBindings = {
       ...getDirectVectorBindings(inputVectors),
       ...bindings
@@ -161,18 +164,39 @@ function requiresBatchBinding(vector: GPUVector): boolean {
   return vector.data.length !== 1;
 }
 
+/**
+ * Checks that every chunk bound as storage starts at an aligned byte offset.
+ * Chunks of skipped batches count as zero rows, because `dispatchBatches` never binds them.
+ */
+function assertInputVectorOffsetsAligned(
+  device: Device,
+  inputVectors: Record<string, GPUVector>,
+  batchState: GPUTableComputationBatchState
+): void {
+  for (const [name, vector] of Object.entries(inputVectors)) {
+    const batched = requiresBatchBinding(vector);
+    vector.data.forEach((data, batchIndex) => {
+      const numRows = batched && batchState.emptyBatches[batchIndex] ? 0 : data.length;
+      assertStorageBufferOffsetAligned(
+        device,
+        'GPUTableComputation',
+        name,
+        batchIndex,
+        data.byteOffset,
+        numRows
+      );
+    });
+  }
+}
+
 function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Record<string, Binding> {
   const bindings: Record<string, Binding> = {};
   for (const [name, vector] of Object.entries(inputVectors)) {
     if (!requiresBatchBinding(vector)) {
-      bindings[name] = getDirectVectorBinding(vector);
+      bindings[name] = getGPUDataBinding(getSingleGPUVectorData(vector));
     }
   }
   return bindings;
-}
-
-function getDirectVectorBinding(vector: GPUVector): Binding {
-  return getGPUDataBinding(getSingleGPUVectorData(vector));
 }
 
 function getBatchVectorBindings(
