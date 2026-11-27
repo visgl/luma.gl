@@ -79,7 +79,9 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
     throw new Error('GPUDataFrame right join projection requires nonoverlapping source row IDs');
   }
 
-  const reusePackedChunks = lengths.filter(length => length > 0).length > 1;
+  const leftBatchCount = lengths.filter(length => length > 0).length;
+  // Three left batches amortize even a two-chunk range staged entirely with compute passes.
+  const allowComputeStaging = leftBatchCount > 2;
   let remainingScratchBytes = maxScratchBytes;
   const projectedSources = new Map(
     sources.map((source, columnIndex) => {
@@ -108,9 +110,17 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
           input: input.data[batchIndex] as GraphDataView<GPUVectorWGSLFormat>,
           inputValidity: validInput?.data[batchIndex]
         }));
-        const projection = reusePackedChunks
-          ? stageGPUJoinProjectionRanges(graph, id, format, chunks, remainingScratchBytes)
-          : {chunks, scratchBytes: 0};
+        const projection =
+          leftBatchCount > 1
+            ? stageGPUJoinProjectionRanges(
+                graph,
+                id,
+                format,
+                chunks,
+                remainingScratchBytes,
+                allowComputeStaging
+              )
+            : {chunks, scratchBytes: 0};
         remainingScratchBytes -= projection.scratchBytes;
         for (const [leftBatch, rows] of matchedRows.data.entries()) {
           if (!rows.length) continue;
@@ -161,7 +171,8 @@ function stageGPUJoinProjectionRanges(
   id: string,
   format: GPUVectorWGSLFormat,
   chunks: GPUJoinProjectionChunk[],
-  maxScratchBytes: number
+  maxScratchBytes: number,
+  allowComputeStaging: boolean
 ): {chunks: GPUJoinProjectionChunk[]; scratchBytes: number} {
   const projectionChunks: GPUJoinProjectionChunk[] = [];
   const {maxBufferSize, maxStorageBufferBindingSize} = graph.device.limits;
@@ -184,8 +195,7 @@ function stageGPUJoinProjectionRanges(
       if (
         chunk.first !== firstChunk.first + length ||
         length + chunk.input.length > maxRows ||
-        !(chunk.input.buffer.usage & Buffer.COPY_SRC) ||
-        (chunk.inputValidity && !(chunk.inputValidity.buffer.usage & Buffer.COPY_SRC))
+        (!allowComputeStaging && !canCopyGPUJoinProjectionChunk(chunk))
       ) {
         break;
       }
@@ -210,6 +220,14 @@ function stageGPUJoinProjectionRanges(
     start = end;
   }
   return {chunks: projectionChunks, scratchBytes};
+}
+
+/** Returns whether both views can use the native GPU buffer copy command. */
+function canCopyGPUJoinProjectionChunk(chunk: GPUJoinProjectionChunk): boolean {
+  return Boolean(
+    chunk.input.buffer.usage & Buffer.COPY_SRC &&
+      (!chunk.inputValidity || chunk.inputValidity.buffer.usage & Buffer.COPY_SRC)
+  );
 }
 
 /** Copies one contiguous right row-ID range into graph scratch for reuse by every left batch. */
@@ -250,8 +268,13 @@ function packGPUJoinProjectionRange(
           ]
         : [])
     ];
+    const copyId = `${id}-pack-${index}`;
+    if (!canCopyGPUJoinProjectionChunk(chunk)) {
+      addGPUJoinProjectionStagingPass(graph, copyId, copies);
+      continue;
+    }
     graph.addCopyPass({
-      id: `${id}-pack-${index}`,
+      id: copyId,
       resources: copies.flatMap(({source, target}) => [
         {buffer: source, usage: 'copy-source'},
         {buffer: target, usage: 'copy-destination'}
@@ -272,6 +295,54 @@ function packGPUJoinProjectionRange(
     });
   }
   return {first, input, inputValidity};
+}
+
+/** Stages one packed payload chunk and its optional validity using storage bindings. */
+function addGPUJoinProjectionStagingPass(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  id: string,
+  copies: readonly {source: GraphDataView; target: GraphDataView}[]
+): void {
+  const length = copies[0].source.length;
+  const declarations = copies.map(
+    (_, index) => `
+@group(0) @binding(${index * 2}) var<storage, read> source${index}: array<u32>;
+@group(0) @binding(${index * 2 + 1}) var<storage, read_write> target${index}: array<u32>;`
+  );
+  const statements = copies.map(({source, target}, index) => {
+    const components = source.rowByteLength / Uint32Array.BYTES_PER_ELEMENT;
+    return `
+  for (var component = 0u; component < ${components}u; component++) {
+    let word = index * ${components}u + component;
+    target${index}[${getViewElementOffset(target)}u + word] =
+      source${index}[${getViewElementOffset(source)}u + word];
+  }`;
+  });
+  addGPUAnalyticsComputePass(graph, {
+    id,
+    source: /* wgsl */ `
+${declarations.join('\n')}
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getGPUAnalyticsInvocationIndexSource(graph, length)}
+  if (index >= ${length}u) { return; }
+  ${statements.join('\n')}
+}`,
+    resources: copies.flatMap(({source, target}) => [
+      {buffer: source, usage: 'storage-read'},
+      {buffer: target, usage: 'storage-write'}
+    ]),
+    bindings: Object.fromEntries(
+      copies.flatMap(({source, target}, index) => [
+        [`source${index}`, source],
+        [`target${index}`, target]
+      ])
+    ),
+    length
+  });
 }
 
 /** Writes one matching right chunk, comparing unsigned source IDs without wraparound. */

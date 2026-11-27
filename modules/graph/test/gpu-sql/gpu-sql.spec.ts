@@ -10,7 +10,7 @@ import {planGPUDataFrameQuery} from '../../../../examples/experimental/gpu-data-
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   CompiledGPUDataFrameAggregation as CompiledGPUDataFrameAggregation,
   CompiledGPUDataFrameGlobalSort as CompiledGPUDataFrameGlobalSort,
@@ -738,6 +738,117 @@ it('GPU SQL and typed joins project nullable packed right vectors with and witho
   } finally {
     right.destroy();
     selectedLeft.destroy();
+    left.destroy();
+  }
+});
+
+it('GPUSQL stages mixed copyable and storage-only right chunks under the scratch cap', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const leftRows = arrow.tableFromArrays({identifier: Uint32Array.of(20, 50, 40, 10)});
+  const leftArrow = new arrow.Table(
+    Array.from({length: 4}, (_, index) => leftRows.slice(index, index + 1).batches[0])
+  );
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, leftArrow),
+    ownership: 'owned'
+  });
+  const rightBatches = [20, 40].map(
+    (identifier, index) =>
+      new GPURecordBatch<{identifier: 'uint32'; position: 'float32x3'}>({
+        gpuData: {
+          identifier: new GPUData({
+            buffer: device.createBuffer({data: Uint32Array.of(identifier), usage: Buffer.STORAGE}),
+            format: 'uint32',
+            length: 1,
+            ownsBuffer: true
+          }),
+          position: new GPUData({
+            buffer: device.createBuffer({
+              data: Float32Array.of(identifier, -identifier, index),
+              usage: Buffer.STORAGE | (index ? Buffer.COPY_SRC : 0)
+            }),
+            format: 'float32x3',
+            length: 1,
+            ownsBuffer: true
+          })
+        },
+        fields: [
+          {name: 'identifier', format: 'uint32', nullable: false},
+          {name: 'position', format: 'float32x3', nullable: true}
+        ]
+      })
+  );
+  const validity = new GPUVector({
+    type: 'data',
+    format: 'uint32',
+    name: 'position-validity',
+    data: [1, 0].map(
+      (value, index) =>
+        new GPUData({
+          buffer: device.createBuffer({
+            data: Uint32Array.of(value),
+            usage: Buffer.STORAGE | (index ? Buffer.COPY_SRC : 0)
+          }),
+          format: 'uint32',
+          length: 1,
+          ownsBuffer: true
+        })
+    ),
+    ownsData: true
+  });
+  const right = new GPUDataFrame({
+    table: new GPUTable({batches: rightBatches}),
+    validity: {position: validity},
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [budget, stageCount] of [
+      [0, 0],
+      [32, 1]
+    ] as const) {
+      const graph = new GPUCommandGraph(device);
+      const compute = vi.spyOn(graph, 'addComputePass');
+      const copy = vi.spyOn(graph, 'addCopyPass');
+      const result = context
+        .query(
+          'SELECT a.position FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
+          {maxJoinProjectionScratchBytes: budget}
+        )
+        .compile(graph);
+      try {
+        expect(
+          compute.mock.calls.filter(
+            ([pass]) => pass.id.includes('-join-projection-') && pass.id.includes('-pack-')
+          )
+        ).toHaveLength(stageCount);
+        expect(
+          copy.mock.calls.filter(([pass]) => pass.id.includes('-join-projection-'))
+        ).toHaveLength(stageCount);
+        expect(
+          compute.mock.calls.filter(
+            ([pass]) => pass.id.includes('-join-projection-') && !pass.id.includes('-pack-')
+          )
+        ).toHaveLength(stageCount ? 4 : 8);
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(
+          Array.from(output.getChild('position') ?? [], value => value && Array.from(value))
+        ).toEqual([[20, -20, 0], null, null, null]);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
     left.destroy();
   }
 });
