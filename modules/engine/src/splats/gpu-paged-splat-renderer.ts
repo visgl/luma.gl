@@ -8,7 +8,12 @@ import {
   type Binding,
   type CommandEncoder,
   type Device,
+  type Framebuffer,
   type RenderPass,
+  type RenderPipeline,
+  type RenderPipelineParameters,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
@@ -24,7 +29,6 @@ import {
 } from '@luma.gl/graph/gpu-core';
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
-  GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
 } from './gpu-splat-graph-shaders';
@@ -48,9 +52,19 @@ import {
 
 const WORKGROUP_SIZE = 256;
 const MINIMUM_SEMANTIC_SELECTION_CAPACITY = 64;
+/** Paged feature uniforms include a 16-byte aligned RGB scale. */
+const PAGED_FEATURE_UNIFORM_BYTE_LENGTH = 64;
 
 /** One intact caller-owned source page and its optional batch-local active-row frontier. */
 export type GPUPagedSplatPage = {
+  /** Per-page source-to-clip transform. */
+  modelViewProjectionMatrix?: readonly number[];
+  /** Camera in the page's source frame. */
+  cameraPosition?: readonly [number, number, number];
+  /** Per-page alpha multiplier. */
+  alphaScale?: number;
+  /** Linear RGB tint applied after feature evaluation. */
+  colorScale?: readonly [number, number, number];
   /** Stable page identity used to retain source topology and renderer-owned index buffers. */
   id: string;
   /** Original caller-owned prepared source allocation, never rewritten or destroyed here. */
@@ -229,6 +243,8 @@ export class GPUPagedSplatRenderer {
   private readonly pageRevisions = new Map<string, number>();
   private plannedSegments: PlannedSourceSegment[] = [];
   private includeRenderPass = true;
+  /** Pipeline variants retained for the current graph model. */
+  private readonly hostPipelines = new Map<string, RenderPipeline>();
   private model?: Model;
   private sortedValuesBuffer?: Buffer;
   private semanticSelectionBuffer?: Buffer;
@@ -497,12 +513,55 @@ export class GPUPagedSplatRenderer {
     return this.encodeFrame(commandEncoder, false);
   }
 
-  /** Draws prepared splats into a caller-owned pass without clearing, ending, or submitting it. */
-  draw(renderPass: RenderPass): void {
+  /**
+   * Draws prepared splats into a caller-owned pass without clearing, ending, or submitting it.
+   * Pipeline overrides apply only to this draw. Attachment formats and samples come from the pass.
+   */
+  draw(renderPass: RenderPass, parameters?: RenderPipelineParameters): void {
     if (this.isDestroyed || !this.hasPresentedContent || !this.model) {
       return;
     }
-    renderPass.setPipeline(this.model.pipeline);
+    const framebuffer =
+      (renderPass as RenderPass & {framebuffer?: Framebuffer}).framebuffer ??
+      renderPass.props.framebuffer;
+    const colorAttachmentFormats = framebuffer?.colorAttachments.map(attachment =>
+      attachment ? (attachment.texture.format as TextureFormatColor) : null
+    ) ?? [this.device.preferredColorFormat];
+    const depthStencilAttachmentFormat = framebuffer?.depthStencilAttachment?.texture.format as
+      | TextureFormatDepthStencil
+      | undefined;
+    const resolvedParameters: RenderPipelineParameters = {
+      ...this.model.pipeline.props.parameters,
+      ...parameters,
+      sampleCount: framebuffer?.props.samples ?? 1
+    };
+    if (depthStencilAttachmentFormat) {
+      resolvedParameters.depthFormat = depthStencilAttachmentFormat;
+    }
+    for (const key of Object.keys(resolvedParameters) as (keyof RenderPipelineParameters)[]) {
+      if (
+        (!depthStencilAttachmentFormat && /^(depth|stencil)/.test(key)) ||
+        (resolvedParameters.blend === false && key !== 'blend' && key.startsWith('blend'))
+      ) {
+        delete resolvedParameters[key];
+      }
+    }
+    const key = JSON.stringify([
+      colorAttachmentFormats,
+      depthStencilAttachmentFormat,
+      resolvedParameters
+    ]);
+    let pipeline = this.hostPipelines.get(key);
+    if (!pipeline) {
+      pipeline = this.model.pipelineFactory.createRenderPipeline({
+        ...this.model.pipeline.props,
+        colorAttachmentFormats,
+        depthStencilAttachmentFormat,
+        parameters: resolvedParameters
+      });
+      this.hostPipelines.set(key, pipeline);
+    }
+    renderPass.setPipeline(pipeline);
     renderPass.setVertexArray(this.model.vertexArray);
     for (const segment of this.outputSegments) {
       renderPass.setBindings({
@@ -783,7 +842,7 @@ export class GPUPagedSplatRenderer {
     );
     const featureUniformBuffer = this.createUniformBuffer(
       `paged-gaussian-features-${planned.id}`,
-      GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH
+      PAGED_FEATURE_UNIFORM_BYTE_LENGTH
     );
     return {
       ...planned,
@@ -1286,10 +1345,13 @@ fn main() {
       const uniformData = new ArrayBuffer(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
       const floatValues = new Float32Array(uniformData);
       const integerValues = new Uint32Array(uniformData);
-      floatValues.set(this.props.modelViewProjectionMatrix, 0);
+      floatValues.set(
+        segment.page.modelViewProjectionMatrix ?? this.props.modelViewProjectionMatrix,
+        0
+      );
       floatValues.set(this.props.viewportSize, 16);
       floatValues[18] = this.props.radiusScale;
-      floatValues[19] = this.props.alphaScale;
+      floatValues[19] = this.props.alphaScale * (segment.page.alphaScale ?? 1);
       floatValues[20] = this.props.alphaCutoff;
       floatValues[21] = this.props.screenSizeCutoffPixels;
       floatValues[22] = this.props.gaussianSupportRadius;
@@ -1309,7 +1371,7 @@ fn main() {
       integerValues[31] = segment.sourceRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
-      const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);
+      const featureData = new ArrayBuffer(PAGED_FEATURE_UNIFORM_BYTE_LENGTH);
       const featureFloatValues = new Float32Array(featureData);
       const featureIntegerValues = new Uint32Array(featureData);
       const batch = segment.page.data;
@@ -1317,7 +1379,7 @@ fn main() {
         batch.sphericalHarmonics && this.props.sphericalHarmonicsDegree > 0
           ? Math.min(batch.sphericalHarmonicsDegree, this.props.sphericalHarmonicsDegree)
           : 0;
-      featureFloatValues.set(this.props.cameraPosition, 0);
+      featureFloatValues.set(segment.page.cameraPosition ?? this.props.cameraPosition, 0);
       featureIntegerValues[3] = degree;
       featureIntegerValues[4] = getSplatSphericalHarmonicCoefficientCount(
         batch.sphericalHarmonicsDegree
@@ -1331,6 +1393,7 @@ fn main() {
           ? 1
           : 0;
       featureIntegerValues[10] = this.props.semanticFilter ? 1 : 0;
+      featureFloatValues.set(segment.page.colorScale ?? [1, 1, 1], 12);
       segment.featureUniformBuffer.write(new Uint8Array(featureData));
     }
   }
@@ -1501,6 +1564,11 @@ fn main() {
     this.compiledGraph?.destroy();
     this.compiledGraph = undefined;
     this.lastEncoding = undefined;
+    if (this.model) {
+      for (const pipeline of this.hostPipelines.values())
+        this.model.pipelineFactory.release(pipeline);
+    }
+    this.hostPipelines.clear();
     this.model?.destroy();
     this.model = undefined;
     for (const buffer of this.ownedBuffers) {

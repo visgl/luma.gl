@@ -196,3 +196,14 @@ window must prevent both unnecessary requests and transient GPU overcommit.
 - [Gaussian splats overview](/docs/api-reference/splats)
 - [Gaussian splat showcase](/examples/showcase/gaussian-splats)
 - [GPU Core](/docs/api-reference/experimental/gpu-core)
+
+### Drawing pages in a host render pass
+
+Each `GPUPagedSplatPage` can override the renderer's `modelViewProjectionMatrix` and
+`cameraPosition` for its own source coordinate frame. Its `alphaScale` multiplies the renderer's
+opacity scale, and its linear RGB `colorScale` tints the result of color evaluation.
+
+Call `renderer.prepare(commandEncoder)` before opening the host render pass, then call
+`renderer.draw(renderPass, parameters)` inside it. The draw uses the host attachment formats
+and sample count. The optional pipeline parameters apply to that draw, and the caller retains
+ownership of the pass and command submission.
