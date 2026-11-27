@@ -11,7 +11,7 @@ const excludePatterns = [
   '**/*.disabled.*',
   // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node).spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-projected-point-performance).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -145,6 +145,7 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/deck-gpu-layers/test/gpu-projected-point-performance.spec.ts',
   'modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts',
   'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
   'modules/engine/test/lighting/indirect-convergence.spec.ts',

@@ -1,0 +1,118 @@
+# Cartesian projection, rendering, and picking
+
+P.8a.2b compares one coordinate update followed by one or four draws and one asynchronous pick.
+Each path also measures a synchronized draw with unchanged coordinates. The benchmark uses a
+768 × 768 offscreen Deck orthographic view and draws the same four-pixel discs from the same
+physical batches. A deterministic longitude/latitude grid alternates between two positions every
+update, with every eleventh row masked. All paths return the same retained CPU projection and
+physical chunk provenance for picks.
+
+- **CPU** evaluates the prepared reference provider in binary64, converts the results to local
+  float32 coordinates, uploads them, and reuses the uploaded positions across draws and picking.
+- **Materialized GPU** uploads raw binary64 input and runs the compiled render projection once per
+  update via the command graph. The same local float32 positions and validity feed subsequent draws
+  and picking, with no intermediate download.
+- **Inline GPU** uploads the same raw binary64 input and draws through the production
+  `GPUProjectedPointLayer`. Each draw, including picking, evaluates projection in the point vertex
+  shader.
+
+The local paths use the same point and picking WGSL as the inline layer. The materialized and inline
+paths use the same compiled adaptive UTM Zone 10N program, local frame and platform fp64 policy.
+Before timing each path, the benchmark compares both GPU output frames with CPU reference frames,
+checks row IDs and CPU metadata on both coordinate updates, and verifies a masked pick misses.
+Frame qualification permits at most 0.5% different red-channel pixels relative to lit pixels.
+The fit tolerance is 0.0005 m. Raster and picking agreement are measured separately from that
+planner tolerance.
+
+## Run
+
+From the repository root, on a hardware WebGPU adapter:
+
+```sh
+VITE_GPU_PROJECT_REVISION="$(git rev-parse --short HEAD)" \
+VITE_GPU_PROJECT_RENDER_ROWS=1024,4096,16384 \
+VITE_GPU_PROJECT_RENDER_BATCH_ROWS=1024,4096 \
+LUMA_TEST_BROWSER_BENCHMARKS=true \
+yarn exec vitest run --project headless --reporter=verbose --silent=false \
+  gpu-projected-point-performance.spec.ts
+```
+
+Each successful case prints a `PROJECTION_RENDER_PERFORMANCE` JSON line with adapter information,
+qualification results, allocation and upload byte counts, and all seven measured samples per
+scenario after two warmups. Upload enqueue, CPU conversion, compute enqueue and draw enqueue
+are host-side timings. Update plus renders and unchanged redraw use WebGPU queue completion.
+Pick time includes the picking pass, readback and retained CPU metadata. Preparation is reported
+separately. Measured frame samples exclude setup, compilation, browser presentation, and texture
+readback used for qualification.
+
+## Initial local capture
+
+November 27, 2026. Apple WebGPU (metal-3 architecture, hardware),
+headless Chromium 151.0.0.0, base revision `fe3b0cfe0` plus this benchmark.
+Each cell lists CPU / materialized GPU / inline GPU median milliseconds.
+
+| Rows | Max rows per batch | Update + 1 draw | Update + 4 draws | Unchanged draw¹ | Pick¹ |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1024 | 1024 | 2.30 / 2.70 / 10.60 | 3.70 / 5.50 / 41.40 | 1.90 / 1.00 / 12.50 | 3.50 / 1.20 / 11.90 |
+| 1024 | 4096 | 1.30 / 1.30 / 10.50 | 2.30 / 2.20 / 43.50 | 0.70 / 0.80 / 11.30 | 0.80 / 0.90 / 13.20 |
+| 4096 | 1024 | 2.90 / 3.50 / 38.60 | 3.80 / 5.00 / 164.30 | 1.00 / 1.70 / 38.30 | 1.20 / 1.80 / 39.10 |
+| 4096 | 4096 | 3.90 / 3.10 / 43.40 | 6.10 / 6.90 / 170.90 | 1.50 / 1.50 / 44.50 | 1.50 / 2.00 / 39.10 |
+| 16384 | 1024 | 8.70 / 13.80 / 162.70 | 14.90 / 14.20 / 610.50 | 2.50 / 1.90 / 165.00 | 2.30 / 2.60 / 169.80 |
+| 16384 | 4096 | 8.30 / 9.00 / 154.10 | 9.40 / 9.40 / 649.80 | 1.60 / 1.70 / 150.70 | 1.40 / 1.80 / 155.70 |
+
+¹ Taken from the one-draw scenario. Pick timing starts with the query pixel already known.
+
+All six cases qualified. Maximum red-channel mismatch against CPU was 0 pixels per frame.
+Probed picks matched the row, physical batch, local index and retained CPU coordinates after both
+updates. The masked row missed on every path.
+
+CPU, materialized and inline coordinate buffers use 12, 32 and 20 bytes per row respectively,
+including validity. After initial mask upload, a coordinate update uploads 8, 16 and 16 bytes
+per row. These counts exclude fixed shader parameters, draw uniforms and framebuffers.
+
+On this adapter, inline rendering was slower than the other paths across the sweep. The
+six-vertex disc evaluates projection at each vertex in both render and picking passes.
+The other paths reuse already-projected positions for both passes. These measurements apply
+to this point geometry, input size range and Apple fp64 backend. The run does not qualify
+cross-vendor behavior or choose a default projection path.
+
+## GPU-resident follow-up
+
+Set `VITE_GPU_PROJECT_RENDER_RESIDENT_ONLY=true` in the command above to run the CPU,
+CPU round-trip, uploaded materialized GPU, and GPU-resident materialized GPU paths. Both
+resident paths preload two coordinate states and alternate between them. The GPU path runs
+the same projection and writes into the same output buffers on every update. The CPU
+round-trip path copies all coordinate chunks into one reusable staging buffer, maps it once,
+projects on the CPU, and uploads the local float32 coordinates. Its static validity mask is
+already available on the CPU. Both rendered views use the same CPU mirror when enriching picks.
+
+These timings come from separate update-only runs, with no render work enqueued between each
+update and its queue completion. Upload-only samples write the same raw coordinate buffers
+and wait for completion without projecting. Readback-only and CPU projection timings are
+captured within the CPU round-trip samples. Setup and preloads are excluded. These are host
+wall-clock measurements including submission and synchronization. Differences between
+independent medians do not estimate exact transfer or kernel times.
+
+Same Apple WebGPU adapter and Chromium as the initial capture. Median milliseconds:
+
+| Rows | Max rows per batch | CPU update | CPU round trip | GPU upload only | GPU upload + compute | GPU resident compute |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1024 | 1024 | 0.40 | 0.90 | 0.10 | 2.30 | 2.40 |
+| 1024 | 4096 | 0.50 | 0.80 | 0.10 | 0.90 | 0.90 |
+| 4096 | 1024 | 1.70 | 2.30 | 0.40 | 4.70 | 4.00 |
+| 4096 | 4096 | 1.50 | 2.10 | 0.10 | 3.70 | 1.80 |
+| 16384 | 1024 | 6.10 | 6.80 | 0.50 | 12.00 | 11.80 |
+| 16384 | 4096 | 5.90 | 6.60 | 0.20 | 5.60 | 5.10 |
+
+All six cases again matched CPU raster and pick results. At 16,384 rows in 4,096-row
+batches, resident compute was 5.10 ms and CPU projection plus local conversion was
+5.50 ms. The CPU round trip moved 256 KiB to the CPU and 128 KiB back to the GPU on
+each update, with a 6.60 ms median for the update. Resident materialization moved no
+coordinate bytes across that boundary. CPU round trip and resident GPU medians for
+update plus four draws were 10.80 and 8.20 ms respectively. Single-draw frame medians
+varied more between captures. At 1,024-row batches the resident compute path was
+slower than the CPU round trip at 4,096 and 16,384 rows. Chunk size matters for this
+workload.
+
+Defer further Cartesian inline projection work. Materialization remains useful when the
+coordinates start and stay on the GPU, even where projection throughput is similar to CPU.
