@@ -29,7 +29,10 @@ export type {
   ToneMappingProps,
   ToneMappingUniforms
 } from './passes/postprocessing/image-adjust-filters/tone-mapping';
-export {toneMapping} from './passes/postprocessing/image-adjust-filters/tone-mapping';
+export {
+  toneMapping,
+  toneMappingEffect
+} from './passes/postprocessing/image-adjust-filters/tone-mapping';
 export type {
   VibranceProps,
   VibranceUniforms
@@ -70,7 +73,7 @@ export type {
   DofProps,
   DofUniforms
 } from './passes/screen-space/dof';
-export {dof, bokehDof, dofCompositeShaderPass} from './passes/screen-space/dof';
+export {dof, bokehDof, depthOfField, dofCompositeShaderPass} from './passes/screen-space/dof';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms
@@ -122,7 +125,7 @@ export {swirl} from './passes/postprocessing/image-warp-filters/swirl';
 
 // Postprocessing modules
 // export type {FXAAProps, FXAAUniforms} from './passes/postprocessing/fxaa/fxaa';
-export {fxaa} from './passes/postprocessing/fxaa/fxaa';
+export {fxaa, fxaaEffect} from './passes/postprocessing/fxaa/fxaa';
 
 // experimental modules
 export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-filters/warp';
@@ -157,7 +160,7 @@ export {
   hdrLuminanceExtract,
   hdrLuminanceReduce
 } from './passes/screen-space/hdr-auto-exposure';
-export {createMotionBlurCompositeShaderPass} from './passes/screen-space/motion-blur';
+export {createMotionBlurCompositeShaderPass, motionBlur} from './passes/screen-space/motion-blur';
 export type {GTAOCompositeShaderPassOptions} from './passes/screen-space/gtao';
 export {
   createGTAOCompositeShaderPass,
@@ -193,7 +196,7 @@ export {
 } from './passes/screen-space/screen-space-reflections';
 export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
 export {createSSAOCompositeShaderPass, ssao} from './passes/screen-space/ssao';
-export {createTAACompositeShaderPass} from './passes/screen-space/temporal-antialiasing';
+export {createTAACompositeShaderPass, taa} from './passes/screen-space/temporal-antialiasing';
 export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
 
 export {

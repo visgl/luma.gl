@@ -46,6 +46,12 @@ bloom. Supply the camera matrices and jitter each frame as
 [camera-reprojection shader definition](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/effects/passes/screen-space/camera-reprojection-temporal-antialiasing.ts)
 for its camera uniform types.
 
+The other fullscreen definitions include `motionBlur`, `taa`, and
+`depthOfField`. Motion blur and standard TAA use the scene velocity texture.
+Depth of field uses scene depth and the `dof` camera and lens uniforms.
+For a display-ready chain, place `toneMappingEffect` after HDR bloom and
+`fxaaEffect` after tone mapping.
+
 ## Author an effect
 
 Start with a fullscreen shader that follows the

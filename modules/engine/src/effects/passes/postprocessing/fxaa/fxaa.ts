@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileCopyrightText: Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
 
+import type {EffectDefinition} from '../../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 
 /**
@@ -981,3 +982,10 @@ export const fxaa = {
   passes: [{sampler: true}],
   getUniforms: props => props
 } as const satisfies ShaderPass<FXAAProps, FXAAUniforms, {}>;
+
+/** Fast approximate antialiasing for the fullscreen effect chain. */
+export const fxaaEffect: EffectDefinition<never> = {
+  name: 'fxaa',
+  resources: {},
+  passes: [{kind: 'fullscreen', shaderPass: fxaa, output: 'previous'}]
+};

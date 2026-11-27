@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '../../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 
 const source = /* wgsl */ `\
@@ -87,3 +88,10 @@ export const toneMapping = {
 
   passes: [{filter: true}]
 } as const satisfies ShaderPass<ToneMappingProps, ToneMappingUniforms>;
+
+/** HDR tone mapping for the fullscreen effect chain. */
+export const toneMappingEffect: EffectDefinition<never> = {
+  name: 'toneMapping',
+  resources: {},
+  passes: [{kind: 'fullscreen', shaderPass: toneMapping, output: 'previous'}]
+};
