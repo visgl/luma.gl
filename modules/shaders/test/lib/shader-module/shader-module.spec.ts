@@ -229,6 +229,27 @@ uniform precisionQualifiedUniforms {
   void 0;
 });
 
+it('ShaderModule uniform block validation parses inline GLSL and WGSL fields', () => {
+  const glslModule: ShaderModule = {
+    name: 'inlineGlsl',
+    uniformTypes: {opacity: 'f32', thickness: 'f32'},
+    fs: 'layout(std140) uniform inlineGlslUniforms { float opacity; float thickness; } inlineGlsl;'
+  };
+  const wgslModule: ShaderModule = {
+    name: 'inlineWgsl',
+    uniformTypes: {opacity: 'f32', thickness: 'f32'},
+    source: 'struct inlineWgslUniforms { opacity: f32, thickness: f32, };'
+  };
+
+  expect(getShaderModuleUniformBlockFields(glslModule, 'fragment')).toEqual([
+    'opacity',
+    'thickness'
+  ]);
+  expect(getShaderModuleUniformBlockFields(wgslModule, 'wgsl')).toEqual(['opacity', 'thickness']);
+  expect(getShaderModuleUniformLayoutValidationResult(glslModule, 'fragment')?.matches).toBe(true);
+  expect(getShaderModuleUniformLayoutValidationResult(wgslModule, 'wgsl')?.matches).toBe(true);
+});
+
 it('ShaderModule uniform block validation reports concise mismatch details', () => {
   const shaderModule: ShaderModule = {
     name: 'mismatchReporter',

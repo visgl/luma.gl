@@ -235,8 +235,11 @@ function extractShaderUniformBlockFieldNames(
 
   const fieldNames: string[] = [];
 
-  for (const sourceLine of sourceBody.split('\n')) {
-    const line = sourceLine.replace(/\/\/.*$/, '').trim();
+  for (const sourceStatement of sourceBody.split(';')) {
+    const line = sourceStatement
+      .replace(/\/\/.*$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (!line || line.startsWith('#')) {
       continue;
     }
@@ -244,7 +247,7 @@ function extractShaderUniformBlockFieldNames(
     const fieldMatch =
       language === 'wgsl'
         ? line.match(/^([A-Za-z0-9_]+)\s*:/)
-        : line.match(GLSL_UNIFORM_BLOCK_FIELD_REGEXP);
+        : `${line};`.match(GLSL_UNIFORM_BLOCK_FIELD_REGEXP);
 
     if (fieldMatch) {
       fieldNames.push(fieldMatch[1]);
