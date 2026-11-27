@@ -47,7 +47,7 @@ struct RayPrimitive {
   iridescence: vec4<f32>, // Strength, film IOR, minimum thickness, effective thickness in nm.
   anisotropy: vec4<f32>, // Tangent-space direction, strength, rotation in radians.
   diffuseTransmission: vec4<f32>, // Tint and fraction of the diffuse lobe.
-  materialFlags: vec4<f32>, // Unlit flag and reserved channels.
+  materialFlags: vec4<f32>, // Unlit flag, dispersion, one-sided flag, reserved.
 };
 
 struct RayBlasNode {
@@ -504,6 +504,11 @@ fn intersectBlasNodeBounds(
   return nearestDistance;
 }
 
+fn isOneSidedTriangle(primitive: RayPrimitive) -> bool {
+  return primitive.properties.y <= 0.0 && primitive.materialFlags.z > 0.0 &&
+    primitive.material.y <= 0.0;
+}
+
 fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> RayHit {
   var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0), 0xffffffffu, 0.0, vec4<f32>(1.0), vec2<f32>(0.0));
   let primitive = primitives[primitiveIndex];
@@ -574,6 +579,8 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
               triangle.thirdNormal.xyz * intersection.z);
             let entering = dot(cross(triangle.secondPosition.xyz - triangle.firstPosition.xyz,
               triangle.thirdPosition.xyz - triangle.firstPosition.xyz), localDirection) < 0.0;
+            // Transmission needs both interfaces of a closed mesh.
+            if (!entering && isOneSidedTriangle(primitive)) { continue; }
             if (dot(localNormal, localDirection) > 0.0) {
               localNormal = -localNormal;
             }
@@ -630,7 +637,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
 fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> bool {
   let primitive = primitives[primitiveIndex];
   // Share alpha traversal with primary rays, including UVs and both sphere interfaces.
-  if (primitive.material.x != OPAQUE_ALPHA_MODE) {
+  if (primitive.material.x != OPAQUE_ALPHA_MODE || isOneSidedTriangle(primitive)) {
     return intersectPrimitive(ray, primitiveIndex, maximumDistance).distance < maximumDistance;
   }
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
@@ -1695,19 +1702,32 @@ struct RayMaterialSample {
 
 // Sample a cosine/GGX-NDF mixture, then evaluate both lobes with the combined PDF.
 // Specular half-vector density D(N.H)*(N.H) becomes direction density / (4*V.H).
-fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSample {
+fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: ptr<function, u32>) -> RayMaterialSample {
   let primitive = getShadedPrimitive(hit);
   let baseColor = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let transmission = clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic);
   if (makeRandom(randomSeed ^ 541u) < transmission) {
     let normal = faceForward(hit.normal, ray.direction, hit.normal);
-    let index = max(primitive.material.z, 1.0);
+    var index = max(primitive.material.z, 1.0);
+    var spectralWeight = vec3<f32>(1.0);
+    let dispersion = primitive.materialFlags.y;
+    if (dispersion > 0.0 && index > 1.0) {
+      if (*spectralChannel == 3u) {
+        // Select one RGB band for the rest of the path, with reciprocal selection weight.
+        *spectralChannel = hashRaySample(randomSeed ^ 0x24a184f7u) % 3u;
+        spectralWeight = vec3<f32>(0.0);
+        spectralWeight[*spectralChannel] = 3.0;
+      }
+      // glTF stores 20 / Abbe number. Red and blue sit on either side of green.
+      let offset = f32(*spectralChannel) - 1.0;
+      index = max(1.0, index + offset * ((index - 1.0) * dispersion / 40.0));
+    }
     let ratio = select(index, 1.0 / index, hit.entering);
     let cosineIncident = clamp(dot(-ray.direction, normal), 0.0, 1.0);
     let sineTransmittedSquared = ratio * ratio * (1.0 - cosineIncident * cosineIncident);
     if (sineTransmittedSquared >= 1.0) {
-      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true, false, 0.0);
+      return RayMaterialSample(reflect(ray.direction, normal), spectralWeight, true, false, 0.0);
     }
     let cosineTransmitted = sqrt(1.0 - sineTransmittedSquared);
     let perpendicular = (ratio * cosineIncident - cosineTransmitted) /
@@ -1716,9 +1736,9 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
       max(cosineIncident + ratio * cosineTransmitted, 0.000001);
     let fresnel = 0.5 * (perpendicular * perpendicular + parallel * parallel);
     if (makeRandom(randomSeed ^ 947u) < fresnel) {
-      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true, false, 0.0);
+      return RayMaterialSample(reflect(ray.direction, normal), spectralWeight, true, false, 0.0);
     }
-    return RayMaterialSample(refract(ray.direction, normal, ratio), baseColor * ratio * ratio, true, true, 0.0);
+    return RayMaterialSample(refract(ray.direction, normal, ratio), spectralWeight * baseColor * ratio * ratio, true, true, 0.0);
   }
 
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
@@ -1921,7 +1941,15 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     let areaNormal = cross(secondPosition - firstPosition, thirdPosition - firstPosition);
     let twiceArea = length(areaNormal);
     if (twiceArea <= 0.00000001) { return vec3<f32>(0.0); }
-    lightNormal = areaNormal / twiceArea;
+    // A mirrored glTF instance reverses front winding. Transform the local
+    // geometric normal like traversal does, while keeping the world-space area.
+    if (isOneSidedTriangle(emitter)) {
+      let localAreaNormal = cross(triangle.secondPosition.xyz - triangle.firstPosition.xyz,
+        triangle.thirdPosition.xyz - triangle.firstPosition.xyz);
+      lightNormal = normalize((transpose(emitter.inverseTransform) * vec4<f32>(localAreaNormal, 0.0)).xyz);
+    } else {
+      lightNormal = areaNormal / twiceArea;
+    }
     inverseAreaDensity = 0.5 * twiceArea * f32(triangleCount) * inverseSelectionProbability;
   }
   let position = ray.origin + ray.direction * hit.distance;
@@ -1969,7 +1997,9 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     // Both emitter estimators evaluate emission at mip zero.
     emitterHit.footprint = 0.0;
   }
-  let lightCosine = abs(dot(lightNormal, -direction));
+  let signedLightCosine = dot(lightNormal, -direction);
+  if (isOneSidedTriangle(emitter) && signedLightCosine <= 0.0) { return vec3<f32>(0.0); }
+  let lightCosine = abs(signedLightCosine);
   if (lightCosine <= 0.0) { return vec3<f32>(0.0); }
   let lightDensity = distanceSquared / (lightCosine * inverseAreaDensity);
   var weight = 1.0;
@@ -2150,6 +2180,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   var radiance = evaluateDirectLighting(ray, hit, true);
   var throughput = vec3<f32>(1.0);
   var dielectricOnly = true;
+  var spectralChannel = 3u;
   var medium = 0xffffffffu;
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
@@ -2159,7 +2190,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
   radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
-    let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
+    let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u), &spectralChannel);
     dielectricOnly = dielectricOnly && sample.delta;
     throughput *= sample.weight;
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }

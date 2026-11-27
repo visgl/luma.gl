@@ -157,8 +157,7 @@ factor participates in triangle mask visibility and sampled emitter endpoints.
 The next increment preserves glTF unlit base color and interpolates authored
 tangents, including handedness and morph deltas. Skeletal skinning now supports retained CPU joint palettes with four influences
 per vertex, after morphing positions, normals, and tangents. GPU-only and
-per-instance palettes and dispersion remain open on the ray
-path. Compatible CPU pose updates refresh packed triangles and refit mesh and
+per-instance palettes remain open on the ray path. Compatible CPU pose updates refresh packed triangles and refit mesh and
 scene hierarchies on the GPU in their retained triangle and primitive order.
 Periodic Morton rebuilds restore spatial ordering. Structural changes and pose
 changes that alter the packed layout rebuild the graphs. Deformation still
@@ -167,3 +166,6 @@ invalidates progressive history.
 The ray tracer now supports glTF alpha blending through stochastic surface
 coverage for camera, continuation, and shadow rays. Explicit emitter samples
 weight radiance by coverage. Hit queries skip fully transparent layers.
+
+Smooth PBR transport supports RGB dispersion. Explicit mesh sidedness applies
+to ray visibility, and closed transmissive meshes keep both interfaces.
