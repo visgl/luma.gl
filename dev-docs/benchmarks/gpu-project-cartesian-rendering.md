@@ -116,3 +116,52 @@ workload.
 
 Defer further Cartesian inline projection work. Materialization remains useful when the
 coordinates start and stay on the GPU, even where projection throughput is similar to CPU.
+
+## P.8a.2d batch-size attribution
+
+Hold the prepared UTM fit, 16,384 source rows, validity, total resident coordinate bytes, GPU arithmetic,
+and output accuracy fixed. Each tested batch size is a multiple of 256, so each update dispatches
+the same 64 workgroups. Only their grouping into dispatches changes. Each case qualifies against
+the same CPU frames and picking oracle. The timing experiment then uses the qualified resident
+projection graph without drawing or transferring coordinates. It rotates schedule order, alternates
+the two preloaded states, and measures 21 submissions per schedule after two warmups.
+
+Use the same benchmark command with the following overrides:
+
+```sh
+VITE_GPU_PROJECT_RENDER_ATTRIBUTION=true VITE_GPU_PROJECT_RENDER_ROWS=16384 VITE_GPU_PROJECT_RENDER_BATCH_ROWS=256,512,1024,2048,4096,8192,16384 LUMA_TEST_BROWSER_BENCHMARKS=true yarn exec vitest run --project headless --reporter=verbose --silent=false   gpu-projected-point-performance.spec.ts
+```
+
+November 27, 2026, Apple WebGPU (metal-3), headless Chromium 151.0.0.0.
+Median milliseconds per update. Each normal graph uses one compute pass and one submission.
+The split control keeps one submission and puts each dispatch in its own pass. The all-masked
+control keeps the normal dispatches and bindings while bypassing the projection arithmetic.
+
+| Rows per batch | Dispatches | Workgroups per dispatch | Normal total | Encode + finish | Queue wait | Split-pass total | All-masked total |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 256 | 64 | 1 | 43.90 | 0.60 | 43.30 | 44.60 | 1.00 |
+| 512 | 32 | 2 | 22.50 | 0.40 | 22.10 | 22.80 | 0.70 |
+| 1,024 | 16 | 4 | 11.90 | 0.20 | 11.70 | 11.70 | 0.50 |
+| 2,048 | 8 | 8 | 6.00 | 0.10 | 6.00 | 6.20 | 0.50 |
+| 4,096 | 4 | 16 | 3.80 | 0.10 | 3.70 | 3.70 | 0.40 |
+| 8,192 | 2 | 32 | 4.10 | 0.00 | 4.00 | 4.20 | 0.30 |
+| 16,384 | 1 | 64 | 3.50 | 0.00 | 3.40 | 3.20 | 0.20 |
+
+On this adapter, reducing batches from 4,096 to 1,024 rows raised normal update time from
+3.80 to 11.90 ms. The queue wait rose from
+3.70 to 11.70 ms, while host encoding and the all-masked control stayed much lower.
+Extra compute passes were absent in the normal graph, and forcing them had a small effect
+relative to the active-workload penalty. Together these controls point to the GPU cost of
+running the full projection in many small dispatches. Each 1,024-row dispatch has only four
+workgroups, versus sixteen at 4,096 rows. Lower utilization or less overlap is consistent
+with the result. This experiment does not measure occupancy or separate it from other
+GPU-side scheduling effects.
+
+WebGPU timestamps are available for the split schedule. Its per-pass durations are retained in
+the JSON as a diagnostic. Their sum can exceed the queue wall-clock duration on this adapter,
+so it cannot be used as a decomposition of the coalesced production path. Host timings
+include browser queue synchronization and are medians of separate measurements.
+
+Repeat on a non-Apple WebGPU adapter before generalizing. For P.8d, a controlled prototype
+would reduce dispatch count without repacking source chunks and test whether the same benefit
+appears in the real GPU producer-to-render path from P.9a.6.

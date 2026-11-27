@@ -16,7 +16,7 @@ import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {WebGPUDevice} from '@luma.gl/core/webgpu';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUVectorModel} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPUProjectionProgram, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import {
@@ -50,6 +50,7 @@ const MEASURED_ITERATIONS = 7;
 const renderCounts = [1, 4] as const;
 const modes = ['cpu', 'cpu-round-trip', 'materialized', 'materialized-resident', 'inline'] as const;
 const residentSweep = import.meta.env['VITE_GPU_PROJECT_RENDER_RESIDENT_ONLY'] === 'true';
+const attributeResidentCost = import.meta.env['VITE_GPU_PROJECT_RENDER_ATTRIBUTION'] === 'true';
 type Mode = (typeof modes)[number];
 type Input = {
   positions: Float64Array;
@@ -195,7 +196,7 @@ for (const rowCount of rowCounts) {
       let referenceFrames: Uint8Array[] | undefined;
       const paths = [];
       for (const mode of modes) {
-        if (residentSweep && mode === 'inline') continue;
+        if ((residentSweep || attributeResidentCost) && mode === 'inline') continue;
         const {frames, ...report} = await measurePath(
           device,
           mode,
@@ -210,7 +211,7 @@ for (const rowCount of rowCounts) {
       }
       console.log(
         `PROJECTION_RENDER_PERFORMANCE ${JSON.stringify({
-          schemaVersion: 2,
+          schemaVersion: 3,
           capturedAt: new Date().toISOString(),
           revision: import.meta.env['VITE_GPU_PROJECT_REVISION'] ?? 'unspecified',
           browser: navigator.userAgent,
@@ -612,9 +613,21 @@ async function measurePath(
         updateOnlySamples.push({...update, updateMs, uploadOnlyMs});
       }
     }
+    let attribution;
+    if (resident && attributeResidentCost) {
+      const active = await measureResidentCost(device, graphs, inputs[0].length);
+      // Preserve the dispatch and bindings while bypassing projection math for all rows.
+      for (const chunk of inputValidity!.data) {
+        getGPUDataBuffer(chunk).write(new Uint32Array(chunk.length));
+      }
+      await waitForGPU();
+      const masked = await measureResidentCost(device, graphs, inputs[0].length, true);
+      attribution = {active, masked};
+    }
     expect(errors).toEqual([]);
     return {
       mode,
+      attribution,
       changedPixels,
       qualifiedPickRows: pickedRows,
       initialUploadedBytes,
@@ -643,4 +656,91 @@ async function measurePath(
     local?.destroy();
     outputValidity?.destroy();
   }
+}
+
+/** This submission runs no Deck work and uses the production graph built for the validated frames. */
+async function measureResidentCost(
+  device: WebGPUDevice,
+  graphs: CompiledGPUCommandGraph<void>[],
+  chunkCount: number,
+  masked = false
+) {
+  const modes = ['coalesced', 'split', 'timestamped'] as const;
+  type Schedule = (typeof modes)[number];
+  const hasTimestamps = device.features.has('timestamp-query');
+  const schedules = modes.filter(
+    schedule => schedule === 'coalesced' || (!masked && (schedule === 'split' || hasTimestamps))
+  );
+  const samplesBySchedule = new Map(
+    schedules.map(schedule => [
+      schedule,
+      [] as {
+        encodeAndFinishMs: number;
+        graphEncodeMs: number;
+        submitMs: number;
+        queueWaitMs: number;
+        totalMs: number;
+        gpuPassMs?: number;
+        dispatches: number;
+        passes: number;
+      }[]
+    ])
+  );
+  const measuredIterations = 21;
+  for (let iteration = 0; iteration < WARMUP_ITERATIONS + measuredIterations; iteration++) {
+    for (let index = 0; index < schedules.length; index++) {
+      // Rotate schedule order so single-phase drift does not always favor one variant.
+      const schedule: Schedule = schedules[(iteration + index) % schedules.length];
+      const timestamps =
+        schedule === 'timestamped'
+          ? device.createQuerySet({type: 'timestamp', count: 2 * chunkCount})
+          : undefined;
+      try {
+        const graph = graphs[iteration % graphs.length];
+        const start = performance.now();
+        const encoder = device.createCommandEncoder(
+          timestamps ? {timeProfilingQuerySet: timestamps} : {}
+        );
+        const coalesced = schedule === 'coalesced';
+        const execution = graph.encode(encoder, {
+          parameters: undefined,
+          coalesceComputePasses: coalesced
+        });
+        const commandBuffer = encoder.finish();
+        const submitStart = performance.now();
+        device.submit(commandBuffer);
+        const waitStart = performance.now();
+        await device.handle.queue.onSubmittedWorkDone();
+        const end = performance.now();
+        const {
+          computePassCount: passes,
+          nodeCount: dispatches,
+          cpuEncodeTimeMilliseconds
+        } = execution.stats;
+        expect(dispatches).toBe(chunkCount);
+        expect(passes).toBe(coalesced ? 1 : dispatches);
+        let gpuPassMs;
+        if (schedule === 'timestamped') {
+          expect(execution.stats.timestampedNodeCount).toBe(dispatches);
+          gpuPassMs = (await execution.readTimings()).gpuTimeMilliseconds;
+          expect(gpuPassMs).toBeGreaterThan(0);
+        }
+        if (iteration >= WARMUP_ITERATIONS) {
+          samplesBySchedule.get(schedule)!.push({
+            encodeAndFinishMs: submitStart - start,
+            graphEncodeMs: cpuEncodeTimeMilliseconds,
+            submitMs: waitStart - submitStart,
+            queueWaitMs: end - waitStart,
+            totalMs: end - start,
+            gpuPassMs,
+            dispatches,
+            passes
+          });
+        }
+      } finally {
+        timestamps?.destroy();
+      }
+    }
+  }
+  return Object.fromEntries(samplesBySchedule);
 }
