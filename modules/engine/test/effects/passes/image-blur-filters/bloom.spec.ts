@@ -7,6 +7,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   bloom,
   bloomCompositeShaderPass,
+  bloomLow,
   createBloomCompositeShaderPass
 } from '@luma.gl/engine/effects';
 import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shaders';
@@ -507,6 +508,31 @@ it('HDR bloom replaces fragment extraction with one exposure-aware WebGPU dispat
       Boolean(highExposure.neighbor > lowExposure.neighbor),
       'runtime camera exposure changes the effective threshold without rebuilding the renderer'
     ).toBe(true);
+
+    const declarativeCompute = new ShaderPassRenderer(device, {
+      shaderPasses: [bloomLow],
+      colorFormat: 'rgba16float',
+      flipY: false
+    });
+    const declarativeFragment = new ShaderPassRenderer(device, {
+      shaderPasses: [{...bloomLow, initialPasses: {fragment: bloomLow.initialPasses.fragment}}],
+      colorFormat: 'rgba16float',
+      flipY: false
+    });
+    try {
+      declarativeCompute.resize([width, height]);
+      declarativeFragment.resize([width, height]);
+      const compute = await renderWithExposure(2, declarativeCompute);
+      const fragment = await renderWithExposure(2, declarativeFragment);
+      expect(compute.computePasses).toBe(1);
+      expect(fragment.computePasses).toBe(0);
+      expect(fragment.renderPasses - compute.renderPasses).toBe(2);
+      expect(compute.highlight).toBeGreaterThan(4);
+      expect(fragment.highlight).toBeGreaterThan(4);
+    } finally {
+      declarativeCompute.destroy();
+      declarativeFragment.destroy();
+    }
 
     const flippedComputeRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [

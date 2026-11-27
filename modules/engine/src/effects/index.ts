@@ -63,6 +63,7 @@ export type {
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export {
   bloomCompositeShaderPass,
+  bloomLow,
   createBloomCompositeShaderPass
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export type {

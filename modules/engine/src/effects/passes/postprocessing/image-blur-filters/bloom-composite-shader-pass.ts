@@ -945,6 +945,161 @@ export const bloomCompositeShaderPass = {
   ]
 } as const satisfies CompositeShaderPass<BloomTargetName>;
 
+const bloomLowExtractionUniforms = {
+  threshold: 0.8,
+  softKnee: 0.5,
+  fireflyReduction: 0,
+  exposure: 1,
+  exposureCompensation: 0
+};
+
+/** Two-level HDR bloom with explicit compute and fragment extraction alternatives. */
+export const bloomLow = {
+  name: 'bloomLow',
+  renderTargets: {
+    extractHalf: {
+      scale: [0.5, 0.5],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER,
+      storage: true
+    },
+    blurHalfScratch: {
+      scale: [0.5, 0.5],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER
+    },
+    blurHalf: {
+      scale: [0.5, 0.5],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER
+    },
+    extractQuarter: {
+      scale: [0.25, 0.25],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER,
+      storage: true
+    },
+    blurQuarterScratch: {
+      scale: [0.25, 0.25],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER
+    },
+    blurQuarter: {
+      scale: [0.25, 0.25],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER
+    },
+    glow: {
+      scale: [0.5, 0.5],
+      format: 'rgba16float',
+      sampler: BLOOM_TARGET_SAMPLER
+    }
+  },
+  initialPasses: {
+    compute: createBloomComputePyramid({
+      levelNames: ['Half', 'Quarter'],
+      colorFormat: 'rgba16float',
+      ...bloomLowExtractionUniforms
+    }),
+    fragment: [
+      {
+        shaderPass: bloomExtractPass,
+        inputs: {
+          sourceTexture: 'previous'
+        },
+        output: 'extractHalf',
+        uniforms: bloomLowExtractionUniforms
+      },
+      {
+        shaderPass: bloomDownsamplePass,
+        inputs: {
+          sourceTexture: 'extractHalf'
+        },
+        output: 'extractQuarter'
+      }
+    ]
+  },
+  steps: [
+    {
+      shaderPass: bloomBlurPass,
+      inputs: {
+        sourceTexture: 'extractHalf'
+      },
+      output: 'blurHalfScratch',
+      uniforms: {
+        radius: 8,
+        delta: [1, 0]
+      }
+    },
+    {
+      shaderPass: bloomBlurPass,
+      inputs: {
+        sourceTexture: 'blurHalfScratch'
+      },
+      output: 'blurHalf',
+      uniforms: {
+        radius: 8,
+        delta: [0, 1]
+      }
+    },
+    {
+      shaderPass: bloomBlurPass,
+      inputs: {
+        sourceTexture: 'extractQuarter'
+      },
+      output: 'blurQuarterScratch',
+      uniforms: {
+        radius: 8,
+        delta: [1, 0]
+      }
+    },
+    {
+      shaderPass: bloomBlurPass,
+      inputs: {
+        sourceTexture: 'blurQuarterScratch'
+      },
+      output: 'blurQuarter',
+      uniforms: {
+        radius: 8,
+        delta: [0, 1]
+      }
+    },
+    {
+      shaderPass: bloomUpsamplePass,
+      inputs: {
+        sourceTexture: 'blurQuarter',
+        higherResolutionGlow: 'blurHalf'
+      },
+      output: 'glow',
+      uniforms: {
+        scatter: 0.55,
+        reconstruction: 0
+      }
+    },
+    {
+      shaderPass: bloomAdaptiveCompositePass,
+      inputs: {
+        sourceTexture: 'previous',
+        glowTexture: 'glow'
+      },
+      output: 'previous',
+      uniforms: {
+        intensity: 1,
+        tint: [1, 1, 1],
+        energyConserving: 0
+      }
+    }
+  ]
+} satisfies CompositeShaderPass<
+  | 'extractHalf'
+  | 'blurHalfScratch'
+  | 'blurHalf'
+  | 'extractQuarter'
+  | 'blurQuarterScratch'
+  | 'blurQuarter'
+  | 'glow'
+>;
+
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
 export function createBloomCompositeShaderPass(
   options: BloomCompositeShaderPassOptions = {}
