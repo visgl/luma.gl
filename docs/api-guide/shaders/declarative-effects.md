@@ -48,7 +48,10 @@ for its camera uniform types.
 
 The other fullscreen definitions include `motionBlur`, `taa`, and
 `depthOfField`. Motion blur and standard TAA use the scene velocity texture.
-Depth of field uses scene depth and the `dof` camera and lens uniforms.
+Depth of field uses scene depth and camera and lens uniforms. Use
+`depthOfField` for separable blur or `bokehDofEffect` for a circular aperture.
+`depthAwareBlurEffect` runs horizontal and vertical filtering with scene depth
+and preserves edges across depth discontinuities.
 For a display-ready chain, place `toneMappingEffect` after HDR bloom and
 `fxaaEffect` after tone mapping.
 

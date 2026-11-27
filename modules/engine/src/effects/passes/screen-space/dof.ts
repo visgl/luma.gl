@@ -293,3 +293,10 @@ export const bokehDof = {
   fs: fs.replaceAll('dof', 'bokehDof'),
   propTypes: {...dof.propTypes, circularAperture: {value: 1, private: true}}
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
+
+/** Circular-aperture depth of field using the frame's scene depth and camera uniforms. */
+export const bokehDofEffect: EffectDefinition<never> = {
+  name: bokehDof.name,
+  resources: {},
+  passes: [{kind: 'fullscreen', shaderPass: bokehDof, output: 'previous'}]
+};
