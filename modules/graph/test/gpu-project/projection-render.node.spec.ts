@@ -23,6 +23,10 @@ it('shares the retained provider and applies explicit origin, axes and signed un
   expect(transform.compiled.inputFormat).toBe('uint32x4');
   expect(transform.compiled.precision).toBe('local-f32');
   expect(transform.compiled.destinationOrigin).toEqual([0, 0]);
+  const resident = transform.compileForInputFormat('float32x2');
+  expect(resident.inputFormat).toBe('float32x2');
+  expect(resident.precision).toBe(transform.compiled.precision);
+  expect(resident.packParameters()).toEqual(transform.compiled.packParameters());
   // Caller edits cannot desynchronize CPU frame metadata from packed GPU parameters.
   origin.fill(0);
   scale.fill(1);

@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import {compileProjectionProgram, type CompiledProjection} from './projection-program';
+import {
+  compileProjectionProgram,
+  type CompiledProjection,
+  type ProjectionInputFormat
+} from './projection-program';
 import {ProjectionTableTransform} from './projection-table-transform';
 import type {PreparedCRSProjectionResult} from './projection-engine';
 import type {ProjectionCoordinates} from './types';
@@ -44,10 +48,15 @@ export class ProjectionRenderTransform {
       axes: Object.freeze(frame.axes ? ([...frame.axes] as [0, 1] | [1, 0]) : ([0, 1] as [0, 1])),
       scale: Object.freeze([...frame.scale] as [number, number])
     });
-    this.compiled = compileProjectionProgram(
+    this.compiled = this.compileForInputFormat('uint32x4');
+  }
+
+  /** Compiles the same render frame for a consumer's existing GPU coordinate encoding. */
+  compileForInputFormat(inputFormat: ProjectionInputFormat): CompiledProjection {
+    return compileProjectionProgram(
       {
         operations: [
-          ...prepared.program.operations,
+          ...this.prepared.program.operations,
           {type: 'affine', scale: [1, 1], offset: this.frame.origin, inverse: true},
           {type: 'axis', order: this.frame.axes},
           {type: 'affine', scale: this.frame.scale, offset: [0, 0]}
@@ -55,7 +64,7 @@ export class ProjectionRenderTransform {
         precision: 'local-f32',
         destinationOrigin: [0, 0]
       },
-      {inputFormat: 'uint32x4'}
+      {inputFormat}
     );
   }
 

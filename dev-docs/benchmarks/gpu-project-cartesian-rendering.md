@@ -218,3 +218,53 @@ Pairing helped most for chunks with few workgroups. These results support reduci
 count for small resident chunks on this adapter. Production qualification still needs the
 real producer-to-render path, non-Apple devices, and a fallback for binding limits. The
 prototype leaves the production graph and inline policy unchanged.
+
+## P.9a.6 GPU H3 producer to Cartesian render consumer
+
+The existing `GPUH3CellProjection` node consumes resident H3 cell IDs and produces float32
+longitude/latitude centers and validity. A `GPUProjectionProgram` reads those same graph views
+and writes the materialized local UTM vertices and mask. The graph orders the producer and
+consumer from their shared resources, and the renderer borrows the output chunks. There is one
+compute submission per update. No coordinate upload, readback, or repacking occurs during
+measured GPU updates. The two ID states are uploaded before timing.
+
+The picking pass reads back its normal pick result. Pick metadata decodes just the selected H3
+ID with h3-js and maps its CPU reference center to UTM; it does not read back GPU coordinates.
+The CPU image oracle projects predecoded h3-js centers rounded to float32. The CPU baseline
+therefore excludes cell-center decoding from update timings and is not an end-to-end CPU producer
+comparison. Qualification reads back image pixels outside the timing scope. Both GPU variants
+produce identical frames, track both input changes, return the expected row and chunk for
+probed picks, and miss the invalid H3 row.
+
+```sh
+VITE_GPU_PROJECT_RENDER_H3_PRODUCER=true \
+VITE_GPU_PROJECT_GROUPED_CHUNKS=2 \
+VITE_GPU_PROJECT_RENDER_ROWS=1024,4096,16384 \
+VITE_GPU_PROJECT_RENDER_BATCH_ROWS=1024,4096 \
+LUMA_TEST_BROWSER_BENCHMARKS=true \
+yarn exec vitest run --project headless --reporter=verbose --silent=false \
+  gpu-projected-point-performance.spec.ts
+```
+
+Omit `VITE_GPU_PROJECT_GROUPED_CHUNKS` to run without paired dispatch.
+
+November 27, 2026, Apple WebGPU and headless Chromium 151. Timings are medians in milliseconds.
+Each timing cell lists **single / paired** projection dispatch. Total compute dispatch counts
+include one H3 producer dispatch per chunk, which pairing does not change. The four-draw
+scenario includes one producer update, four draws reusing its projected output, and one pick.
+Combined medians are calculated on whole samples.
+
+| Rows | Max rows per chunk | Compute dispatches single → paired | Update + first draw | Pick after first draw | Update + first draw + pick | Update + four draws + pick |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,024 | 1,024 | 2 → 2 | 2.20 / 2.60 | 2.10 / 3.00 | 4.70 / 5.60 | 5.50 / 4.80 |
+| 1,024 | 4,096 | 2 → 2 | 7.50 / 5.00 | 4.80 / 3.10 | 12.60 / 8.10 | 12.60 / 12.20 |
+| 4,096 | 1,024 | 8 → 6 | 6.60 / 4.00 | 4.70 / 2.10 | 12.00 / 9.40 | 14.30 / 11.50 |
+| 4,096 | 4,096 | 2 → 2 | 3.90 / 4.10 | 2.60 / 1.70 | 6.20 / 5.80 | 8.90 / 8.60 |
+| 16,384 | 1,024 | 32 → 24 | 16.80 / 10.10 | 5.30 / 6.30 | 23.00 / 15.20 | 26.30 / 18.80 |
+| 16,384 | 4,096 | 8 → 6 | 8.30 / 7.30 | 3.80 / 3.30 | 13.10 / 12.10 | 13.40 / 16.80 |
+
+All six cases passed. The maximum red-channel pixel difference from the CPU reference was
+2.15% of lit pixels on either GPU path. This qualification measures the complete
+producer-to-render pipeline, including the precision of the H3 producer. The frame timings
+include queue synchronization and are specific to this adapter and workload. Pairing leaves the
+H3 producer and the render/picking passes unchanged. Further Cartesian inline work stays deferred.

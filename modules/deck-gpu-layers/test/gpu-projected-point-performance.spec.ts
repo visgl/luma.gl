@@ -16,6 +16,8 @@ import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {WebGPUDevice} from '@luma.gl/core/webgpu';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUVectorModel} from '@luma.gl/engine';
+import {cellToLatLng, latLngToCell} from 'h3-js';
+import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPUProjectionProgram, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
@@ -56,6 +58,7 @@ const modes = [
   'materialized-grouped',
   'inline'
 ] as const;
+const producerSweep = import.meta.env['VITE_GPU_PROJECT_RENDER_H3_PRODUCER'] === 'true';
 const groupedChunkCount = Number(import.meta.env['VITE_GPU_PROJECT_GROUPED_CHUNKS'] ?? 0);
 if (![0, 1, 2].includes(groupedChunkCount)) {
   throw new Error('Expected zero, one, or two chunks per dispatch');
@@ -66,6 +69,7 @@ type Mode = (typeof modes)[number];
 type Input = {
   positions: Float64Array;
   inputValidity: Uint32Array;
+  cells?: BigUint64Array;
 };
 type CommonProps = {
   transform: ProjectionRenderTransform;
@@ -207,10 +211,11 @@ for (const rowCount of rowCounts) {
       let referenceFrames: Uint8Array[] | undefined;
       const paths = [];
       let referenceWords: Uint32Array[][] | undefined;
+      let residentFrames: Uint8Array[] | undefined;
       for (const mode of modes) {
         if (mode === 'materialized-grouped' && !groupedChunkCount) continue;
         if (
-          groupedChunkCount &&
+          (producerSweep || groupedChunkCount) &&
           mode !== 'cpu' &&
           mode !== 'materialized-resident' &&
           mode !== 'materialized-grouped'
@@ -227,8 +232,18 @@ for (const rowCount of rowCounts) {
           referenceFrames
         );
         referenceFrames ??= frames;
-        if (mode === 'materialized-resident') referenceWords = words;
-        if (mode === 'materialized-grouped') {
+        if (mode === 'materialized-resident') {
+          referenceWords = words;
+          residentFrames = frames;
+        }
+        if (mode === 'materialized-grouped' && producerSweep) {
+          expect(
+            frames.every((frame, index) =>
+              frame.every((value, offset) => value === residentFrames![index][offset])
+            )
+          ).toBe(true);
+        }
+        if (mode === 'materialized-grouped' && !producerSweep) {
           expect(words).toHaveLength(2);
           expect(words).toEqual(referenceWords);
         }
@@ -236,7 +251,8 @@ for (const rowCount of rowCounts) {
       }
       console.log(
         `PROJECTION_RENDER_PERFORMANCE ${JSON.stringify({
-          schemaVersion: 3,
+          schemaVersion: 4,
+          producer: producerSweep ? 'GPUH3CellProjection' : undefined,
           capturedAt: new Date().toISOString(),
           revision: import.meta.env['VITE_GPU_PROJECT_REVISION'] ?? 'unspecified',
           browser: navigator.userAgent,
@@ -277,7 +293,17 @@ function makeInputs(rowCount: number, batchSize: number, update: number): Input[
         37.8 + (Math.floor(row / width) - width / 2 + update * 0.23) * spacing;
       inputValidity[index] = Number(row % 11 !== 0);
     }
-    inputs.push({positions, inputValidity});
+    const cells = producerSweep ? new BigUint64Array(length) : undefined;
+    if (cells) {
+      for (let row = 0; row < length; row++) {
+        const cell = latLngToCell(positions[row * 2 + 1], positions[row * 2], 12);
+        const [latitude, longitude] = cellToLatLng(cell);
+        positions[row * 2] = Math.fround(longitude);
+        positions[row * 2 + 1] = Math.fround(latitude);
+        cells[row] = inputValidity[row] ? BigInt(`0x${cell}`) : 0n;
+      }
+    }
+    inputs.push({positions, inputValidity, cells});
   }
   return inputs;
 }
@@ -335,9 +361,14 @@ async function measurePath(
   const grouped = mode === 'materialized-grouped';
   const resident = mode === 'materialized-resident' || grouped;
   const gpuUsage =
-    vertexUsage | Buffer.STORAGE | (cpuRoundTrip || groupedChunkCount ? Buffer.COPY_SRC : 0);
+    vertexUsage |
+    Buffer.STORAGE |
+    (cpuRoundTrip || (groupedChunkCount && !producerSweep) ? Buffer.COPY_SRC : 0);
+  const producer = resident && producerSweep;
   const raw =
-    mode === 'cpu' ? undefined : allocateVector(device, inputs[0], 'uint32x4', 16, gpuUsage);
+    mode === 'cpu' || producer
+      ? undefined
+      : allocateVector(device, inputs[0], 'uint32x4', 16, gpuUsage);
   const inputValidity = cpuProjection
     ? undefined
     : allocateVector(device, inputs[0], 'uint32', 4, gpuUsage);
@@ -346,7 +377,7 @@ async function measurePath(
   const outputValidity =
     mode === 'inline' ? undefined : allocateVector(device, inputs[0], 'uint32', 4, gpuUsage);
   const secondRaw =
-    resident || cpuRoundTrip
+    (resident && !producer) || cpuRoundTrip
       ? allocateVector(device, inputs[1], 'uint32x4', 16, gpuUsage)
       : undefined;
   const staging = cpuRoundTrip
@@ -355,38 +386,60 @@ async function measurePath(
         usage: Buffer.COPY_DST | Buffer.MAP_READ
       })
     : undefined;
+  const producerCells = producer
+    ? inputs.map(input =>
+        allocateVector(device, input, 'uint32x2', 8, Buffer.STORAGE | Buffer.COPY_DST)
+      )
+    : [];
+  const producerPositions = producer
+    ? allocateVector(device, inputs[0], 'float32x2', 8, Buffer.STORAGE)
+    : undefined;
+  const projection = producer ? transform.compileForInputFormat('float32x2') : transform.compiled;
   const programs: GPUProjectionProgram[] = [];
-  const graphs = (resident ? [raw!, secondRaw!] : mode === 'materialized' ? [raw!] : []).map(
-    positions => {
-      const graph = new GPUCommandGraph(device);
-      if (groupedChunkCount) {
+  const graphCount = resident ? 2 : Number(mode === 'materialized');
+  const graphs = Array.from({length: graphCount}, (_, stateIndex) => {
+    const graph = new GPUCommandGraph(device);
+    const positions = producerPositions ?? (stateIndex === 0 ? raw! : secondRaw!);
+    if (producer || groupedChunkCount) {
+      const positionViews = graph.importGPUVector('positions', positions);
+      const inputValidityViews = graph.importGPUVector('input-validity', inputValidity!);
+      if (producer) {
+        const cellViews = graph.importGPUVector('h3-cells', producerCells[stateIndex]);
+        for (const [index, cells] of cellViews.data.entries()) {
+          new GPUH3CellProjection({
+            id: `h3-centers-${index}`,
+            cells,
+            output: positionViews.data[index],
+            validity: inputValidityViews.data[index]
+          }).addToGraph(graph);
+        }
+      }
+      const program = new GPUProjectionProgram({
+        groupChunks: grouped && groupedChunkCount === 2,
+        projection,
+        positions: positionViews,
+        inputValidity: inputValidityViews,
+        output: graph.importGPUVector('output', local!),
+        validity: graph.importGPUVector('validity', outputValidity!)
+      });
+      programs.push(program);
+      program.addToGraph(graph);
+    } else {
+      for (const [index, chunk] of positions.data.entries()) {
         const program = new GPUProjectionProgram({
-          groupChunks: grouped && groupedChunkCount === 2,
-          projection: transform.compiled,
-          positions: graph.importGPUVector('positions', positions),
-          inputValidity: graph.importGPUVector('input-validity', inputValidity!),
-          output: graph.importGPUVector('output', local!),
-          validity: graph.importGPUVector('validity', outputValidity!)
+          id: `cartesian-${index}`,
+          projection,
+          positions: importChunk(graph, `raw-${index}`, chunk),
+          inputValidity: importChunk(graph, `mask-${index}`, inputValidity!.data[index]),
+          output: importChunk(graph, `local-${index}`, local!.data[index]),
+          validity: importChunk(graph, `validity-${index}`, outputValidity!.data[index])
         });
         programs.push(program);
         program.addToGraph(graph);
-      } else {
-        for (const [index, chunk] of positions.data.entries()) {
-          const program = new GPUProjectionProgram({
-            id: `cartesian-${index}`,
-            projection: transform.compiled,
-            positions: importChunk(graph, `raw-${index}`, chunk),
-            inputValidity: importChunk(graph, `mask-${index}`, inputValidity!.data[index]),
-            output: importChunk(graph, `local-${index}`, local!.data[index]),
-            validity: importChunk(graph, `validity-${index}`, outputValidity!.data[index])
-          });
-          programs.push(program);
-          program.addToGraph(graph);
-        }
       }
-      return graph.compile();
     }
-  );
+    return graph.compile();
+  });
   const texture = device.createTexture({
     width: TARGET_SIZE,
     height: TARGET_SIZE,
@@ -407,10 +460,17 @@ async function measurePath(
     usage: Buffer.MAP_READ | Buffer.COPY_DST
   });
   let current = inputs[0];
-  const getSourcePosition = (row: number): ProjectionCoordinates => {
+  const getReferencePosition = (row: number): ProjectionCoordinates => {
     const {positions} = current[Math.floor(row / batchSize)];
     const index = (row % batchSize) * 2;
     return [positions[index], positions[index + 1]];
+  };
+  const getSourcePosition = (row: number): ProjectionCoordinates | null => {
+    if (!producer) return getReferencePosition(row);
+    const cell = current[Math.floor(row / batchSize)].cells![row % batchSize];
+    if (!cell) return null;
+    const [latitude, longitude] = cellToLatLng(cell.toString(16));
+    return [Math.fround(longitude), Math.fround(latitude)];
   };
   const common = {id: 'cartesian-points', transform, getSourcePosition, pickable: true};
   const layer =
@@ -427,6 +487,16 @@ async function measurePath(
   let renderedFrames = 0;
   function uploadResidentInputs(): number {
     let bytes = 0;
+    if (producer) {
+      for (const [stateIndex, cells] of producerCells.entries()) {
+        for (const [chunkIndex, chunk] of cells.data.entries()) {
+          const cellWords = new Uint32Array(inputs[stateIndex][chunkIndex].cells!.buffer);
+          getGPUDataBuffer(chunk).write(cellWords);
+          bytes += cellWords.byteLength;
+        }
+      }
+      return bytes;
+    }
     for (const [stateIndex, positions] of [raw!, secondRaw!].entries()) {
       for (const [chunkIndex, batch] of inputs[stateIndex].entries()) {
         getGPUDataBuffer(positions.data[chunkIndex]).write(new Uint8Array(batch.positions.buffer));
@@ -482,13 +552,32 @@ async function measurePath(
     }
     const materializeStart = performance.now();
     const compiled = project ? graphs[resident ? stateIndex : 0] : undefined;
+    let computeDispatches = 0;
+    let computePasses = 0;
     if (compiled) {
       const encoder = device.createCommandEncoder();
-      compiled.encode(encoder, {parameters: undefined});
+      const {stats} = compiled.encode(encoder, {parameters: undefined});
+      computeDispatches = stats.nodeCount;
+      computePasses = stats.computePassCount;
       device.submit(encoder.finish());
     }
+    if (producer && compiled) {
+      const chunkCount = producerCells[stateIndex].data.length;
+      const projectionDispatches =
+        grouped && groupedChunkCount === 2 && device.limits.maxStorageBuffersPerShaderStage >= 9
+          ? Math.ceil(chunkCount / 2)
+          : chunkCount;
+      expect(computeDispatches).toBe(chunkCount + projectionDispatches);
+    }
     const materializeEnqueueMs = compiled ? performance.now() - materializeStart : 0;
-    return {uploadedBytes, cpuProjectMs, uploadEnqueueMs, materializeEnqueueMs};
+    return {
+      uploadedBytes,
+      cpuProjectMs,
+      uploadEnqueueMs,
+      materializeEnqueueMs,
+      computeDispatches,
+      computePasses
+    };
   }
 
   async function applyReadbackInput(stateIndex: number, initial = false) {
@@ -567,6 +656,7 @@ async function measurePath(
     ];
     const frames: Uint8Array[] = [];
     const changedPixels: number[] = [];
+    const referencePixelDifferenceFractions: number[] = [];
     const words: Uint32Array[][] = [];
     const pickQueries: ReturnType<typeof getPickQuery>[] = [];
     for (const index of inputs.keys()) {
@@ -588,10 +678,11 @@ async function measurePath(
         }
       }
       expect(litPixels).toBeGreaterThan(0);
-      expect(mismatched / litPixels).toBeLessThanOrEqual(0.005);
+      expect(mismatched / litPixels).toBeLessThanOrEqual(producer ? 0.1 : 0.005);
       changedPixels.push(mismatched);
+      referencePixelDifferenceFractions.push(mismatched / litPixels);
       frames.push(pixels);
-      if (groupedChunkCount && resident) {
+      if (groupedChunkCount && resident && !producer) {
         const result = [];
         for (const vector of [local!, outputValidity!]) {
           for (const chunk of vector.data) {
@@ -602,7 +693,7 @@ async function measurePath(
         words.push(result);
       }
       for (const row of pickedRows) {
-        const position = transform.projectPosition(getSourcePosition(row))!;
+        const position = transform.projectPosition(getReferencePosition(row))!;
         const query = getPickQuery(position.common);
         const result = await pick(query);
         if (row === 1) pickQueries.push(query);
@@ -614,7 +705,7 @@ async function measurePath(
           batchRowIndex: row % batchSize
         });
       }
-      const masked = transform.projectPosition(getSourcePosition(0))!;
+      const masked = transform.projectPosition(getReferencePosition(0))!;
       expect(await pick(getPickQuery(masked.common))).toBeNull();
     }
     expect(frames[0].some((value, index) => value !== frames[1][index])).toBe(true);
@@ -635,14 +726,24 @@ async function measurePath(
         expect(renderedFrames - previousFrames).toBe(drawsPerUpdate);
         const pickingStart = performance.now();
         const result = await pick(pickQueries[iteration % pickQueries.length]);
-        const pickingMs = performance.now() - pickingStart;
+        const pickEnd = performance.now();
+        const pickingMs = pickEnd - pickingStart;
+        const updateRenderPickMs = pickEnd - start;
+        if (producer) expect(update.uploadedBytes).toBe(0);
         expect(result?.index).toBe(1);
         const redrawStart = performance.now();
         deck.redraw('measure unchanged frame');
         await waitForGPU();
         const unchangedFrameMs = performance.now() - redrawStart;
         if (iteration >= WARMUP_ITERATIONS) {
-          samples.push({...update, drawEnqueueMs, updateAndRenderMs, pickingMs, unchangedFrameMs});
+          samples.push({
+            ...update,
+            drawEnqueueMs,
+            updateAndRenderMs,
+            pickingMs,
+            updateRenderPickMs,
+            unchangedFrameMs
+          });
         }
       }
       scenarios.push({drawsPerUpdate, samples});
@@ -667,13 +768,13 @@ async function measurePath(
       }
     }
     let attribution;
-    if (resident && groupedChunkCount) {
+    if (resident && groupedChunkCount && !producer) {
       const dispatches =
         grouped && device.limits.maxStorageBuffersPerShaderStage >= 9
           ? Math.ceil(inputs[0].length / groupedChunkCount)
           : inputs[0].length;
       attribution = {active: await measureResidentCost(device, graphs, dispatches, true)};
-    } else if (resident && attributeResidentCost) {
+    } else if (resident && attributeResidentCost && !producer) {
       const active = await measureResidentCost(device, graphs, inputs[0].length);
       // Preserve the dispatch and bindings while bypassing projection math for all rows.
       for (const chunk of inputValidity!.data) {
@@ -688,11 +789,20 @@ async function measurePath(
       mode,
       attribution,
       changedPixels,
+      referencePixelDifferenceFractions,
       qualifiedPickRows: pickedRows,
       initialUploadedBytes,
       updateOnlySamples,
       stagingBytes: staging?.byteLength ?? 0,
-      coordinateBufferBytes: [raw, secondRaw, inputValidity, local, outputValidity].reduce(
+      coordinateBufferBytes: [
+        raw,
+        secondRaw,
+        inputValidity,
+        local,
+        outputValidity,
+        producerPositions,
+        ...producerCells
+      ].reduce(
         (bytes, vector) =>
           bytes + (vector?.data.reduce((sum, chunk) => sum + chunk.buffer.byteLength, 0) ?? 0),
         0
@@ -712,6 +822,8 @@ async function measurePath(
     programs.forEach(program => program.destroy());
     raw?.destroy();
     secondRaw?.destroy();
+    producerPositions?.destroy();
+    producerCells.forEach(cells => cells.destroy());
     inputValidity?.destroy();
     local?.destroy();
     outputValidity?.destroy();
