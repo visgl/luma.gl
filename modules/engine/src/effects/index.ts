@@ -213,3 +213,28 @@ export {
   type SelectionOutlineProps,
   type SelectionOutlineUniforms
 } from './passes/screen-space/selection-outline';
+
+// Fullscreen definitions for the glfx filter catalog.
+export {
+  brightnessContrastEffect,
+  denoiseEffect,
+  hueSaturationEffect,
+  noiseEffect,
+  persistence,
+  sepiaEffect,
+  vibranceEffect,
+  vignetteEffect,
+  bloomEffect,
+  gaussianBlurEffect,
+  tiltShiftEffect,
+  triangleBlurEffect,
+  zoomBlurEffect,
+  colorHalftoneEffect,
+  dotScreenEffect,
+  edgeWorkEffect,
+  hexagonalPixelateEffect,
+  inkEffect,
+  magnifyEffect,
+  bulgePinchEffect,
+  swirlEffect
+} from './glfx-effects';

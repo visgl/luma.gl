@@ -22,6 +22,8 @@ import {
   createHDRAutoExposureCompositeShaderPass,
   createOutlineCompositeShaderPass,
   createSSAOCompositeShaderPass,
+  gaussianBlurEffect,
+  sepiaEffect,
   ssao,
   createSSGICompositeShaderPass,
   createSSRCompositeShaderPass,
@@ -839,7 +841,7 @@ it('advanced effects compose in order with existing effects', async () => {
     device.submit();
 
     const effectRenderer = new EffectRenderer(device, {
-      effects: [ssao, cameraReprojectionTaa, bloomLow],
+      effects: [ssao, cameraReprojectionTaa, bloomLow, gaussianBlurEffect, sepiaEffect],
       colorFormat: 'rgba16float',
       flipY: false
     });

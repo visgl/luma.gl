@@ -52,6 +52,23 @@ Depth of field uses scene depth and the `dof` camera and lens uniforms.
 For a display-ready chain, place `toneMappingEffect` after HDR bloom and
 `fxaaEffect` after tone mapping.
 
+## Apply glfx image filters
+
+Import `sepiaEffect`, `vignetteEffect`, or another glfx definition from
+`@luma.gl/engine/effects` and add it to the stack. Use uniforms keyed by the
+shader name, for example `uniforms: {sepia: {amount: 0.6}}`.
+
+| Category | Definitions |
+| --- | --- |
+| Adjust | `brightnessContrastEffect`, `denoiseEffect`, `hueSaturationEffect`, `noiseEffect`, `persistence`, `sepiaEffect`, `vibranceEffect`, `vignetteEffect` |
+| Blur | `bloomEffect`, `gaussianBlurEffect`, `tiltShiftEffect`, `triangleBlurEffect`, `zoomBlurEffect` |
+| Stylize | `colorHalftoneEffect`, `dotScreenEffect`, `edgeWorkEffect`, `hexagonalPixelateEffect`, `inkEffect`, `magnifyEffect` |
+| Warp | `bulgePinchEffect`, `swirlEffect` |
+
+Use `bloomEffect` for the simple image filter and `bloomLow` for the HDR
+pyramid. Separable and repeated glfx filters declare both draws and reuse the
+shared color chain between them.
+
 ## Author an effect
 
 Start with a fullscreen shader that follows the
