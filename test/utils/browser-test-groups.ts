@@ -33,6 +33,7 @@ export const RENDER_CONFORMANCE_TEST_PATTERNS = [
   'modules/anari/test/engine/ray-material-alpha-blend.spec.ts',
   'modules/anari/test/engine/ray-material-alpha-blend-shadow.spec.ts',
   'modules/anari/test/engine/ray-material-dispersion.spec.ts',
+  'modules/anari/test/engine/ray-material-rough-dielectric.spec.ts',
   'modules/anari/test/engine/ray-material-sidedness.spec.ts',
   'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts',
   'modules/anari/test/engine/ray-environment-lighting.spec.ts',

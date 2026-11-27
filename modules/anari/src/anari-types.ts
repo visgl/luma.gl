@@ -306,6 +306,8 @@ export type ANARIRendererParameters = {
   filteredCutouts?: boolean;
   /** Allows thin transmission and index-matched analytic spheres in PBR analytic-light shadows. */
   transmissiveShadows?: boolean;
+  /** Use material roughness for GGX dielectric continuation in PBR mode. */
+  roughDielectricTransmission?: boolean;
   resolutionScale?: number;
   minimumResolutionScale?: number;
   adaptiveResolution?: boolean;

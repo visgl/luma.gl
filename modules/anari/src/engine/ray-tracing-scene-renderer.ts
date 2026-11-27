@@ -527,6 +527,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   filteredCutouts?: boolean;
   /** Allows thin transmission and index-matched analytic spheres in PBR analytic-light shadows. */
   transmissiveShadows?: boolean;
+  /** Use material roughness for GGX dielectric continuation in PBR mode. */
+  roughDielectricTransmission?: boolean;
   /** Initial internal ray-tracing resolution relative to the display resolution. */
   resolutionScale?: number;
   /** Lowest internal resolution available to adaptive frame budgeting. */
@@ -4150,6 +4152,7 @@ function getRenderRevision(
     options.shadows,
     options.filteredCutouts,
     options.transmissiveShadows,
+    options.roughDielectricTransmission,
     options.temporalReprojection,
     options.shadowSamplesPerFrame
   ]);
@@ -4644,6 +4647,7 @@ function makeUniformData(props: {
   data[82] = Math.max(0, environmentRadiance?.[2] ?? 0);
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
+  unsignedData[90] = Number(props.options.roughDielectricTransmission ?? false);
   unsignedData[88] = Number(props.options.filteredCutouts ?? false);
   unsignedData[89] = Number(
     props.options.surfaces.some(surface => surface.material.alphaMode === 'BLEND')
