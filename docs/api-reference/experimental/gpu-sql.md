@@ -108,7 +108,7 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   GROUP BY keys may be omitted from SELECT. Queries with hidden keys return only groups observed after WHERE.
   A projected computed key such as `FLOOR(fare) AS bucket` requires an explicit SELECT alias. Computed keys use observed grouping.
   HAVING filters grouped results before ordering and pagination. It can reference SELECT output names and aggregate calls, including calls omitted from SELECT. For unordered HAVING results, pass `rowIndices` and `selectedCounts` to Arrow readback.
-  Set `maxMeanScratchBytes` in the query options to limit the temporary count buffer used by grouped AVG. The GPU reuses that buffer across key ranges.
+  Set `maxReductionScratchBytes` in the query options to cap temporary partial buffers per grouped SUM or AVG. AVG counts both the sum and count buffers. The GPU reuses scratch across key ranges. `maxMeanScratchBytes` can also constrain the size of an individual AVG partial buffer.
   Grouped queries accept ORDER BY on SELECT output names, positions, or aggregate calls. Aggregate sort keys may be omitted from SELECT. Apply LIMIT and OFFSET to the sorted groups. Pass `globalRowIndices` and `globalSelectedCount` to Arrow readback for ordered groups.
   Grouped results preserve SELECT column order and retain key dictionaries under their output names.
   A projected single dictionary key returns the full category domain. Single numeric keys and multi-key queries return only groups observed after WHERE.

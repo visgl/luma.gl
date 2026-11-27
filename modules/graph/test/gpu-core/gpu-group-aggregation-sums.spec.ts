@@ -17,6 +17,7 @@ type GroupSumInput = {
   maskChunks?: Uint32Array[];
   groupCount: number;
   operation: SumOperation;
+  maxReductionScratchBytes?: number;
 };
 
 type GroupSumResult = {
@@ -62,7 +63,7 @@ it('GPUGroupAggregation sums integer-valued floats exactly across row blocks', a
   }
 });
 
-it('GPUGroupAggregation sums fractional floats deterministically within tolerance', async () => {
+it('GPUGroupAggregation reduces fractional floats deterministically under a scratch budget', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
@@ -74,10 +75,11 @@ it('GPUGroupAggregation sums fractional floats deterministically within toleranc
   );
   for (const operation of ['sum', 'mean'] as const) {
     const input = {
-      keyChunks: [keys],
-      valueChunks: [values],
+      keyChunks: [keys.subarray(0, 123), keys.subarray(123)],
+      valueChunks: [values.subarray(0, 123), values.subarray(123)],
       groupCount: 16,
-      operation
+      operation,
+      maxReductionScratchBytes: 32
     };
     const expected = getCPUGroupStatistic(input);
     const runs = [await runGroupSum(device, input), await runGroupSum(device, input)];
@@ -521,7 +523,8 @@ function createGroupSumSession(device: Device, input: GroupSumInput): GroupSumSe
       values: graph.importGPUVector('values', valuesVector),
       mask: maskVector ? graph.importGPUVector('mask', maskVector) : undefined,
       output,
-      operation: input.operation
+      operation: input.operation,
+      maxReductionScratchBytes: input.maxReductionScratchBytes
     })
   );
   const compiled = graph.compile();

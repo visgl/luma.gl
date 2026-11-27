@@ -52,6 +52,8 @@ export type GPUSQLQueryOptions = Readonly<{
   parameters?: GPUDataFrameQueryParameters;
   /** Maximum temporary count bytes per grouped AVG operation. */
   maxMeanScratchBytes?: number;
+  /** Combined byte limit per grouped deterministic SUM or AVG. */
+  maxReductionScratchBytes?: number;
 }>;
 
 /** A source column name with its optional, separately parsed table qualifier. */
@@ -194,7 +196,13 @@ export class GPUSQLContext {
     const statement = parseGPUSQLStatement(source);
     return new GPUSQLQuery(
       source,
-      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {}, options.maxMeanScratchBytes)
+      buildGPUSQLPlan(
+        this.tables,
+        statement,
+        options.parameters ?? {},
+        options.maxMeanScratchBytes,
+        options.maxReductionScratchBytes
+      )
     );
   }
 }
@@ -227,7 +235,8 @@ function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
   statement: GPUSQLStatement,
   parameters: GPUDataFrameQueryParameters,
-  maxMeanScratchBytes?: number
+  maxMeanScratchBytes?: number,
+  maxReductionScratchBytes?: number
 ): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
@@ -548,7 +557,8 @@ function buildGPUSQLPlan(
                 ordering,
                 having,
                 aggregateJoin,
-                maxMeanScratchBytes
+                maxMeanScratchBytes,
+                maxReductionScratchBytes
               )
           },
           'observed-grouping',
@@ -576,7 +586,8 @@ function buildGPUSQLPlan(
               ordering,
               having,
               aggregateJoin,
-              maxMeanScratchBytes
+              maxMeanScratchBytes,
+              maxReductionScratchBytes
             )
         },
         'dense-grouping',

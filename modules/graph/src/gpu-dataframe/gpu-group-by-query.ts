@@ -42,6 +42,8 @@ export type GPUDataFrameGroupByOptions = Readonly<{
   groupCount?: number;
   /** Maximum temporary bytes for a partition of AVG accumulators. */
   maxMeanScratchBytes?: number;
+  /** Combined byte limit per grouped deterministic SUM or AVG. */
+  maxReductionScratchBytes?: number;
 }>;
 
 /** One named count or a float32 statistic referencing a selected numerical column. */
@@ -92,6 +94,8 @@ export class GPUDataFrameGroupByQuery<
   readonly groupCount: number;
   /** Optional temporary AVG count budget. */
   readonly maxMeanScratchBytes?: number;
+  /** Combined byte limit per grouped deterministic SUM or AVG. */
+  readonly maxReductionScratchBytes?: number;
 
   /** Validates grouping metadata entirely on the CPU. @internal */
   constructor(
@@ -130,6 +134,7 @@ export class GPUDataFrameGroupByQuery<
       throw new Error('GPUDataFrame mean scratch budget requires at least four bytes');
     }
     this.maxMeanScratchBytes = options.maxMeanScratchBytes;
+    this.maxReductionScratchBytes = options.maxReductionScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -146,7 +151,14 @@ export class GPUDataFrameGroupByQuery<
       Key,
       Definitions,
       Source
-    >(this.query, this.key, this.groupCount, definitions, this.maxMeanScratchBytes);
+    >(
+      this.query,
+      this.key,
+      this.groupCount,
+      definitions,
+      this.maxMeanScratchBytes,
+      this.maxReductionScratchBytes
+    );
   }
 }
 
@@ -166,6 +178,8 @@ export class GPUDataFrameGroupedAggregationQuery<
   readonly groupCount: number;
   /** Optional temporary AVG count budget. */
   readonly maxMeanScratchBytes?: number;
+  /** Combined byte limit per grouped deterministic SUM or AVG. */
+  readonly maxReductionScratchBytes?: number;
   /** Named operations normalized in the caller's original object insertion order. */
   readonly definitions: readonly GPUDataFrameAggregationDefinition[];
 
@@ -175,9 +189,11 @@ export class GPUDataFrameGroupedAggregationQuery<
     key: Key,
     groupCount: number,
     definitions: Definitions,
-    maxMeanScratchBytes?: number
+    maxMeanScratchBytes?: number,
+    maxReductionScratchBytes?: number
   ) {
     this.maxMeanScratchBytes = maxMeanScratchBytes;
+    this.maxReductionScratchBytes = maxReductionScratchBytes;
     this.query = query;
     this.key = key;
     this.groupCount = groupCount;
@@ -208,7 +224,8 @@ export class GPUDataFrameGroupedAggregationQuery<
       undefined,
       undefined,
       undefined,
-      this.maxMeanScratchBytes
+      this.maxMeanScratchBytes,
+      this.maxReductionScratchBytes
     );
   }
 }
