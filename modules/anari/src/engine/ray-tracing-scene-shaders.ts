@@ -1705,7 +1705,7 @@ struct RayMaterialSample {
   density: f32,
 };
 
-// Sample the projected GGX normal distribution about the geometric interface.
+// Sample the projected GGX distribution about the unperturbed shading normal.
 fn sampleDielectricFacet(normal: vec3<f32>, alphaSquared: f32, seed: u32) -> vec3<f32> {
   let reference = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(normal.z) > 0.999);
   let tangent = normalize(cross(reference, normal));
@@ -1729,7 +1729,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let transmission = clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic);
   if (makeRandom(randomSeed ^ 541u) < transmission) {
-    var normal = faceForward(hit.normal, ray.direction, hit.normal);
+    let normal = faceForward(hit.normal, ray.direction, hit.normal);
     var index = max(primitive.material.z, 1.0);
     var spectralWeight = vec3<f32>(1.0);
     let dispersion = primitive.materialFlags.y;
@@ -1751,7 +1751,6 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
     let alphaSquared = alpha * alpha;
     var facet = normal;
     if (useRoughInterface) {
-      normal = getFaceNormal(hit, ray);
       facet = sampleDielectricFacet(normal, alphaSquared, randomSeed);
     }
     let cosineIncident = clamp(dot(-ray.direction, facet), 0.0, 1.0);
@@ -1779,7 +1778,9 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
     }
     if (useRoughInterface) {
       let outgoingCosine = dot(normal, direction);
-      if (select(-outgoingCosine, outgoingCosine, reflected) <= 0.0) {
+      let geometricCosine = dot(getFaceNormal(hit, ray), direction);
+      if (select(-outgoingCosine, outgoingCosine, reflected) <= 0.0 ||
+          select(-geometricCosine, geometricCosine, reflected) <= 0.0) {
         return RayMaterialSample(direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0);
       }
       let incomingCosine = dot(normal, -ray.direction);
