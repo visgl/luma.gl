@@ -399,17 +399,20 @@ async function measurePath(
   const graphCount = resident ? 2 : Number(mode === 'materialized');
   const graphs = Array.from({length: graphCount}, (_, stateIndex) => {
     const graph = new GPUCommandGraph(device);
-    const positions = producerPositions ?? (stateIndex === 0 ? raw! : secondRaw!);
-    if (producer || groupedChunkCount) {
-      const positionViews = graph.importGPUVector('positions', positions);
+    const positions = stateIndex === 0 ? raw : secondRaw;
+    const producedPositionViews = producerPositions
+      ? graph.importGPUVector('positions', producerPositions)
+      : undefined;
+    if (producedPositionViews || groupedChunkCount) {
+      const positionViews = producedPositionViews ?? graph.importGPUVector('positions', positions!);
       const inputValidityViews = graph.importGPUVector('input-validity', inputValidity!);
-      if (producer) {
+      if (producedPositionViews) {
         const cellViews = graph.importGPUVector('h3-cells', producerCells[stateIndex]);
         for (const [index, cells] of cellViews.data.entries()) {
           new GPUH3CellProjection({
             id: `h3-centers-${index}`,
             cells,
-            output: positionViews.data[index],
+            output: producedPositionViews.data[index],
             validity: inputValidityViews.data[index]
           }).addToGraph(graph);
         }
@@ -425,7 +428,7 @@ async function measurePath(
       programs.push(program);
       program.addToGraph(graph);
     } else {
-      for (const [index, chunk] of positions.data.entries()) {
+      for (const [index, chunk] of positions!.data.entries()) {
         const program = new GPUProjectionProgram({
           id: `cartesian-${index}`,
           projection,
