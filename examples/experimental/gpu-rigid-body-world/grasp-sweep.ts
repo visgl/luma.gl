@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import type {Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {DESTINATION_ANGLE, GRIPPER_PHASES, REACH, makeGripperTrial} from './gripper';
 
@@ -11,14 +10,25 @@ const stepsPerPhase = 180;
 const stepsPerSubmission = 4;
 const stepsPerTrial = GRIPPER_PHASES.length * stepsPerPhase;
 
-const button = document.querySelector<HTMLButtonElement>('#run')!;
-const status = document.querySelector<HTMLOutputElement>('#status')!;
-const results = document.querySelector<HTMLElement>('#results')!;
+export function enableGraspSweep(device: Device, root: HTMLElement) {
+  const button = root.querySelector<HTMLButtonElement>('button')!;
+  const status = root.querySelector<HTMLOutputElement>('output')!;
+  const results = root.querySelector<HTMLElement>('.results')!;
+  button.disabled = false;
+  button.onclick = () => {
+    button.disabled = true;
+    results.replaceChildren();
+    void runGraspSweep(device, status, results)
+      .catch(error => {
+        status.value = String(error);
+      })
+      .finally(() => {
+        button.disabled = false;
+      });
+  };
+}
 
-async function run() {
-  button.disabled = true;
-  results.replaceChildren();
-  const device = await luma.createDevice({adapters: [webgpuAdapter], type: 'webgpu'});
+async function runGraspSweep(device: Device, status: HTMLOutputElement, results: HTMLElement) {
   const definition = new GPUCommandGraph(device);
   const trials: {
     trial: ReturnType<typeof makeGripperTrial>;
@@ -133,15 +143,5 @@ async function run() {
     }
   } finally {
     for (const {trial} of trials) trial.world.destroy();
-    device.destroy();
   }
 }
-button.onclick = () => {
-  void run()
-    .catch(error => {
-      status.value = String(error);
-    })
-    .finally(() => {
-      button.disabled = false;
-    });
-};

@@ -12,6 +12,7 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from './info-box';
 import {makeArmContactTrial} from './robot-arm-contact';
 import {makeGripperTrial, GRIPPER_PHASES} from './gripper';
+import {enableGraspSweep} from './grasp-sweep';
 import {RobotArmScene} from './robot-arm-scene';
 
 const gripper = document.body.dataset.lab === 'gripper';
@@ -81,6 +82,7 @@ try {
     }
   };
   if (pick) {
+    enableGraspSweep(device, document.querySelector<HTMLElement>('#grasp-sweep')!);
     const advance = document.querySelector<HTMLButtonElement>('#advance')!;
     advance.onclick = () => {
       cycling = false;

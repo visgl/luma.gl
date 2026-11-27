@@ -76,10 +76,10 @@ node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5330/
 
 ### Grasp parameter sweep
 
-**Compare grasp trials** in the gripper lab runs 18 independent reduced-coordinate mechanisms in one GPU command graph. The experiment crosses payload masses of 0.5, 1 and 3 kg, pad friction coefficients of 0, 0.35 and 0.9, and finger torque caps of 8 and 32 N·m. Each link in the results grid opens the same parameters in the interactive 3D lab.
+The **Grasp Sweep** tab in the gripper lab runs 18 independent reduced-coordinate mechanisms in one GPU command graph. The experiment crosses payload masses of 0.5, 1 and 3 kg, pad friction coefficients of 0, 0.35 and 0.9, and finger torque caps of 8 and 32 N·m. Each link in the results grid opens the same parameters in the interactive 3D lab.
 
 A trial earns **placed** if it completes all 1,080 fixed steps, lifts and carries above 0.58 m, and finishes within 25 cm of the destination and 6 cm of the reference resting center height. A missed placement and a numerical failure are reported separately. Hover a result to inspect lift height and landing error.
 
-Each tree owns its state and contributes a dispatch per step. Four steps for all trials share an encoder, submission and completion fence. The reported world-steps per second includes drive writes and fenced simulation work and excludes compilation, rendering and phase-end readbacks. This measures graph-level batching on the active adapter.
+Each tree owns its state and contributes a dispatch per step. Four steps for all trials share an encoder, submission and completion fence. The reported world-steps per second includes drive writes and fenced simulation work and excludes compilation, rendering and phase-end readbacks. The sweep shares the live 3D lab’s device, so rendering can affect measured throughput.
 
-In the Apple WebGPU lab run, the graph processed 3,042 world-steps/s. Four of 18 workpieces met the placement gates. Both 0.5 and 1 kg placed at 32 N·m with friction 0.35 and 0.9. All zero-friction controls missed. The 3 kg, 32 N·m, 0.9 trial lifted to 0.69 m but missed the destination by 0.85 m.
+In the standalone Apple WebGPU baseline, the graph processed 3,042 world-steps/s. Four of 18 workpieces met the placement gates. Both 0.5 and 1 kg placed at 32 N·m with friction 0.35 and 0.9. All zero-friction controls missed. The 3 kg, 32 N·m, 0.9 trial lifted to 0.69 m but missed the destination by 0.85 m.
