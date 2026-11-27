@@ -33,6 +33,7 @@ for (const integrator of ['rk2', 'rk4', 'rk45'] as const) {
         integrator === 'rk45'
           ? new ScientificFlowTracer(device, {
               ...props,
+              conservativeMask: true,
               positions: new Float32Array([initialLongitude, 0.5]),
               tolerance: 1e-5,
               maximumTimeStep: 0.1,

@@ -2,6 +2,8 @@
 
 ## Version 10.0
 
+- **Scientific trajectories.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md) adds opt-in conservative mask checks and bounded GPU trajectory history.
+
 - **Font atlas cache capacity.** Use `ensureFontAtlasCacheCapacity()` from `@luma.gl/engine/text-fonts` to grow the shared bitmap and SDF atlas cache while retaining cached atlases.
 
 - **Independent graph state.** Reuse a compiled graph with separate [mutable state instances](./api-reference/graph/gpu-graph-state.md) that borrow or copy GPU vectors and can be reset explicitly.

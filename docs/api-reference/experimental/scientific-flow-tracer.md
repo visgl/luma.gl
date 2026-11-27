@@ -169,3 +169,59 @@ without respawning or changing particle identity. Latitude and missing-data
 boundaries retain their usual behavior. Snapshot rotation preserves this option.
 Renderers should unwrap segment displacement and split trails at the atlas seam;
 raw consecutive x coordinates can jump from near one to near zero.
+
+## Conservative mask footprints
+
+Set `conservativeMask: true` to check every grid sample in the interpolation
+rectangle swept by each proposed accepted chord, in addition to RK-stage checks.
+The default remains stage-only validation. Missing samples reject the trial and
+reduce its timestep; failure at the minimum timestep reports `MissingData` and
+retains the last accepted position. Longitude footprints wrap when periodic
+longitude is enabled. Both snapshots contribute when their temporal weights do.
+
+This is deliberately conservative: a diagonal chord can be rejected by a missing
+sample beside its path. It does not resolve the curved path between stages,
+localize coastline impact, reflect particles or provide slip boundaries. Use it
+when avoiding unsupported interpolation footprints is preferable to approaching
+masked corners closely.
+
+## Retaining GPU trajectories
+
+`FlowTrajectoryHistory` is an optional, separately owned ring buffer exported from
+`@luma.gl/graph/experimental-simulation`:
+
+```ts
+import {FlowTrajectoryHistory} from '@luma.gl/graph/experimental-simulation';
+
+const history = new FlowTrajectoryHistory(device, {
+  particleCount: tracer.particleCount,
+  capacity: 32
+});
+let result = await tracer.advance(1);
+while (!result.complete) result = await tracer.continue();
+const encoder = device.createCommandEncoder();
+history.record(encoder, tracer.output, tracer.time);
+device.submit(encoder.finish());
+// Bind history.buffer for rendering. history.frames lists chronological byte offsets.
+// Later, after the renderer no longer borrows it:
+history.destroy();
+```
+
+Memory is exactly `capacity * particleCount * 16` bytes. Each frame preserves
+normalized x/y, age and generation, with particle identity given by its index.
+Recording beyond capacity overwrites the oldest frame. `frames` returns detached
+CPU metadata (`time`, `byteOffset`, `sequence`), not particle readback. Times must
+be finite and nondecreasing. `reset()` forgets metadata and starts a new capture
+sequence without clearing GPU bytes; reset when reseeding or changing clocks.
+Captured source buffers are borrowed, never destroyed by history.
+
+Submit encoders in recording order and do not discard recorded commands: metadata
+advances at recording time. Capture a completed RK45 horizon for synchronized
+particle times; intermediate dispatches contain mixed progress. Stopped particles
+retain their earlier age, even when the request horizon completes. For visual
+RK2/RK4 simulations, generation changes identify respawns; never join across them.
+Periodic trajectories still require seam-aware rendering.
+
+The [advection roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/advection-roadmap.md) separates
+implemented qualification/history from real-data validation, true spherical
+transport, grid extensions and GPU scheduling work.
