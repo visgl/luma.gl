@@ -4088,6 +4088,7 @@ function getPrimitiveRevision(
       surface.material.id,
       surface.material.version,
       surface.material.alphaMode,
+      surface.material.doubleSided,
       surface.material.uniforms,
       options.primitives?.[surface.id]
     ])
@@ -4301,6 +4302,9 @@ function makePrimitiveData(
       primitiveValues.set(transmissionColor, primitiveOffset + 96);
       primitiveValues[primitiveOffset + 99] = materialUniforms?.diffuseTransmissionFactor ?? 0;
       primitiveValues[primitiveOffset + 100] = Number(materialUniforms?.unlit ?? false);
+      primitiveValues[primitiveOffset + 101] = Math.max(0, materialUniforms?.dispersion ?? 0);
+      // Keep legacy direct scene materials two-sided unless they explicitly opt out.
+      primitiveValues[primitiveOffset + 102] = Number(surface.material.doubleSided === false);
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,
