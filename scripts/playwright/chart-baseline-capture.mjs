@@ -19,6 +19,7 @@ const {values} = parseArgs({options: {
   'compare-emitters': {type: 'boolean'},
   'compare-reconstruction': {type: 'boolean'},
   'compare-motion': {type: 'boolean'},
+  'maximum-glossy-rmse-ratio': {type: 'string'},
   'pose-frame': {type: 'string', default: '16'},
   'reference-frames': {type: 'string', default: '64'},
   temporal: {type: 'string'},
@@ -63,6 +64,14 @@ if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
 if (!Number.isInteger(history) || history < 1 || history > 256) throw new Error('history must be an integer between 1 and 256');
 /** Whether to generate pose-matched HDR references and measure temporal reconstruction. */
 const compareMotion = values['compare-motion'];
+/** Optional recovery gate for the final glossy checkpoint. */
+const maximumGlossyRatio = values['maximum-glossy-rmse-ratio'] === undefined
+  ? undefined
+  : Number(values['maximum-glossy-rmse-ratio']);
+if (maximumGlossyRatio !== undefined &&
+  (!compareMotion || !Number.isFinite(maximumGlossyRatio) || maximumGlossyRatio <= 0)) {
+  throw new Error('maximum-glossy-rmse-ratio requires the motion benchmark and a positive ratio');
+}
 const frameCounts = (values['frame-sweep'] ?? (compareMotion ? '1,4,8,16' : values.frames)).split(',').map(Number);
 if (frameCounts.some((frames, index) => !Number.isInteger(frames) || frames < 1 || frames > 256 ||
   (index > 0 && frames <= frameCounts[index - 1]))) {
@@ -213,6 +222,13 @@ async function captureMotionBenchmark() {
     }
     scenes[preset] = {reference, measurements};
   }
+  /** Compare temporal modes at equal new sample counts, even when GPU timing is unavailable. */
+  const glossyMeasurements = scenes['chart-glossy-motion'].measurements;
+  const temporalError = glossyMeasurements.on.at(-1).comparison.rootMeanSquaredError;
+  const controlError = glossyMeasurements.off.at(-1).comparison.rootMeanSquaredError;
+  const passed = maximumGlossyRatio === undefined
+    ? undefined
+    : temporalError <= maximumGlossyRatio * controlError;
   await writeFile(resolve(root, 'motion-reconstruction.json'), JSON.stringify({
     comparisonSpace: 'linear-hdr',
     poseFrame,
@@ -223,8 +239,18 @@ async function captureMotionBenchmark() {
     viewport: [width, height],
     hardware: values.hardware,
     browser: browser.version(),
-    scenes
+    scenes,
+    glossyRecovery: {
+      samplesAtPose: glossyMeasurements.on.at(-1).samplesAtPose,
+      temporalError,
+      controlError,
+      maximumRatio: maximumGlossyRatio,
+      passed
+    }
   }, null, 2));
+  if (passed === false) {
+    throw new Error(`Glossy HDR RMSE ${temporalError} exceeds ${maximumGlossyRatio} times the control RMSE ${controlError}`);
+  }
 }
 
 /** Capture each requested checkpoint in its own page. */

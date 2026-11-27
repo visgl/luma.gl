@@ -148,7 +148,10 @@ presentation at fixed seeds and shared measured GPU costs. Motion captures can
 toggle reprojection against an independently sampled, stationary reference at
 the exact target pose. The Chart Motion and glossy motion workflows measure
 linear HDR recovery error versus new samples and GPU time after the pose stops.
-Broader ghosting acceptance scenes and separate diffuse/specular histories remain open.
+Stationary PBR paths now accumulate without reprojection clipping, while glossy
+guides reject stale history during movement. The glossy benchmark can gate the
+final HDR error relative to a pose-matched temporal-off control. Broader
+ghosting acceptance scenes and separate diffuse/specular histories remain open.
 
 
 The first glTF vertex fidelity increment applies retained morph position and

@@ -1574,8 +1574,10 @@ fn getHistoricalRaySample(
     return rejectHistoricalRaySample();
   }
 
-  // Unchanged static progressive samples must average without per-sample clipping.
-  if (uniforms.temporal.w <= 0.5) {
+  // A stationary PBR path traces the same integral each frame. Clipping it
+  // around the latest noisy sample biases bright glossy paths even after motion stops.
+  let pbrPaths = usePBRTransport() && uniforms.sampling.y > 0u;
+  if (uniforms.temporal.w <= 0.5 || (pbrPaths && uniforms.visibility.w != 0u)) {
     let previous = textureLoad(historyImage, vec2<i32>(pixel), 0);
     return HistoricalRaySample(previous.rgb, previous.a, previous.a > 0.0, loadHistoryMoments(vec2<i32>(pixel)));
   }
@@ -1587,6 +1589,16 @@ fn getHistoricalRaySample(
   );
   if (hit.distance < RAY_INFINITY && uniforms.temporal.w > 0.5) {
     let primitive = primitives[hit.primitiveIndex];
+    // Primary identity does not identify the reflected or refracted surface.
+    // Reject history for shiny guides during camera motion.
+    if (pbrPaths) {
+      let material = getShadedPrimitive(hit);
+      if (material.material.y > 0.0 ||
+          (material.emissive.w >= 0.5 && material.properties.x < 0.4) ||
+          (material.clearcoatOcclusion.x > 0.0 && material.clearcoatOcclusion.y < 0.4)) {
+        return rejectHistoricalRaySample();
+      }
+    }
     let hitPosition = ray.origin + ray.direction * hit.distance;
     let localHitPosition = primitive.inverseTransform * vec4<f32>(hitPosition, 1.0);
     let previousHitPosition = (primitive.previousTransform * localHitPosition).xyz;
