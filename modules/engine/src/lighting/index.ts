@@ -123,3 +123,8 @@ export type {
   LightmapAtlasOptions,
   LightmapAtlasChart
 } from './lightmap-atlas';
+
+export {CORTAOPass} from './cortao/cortao-pass';
+export type {CORTAOPassProps, CORTAORenderOptions} from './cortao/cortao-pass';
+export type {CORTAOCamera} from './cortao/cortao-parameters';
+export type {CORTAORayCount} from './cortao/cortao-occluder-lookup-table';
