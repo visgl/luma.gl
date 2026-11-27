@@ -68,6 +68,7 @@
   "include": [
     "./modules/shaders/test/lib/uniform-types.spec.ts",
     "./modules/engine/test/shader-inputs-types.spec.ts",
+    "./modules/engine/test/effect-renderer.types.ts",
     "./modules/graph/test/gpu-data/gpu-data-types.node.spec.ts",
     "./modules/graph/test/geospatial/geospatial-types.spec.ts"
   ],

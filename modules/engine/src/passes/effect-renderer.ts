@@ -98,9 +98,23 @@ export function resolveEffect<TargetName extends string>(
   };
 }
 
-export type EffectRendererProps = Omit<ShaderPassRendererProps, 'shaderPasses'> & {
-  /** Effects run in array order, with each color output feeding the next effect. */
-  effects: readonly EffectDefinition[];
+export type EffectRendererProps<Options extends readonly unknown[] = readonly unknown[]> = Omit<
+  ShaderPassRendererProps,
+  'shaderPasses'
+> & {
+  /**
+   * Effects run in array order, with each color output feeding the next effect.
+   * Configure reusable effects inline by supplying their definition and options.
+   * Each configuration is checked against the options declared by its effect.
+   */
+  effects: {
+    readonly [Index in keyof Options]:
+      | EffectDefinition
+      | {
+          effect: ConfigurableEffectDefinition<Options[Index]>;
+          configuration?: NoInfer<Options[Index]>;
+        };
+  };
 };
 
 /**
@@ -111,8 +125,17 @@ export type EffectRendererProps = Omit<ShaderPassRendererProps, 'shaderPasses'> 
  * scene changes invalidate temporal data, and destroy the renderer when the
  * chain is no longer needed.
  */
-export class EffectRenderer extends ShaderPassRenderer {
-  constructor(device: Device, {effects, ...props}: EffectRendererProps) {
-    super(device, {...props, shaderPasses: effects.map(effect => resolveEffect(effect))});
+export class EffectRenderer<
+  Options extends readonly unknown[] = readonly unknown[]
+> extends ShaderPassRenderer {
+  constructor(device: Device, {effects, ...props}: EffectRendererProps<Options>) {
+    super(device, {
+      ...props,
+      shaderPasses: effects.map(entry =>
+        resolveEffect(
+          'effect' in entry ? configureEffect(entry.effect, entry.configuration) : entry
+        )
+      )
+    });
   }
 }

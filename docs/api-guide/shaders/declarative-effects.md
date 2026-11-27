@@ -71,23 +71,26 @@ shared color chain between them.
 
 ## Configure an effect
 
-Use `configureEffect` to resolve settings that affect resources or pass order
-when building the stack. Keep animated controls in the render call's
+Use `{effect, configuration}` for settings that affect resources or pass order
+when building the stack. The renderer resolves the definition once at construction. Keep animated controls in the render call's
 `uniforms` so they can change without reallocating those resources.
 
 ```ts
-import {configureEffect, EffectRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {hdrBloom, ssaoEffect, ssr} from '@luma.gl/engine/effects';
 
 const renderer = new EffectRenderer(device, {
   effects: [
-    configureEffect(ssaoEffect, {normalSource: 'normal-texture', resolutionScale: 0.5}),
-    configureEffect(ssr, {reprojection: 'camera', quality: 'fast'}),
-    configureEffect(hdrBloom, {quality: 'ultra', downsample: 'auto'})
+    {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+    {effect: ssr, configuration: {reprojection: 'camera', quality: 'fast'}},
+    {effect: hdrBloom, configuration: {quality: 'ultra', downsample: 'auto'}}
   ],
   colorFormat: 'rgba16float'
 });
 ```
+
+Use `configureEffect` to resolve a definition separately when you want to
+inspect or reuse its configured resources and passes.
 
 Supply each effect's scene bindings at render time. SSAO in normal-texture
 mode needs the normal texture in addition to depth. Camera-reprojected SSR
