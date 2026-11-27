@@ -2,9 +2,8 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 
 # Screen-Space Outlines
 
-Reveal object silhouettes and hard surface transitions by comparing nearby depth and normal
-values. `createOutlineCompositeShaderPass` overlays a configurable edge color in one scene-aware
-fullscreen pass.
+Reveal object silhouettes and hard surface transitions with `createOutlineCompositeShaderPass`.
+The pass can compare scene depth and normals, or detect contours directly from the source image.
 
 <AdvancedEffectsExample embedded showStats={false} />
 
@@ -48,12 +47,16 @@ renderer.renderToScreen({
 | Parameter | Default | Description |
 | --- | --- | --- |
 | `normalSource` | `'reconstruct-from-depth'` | Reconstruct geometric normals or use an explicit scene-normal texture. |
+| `mode` | `'depth-normal'` | Use scene attachments or color/alpha differences from the source image. |
+| `quality` | `'high'` | `fast` samples four neighbors; `high` includes diagonals for smoother contours. |
 | `color` | `[0.02, 0.08, 0.12, 0.48]` | RGBA outline color; alpha controls the overlay contribution. |
 | `thickness` | `1.5` | Neighbor offset in depth-texture pixels. |
 | `depthThreshold` | `0.003` | Depth change needed to begin drawing an edge. |
 | `normalThreshold` | `0.18` | Normal-direction difference needed to begin drawing an edge. |
 
-The pass samples four cardinal neighbors and combines smooth depth and normal edge responses.
+The pass samples cardinal neighbors and, in high quality, diagonals. It combines smooth depth and
+normal edge responses. Image mode uses luminance/color and alpha differences and needs no scene
+attachments.
 Supplying authored normals captures material or geometric detail that reconstructed depth normals
 cannot express.
 

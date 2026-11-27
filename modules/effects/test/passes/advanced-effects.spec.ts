@@ -337,6 +337,18 @@ it('advanced effects expose composable pipeline shapes', () => {
 
   const outlines = createOutlineCompositeShaderPass({normalSource: 'normal-texture'});
   expect(outlines.steps[0].output, 'outlines compose into previous').toBe('previous');
+  expect(
+    outlines.steps[0].uniforms?.useDiagonalSamples,
+    'high quality outlines include diagonal samples'
+  ).toBe(1);
+  const fastImageOutlines = createOutlineCompositeShaderPass({mode: 'image', quality: 'fast'});
+  expect(fastImageOutlines.name, 'image outlines expose a dedicated postprocessing pipeline').toBe(
+    'imageOutlineCompositeShaderPass'
+  );
+  expect(
+    fastImageOutlines.steps[0].uniforms?.useDiagonalSamples,
+    'fast image outlines use four neighbors'
+  ).toBe(0);
 
   const taa = createTAACompositeShaderPass();
   expect(taa.renderTargets?.taaHistoryColor.lifetime, 'TAA retains color').toBe('history');
