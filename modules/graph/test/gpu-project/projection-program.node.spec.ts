@@ -178,6 +178,23 @@ describe('projection programs', () => {
     expect(assembled).toContain('fn fp64_accumulate_f32_integer');
   });
 
+  it.each([
+    ['d3d12', 'intel', false],
+    ['vulkan', 'nvidia', false],
+    ['metal', 'apple', true]
+  ] as const)('selects fp64 arithmetic and retains uniform metadata on %s', (gpuBackend, gpu, integer) => {
+    const device = new NullDevice({});
+    Object.defineProperty(device, 'info', {
+      value: {...device.info, type: 'webgpu', gpu, gpuType: 'discrete', gpuBackend, fallback: false}
+    });
+    const shader = compileProjectionProgram(nativeProgram).getShader({device});
+    expect(shader.defines.LUMA_FP64_INTEGER_ARITHMETIC).toBe(integer);
+    expect(shader.defines.LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND).toBe(
+      gpu === 'intel' ? true : undefined
+    );
+    expect(shader.modules[0].uniformTypes).toEqual({ONE: 'f32', SPLIT: 'f32'});
+  });
+
   it('calls each heavy fp64 helper from one site in adaptive stages', () => {
     const plan = compileProjectionPlan({
       projection: position => [

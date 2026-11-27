@@ -7,7 +7,7 @@ Reusable deck.gl layers for geographic rendering that consume caller-owned GPU b
 `GPUProjectedPointLayer` renders raw binary64 coordinate pairs (`GPUVector<'uint32x4'>`) through a
 prepared `ProjectionRenderTransform`, with an aligned `GPUVector<'uint32'>` validity mask. It borrows
 vertex buffers and preserves their physical chunks. Projection and origin subtraction use the shared
-integer-controlled double-single implementation before narrowing local render coordinates to float32.
+platform-selected double-single implementation before narrowing local render coordinates to float32.
 
 Use a non-geospatial Cartesian viewport such as `OrthographicView`, with explicit destination origin,
 axis order and signed unit scales. Map/globe viewports, model matrices, extra coordinate origins and

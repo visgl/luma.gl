@@ -15,7 +15,6 @@ import {
 import {Buffer, type RenderPass} from '@luma.gl/core';
 import {GPUVectorModel} from '@luma.gl/engine';
 import type {GPUVector} from '@luma.gl/graph/gpu-data';
-import {fp64arithmetic} from '@luma.gl/shaders';
 import type {ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import type {
   ProjectionRenderTransform,
@@ -81,7 +80,7 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
       } satisfies ProjectedPointState);
       return;
     }
-    const shader = transform.compiled.getShader({namespace: 'render'});
+    const shader = transform.compiled.getShader({namespace: 'render', device});
     const parameters = device.createBuffer({
       id: `${this.id}-projection-parameters`,
       data: transform.compiled.packParameters(),
@@ -98,15 +97,7 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
       const model = new GPUVectorModel(device, {
         shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
-          // Model reflects the shared WGSL uniform declaration even on the integer path.
-          // Restore its uniform metadata; graph kernels strip this unused declaration instead.
-          modules: [
-            ...shader.modules.map(module =>
-              module.name === fp64arithmetic.name ? fp64arithmetic : module
-            ),
-            project32,
-            picking
-          ],
+          modules: [...shader.modules, project32, picking],
           defines: shader.defines,
           source: `${shader.source}\n${getProjectedPointShader(shader.entryPoint)}`
         }),

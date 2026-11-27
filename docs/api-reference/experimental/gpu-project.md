@@ -241,6 +241,8 @@ returns the full `fp64arithmetic` module and its workaround defines. The consume
 the module's uniform block and upload its `ONE` and `SPLIT` values (for example with
 `computation.updateShaderInputs()`) before dispatching; with zero values the low limbs are lost.
 Keep integer-controlled arithmetic on Metal, which may reassociate the classic transforms.
+Render models can call `getShader({device})` to follow the same platform selection and retain the
+full uniform metadata for shader reflection. `GPUProjectedPointLayer` uses this option.
 
 Zero input validity, non-finite intermediates, and rejected domains produce zero output and validity.
 The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
