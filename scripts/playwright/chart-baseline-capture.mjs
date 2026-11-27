@@ -243,6 +243,8 @@ async function captureSweep(directory) {
 
 /** Capture one exact checkpoint and collect image error and optional GPU timings. */
 async function captureFrameCount(browser, output, frames, poseReference) {
+  /** Use the seed passed to this page, including independently seeded references. */
+  const captureSeed = Number(url.searchParams.get('seed'));
   const comparisonImage = poseReference?.image ?? referenceImage;
   const comparisonPath = poseReference?.path ?? values.reference;
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
@@ -309,14 +311,14 @@ async function captureFrameCount(browser, output, frames, poseReference) {
       comparison = {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)};
     }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
-    await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
+    await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed: captureSeed, frames, viewport: [width, height],
       gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, motionTimeSeconds,
       comparisonSpace: linearHdr ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
       note: 'Elapsed time includes startup and output readback; GPU pass timestamps exclude browser startup, screenshots and readback. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
     console.log(output);
     if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
-    return {frames, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
+    return {frames, seed: captureSeed, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
       hardware: values.hardware, timeToCaptureMilliseconds, gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTiming,
       motionTimeSeconds, pose: metadata.pose, drawingBuffer: metadata.drawingBuffer, ownedMemory: metadata.ownedMemory,
       radianceSize, historyConfidence, comparison};
