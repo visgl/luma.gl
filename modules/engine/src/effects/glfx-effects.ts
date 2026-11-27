@@ -31,7 +31,7 @@ export const brightnessContrastEffect: EffectDefinition<never> = {
   passes: [{kind: 'fullscreen', shaderPass: brightnessContrast, output: 'previous'}]
 };
 
-const denoiseSample = {...denoise, passes: [{sampler: true}]} as const;
+const denoiseSample = {...denoise, passes: [{sampler: true}]};
 
 export const denoiseEffect: EffectDefinition<never> = {
   name: denoise.name,
@@ -88,7 +88,7 @@ export const bloomEffect: EffectDefinition<never> = {
   passes: [{kind: 'fullscreen', shaderPass: bloom, output: 'previous'}]
 };
 
-const gaussianBlurSample = {...gaussianBlur, passes: [{sampler: true}]} as const;
+const gaussianBlurSample = {...gaussianBlur, passes: [{sampler: true}]};
 
 export const gaussianBlurEffect: EffectDefinition<never> = {
   name: gaussianBlur.name,
@@ -109,7 +109,7 @@ export const gaussianBlurEffect: EffectDefinition<never> = {
   ]
 };
 
-const tiltShiftSample = {...tiltShift, passes: [{sampler: true}]} as const;
+const tiltShiftSample = {...tiltShift, passes: [{sampler: true}]};
 
 export const tiltShiftEffect: EffectDefinition<never> = {
   name: tiltShift.name,
@@ -125,7 +125,7 @@ export const tiltShiftEffect: EffectDefinition<never> = {
   ]
 };
 
-const triangleBlurSample = {...triangleBlur, passes: [{sampler: true}]} as const;
+const triangleBlurSample = {...triangleBlur, passes: [{sampler: true}]};
 
 export const triangleBlurEffect: EffectDefinition<never> = {
   name: triangleBlur.name,
@@ -164,7 +164,7 @@ export const dotScreenEffect: EffectDefinition<never> = {
   passes: [{kind: 'fullscreen', shaderPass: dotScreen, output: 'previous'}]
 };
 
-const edgeWorkSample = {...edgeWork, passes: [{sampler: true}]} as const;
+const edgeWorkSample = {...edgeWork, passes: [{sampler: true}]};
 
 export const edgeWorkEffect: EffectDefinition<never> = {
   name: edgeWork.name,
