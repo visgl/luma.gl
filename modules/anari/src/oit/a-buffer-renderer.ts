@@ -12,7 +12,11 @@ import {
   type TextureFormatColor,
   type TextureView
 } from '@luma.gl/core';
-import {EffectRenderer} from '@luma.gl/engine';
+import {
+  EffectRenderer,
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '@luma.gl/engine';
 import {type ABufferShaderModuleProps} from './a-buffer';
 import {
   aBufferResolveEffect,
@@ -91,6 +95,35 @@ export type ABufferRenderOptions = {
 };
 
 type ResolvedABufferRendererProps = Required<Omit<ABufferRendererProps, 'colorFormat'>>;
+
+type ABufferCaptureFrame = {
+  sourceHeadPointers: Buffer;
+  headPointers: Buffer;
+  shaderModuleProps: ABufferShaderModuleProps;
+  scissorRect: [number, number, number, number];
+  options: ABufferRenderOptions;
+};
+
+/** Resets a slice's head pointers and records translucent geometry into its fragment buffers. */
+export const aBufferCapturePass: SceneCapturePassDefinition<ABufferCaptureFrame, 'capture'> = {
+  name: 'a-buffer-capture',
+  target: 'capture',
+  pass: {clearColor: false},
+  getPassProps: ({scissorRect}) => ({parameters: {scissorRect}}),
+  prepare(commandEncoder, {sourceHeadPointers, headPointers, shaderModuleProps, options}) {
+    commandEncoder.copyBufferToBuffer({
+      sourceBuffer: sourceHeadPointers,
+      destinationBuffer: headPointers,
+      size: headPointers.byteLength
+    });
+    options.prepareTranslucent({
+      commandEncoder,
+      shaderModuleProps,
+      captureParameters: ABufferRenderer.captureParameters
+    });
+  },
+  draw: (renderPass, {options}) => options.drawTranslucent(renderPass)
+};
 
 /**
  * Captures exact order-independent transparency and resolves each slice through a CompositeShaderPass.
@@ -178,28 +211,18 @@ export class ABufferRenderer {
         const sliceHeight = Math.min(slicePlan.sliceHeight, slicePlan.height - sliceStartY);
         const shaderModuleProps = this.getShaderModuleProps(sliceStartY, opaqueDepthTexture);
 
-        commandEncoder.copyBufferToBuffer({
-          sourceBuffer: this.headPointerInitBuffer!,
-          destinationBuffer: this.headPointers!,
-          size: this.headPointers!.byteLength
-        });
-
-        options.prepareTranslucent({
+        encodeSceneCapturePass(aBufferCapturePass, {
           commandEncoder,
-          shaderModuleProps,
-          captureParameters: ABufferRenderer.captureParameters
+          id: 'a-buffer-capture-' + sliceIndex,
+          framebuffers: {capture: captureFramebuffer},
+          frame: {
+            sourceHeadPointers: this.headPointerInitBuffer!,
+            headPointers: this.headPointers!,
+            shaderModuleProps,
+            scissorRect: [0, sliceStartY, slicePlan.width, sliceHeight],
+            options
+          }
         });
-        const capturePass = this.device.beginRenderPass({
-          id: `a-buffer-capture-${sliceIndex}`,
-          framebuffer: captureFramebuffer,
-          parameters: {scissorRect: [0, sliceStartY, slicePlan.width, sliceHeight]},
-          clearColor: false
-        });
-        try {
-          options.drawTranslucent(capturePass);
-        } finally {
-          capturePass.end();
-        }
 
         resolvedTexture = this.resolveRenderer.renderToTexture({
           sourceTexture: resolvedTexture,

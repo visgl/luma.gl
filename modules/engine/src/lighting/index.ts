@@ -35,6 +35,7 @@ export type {CreatePBRModelOptions, PBRModelShaderHooks} from './pbr-model';
 
 export {
   ShadowMapRenderer,
+  shadowMapCapturePass,
   getDirectionalCascadeViews,
   getPointShadowViews,
   getPracticalCascadeSplits,

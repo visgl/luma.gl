@@ -29,7 +29,11 @@ export type {
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
 export {SelectionOutline, type SelectionOutlineOptions} from './rendering/selection-outline';
-export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
+export {
+  deferredGBufferCapturePass,
+  DeferredSceneRenderer,
+  supportsDeferredScene
+} from './engine/deferred-scene-renderer';
 export type {
   RayTracingImageRegion,
   RayTracingScenePickResult,
@@ -71,6 +75,7 @@ export type {
   ABufferSupport
 } from './oit/a-buffer-renderer';
 export {
+  aBufferCapturePass,
   ABufferRenderer,
   getABufferSlicePlan,
   getABufferSupport
@@ -91,7 +96,7 @@ export type {
   WBOITRendererProps,
   WBOITSupport
 } from './oit/wboit-renderer';
-export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
+export {getWBOITSupport, wboitCapturePasses, WBOITRenderer} from './oit/wboit-renderer';
 export type {
   DirectionalShadowLight,
   PointShadowFace,
