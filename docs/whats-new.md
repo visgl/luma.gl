@@ -10,6 +10,7 @@
 
 - **GPU graphs.** [Graph](./api-reference/graph/README.md) composes compute and render
   operations, manages transient resources, and processes GPU vectors and tables.
+- **Fixed-width Arrow column streams.** [Arrow column streams](./api-reference/arrow/arrow-conversion.mdx#fixed-width-column-streams) preserve transforms, residual-low values, and validity vectors with abortable reads.
 - **Shaders.** [Shaders](./api-reference/shaders/README.md) provides language-specific
   assemblers and reusable WGSL and GLSL shader modules.
 - **Rendering.** [Engine](./api-reference/engine/README.md) brings together models,
