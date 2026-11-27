@@ -3,9 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {Buffer} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
+  createTransientView,
   getViewElementOffset,
   type GPUCommandGraph,
   type GraphDataView,
@@ -97,18 +99,25 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
         inputValidity && graph.importGPUVector(id + '-input-validity', inputValidity);
       const output = graph.importGPUVector(id + '-output', values);
       const validOutput = graph.importGPUVector(id + '-output-validity', valid);
+      const chunks = sortedRanges.map(({batchIndex, first}) => ({
+        first,
+        input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
+        inputValidity: validInput?.data[batchIndex]
+      }));
+      const projectionChunks =
+        lengths.filter(length => length > 0).length > 1
+          ? packGPUJoinProjectionChunks(graph, id, format, chunks)
+          : chunks;
       for (const [leftBatch, rows] of matchedRows.data.entries()) {
         if (!rows.length) continue;
-        for (const [rangeIndex, {batchIndex, first}] of ranges.entries()) {
-          addGPUJoinProjectionPass(graph, `${id}-${leftBatch}-${batchIndex}`, {
+        for (const [chunkIndex, chunk] of projectionChunks.entries()) {
+          addGPUJoinProjectionPass(graph, `${id}-${leftBatch}-${chunkIndex}`, {
+            ...chunk,
             rows,
             matches: matches.data[leftBatch],
-            input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
-            inputValidity: validInput?.data[batchIndex],
             output: output.data[leftBatch],
             outputValidity: validOutput.data[leftBatch],
-            first,
-            initialize: rangeIndex === 0
+            initialize: chunkIndex === 0
           });
         }
       }
@@ -117,6 +126,94 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   });
   const table = createGPUQueryDerivedTable<Left, Left>(context.table, columns, outputs);
   return {table, validity, dictionaries, destroy: () => table.destroy()};
+}
+
+/** A contiguous right-side payload range available to the projection. */
+type GPUJoinProjectionChunk = {
+  /** Source-row ID of the first value in the range. */
+  first: number;
+  /** Packed scalar payload for every row in the range. */
+  input: GraphDataView<GPUAnalyticsScalarFormat>;
+  /** Optional validity words aligned one-to-one with the payload rows. */
+  inputValidity?: GraphDataView<'uint32'>;
+};
+
+/** Copies a dense right row-ID range into per-column graph scratch for reuse by every left batch. */
+function packGPUJoinProjectionChunks(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  id: string,
+  format: GPUAnalyticsScalarFormat,
+  chunks: GPUJoinProjectionChunk[]
+): GPUJoinProjectionChunk[] {
+  const first = chunks[0].first;
+  let length = 0;
+  for (const chunk of chunks) {
+    if (
+      chunk.first !== first + length ||
+      !(chunk.input.buffer.usage & Buffer.COPY_SRC) ||
+      (chunk.inputValidity && !(chunk.inputValidity.buffer.usage & Buffer.COPY_SRC))
+    ) {
+      return chunks;
+    }
+    length += chunk.input.length;
+  }
+  const byteLength = length * Uint32Array.BYTES_PER_ELEMENT;
+  const {maxBufferSize, maxStorageBufferBindingSize} = graph.device.limits;
+  if (chunks.length < 2 || byteLength > Math.min(maxBufferSize, maxStorageBufferBindingSize)) {
+    return chunks;
+  }
+
+  const usage = Buffer.STORAGE | Buffer.COPY_DST;
+  const input = createTransientView(graph, `${id}-packed-values`, format, length, usage);
+  const inputValidity = chunks[0].inputValidity
+    ? createTransientView(graph, `${id}-packed-validity`, 'uint32', length, usage)
+    : undefined;
+  for (const [index, chunk] of chunks.entries()) {
+    const offset = chunk.first - first;
+    const copies = [
+      {
+        source: chunk.input,
+        target: graph.createDataView(input.buffer, {
+          format,
+          length: chunk.input.length,
+          byteOffset: offset * Uint32Array.BYTES_PER_ELEMENT
+        })
+      },
+      ...(inputValidity && chunk.inputValidity
+        ? [
+            {
+              source: chunk.inputValidity,
+              target: graph.createDataView(inputValidity.buffer, {
+                format: 'uint32',
+                length: chunk.input.length,
+                byteOffset: offset * Uint32Array.BYTES_PER_ELEMENT
+              })
+            }
+          ]
+        : [])
+    ];
+    graph.addCopyPass({
+      id: `${id}-pack-${index}`,
+      resources: copies.flatMap(({source, target}) => [
+        {buffer: source, usage: 'copy-source'},
+        {buffer: target, usage: 'copy-destination'}
+      ]),
+      compile: () => ({
+        encode: ({commandEncoder, getBuffer}) => {
+          for (const {source, target} of copies) {
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(source),
+              sourceOffset: source.byteOffset,
+              destinationBuffer: getBuffer(target),
+              destinationOffset: target.byteOffset,
+              size: source.length * Uint32Array.BYTES_PER_ELEMENT
+            });
+          }
+        }
+      })
+    });
+  }
+  return [{first, input, inputValidity}];
 }
 
 /** Writes one matching right chunk, comparing unsigned source IDs without wraparound. */
