@@ -78,11 +78,17 @@ layout(std140) uniform screenSpaceOutlineUniforms {
 } screenSpaceOutline;
 uniform sampler2D depthTexture;
 uniform sampler2D normalTexture;
+vec3 screenSpaceOutline_depthNormal(vec2 uv, vec2 texSize) {
+  float center = texture(depthTexture, uv).r;
+  float right = texture(depthTexture, clamp(uv + vec2(1.0 / texSize.x, 0.0), 0.0, 1.0)).r;
+  float up = texture(depthTexture, clamp(uv + vec2(0.0, 1.0 / texSize.y), 0.0, 1.0)).r;
+  return normalize(vec3((center - right) * texSize.x, (center - up) * texSize.y, 1.0));
+}
 vec4 screenSpaceOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   vec2 texel = screenSpaceOutline.thickness / texSize;
   vec4 sourceColor = texture(sourceTexture, texCoord);
   float centerDepth = texture(depthTexture, texCoord).r;
-  vec3 centerNormal = normalize(mix(vec3(0.0, 0.0, 1.0), texture(normalTexture, texCoord).xyz * 2.0 - 1.0, screenSpaceOutline.useNormalTexture));
+  vec3 centerNormal = normalize(mix(screenSpaceOutline_depthNormal(texCoord, texSize), texture(normalTexture, texCoord).xyz * 2.0 - 1.0, screenSpaceOutline.useNormalTexture));
   float depthEdge = 0.0;
   float normalEdge = 0.0;
   for (int index = 0; index < 8; index++) {
@@ -91,7 +97,7 @@ vec4 screenSpaceOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 
     vec2 sampleUv = clamp(texCoord + offset, 0.0, 1.0);
     float sampleDepth = texture(depthTexture, sampleUv).r;
     depthEdge = max(depthEdge, abs(sampleDepth - centerDepth));
-    vec3 sampleNormal = normalize(mix(vec3(0.0, 0.0, 1.0), texture(normalTexture, sampleUv).xyz * 2.0 - 1.0, screenSpaceOutline.useNormalTexture));
+    vec3 sampleNormal = normalize(mix(screenSpaceOutline_depthNormal(sampleUv, texSize), texture(normalTexture, sampleUv).xyz * 2.0 - 1.0, screenSpaceOutline.useNormalTexture));
     normalEdge = max(normalEdge, 1.0 - max(dot(centerNormal, sampleNormal), 0.0));
   }
   float edge = max(smoothstep(screenSpaceOutline.depthThreshold, screenSpaceOutline.depthThreshold * 2.0, depthEdge), smoothstep(screenSpaceOutline.normalThreshold, screenSpaceOutline.normalThreshold * 2.0, normalEdge));
