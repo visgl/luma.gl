@@ -169,3 +169,6 @@ weight radiance by coverage. Hit queries skip fully transparent layers.
 
 Smooth PBR transport supports RGB dispersion. Explicit mesh sidedness applies
 to ray visibility, and closed transmissive meshes keep both interfaces.
+
+Opt-in rough dielectric continuation uses GGX facet sampling for Fresnel reflection
+and refraction. Light-sampled rough dielectric connections and nested media remain open.

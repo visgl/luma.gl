@@ -1692,13 +1692,34 @@ fn getHistoricalRaySample(
 }
 
 
+const CONTINUOUS_MATERIAL_EVENT = 0u;
+const SMOOTH_DIELECTRIC_EVENT = 1u;
+const ROUGH_DIELECTRIC_EVENT = 2u;
+
 struct RayMaterialSample {
   direction: vec3<f32>,
   weight: vec3<f32>,
-  delta: bool,
+  // Dielectric events are continuation-only and have no competing light proposal.
+  eventKind: u32,
   crossesInterface: bool,
   density: f32,
 };
+
+// Sample the projected GGX normal distribution about the geometric interface.
+fn sampleDielectricFacet(normal: vec3<f32>, alphaSquared: f32, seed: u32) -> vec3<f32> {
+  let reference = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(normal.z) > 0.999);
+  let tangent = normalize(cross(reference, normal));
+  let radial = makeRandom(seed ^ 0x7ac6a925u);
+  let angle = 2.0 * PI * makeRandom(seed ^ 0xe0b6351fu);
+  let cosine = sqrt((1.0 - radial) / (1.0 - radial + alphaSquared * radial));
+  let sine = sqrt(max(1.0 - cosine * cosine, 0.0));
+  return normal * cosine + sine * (tangent * cos(angle) + cross(normal, tangent) * sin(angle));
+}
+
+fn smithDielectricMask(cosine: f32, alphaSquared: f32) -> f32 {
+  return 2.0 * cosine /
+    max(cosine + sqrt(alphaSquared + (1.0 - alphaSquared) * cosine * cosine), 0.000001);
+}
 
 // Sample a cosine/GGX-NDF mixture, then evaluate both lobes with the combined PDF.
 // Specular half-vector density D(N.H)*(N.H) becomes direction density / (4*V.H).
@@ -1708,7 +1729,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let transmission = clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic);
   if (makeRandom(randomSeed ^ 541u) < transmission) {
-    let normal = faceForward(hit.normal, ray.direction, hit.normal);
+    var normal = faceForward(hit.normal, ray.direction, hit.normal);
     var index = max(primitive.material.z, 1.0);
     var spectralWeight = vec3<f32>(1.0);
     let dispersion = primitive.materialFlags.y;
@@ -1724,21 +1745,51 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
       index = max(1.0, index + offset * ((index - 1.0) * dispersion / 40.0));
     }
     let ratio = select(index, 1.0 / index, hit.entering);
-    let cosineIncident = clamp(dot(-ray.direction, normal), 0.0, 1.0);
+    let roughness = clamp(primitive.properties.x, 0.0, 1.0);
+    let useRoughInterface = uniforms.visibility.z != 0u && roughness > 0.04 && index > 1.0;
+    let alpha = roughness * roughness;
+    let alphaSquared = alpha * alpha;
+    var facet = normal;
+    if (useRoughInterface) {
+      normal = getFaceNormal(hit, ray);
+      facet = sampleDielectricFacet(normal, alphaSquared, randomSeed);
+    }
+    let cosineIncident = clamp(dot(-ray.direction, facet), 0.0, 1.0);
+    if (useRoughInterface && cosineIncident <= 0.0) {
+      return RayMaterialSample(ray.direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0);
+    }
     let sineTransmittedSquared = ratio * ratio * (1.0 - cosineIncident * cosineIncident);
-    if (sineTransmittedSquared >= 1.0) {
-      return RayMaterialSample(reflect(ray.direction, normal), spectralWeight, true, false, 0.0);
+    var reflected = sineTransmittedSquared >= 1.0;
+    if (!reflected) {
+      let cosineTransmitted = sqrt(1.0 - sineTransmittedSquared);
+      let perpendicular = (ratio * cosineIncident - cosineTransmitted) /
+        max(ratio * cosineIncident + cosineTransmitted, 0.000001);
+      let parallel = (cosineIncident - ratio * cosineTransmitted) /
+        max(cosineIncident + ratio * cosineTransmitted, 0.000001);
+      let fresnel = 0.5 * (perpendicular * perpendicular + parallel * parallel);
+      reflected = makeRandom(randomSeed ^ 947u) < fresnel;
     }
-    let cosineTransmitted = sqrt(1.0 - sineTransmittedSquared);
-    let perpendicular = (ratio * cosineIncident - cosineTransmitted) /
-      max(ratio * cosineIncident + cosineTransmitted, 0.000001);
-    let parallel = (cosineIncident - ratio * cosineTransmitted) /
-      max(cosineIncident + ratio * cosineTransmitted, 0.000001);
-    let fresnel = 0.5 * (perpendicular * perpendicular + parallel * parallel);
-    if (makeRandom(randomSeed ^ 947u) < fresnel) {
-      return RayMaterialSample(reflect(ray.direction, normal), spectralWeight, true, false, 0.0);
+    var direction: vec3<f32>;
+    var weight = spectralWeight;
+    if (reflected) {
+      direction = reflect(ray.direction, facet);
+    } else {
+      direction = refract(ray.direction, facet, ratio);
+      weight *= baseColor * ratio * ratio;
     }
-    return RayMaterialSample(refract(ray.direction, normal, ratio), spectralWeight * baseColor * ratio * ratio, true, true, 0.0);
+    if (useRoughInterface) {
+      let outgoingCosine = dot(normal, direction);
+      if (select(-outgoingCosine, outgoingCosine, reflected) <= 0.0) {
+        return RayMaterialSample(direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0);
+      }
+      let incomingCosine = dot(normal, -ray.direction);
+      // Fresnel, GGX D, and the direction Jacobian cancel against the proposal.
+      // The remaining ratio uses separable Smith masking.
+      let masking = smithDielectricMask(incomingCosine, alphaSquared) *
+        smithDielectricMask(abs(outgoingCosine), alphaSquared);
+      weight *= masking * cosineIncident / max(incomingCosine * dot(normal, facet), 0.000001);
+    }
+    return RayMaterialSample(direction, weight, select(SMOOTH_DIELECTRIC_EVENT, ROUGH_DIELECTRIC_EVENT, useRoughInterface), !reflected, 0.0);
   }
 
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
@@ -1784,21 +1835,21 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32, spectralChannel: pt
       let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(face, viewDirection)), -dot(face, transmittedDirection));
       let density = (1.0 - transmission) * (1.0 - specularProbability) *
         diffuseTransmission * max(-dot(face, transmittedDirection), 0.0) / PI;
-      return RayMaterialSample(transmittedDirection, tint / (1.0 - specularProbability), false, false, density);
+      return RayMaterialSample(transmittedDirection, tint / (1.0 - specularProbability), CONTINUOUS_MATERIAL_EVENT, false, density);
     }
     direction = normalize(tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
       normal * sqrt(max(1.0 - radialSample, 0.0)));
   }
   let normalLight = dot(normal, direction);
   if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), false, false, 0.0);
+    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0);
   }
   let sampleDensity = getPBRReflectionDensity(direction, normal, viewDirection,
     anisotropic, alphaSquared, specularProbability, diffuseTransmission);
   if (sampleDensity <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), false, false, 0.0);
+    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0);
   }
-  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction, primitive, normal) / sampleDensity, false, false, (1.0 - transmission) * sampleDensity);
+  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction, primitive, normal) / sampleDensity, CONTINUOUS_MATERIAL_EVENT, false, (1.0 - transmission) * sampleDensity);
 }
 
 // Conditional on selecting a continuous material event.
@@ -2191,13 +2242,14 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u), &spectralChannel);
-    dielectricOnly = dielectricOnly && sample.delta;
+    let dielectric = sample.eventKind != CONTINUOUS_MATERIAL_EVENT;
+    dielectricOnly = dielectricOnly && dielectric;
     throughput *= sample.weight;
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
-    let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.delta);
+    let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.eventKind == SMOOTH_DIELECTRIC_EVENT);
     let receiverDistance = hit.distance;
     let position = ray.origin + ray.direction * receiverDistance;
-    let pairEmission = allowEmitterMIS && medium == 0xffffffffu && !sample.delta;
+    let pairEmission = allowEmitterMIS && medium == 0xffffffffu && !dielectric;
     if (sample.crossesInterface) {
       if (hit.entering && medium == 0xffffffffu) {
         let attenuation = primitives[hit.primitiveIndex].attenuation;
@@ -2213,12 +2265,12 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
-      // A camera backdrop remains visible through smooth dielectric paths without
+      // A camera backdrop remains visible through dielectric paths without
       // turning it into diffuse environment illumination.
       if (medium == 0xffffffffu) {
         if (ENVIRONMENT_LIGHTING_ENABLED) {
           let environment = evaluateEnvironmentRadiance(ray.direction, receiverDistance);
-          let weight = select(getMISWeight(sample.density, environment.w), 1.0, sample.delta);
+          let weight = select(getMISWeight(sample.density, environment.w), 1.0, dielectric);
           radiance += throughput * weight * environment.rgb;
         } else if (dielectricOnly) {
           radiance += throughput * uniforms.background.rgb;
@@ -2239,7 +2291,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       radiance += throughput * getUnlitRadiance(hit);
       break;
     }
-    var illumination = evaluateDirectLighting(ray, hit, sample.delta || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u);
+    var illumination = evaluateDirectLighting(ray, hit, dielectric || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u);
     if (pairEmission && any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
       let emitterDensity = getEmitterHitDensity(ray, hit, position);
       let weight = getMISWeight(sample.density, emitterDensity);
