@@ -84,10 +84,7 @@ type WBOITRenderTargets = {
 };
 
 /** Opaque depth, weighted accumulation, and revealage captures in execution order. */
-export const wboitCapturePasses: readonly SceneCapturePassDefinition<
-  WBOITCaptureOptions,
-  'accumulation' | 'revealage'
->[] = [
+export const wboitCapturePasses = [
   {
     name: 'opaque-depth',
     target: 'accumulation',
@@ -110,7 +107,10 @@ export const wboitCapturePasses: readonly SceneCapturePassDefinition<
     prepare: (commandEncoder, options) => prepareWBOITCapture(commandEncoder, options, 'revealage'),
     draw: (renderPass, options) => options.drawTranslucent(renderPass)
   }
-];
+] as const satisfies readonly SceneCapturePassDefinition<
+  WBOITCaptureOptions,
+  'accumulation' | 'revealage'
+>[];
 
 function prepareWBOITCapture(
   commandEncoder: CommandEncoder,

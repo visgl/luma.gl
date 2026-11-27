@@ -44,11 +44,7 @@ type DeferredGBufferCaptureFrame = {
 };
 
 /** Captures deferred scene color, normal/roughness, material, emissive, and depth attachments. */
-export const deferredGBufferCapturePass: SceneCapturePassDefinition<
-  DeferredGBufferCaptureFrame,
-  'gBuffer',
-  number
-> = {
+export const deferredGBufferCapturePass = {
   name: 'deferred-gbuffer',
   target: 'gBuffer',
   pass: {clearDepth: 1},
@@ -61,7 +57,7 @@ export const deferredGBufferCapturePass: SceneCapturePassDefinition<
     ]
   }),
   draw: (renderPass, {drawGeometry}) => drawGeometry(renderPass)
-};
+} as const satisfies SceneCapturePassDefinition<DeferredGBufferCaptureFrame, 'gBuffer', number>;
 
 /** Returns whether a scene can be represented by the shared metallic-roughness G-buffer. */
 export function supportsDeferredScene(options: SceneRenderOptions): boolean {

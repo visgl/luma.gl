@@ -22,7 +22,7 @@ it('prepares geometry before opening the named target and closes the pass if dra
       };
     }
   } as unknown as CommandEncoder;
-  const definition: SceneCapturePassDefinition<{firstRow: number}, 'capture'> = {
+  const definition = {
     name: 'capture',
     target: 'capture',
     pass: {clearColor: false},
@@ -34,7 +34,7 @@ it('prepares geometry before opening the named target and closes the pass if dra
       commands.push('draw');
       throw new Error('draw failed');
     }
-  };
+  } as const satisfies SceneCapturePassDefinition<{firstRow: number}, 'capture'>;
 
   expect(() =>
     encodeSceneCapturePass(definition, {

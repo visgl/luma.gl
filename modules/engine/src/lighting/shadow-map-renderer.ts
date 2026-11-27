@@ -92,7 +92,7 @@ type ShadowCaptureFrame = {
 };
 
 /** Depth capture shared by directional cascades, spot lights, and point-light cube faces. */
-export const shadowMapCapturePass: SceneCapturePassDefinition<ShadowCaptureFrame, 'shadowDepth'> = {
+export const shadowMapCapturePass = {
   name: 'shadow-map',
   target: 'shadowDepth',
   pass: {clearDepth: 1},
@@ -102,7 +102,7 @@ export const shadowMapCapturePass: SceneCapturePassDefinition<ShadowCaptureFrame
   draw: (renderPass, {view, drawShadowCasters}) => {
     drawShadowCasters({...view, renderPass});
   }
-};
+} as const satisfies SceneCapturePassDefinition<ShadowCaptureFrame, 'shadowDepth'>;
 
 /** GPU resource props returned by the renderer for the shadow sampling module. */
 export type ShadowShaderProps = ShadowProps<Texture, Sampler>;

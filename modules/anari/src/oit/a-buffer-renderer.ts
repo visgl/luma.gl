@@ -105,7 +105,7 @@ type ABufferCaptureFrame = {
 };
 
 /** Resets a slice's head pointers and records translucent geometry into its fragment buffers. */
-export const aBufferCapturePass: SceneCapturePassDefinition<ABufferCaptureFrame, 'capture'> = {
+export const aBufferCapturePass = {
   name: 'a-buffer-capture',
   target: 'capture',
   pass: {clearColor: false},
@@ -123,7 +123,7 @@ export const aBufferCapturePass: SceneCapturePassDefinition<ABufferCaptureFrame,
     });
   },
   draw: (renderPass, {options}) => options.drawTranslucent(renderPass)
-};
+} as const satisfies SceneCapturePassDefinition<ABufferCaptureFrame, 'capture'>;
 
 /**
  * Captures exact order-independent transparency and resolves each slice through a CompositeShaderPass.
