@@ -14,7 +14,7 @@ luma.gl began as an ES6 port of **Nicolas Garcia Belmonte's PhiloGL**, developed
 
 ## Package source inventory[​](#package-source-inventory "Direct link to Package source inventory")
 
-Every public package ships a `THIRD-PARTY-NOTICES.md` index, the repository license, and applicable full notices. The links below identify affected source, upstream terms, known revisions, and changes. Unknown historical revisions are marked explicitly rather than inferred from current upstream releases. The website also distributes [standalone example notices](https://luma.gl/next/assets/files/THIRD-PARTY-NOTICES-0b14aa71637f74e8d1a9f218753b80e0.txt).
+Every public package ships a `THIRD-PARTY-NOTICES.md` index, the repository license, and applicable full notices. The links below identify affected source, upstream terms, known revisions, and changes. Unknown historical revisions are marked explicitly rather than inferred from current upstream releases. The website also distributes [standalone example notices](https://luma.gl/next/assets/files/THIRD-PARTY-NOTICES-1561da4c9890571278a60bf0c73ea48a.txt).
 
 | Package                                                                                                            | Contributions and foundations                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
