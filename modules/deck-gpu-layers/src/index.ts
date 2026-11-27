@@ -33,3 +33,12 @@ export {GPUPolygonLayer, type GPUPolygonLayerProps} from './layers/gpu-polygon-l
 export type {GPUVectorLayerPickingInfo} from './layers/gpu-vector-layer-utils';
 
 export {getMeterOffsetPosition} from './projection/meter-offset-position';
+
+export {
+  GPUMaterializedPointLayer,
+  type GPUMaterializedPointLayerProps
+} from './layers/gpu-materialized-point-layer';
+export {
+  GPUH3ProjectedPointSource,
+  type GPUH3ProjectedPointSourceProps
+} from './projection/gpu-h3-projected-point-source';
