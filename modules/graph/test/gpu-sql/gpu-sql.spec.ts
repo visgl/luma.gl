@@ -647,16 +647,19 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
-it('GPUSQL schedules more right projection passes as fixed rows span more right batches', async () => {
+it('GPUSQL reuses packed right projection across fixed-row batch layouts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
   const rowCount = 32;
   const leftBatchCount = 8;
   const identifiers = Uint32Array.from({length: rowCount}, (_, row) => row);
-  const scores = Float32Array.from(identifiers, identifier => identifier * 0.5);
+  const scores = Array.from(identifiers, identifier => (identifier % 5 ? identifier * 0.5 : null));
   const leftRows = arrow.tableFromArrays({identifier: identifiers});
-  const rightRows = arrow.tableFromArrays({identifier: identifiers, score: scores});
+  const rightRows = arrow.tableFromArrays({
+    identifier: identifiers,
+    score: arrow.vectorFromArray(scores, new arrow.Float32())
+  });
   const batchRows = (table: arrow.Table, batchCount: number) => {
     const rowsPerBatch = table.numRows / batchCount;
     return new arrow.Table(
@@ -673,8 +676,8 @@ it('GPUSQL schedules more right projection passes as fixed rows span more right 
   try {
     for (const [rightBatchCount, expectedPasses] of [
       [1, 8],
-      [2, 16],
-      [8, 64]
+      [2, 8],
+      [8, 8]
     ] as const) {
       const right = new GPUDataFrame({
         ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(rightRows, rightBatchCount)),
@@ -682,6 +685,7 @@ it('GPUSQL schedules more right projection passes as fixed rows span more right 
       });
       const graph = new GPUCommandGraph(device);
       const addComputePass = vi.spyOn(graph, 'addComputePass');
+      const addCopyPass = vi.spyOn(graph, 'addCopyPass');
       try {
         expect(left.numRows).toBe(rowCount);
         expect(right.numRows).toBe(rowCount);
@@ -697,6 +701,10 @@ it('GPUSQL schedules more right projection passes as fixed rows span more right 
             pass.id.includes('-join-projection-')
           );
           expect(projectionPasses).toHaveLength(expectedPasses);
+          const packingPasses = addCopyPass.mock.calls.filter(([pass]) =>
+            pass.id.includes('-join-projection-')
+          );
+          expect(packingPasses).toHaveLength(rightBatchCount > 1 ? rightBatchCount : 0);
           const encoder = device.createCommandEncoder();
           result.encode(encoder);
           device.submit(encoder.finish());
@@ -713,6 +721,7 @@ it('GPUSQL schedules more right projection passes as fixed rows span more right 
         }
       } finally {
         addComputePass.mockRestore();
+        addCopyPass.mockRestore();
         right.destroy();
       }
     }
