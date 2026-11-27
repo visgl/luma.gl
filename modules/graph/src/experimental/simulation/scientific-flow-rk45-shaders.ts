@@ -49,6 +49,35 @@ fn fraction(elapsed: f32) -> f32 {
   return mix(parameters.temporal.x, parameters.temporal.y,
     clamp(elapsed / max(parameters.temporal.z, 1e-30), 0.0, 1.0));
 }
+// Validate every interpolation corner in the rectangle enclosing the accepted
+// chord. Conservative at diagonal corners; not an exact curved-path collision.
+fn sweptMask(field: texture_2d<f32>, start: vec2<f32>, end: vec2<f32>) -> f32 {
+  let dimensions = vec2<i32>(textureDimensions(field));
+  let gridScale = vec2<f32>(dimensions - vec2<i32>(1));
+  let low = vec2<i32>(floor(min(start, end) * gridScale));
+  let high = vec2<i32>(floor(max(start, end) * gridScale)) + vec2<i32>(1);
+  // Reject unexpected footprints rather than silently truncating the check.
+  if (any(high - low > vec2<i32>(4))) {return 0.0;}
+  for (var row = low.y; row <= high.y; row++) {
+    for (var column = low.x; column <= high.x; column++) {
+      var sampleColumn = column;
+      if ((parameters.counters.y & 2u) != 0u) {
+        let period = dimensions.x - 1;
+        sampleColumn = ((column % period) + period) % period;
+      }
+      let coordinate = clamp(vec2<i32>(sampleColumn, row), vec2<i32>(0), dimensions - vec2<i32>(1));
+      if (textureLoad(field, coordinate, 0).z < 0.5) {return 0.0;}
+    }
+  }
+  return 1.0;
+}
+fn segmentValidity(start: vec2<f32>, end: vec2<f32>, startFraction: f32, endFraction: f32) -> f32 {
+  if ((parameters.counters.y & 4u) == 0u) {return 1.0;}
+  var valid = 1.0;
+  if (startFraction < 1.0) {valid = min(valid, sweptMask(velocityField, start, end));}
+  if (endFraction > 0.0) {valid = min(valid, sweptMask(nextVelocityField, start, end));}
+  return valid;
+}
 struct Trial {displacement: vec2<f32>, error: vec2<f32>, validity: f32};
 fn trial(position: vec2<f32>, elapsed: f32, deltaTime: f32) -> Trial {
   let first = velocity(position, fraction(elapsed));
@@ -60,8 +89,9 @@ fn trial(position: vec2<f32>, elapsed: f32, deltaTime: f32) -> Trial {
   let lower = deltaTime * (25.0/216.0 * first.xy + 1408.0/2565.0 * third.xy + 2197.0/4104.0 * fourth.xy - fifth.xy / 5.0);
   let higher = deltaTime * (16.0/135.0 * first.xy + 6656.0/12825.0 * third.xy + 28561.0/56430.0 * fourth.xy - 9.0/50.0 * fifth.xy + 2.0/55.0 * sixth.xy);
   let last = velocity(position + higher, fraction(elapsed + deltaTime));
+  let sweptValidity = segmentValidity(position, position + higher, fraction(elapsed), fraction(elapsed + deltaTime));
   return Trial(higher, higher - lower,
-    min(min(min(first.z, second.z), min(third.z, fourth.z)), min(min(fifth.z, sixth.z), last.z)));
+    min(sweptValidity, min(min(min(first.z, second.z), min(third.z, fourth.z)), min(min(fifth.z, sixth.z), last.z))));
 }
 fn physicalError(error: vec2<f32>, position: vec2<f32>) -> f32 {
   var scale = parameters.domain.zw;

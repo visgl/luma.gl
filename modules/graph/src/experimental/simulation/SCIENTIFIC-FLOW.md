@@ -30,8 +30,9 @@ Choose Cartesian bounds explicitly for analytic or local fields. Geographic
 bounds are derived from sample centers and use a spherical local metres-to-degree
 conversion, limited to ±85° latitude. This is a regular 2D collocated-grid tracer,
 not a fluid solver: it does not solve pressure or reconstruct staggered grids.
-3D transport, polar transport, staggered grids, and adaptive error-controlled
-integration remain future work. `step()` accepts 0–1/30 second. `advance()` splits
+3D transport, polar transport and staggered grids remain future work. Adaptive
+RKF45 is available through `ScientificFlowTracer`, with explicit stopping reasons
+and stable particle identities; see the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md). `step()` accepts 0–1/30 second. `advance()` splits
 an interval into substeps capped at 1/30 second and half a grid cell of travel per axis,
 using a conservative maximum component velocity across both snapshots. This is a
 travel bound, not an error estimate or a guarantee against crossing a thin mask.
@@ -81,7 +82,9 @@ substeps with one uniform write; `advance()` calculates and submits such a batch
 No intermediate particle state is read back. Geographic inputs use a conservative
 longitude conversion at the domain's largest absolute latitude for the travel
 bound. Boundary and missing-data behavior remains deterministic respawning;
-scientific stop/deactivate/wrap policies are a separate extension.
+the adaptive tracer stops instead of respawning. Both APIs support optional
+`periodicLongitude` with matching first/last grid columns. Reflect/slip boundaries
+remain future work.
 
 `record(encoder, deltaTime)` records the compiled graph into a caller-owned
 command encoder. `encode(computePass, deltaTime)` is the lower-level escape hatch
@@ -95,9 +98,9 @@ Run the **Vector Observatory** with:
 yarn workspace luma.gl-examples-vector-observatory start
 ```
 
-Its three analytic benchmark fields (unsteady double gyre, vortex pair, and meandering jet)
+Alongside the default synthetic weather globe, its three analytic benchmark fields (unsteady double gyre, vortex pair, and meandering jet)
 are sampled onto a 256² scientific grid. It renders up to 1,048,576 particles with
-persistent HDR trails, speed coloring, selectable RK2/RK4 integration, exposure,
+persistent HDR trails, speed coloring, selectable RK2/RK4/RK45 integration, exposure,
 time scale, a simulation clock, pause, and deterministic reseeding. The double
 gyre has a ten-second cycle and quarter-second snapshots. Playback follows elapsed
 wall time, with gaps capped at 0.1 second to avoid catching up background-tab time. Fields are synthetic benchmarks,
@@ -111,10 +114,25 @@ An unsteady double gyre on a 129² grid with 0.125-second snapshots is compared
 against an independent double-precision CPU trajectory using continuous analytic
 velocities and 2000 RK4 steps: normalized position error must stay below 1e-4 after
 one second. This qualifies synthetic trajectories; it is not validation against
-observational ocean data. Real-data fixtures and GPU timestamp benchmarks remain
-follow-up work. Higher integrator order alone cannot remove spatial or temporal
+observational ocean data. Real-data qualification fixtures remain follow-up work. The opt-in
+`scientific-flow-benchmark.spec.ts` measures RK4/RK45 accuracy and GPU compute
+timestamps; it excludes counter readback and rendering. Higher integrator order alone cannot remove spatial or temporal
 interpolation error. Run with:
 
 ```bash
 yarn test-headless --no-coverage modules/graph/test/experimental/simulation/scientific-flow
 ```
+
+## Qualification and retained trajectories
+
+The [dedicated advection roadmap](../../../../../dev-docs/roadmaps/advection-roadmap.md)
+tracks scientific qualification separately from visual features. Manufactured
+shear and time-quadratic tests now isolate spatial/temporal interpolation error
+from RK45 integration error. `conservativeMask: true` opts the adaptive tracer
+into swept interpolation-footprint checks; this can stop early at diagonal mask
+corners and does not implement coastline reflection or sliding.
+
+`FlowTrajectoryHistory` retains GPU particle snapshots in a fixed-capacity ring.
+It records copies into a caller-owned encoder without submission or readback.
+See the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md)
+for synchronization, memory costs and completed-horizon capture.

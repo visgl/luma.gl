@@ -40,6 +40,8 @@ export {
   ScientificFlowCompute,
   type ScientificFlowGraphProps,
   ScientificFlowTracer,
+  FlowTrajectoryHistory,
+  type FlowTrajectoryFrame,
   ScientificParticleStatus,
   type ScientificFlowTracerProps,
   type ScientificFlowTraceResult,

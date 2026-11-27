@@ -5,7 +5,7 @@ repository root with `yarn workspace luma.gl-examples-vector-observatory start`.
 Requires a WebGPU browser. All particle integration, streak rendering and HDR
 trail persistence run on the GPU; the frame loop reads no particle positions.
 
-Select an evolving double gyre, a counter-rotating vortex pair, or a meandering jet. These are
+Start with the synthetic weather globe, or select an evolving double gyre, a counter-rotating vortex pair, or a meandering jet. These are
 analytic benchmarks sampled onto a 256 × 256 collocated grid, not observed data.
 The scientific adapter accepts the same structural normalized input used by
 loaders.gl. Integration uses RK4 by default and automatic substeps bounded by half-cell
@@ -15,7 +15,7 @@ with linear interpolation between quarter-second snapshots at every RK stage.
 Only two snapshots reside on the GPU. The clock displays simulated seconds.
 FPS is frame-loop timing, not a GPU timestamp benchmark.
 
-Controls support 65,536 through 1,048,576 particles, RK2/RK4, pause/resume, reseed,
+Controls support 65,536 through 1,048,576 particles, RK2/RK4/RK45, pause/resume, reseed,
 speed and exposure. History is cleared when the field, integrator, density or
 viewport changes. Pause preserves the accumulated image. Resource cleanup runs
 when the page is left.
@@ -69,3 +69,6 @@ states preserve trajectories across the antimeridian in all three integrators.
 Trail segments crossing the atlas boundary are drawn on both edges, and the globe
 uses wrapped bilinear sampling to avoid a visible texture seam. Earth imagery reuses
 `examples/showcase/globe/earth.jpg`; no remote data service is required.
+
+Scientific capabilities and remaining qualification work are tracked in the
+[advection roadmap](../../../dev-docs/roadmaps/advection-roadmap.md).

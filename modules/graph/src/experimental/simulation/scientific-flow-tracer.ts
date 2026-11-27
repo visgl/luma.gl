@@ -33,6 +33,8 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   timeRange?: readonly [number, number];
   /** Absolute local position-error tolerance: bounds units, or metres for lnglat. */
   tolerance: number;
+  /** Reject swept interpolation footprints touching missing samples, conservatively near corners. */
+  conservativeMask?: boolean;
   minimumTimeStep?: number;
   maximumTimeStep?: number;
   initialTimeStep?: number;
@@ -90,6 +92,8 @@ export class ScientificFlowTracer {
   private readonly kernel: Kernel;
   private readonly queries?: QuerySet;
   private readonly tolerance: number;
+  /** Whether to validate the swept interpolation footprint. */
+  private readonly conservativeMask: boolean;
   private readonly minimumTimeStep: number;
   private readonly maximumTimeStep: number;
   private readonly lifetime: number;
@@ -112,6 +116,7 @@ export class ScientificFlowTracer {
     };
     this.particleCount = props.positions.length / 2;
     this.tolerance = props.tolerance;
+    this.conservativeMask = props.conservativeMask ?? false;
     this.minimumTimeStep = props.minimumTimeStep ?? 1e-4;
     this.maximumTimeStep = props.maximumTimeStep ?? 1;
     this.lifetime = props.lifetime ?? 1e30;
@@ -416,7 +421,8 @@ export class ScientificFlowTracer {
       [
         this.particleCount,
         (this.currentField.field.coordinates === 'lnglat' ? 1 : 0) |
-          (this.currentField.periodicLongitude ? 2 : 0),
+          (this.currentField.periodicLongitude ? 2 : 0) |
+          (this.conservativeMask ? 4 : 0),
         this.maximumAttempts,
         first ? 1 : 0
       ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));
