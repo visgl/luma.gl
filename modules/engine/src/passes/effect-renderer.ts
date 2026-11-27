@@ -12,7 +12,7 @@ import {ShaderPassRenderer, type ShaderPassRendererProps} from './shader-pass-re
  * destination. Uniform values here provide defaults for this draw.
  */
 export type EffectPass<TargetName extends string = string> =
-	CompositeShaderPass<TargetName>['steps'][number] & {kind: 'fullscreen'};
+  CompositeShaderPass<TargetName>['steps'][number] & {kind: 'fullscreen'};
 
 /**
  * A reusable, device-independent description of a fullscreen effect.
@@ -28,58 +28,58 @@ export type EffectPass<TargetName extends string = string> =
  * @typeParam TargetName - Names of textures owned by this effect.
  */
 export type EffectDefinition<TargetName extends string = string> = {
-	/** Label used to identify the effect and its GPU resources in diagnostics. */
-	name: string;
+  /** Label used to identify the effect and its GPU resources in diagnostics. */
+  name: string;
 
-	/**
-	 * Textures owned by each occurrence of this effect. A target's scale is relative
-	 * to the renderer size. History targets retain their prior frame value and may
-	 * declare how to initialize it. Use an empty object for an effect that only
-	 * writes to the shared color chain.
-	 */
-	resources: NonNullable<CompositeShaderPass<TargetName>['renderTargets']>;
+  /**
+   * Textures owned by each occurrence of this effect. A target's scale is relative
+   * to the renderer size. History targets retain their prior frame value and may
+   * declare how to initialize it. Use an empty object for an effect that only
+   * writes to the shared color chain.
+   */
+  resources: NonNullable<CompositeShaderPass<TargetName>['renderTargets']>;
 
-	/**
-	 * Optional backend alternatives for a stage before the shared passes. Both
-	 * implementations must produce the named textures the shared passes consume.
-	 * The renderer selects the implementation once when constructed.
-	 */
-	initialPasses?: {
-		/**
-		 * A fused WebGPU dispatch. Declare each storage output by binding name, and
-		 * mark the corresponding resource with `storage: true`. The first listed
-		 * output determines dispatch dimensions. The renderer checks device limits
-		 * and storage-format support and chooses the fragment sequence if needed.
-		 */
-		compute?: NonNullable<CompositeShaderPass<TargetName>['initialPasses']>['compute'];
+  /**
+   * Optional backend alternatives for a stage before the shared passes. Both
+   * implementations must produce the named textures the shared passes consume.
+   * The renderer selects the implementation once when constructed.
+   */
+  initialPasses?: {
+    /**
+     * A fused WebGPU dispatch. Declare each storage output by binding name, and
+     * mark the corresponding resource with `storage: true`. The first listed
+     * output determines dispatch dimensions. The renderer checks device limits
+     * and storage-format support and chooses the fragment sequence if needed.
+     */
+    compute?: NonNullable<CompositeShaderPass<TargetName>['initialPasses']>['compute'];
 
-		/** Portable fullscreen draws in execution order. */
-		fragment: EffectPass<TargetName>[];
-	};
+    /** Portable fullscreen draws in execution order. */
+    fragment: EffectPass<TargetName>[];
+  };
 
-	/**
-	 * Shared fullscreen draws in execution order. Use `previous` to read or
-	 * update the color chain, `original` to read the stack's input image, and a
-	 * local resource name to route a texture between draws within the effect.
-	 */
-	passes: EffectPass<TargetName>[];
+  /**
+   * Shared fullscreen draws in execution order. Use `previous` to read or
+   * update the color chain, `original` to read the stack's input image, and a
+   * local resource name to route a texture between draws within the effect.
+   */
+  passes: EffectPass<TargetName>[];
 };
 
 /** @internal Lowers an effect definition to the fullscreen renderer's execution format. */
 export function resolveEffect<TargetName extends string>(
-	effect: EffectDefinition<TargetName>
+  effect: EffectDefinition<TargetName>
 ): CompositeShaderPass<TargetName> {
-	return {
-		name: effect.name,
-		renderTargets: effect.resources,
-		initialPasses: effect.initialPasses,
-		steps: effect.passes
-	};
+  return {
+    name: effect.name,
+    renderTargets: effect.resources,
+    initialPasses: effect.initialPasses,
+    steps: effect.passes
+  };
 }
 
 export type EffectRendererProps = Omit<ShaderPassRendererProps, 'shaderPasses'> & {
-	/** Effects run in array order, with each color output feeding the next effect. */
-	effects: readonly EffectDefinition[];
+  /** Effects run in array order, with each color output feeding the next effect. */
+  effects: readonly EffectDefinition[];
 };
 
 /**
@@ -91,7 +91,7 @@ export type EffectRendererProps = Omit<ShaderPassRendererProps, 'shaderPasses'> 
  * chain is no longer needed.
  */
 export class EffectRenderer extends ShaderPassRenderer {
-	constructor(device: Device, {effects, ...props}: EffectRendererProps) {
-		super(device, {...props, shaderPasses: effects.map(effect => resolveEffect(effect))});
-	}
+  constructor(device: Device, {effects, ...props}: EffectRendererProps) {
+    super(device, {...props, shaderPasses: effects.map(effect => resolveEffect(effect))});
+  }
 }
