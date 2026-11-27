@@ -43,10 +43,8 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   maxScratchBytes: number
 ) {
   const {graph} = context;
-  validateGPUAnalyticsSource(
-    right,
-    rightColumns.map(column => column.source)
-  );
+  const sources = [...new Set(rightColumns.map(column => column.source))];
+  validateGPUAnalyticsSource(right, sources);
   const lengths = context.table.batches.map(batch => batch.numRows);
   const validity: Partial<Record<keyof Left & string, GPUVector<'uint32'>>> = {};
   const dictionaries: GPUDataFrameDictionaries<Left> = {};
@@ -76,54 +74,63 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
 
   const reusePackedChunks = lengths.filter(length => length > 0).length > 1;
   let remainingScratchBytes = maxScratchBytes;
-  const outputs = rightColumns.map(({name, source}, columnIndex) => {
-    const field = right.schema.fields.find(candidate => candidate.name === source);
-    const format = field?.format;
-    if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
-      throw new Error(
-        `GPUDataFrame right join projection requires a 32-bit scalar column: ${source}`
-      );
-    }
-    const id = `${context.queryId}-join-projection-${columnIndex}`;
-    const values = createGPUQueryOutputVector(graph.device, id, lengths, format, false, true);
-    ownedVectors.push(values);
-    const valid = createGPUQueryOutputVector(graph.device, id + '-validity', lengths, 'uint32');
-    ownedVectors.push(valid);
-    const nameKey = name as keyof Left & string;
-    const sourceKey = source as keyof Right & string;
-    validity[nameKey] = valid;
-    delete dictionaries[nameKey];
-    const dictionary = right.dictionaries[sourceKey];
-    if (dictionary) dictionaries[nameKey] = dictionary;
-    if (ranges.length && lengths.some(length => length > 0)) {
-      const input = graph.importGPUVector(id + '-input', right.table.gpuVectors[source]);
-      const inputValidity = right.validity[sourceKey];
-      const validInput =
-        inputValidity && graph.importGPUVector(id + '-input-validity', inputValidity);
-      const output = graph.importGPUVector(id + '-output', values);
-      const validOutput = graph.importGPUVector(id + '-output-validity', valid);
-      const chunks = sortedRanges.map(({batchIndex, first}) => ({
-        first,
-        input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
-        inputValidity: validInput?.data[batchIndex]
-      }));
-      const projection = reusePackedChunks
-        ? stageGPUJoinProjectionRanges(graph, id, format, chunks, remainingScratchBytes)
-        : {chunks, scratchBytes: 0};
-      remainingScratchBytes -= projection.scratchBytes;
-      for (const [leftBatch, rows] of matchedRows.data.entries()) {
-        if (!rows.length) continue;
-        for (const [chunkIndex, chunk] of projection.chunks.entries()) {
-          addGPUJoinProjectionPass(graph, `${id}-${leftBatch}-${chunkIndex}`, {
-            ...chunk,
-            rows,
-            matches: matches.data[leftBatch],
-            output: output.data[leftBatch],
-            outputValidity: validOutput.data[leftBatch],
-            initialize: chunkIndex === 0
-          });
+  const projectedSources = new Map(
+    sources.map((source, columnIndex) => {
+      const field = right.schema.fields.find(candidate => candidate.name === source);
+      const format = field?.format;
+      if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+        throw new Error(
+          `GPUDataFrame right join projection requires a 32-bit scalar column: ${source}`
+        );
+      }
+      const id = `${context.queryId}-join-projection-${columnIndex}`;
+      const values = createGPUQueryOutputVector(graph.device, id, lengths, format, false, true);
+      ownedVectors.push(values);
+      const valid = createGPUQueryOutputVector(graph.device, id + '-validity', lengths, 'uint32');
+      ownedVectors.push(valid);
+      const sourceKey = source as keyof Right & string;
+      if (ranges.length && lengths.some(length => length > 0)) {
+        const input = graph.importGPUVector(id + '-input', right.table.gpuVectors[source]);
+        const inputValidity = right.validity[sourceKey];
+        const validInput =
+          inputValidity && graph.importGPUVector(id + '-input-validity', inputValidity);
+        const output = graph.importGPUVector(id + '-output', values);
+        const validOutput = graph.importGPUVector(id + '-output-validity', valid);
+        const chunks = sortedRanges.map(({batchIndex, first}) => ({
+          first,
+          input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
+          inputValidity: validInput?.data[batchIndex]
+        }));
+        const projection = reusePackedChunks
+          ? stageGPUJoinProjectionRanges(graph, id, format, chunks, remainingScratchBytes)
+          : {chunks, scratchBytes: 0};
+        remainingScratchBytes -= projection.scratchBytes;
+        for (const [leftBatch, rows] of matchedRows.data.entries()) {
+          if (!rows.length) continue;
+          for (const [chunkIndex, chunk] of projection.chunks.entries()) {
+            addGPUJoinProjectionPass(graph, `${id}-${leftBatch}-${chunkIndex}`, {
+              ...chunk,
+              rows,
+              matches: matches.data[leftBatch],
+              output: output.data[leftBatch],
+              outputValidity: validOutput.data[leftBatch],
+              initialize: chunkIndex === 0
+            });
+          }
         }
       }
+      return [source, {format, values, valid}] as const;
+    })
+  );
+  const outputs = rightColumns.map(({name, source}) => {
+    const {format, values, valid} = projectedSources.get(source)!;
+    const nameKey = name as keyof Left & string;
+    validity[nameKey] = valid;
+    const dictionary = right.dictionaries[source as keyof Right & string];
+    if (dictionary) {
+      dictionaries[nameKey] = dictionary;
+    } else {
+      delete dictionaries[nameKey];
     }
     return {plan: {name, format, nullable: true}, values};
   });

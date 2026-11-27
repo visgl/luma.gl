@@ -647,7 +647,7 @@ it('GPUSQL projects nullable right payloads across independent Arrow batches', a
   }
 });
 
-it('GPUSQL stages partial right projection ranges across fixed-row batch layouts', async () => {
+it('GPUSQL shares right projection storage and work across aliases and batch layouts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
@@ -711,7 +711,7 @@ it('GPUSQL stages partial right projection ranges across fixed-row batch layouts
         }
         const result = new GPUSQLContext({trips: left, accounts: right})
           .query(
-            'SELECT a.score, a.identifier AS account FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier',
+            'SELECT a.score, a.identifier AS account, a.score AS rating, a.identifier AS account_copy FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier',
             {maxJoinProjectionScratchBytes: budget}
           )
           .compile(graph);
@@ -741,6 +741,22 @@ it('GPUSQL stages partial right projection ranges across fixed-row batch layouts
           expect(output.batches).toHaveLength(leftBatchCount);
           expect(Array.from(output.getChild('score') ?? [])).toEqual(scores);
           expect(Array.from(output.getChild('account') ?? [])).toEqual(Array.from(identifiers));
+          expect(output.schema.fields.map(field => field.name)).toEqual([
+            'score',
+            'account',
+            'rating',
+            'account_copy'
+          ]);
+          expect(Array.from(output.getChild('rating') ?? [])).toEqual(scores);
+          expect(Array.from(output.getChild('account_copy') ?? [])).toEqual(
+            Array.from(identifiers)
+          );
+          expect(result.validity.rating).toBe(result.validity.score);
+          expect(result.validity.account_copy).toBe(result.validity.account);
+          for (const batch of result.table.batches) {
+            expect(batch.gpuData.rating.buffer).toBe(batch.gpuData.score.buffer);
+            expect(batch.gpuData.account_copy.buffer).toBe(batch.gpuData.account.buffer);
+          }
         } finally {
           result.destroy();
         }
