@@ -58,9 +58,13 @@ receiverModel.shaderInputs.setProps({shadow: shadowProps});
 // Record receiver draws after the shadow passes, then submit the device normally.
 ```
 
+## Sampling directional lights[​](#sampling-directional-lights "Direct link to Sampling directional lights")
+
+Call `shadow_getDirectionalLightFactor(lightIndex, worldPosition, worldNormal, viewDepth)` in GLSL or WGSL to sample the visibility of a directional light by its input index. Apply that factor to the corresponding direct-light contribution. The existing `shadow_getDirectionalFactor(worldPosition, worldNormal, viewDepth)` samples the first light.
+
 ## Lights and cameras[​](#lights-and-cameras "Direct link to Lights and cameras")
 
-`ShadowMapRendererProps` configures light capacities, map sizes, and the `low`, `balanced`, or `cinematic` quality preset. Defaults reserve one light of each type; spot and point capacities can increase to four. The renderer supports one directional light with up to four cascades. Each spot light has one view; each point light has six cube-face views. Active light counts must fit the configured capacities. `SHADOW_QUALITY_SETTINGS` exposes the frozen preset budgets.
+`ShadowMapRendererProps` configures light capacities, map sizes, and the `low`, `balanced`, or `cinematic` quality preset. Defaults reserve one light of each type. Each capacity can increase to four. Each directional light has up to four cascades. Each spot light has one view, and each point light has six cube-face views. Active light counts must fit the configured capacities. `SHADOW_QUALITY_SETTINGS` exposes the frozen preset budgets.
 
 `ShadowCamera` includes view/projection matrices and near/far distances. Its optional `clipDepth` is `negative-one-to-one` by default, matching math.gl projections; supply `zero-to-one` for a WebGPU projection. Computed light cameras and returned receiver matrices use \[0, 1] depth on both backends. A WebGL caster must convert clip Z to \[-1, 1] before writing `gl_Position`. Directional light `direction` points from the surface toward the light; spot light `direction` points along the light cone. Angles are in radians.
 

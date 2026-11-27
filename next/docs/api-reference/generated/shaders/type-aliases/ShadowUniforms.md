@@ -2,7 +2,7 @@
 
 > **ShadowUniforms** = `object`
 
-Defined in: [modules/lighting/shadow/shadow.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L50)
+Defined in: [modules/lighting/shadow/shadow.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L51)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:50](https://github.com/visgl/luma
 
 > **blockerSampleCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L55)
+Defined in: [modules/lighting/shadow/shadow.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L56)
 
 ***
 
@@ -18,15 +18,15 @@ Defined in: [modules/lighting/shadow/shadow.ts:55](https://github.com/visgl/luma
 
 > **cascadeCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L54)
+Defined in: [modules/lighting/shadow/shadow.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L55)
 
 ***
 
-### cascadeSplits[​](#cascadesplits "Direct link to cascadeSplits")
+### directionalCascadeSplits[​](#directionalcascadesplits "Direct link to directionalCascadeSplits")
 
-> **cascadeSplits**: `Readonly`<`NumberArray4`>
+> **directionalCascadeSplits**: readonly `Readonly`<`NumberArray4`>\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L57)
+Defined in: [modules/lighting/shadow/shadow.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L58)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:57](https://github.com/visgl/luma
 
 > **directionalLightCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L51)
+Defined in: [modules/lighting/shadow/shadow.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L52)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:51](https://github.com/visgl/luma
 
 > **directionalLights**: readonly `DirectionalShadowUniform`\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L61)
+Defined in: [modules/lighting/shadow/shadow.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L62)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:61](https://github.com/visgl/luma
 
 > **directionalViewProjectionMatrices**: readonly `Readonly`<`NumberArray16`>\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L58)
+Defined in: [modules/lighting/shadow/shadow.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L59)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:58](https://github.com/visgl/luma
 
 > **filterSampleCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L56)
+Defined in: [modules/lighting/shadow/shadow.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L57)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:56](https://github.com/visgl/luma
 
 > **pointLightCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L53)
+Defined in: [modules/lighting/shadow/shadow.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L54)
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:53](https://github.com/visgl/luma
 
 > **pointLights**: readonly `PointShadowUniform`\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L63)
+Defined in: [modules/lighting/shadow/shadow.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L64)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:63](https://github.com/visgl/luma
 
 > **pointViewProjectionMatrices**: readonly `Readonly`<`NumberArray16`>\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L60)
+Defined in: [modules/lighting/shadow/shadow.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L61)
 
 ***
 
@@ -90,7 +90,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:60](https://github.com/visgl/luma
 
 > **spotLightCount**: `number`
 
-Defined in: [modules/lighting/shadow/shadow.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L52)
+Defined in: [modules/lighting/shadow/shadow.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L53)
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: [modules/lighting/shadow/shadow.ts:52](https://github.com/visgl/luma
 
 > **spotLights**: readonly `SpotShadowUniform`\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L62)
+Defined in: [modules/lighting/shadow/shadow.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L63)
 
 ***
 
@@ -106,4 +106,4 @@ Defined in: [modules/lighting/shadow/shadow.ts:62](https://github.com/visgl/luma
 
 > **spotViewProjectionMatrices**: readonly `Readonly`<`NumberArray16`>\[]
 
-Defined in: [modules/lighting/shadow/shadow.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L59)
+Defined in: [modules/lighting/shadow/shadow.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow.ts#L60)

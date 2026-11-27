@@ -86,7 +86,7 @@ The module uses bind group 2 and binds `depth32float` `texture_depth_2d_array` r
 | `balanced`  | 4        | 1536        | 1024 | 512        | 16 / 24        | 0.75 / 24           |
 | `cinematic` | 4        | 2048        | 2048 | 1024       | 24 / 48        | 1.0 / 40            |
 
-Capacities default to one directional, one spot, and one point light. Configurable hard limits are one directional, four spot, and four point lights. `setProps()` rebuilds resources only when the effective quality, capacity, cascade count, or map size changes.
+Capacities default to one directional, one spot, and one point light. Configurable hard limits are four directional, four spot, and four point lights. `setProps()` rebuilds resources only when the effective quality, capacity, cascade count, or map size changes.
 
 ## Contact refinement[​](#contact-refinement "Direct link to Contact refinement")
 

@@ -1,4 +1,4 @@
-import{C as e,D as t,E as n,M as r,N as i,O as a,S as o,T as s,_ as c,g as l,h as u,j as d,k as f,t as p,w as m,y as h}from"./robot-arm-scene-C0mM8zbf.js";import{z as g}from"./wgsl-interface-scan-BeLN4x0P.js";function _(e,t=!1,n=!1){return`
+import{C as e,D as t,E as n,M as r,N as i,O as a,S as o,T as s,_ as c,g as l,h as u,j as d,k as f,t as p,w as m,y as h}from"./robot-arm-scene-XDPNaKiM.js";import{z as g}from"./wgsl-interface-scan-BeLN4x0P.js";function _(e,t=!1,n=!1){return`
 const N = ${e}u;
 struct Link {
   parentAnchor:vec4f, childAnchor:vec4f, axisMass:vec4f, inertia:vec4f, rest:vec4f
