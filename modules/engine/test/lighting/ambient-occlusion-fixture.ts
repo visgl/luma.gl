@@ -1,16 +1,29 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import {type Device, Texture, type TextureFormatDepthStencil} from '@luma.gl/core';
 import {ClipSpace} from '@luma.gl/engine';
-import {PBRSurfacePass} from '@luma.gl/engine/lighting';
 import {Matrix4} from '@math.gl/core/matrix';
 
 /** Two parallel planes with a foreground rectangle and a flat, unoccluded border. */
-export function createOcclusionFixture(device: Device, width: number, height: number) {
-  const surface = new PBRSurfacePass(device, {width, height});
+export function createOcclusionFixture(
+  device: Device,
+  width: number,
+  height: number,
+  depthFormat: TextureFormatDepthStencil = 'depth32float'
+) {
+  const usage = Texture.RENDER_ATTACHMENT | Texture.SAMPLE;
+  const sampler = {minFilter: 'nearest', magFilter: 'nearest'} as const;
+  const depthTexture = device.createTexture({width, height, format: depthFormat, usage, sampler});
+  const normalTexture = device.createTexture({width, height, format: 'rgba8unorm', usage, sampler});
+  const framebuffer = device.createFramebuffer({
+    width,
+    height,
+    colorAttachments: [normalTexture],
+    depthStencilAttachment: depthTexture
+  });
   const model = new ClipSpace(device, {
-    parameters: {depthWriteEnabled: true, depthCompare: 'less', depthFormat: 'depth32float'},
+    parameters: {depthWriteEnabled: true, depthCompare: 'less', depthFormat},
     source: /* wgsl */ `
 struct Output {
   @location(0) normal: vec4f,
@@ -44,18 +57,23 @@ void main() {
       new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1])
     );
   }
-  surface.render({drawSurfaces: ({renderPass}) => model.draw(renderPass)});
+  const renderPass = device.beginRenderPass({framebuffer, clearDepth: 1});
+  renderPass.setParameters({viewport: [0, 0, width, height]});
+  model.draw(renderPass);
+  renderPass.end();
   device.submit();
   return {
-    depthTexture: surface.depthTexture,
-    normalTexture: surface.normalTexture,
+    depthTexture,
+    normalTexture,
     projectionMatrix,
     near,
     far,
     camera: {projectionMatrix, nearPlane: near, farPlane: far},
     destroy() {
       model.destroy();
-      surface.destroy();
+      framebuffer.destroy();
+      depthTexture.destroy();
+      normalTexture.destroy();
     }
   };
 }

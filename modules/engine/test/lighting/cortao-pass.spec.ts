@@ -7,12 +7,16 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils'
 import {CORTAOPass} from '@luma.gl/engine/lighting';
 import {createOcclusionFixture} from './ambient-occlusion-fixture';
 
-for (const backend of ['webgl', 'webgpu'] as const) {
-  test(`CORTAO generates full-resolution visibility and resizes on ${backend}`, async context => {
+for (const [backend, depthFormat] of [
+  ['webgl', 'depth32float'],
+  ['webgpu', 'depth32float'],
+  ['webgpu', 'depth24plus-stencil8']
+] as const) {
+  test(`CORTAO generates full-resolution visibility and resizes on ${backend} with ${depthFormat}`, async context => {
     const device = backend === 'webgpu' ? await getWebGPUTestDevice() : await getWebGLTestDevice();
     if (!device) return context.skip(`No ${backend}`);
-    const fixture = createOcclusionFixture(device, 97, 65);
-    const resized = createOcclusionFixture(device, 47, 31);
+    const fixture = createOcclusionFixture(device, 97, 65, depthFormat);
+    const resized = createOcclusionFixture(device, 47, 31, depthFormat);
     const pass = new CORTAOPass(device);
     try {
       const submit = vi.spyOn(device, 'submit');

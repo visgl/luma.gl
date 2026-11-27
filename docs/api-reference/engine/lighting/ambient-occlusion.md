@@ -121,8 +121,8 @@ device.submit();
 ```
 
 Supply single-sample depth from a perspective camera with the backend's native clip depth
-range and a depth clear value of one. Use the same view-space units for the camera planes
-and radius. The default radius is unlimited in view space, with a screen-space cap of
+range and a depth clear value of one. On WebGPU, the pass can sample the depth aspect of a
+combined depth-stencil texture. Use the same view-space units for the camera planes and radius. The default radius is unlimited in view space, with a screen-space cap of
 20% of the input height. The filter defaults to the symmetric 13-tap kernel. Construct
 another pass to change the sample count, ray count, or filter specialization.
 

@@ -84,6 +84,7 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
   private readonly pointSampler: Sampler;
   private readonly lookupTableTexture: Texture;
   private targets: WebGPUTargets | null = null;
+  private depthOnlyView: TextureView | null = null;
 
   constructor(device: Device, id: string, options: CORTAOShaderOptions) {
     this.device = device;
@@ -126,7 +127,7 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     ]);
     this.dispatch(pipelines.prepass, width, height, {
       cortaoPrepass: uniformBuffers.prepass,
-      depthTexture: depthTexture.view,
+      depthTexture: this.getDepthView(depthTexture),
       packedOutput: targets.packedLevelViews[0],
       normalOutput: targets.normalTexture.view
     });
@@ -198,10 +199,26 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     this.destroyTargets();
     this.lookupTableTexture.destroy();
     this.pointSampler.destroy();
+    this.depthOnlyView?.destroy();
+    this.depthOnlyView = null;
     const {prepass, mipmap, main, filter} = this.uniformBuffers;
     for (const buffer of [prepass, ...mipmap, main, filter]) {
       buffer.destroy();
     }
+  }
+
+  private getDepthView(depthTexture: Texture): TextureView {
+    if (this.depthOnlyView?.texture === depthTexture) {
+      return this.depthOnlyView;
+    }
+
+    this.depthOnlyView?.destroy();
+    // A depth binding cannot use the all-aspects view of a combined depth-stencil texture.
+    this.depthOnlyView =
+      this.device.getTextureFormatInfo(depthTexture.format).attachment === 'depth-stencil'
+        ? depthTexture.createView({aspect: 'depth-only', mipLevelCount: 1, arrayLayerCount: 1})
+        : null;
+    return this.depthOnlyView ?? depthTexture.view;
   }
 
   /** Runs one compute pass over a width x height grid of invocations. */
