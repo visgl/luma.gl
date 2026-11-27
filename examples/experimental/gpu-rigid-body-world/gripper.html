@@ -9,5 +9,6 @@ html,body{margin:0;height:100%;background:#e6e9e4;font:13px system-ui}canvas{wid
 <section id="lab-controls" class="control-card" hidden>
 <label>Solver <select id="backend"><option value="tree">Reduced-coordinate</option><option value="ordered">Ordered · 64 iterations</option></select></label>
 
+<a href="./grasp-sweep.html">Compare grasp trials</a>
 <label>Pad friction <select id="friction"><option value="0.9">Rubber · 0.9</option><option value="0">Frictionless</option></select></label><output id="phase"></output><output id="reading" role="status">Compiling…</output></section>
-<section id="lab-details" hidden>Two driven fingers squeeze a free 1 kg workpiece. Step through grip, lift, carry, lower and release, or run the cycle. Select frictionless pads to see the workpiece slip. Drag to orbit.</section><div id="startup-error" role="alert"></div><script type="module" src="./arm-contact-lab.ts"></script></body></html>
+<section id="lab-details" hidden>Two driven fingers squeeze a free workpiece. Step through grip, lift, carry, lower and release, or run the cycle. Select frictionless pads to see the workpiece slip. Drag to orbit.</section><div id="startup-error" role="alert"></div><script type="module" src="./arm-contact-lab.ts"></script></body></html>

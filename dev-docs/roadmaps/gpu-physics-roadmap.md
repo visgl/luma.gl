@@ -563,7 +563,7 @@ the whole step. Qualification across adapters and broader fault attribution rema
 
 ### G9. Articulations and mechanism quality
 
-The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. A [3 kg work-stop trial](../benchmarks/robot-arm.md#press-and-lift-at-120-hz) qualifies unilateral sphere–static-box contact through press and release. Multiple simultaneous contacts, friction, moving counterparts, floating bases, limits and larger-tree scaling remain open.
+The fixed-base tree solver advances revolute and welded links in joint space. The [matched comparison](../benchmarks/robot-arm.md#reduced-coordinate-tree-comparison) measures the 3 kg arm at 1.0 ms p95 over 240 steps on Apple WebGPU. A [3 kg work-stop trial](../benchmarks/robot-arm.md#press-and-lift-at-120-hz) qualifies unilateral sphere–static-box contact through press and release. The two-finger gripper extends the contact envelope to two frictional pad contacts on a free box. Arbitrary manifolds and moving counterparts, floating bases, limits and larger-tree scaling remain open.
 
 The [robot arm qualification](../benchmarks/robot-arm.md) compares loaded one- and four-link arms at matched accuracy. Named scenegraph angular actuators expose target, gains, torque cap and measured torque. The four-link 3 kg horizontal hold was chosen as the reduced-coordinate comparison fixture: the ordered solver met the accuracy gates at 120 Hz and 64 iterations, but its measured p95 step exceeded the fixed-step interval.
 
@@ -1023,3 +1023,5 @@ package advances the G10 throughput gate; it does not claim unrestricted large-w
 ### G9 two-finger pick and place
 
 A fixed-base tree can squeeze and carry one freely rotating box using two spherical pads with Coulomb friction. The benchmark compares the reduced-coordinate and ordered formulations at 120 Hz and includes a zero-pad-friction control. See the [pick-and-place qualification](../benchmarks/robot-arm.md#two-finger-pick-and-place). General manifold discovery, arbitrary payload geometry, multiple free counterparts, floating bases and loop closure remain open.
+
+The [grasp parameter sweep](../benchmarks/robot-arm.md#grasp-parameter-sweep) batches 18 independent G9 trees into a G10 graph-level throughput experiment with per-trial 3D replay. Fusing the dispatches and qualifying additional adapters remain open.
