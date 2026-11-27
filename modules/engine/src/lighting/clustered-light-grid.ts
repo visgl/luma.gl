@@ -84,11 +84,7 @@ type ClusteredLightGridDispatchState = {
 };
 
 /** Clears the mask, bins light spheres, and compacts the lists for lighting consumers. */
-export const clusteredLightGridPipeline: ComputePipelineDefinition<
-  ClusteredLightGridResources,
-  'clear' | 'bin' | 'compact',
-  ClusteredLightGridDispatchState
-> = {
+export const clusteredLightGridPipeline = {
   name: 'clustered-light-grid',
   passes: [
     {
@@ -125,7 +121,11 @@ export const clusteredLightGridPipeline: ComputePipelineDefinition<
       ]
     }
   ]
-};
+} as const satisfies ComputePipelineDefinition<
+  ClusteredLightGridResources,
+  'clear' | 'bin' | 'compact',
+  ClusteredLightGridDispatchState
+>;
 
 /**
  * Builds fixed-capacity screen/depth light lists entirely on WebGPU.

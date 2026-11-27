@@ -18,11 +18,7 @@ it('prepares named bindings before a grouped pass and runs operations between pa
       return {end: () => commands.push('end')};
     }
   } as unknown as CommandEncoder;
-  const definition: ComputePipelineDefinition<
-    {input: Buffer; optionalOutput?: Buffer},
-    'prepare' | 'compute',
-    {count: number}
-  > = {
+  const definition = {
     name: 'pipeline',
     passes: [
       {
@@ -53,7 +49,11 @@ it('prepares named bindings before a grouped pass and runs operations between pa
         }
       }
     ]
-  };
+  } as const satisfies ComputePipelineDefinition<
+    {input: Buffer; optionalOutput?: Buffer},
+    'prepare' | 'compute',
+    {count: number}
+  >;
 
   try {
     encodeComputePipeline(definition, {

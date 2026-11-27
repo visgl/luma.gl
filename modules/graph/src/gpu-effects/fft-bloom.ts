@@ -178,11 +178,7 @@ type FFTBloomFrame = {
 };
 
 /** Extracts highlights, convolves them in the frequency domain, and composites in HDR. */
-export const fftBloomPipeline: ComputePipelineDefinition<
-  FFTBloomResources,
-  'extract' | 'multiply' | 'composite',
-  FFTBloomFrame
-> = {
+export const fftBloomPipeline = {
   name: 'gpu-convolution-bloom',
   passes: [
     {
@@ -283,7 +279,11 @@ export const fftBloomPipeline: ComputePipelineDefinition<
       ]
     }
   ]
-};
+} as const satisfies ComputePipelineDefinition<
+  FFTBloomResources,
+  'extract' | 'multiply' | 'composite',
+  FFTBloomFrame
+>;
 
 /**
  * Computes physically motivated optical convolution using three complex 2D RGB transforms.
