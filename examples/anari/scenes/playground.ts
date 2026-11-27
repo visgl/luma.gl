@@ -61,6 +61,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly chartLabels?: ChartLabels;
   private renderedFrameCount = 0;
   private captureFrameLimit = 0;
+  /** Frame on the deterministic 60 Hz motion timeline at which the pose stops. */
+  private capturePoseFrame: number | undefined;
+  /** Render the target pose from the first frame when producing an independent reference. */
+  private captureReferencePose = false;
   private staticRadianceCapture = false;
   /** Whether the capture harness requested optional GPU timestamps. */
   private captureGpuTiming = false;
@@ -125,7 +129,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           ? 4
           : preset === 'chart-diffuse'
             ? 5
-            : preset === 'chart-materials'
+            : preset === 'chart-materials' || preset === 'chart-glossy-motion'
               ? 6
               : preset === 'chart-shapes'
                 ? 7
@@ -148,6 +152,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       preset === 'chart-motion' ||
       preset === 'chart-diffuse' ||
       preset === 'chart-materials' ||
+      preset === 'chart-glossy-motion' ||
       preset === 'chart-shapes' ||
       preset === 'chart-lighting' ||
       preset === 'small-emitter' ||
@@ -170,6 +175,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     parameters: URLSearchParams
   ): void {
     const preset = parameters.get('preset');
+    if (preset === 'chart-glossy-motion') {
+      sceneDescription.instances = sceneDescription.instances?.map((instance, index) =>
+        instance['@@id'].startsWith('point-')
+          ? {
+              ...instance,
+              animation: {'@@type': 'bob', amplitude: 0.75, speed: 2, phase: index * 0.7}
+            }
+          : instance
+      );
+    }
     if (preset === 'small-emitter' || preset === 'mixed-emitters') {
       const emitter = sceneDescription.instances?.find(instance => instance['@@id'] === 'emitter');
       if (emitter) emitter.scale = [0.2, 0.2, 0.2];
@@ -262,6 +277,18 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     const frameLimit = Number(parameters.get('captureFrames') ?? 0);
     if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
       this.captureFrameLimit = frameLimit;
+    /** The frame index is shared by the motion prefix and all reference samples. */
+    const poseFrame = Number(parameters.get('capturePoseFrame'));
+    if (
+      this.captureFrameLimit &&
+      parameters.has('capturePoseFrame') &&
+      Number.isInteger(poseFrame) &&
+      poseFrame >= 0 &&
+      poseFrame < 256
+    ) {
+      this.capturePoseFrame = poseFrame;
+      this.captureReferencePose = parameters.get('captureReferencePose') === '1';
+    }
     this.captureGpuTiming = parameters.has('captureGpuTiming') && Boolean(this.captureFrameLimit);
     if (this.captureGpuTiming) {
       Object.assign(this.canvas, {
@@ -295,8 +322,20 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       return;
     }
 
-    const elapsedSeconds = this.captureFrameLimit ? this.renderedFrameCount / 60 : time * 0.001;
-    const updateScene = !this.staticRadianceCapture || this.renderedFrameCount === 0;
+    /** Match the reference pose exactly while holding it through the measured sample sweep. */
+    const animationFrame =
+      this.capturePoseFrame === undefined
+        ? this.renderedFrameCount
+        : this.captureReferencePose
+          ? this.capturePoseFrame
+          : Math.min(this.capturePoseFrame, this.renderedFrameCount);
+    const elapsedSeconds = this.captureFrameLimit ? animationFrame / 60 : time * 0.001;
+    const updateScene =
+      this.capturePoseFrame === undefined
+        ? !this.staticRadianceCapture || this.renderedFrameCount === 0
+        : this.captureReferencePose
+          ? this.renderedFrameCount === 0
+          : this.renderedFrameCount <= this.capturePoseFrame;
     if (updateScene) scene.update(elapsedSeconds);
     this.updateAnimationTime(scene);
 
@@ -418,6 +457,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.canvas.dataset['renderedFrames'] = String(this.renderedFrameCount);
     if (this.captureFrameLimit)
       this.canvas.dataset['animationTimeSeconds'] = String(elapsedSeconds);
+    if (this.capturePoseFrame !== undefined && this.renderedFrameCount === this.captureFrameLimit) {
+      this.canvas.dataset['capturePose'] = JSON.stringify({
+        camera: {position, direction},
+        instances: Array.from(scene.instanceIdentifiers, ([instance, identifier]) => [
+          identifier,
+          instance.getParameter('transform')
+        ])
+      });
+    }
     if (
       elapsedSeconds - this.lastStatisticsUpdate > 0.25 ||
       this.renderedFrameCount === this.captureFrameLimit ||

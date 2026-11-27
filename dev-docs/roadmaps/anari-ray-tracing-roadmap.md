@@ -145,8 +145,10 @@ connections remain open.
 
 The reconstruction benchmark compares unfiltered, spatial, and variance-guided
 presentation at fixed seeds and shared measured GPU costs. Motion captures can
-toggle reprojection at the same animation time. Independent pose-matched
-references and broader ghosting acceptance scenes remain open.
+toggle reprojection against an independently sampled, stationary reference at
+the exact target pose. The Chart Motion and glossy motion workflows measure
+linear HDR recovery error versus new samples and GPU time after the pose stops.
+Broader ghosting acceptance scenes and separate diffuse/specular histories remain open.
 
 
 The first glTF vertex fidelity increment applies retained morph position and
