@@ -21,35 +21,38 @@ function makeRotation(width = 129, height = 65, speed = 1) {
   return {shape: [height, width] as const, velocity};
 }
 
-it('crosses both poles with stable slots and bounded radius and angular error', async context => {
-  const device = await getTestDevice('webgpu');
-  if (!device) return context.skip();
-  const graph = new SphericalFlowGraph(device, {
-    input: makeRotation(),
-    positions: new Float32Array([1, 0, 0, 0, 1, 0]),
-    radius: 1,
-    maximumTimeStep: 0.01
-  });
-  try {
-    for (let quarter = 1; quarter <= 4; quarter++) {
-      graph.advance(Math.PI / 2);
-      const bytes = await graph.output.readAsync();
-      const values = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-      expect(Math.hypot(values[0], values[1], values[2])).toBeCloseTo(1, 6);
-      expect(
-        Math.hypot(
-          values[0] - Math.cos((quarter * Math.PI) / 2),
-          values[1],
-          values[2] + Math.sin((quarter * Math.PI) / 2)
-        )
-      ).toBeLessThan(0.004);
-      expect(Math.hypot(values[4], values[5] - 1, values[6])).toBeLessThan(1e-6);
-      expect(values[3]).toBeCloseTo((quarter * Math.PI) / 2, 4);
+for (const integrator of ['rk2', 'rk4'] as const) {
+  it(`${integrator} crosses both poles with stable slots and bounded radius and angular error`, async context => {
+    const device = await getTestDevice('webgpu');
+    if (!device) return context.skip();
+    const graph = new SphericalFlowGraph(device, {
+      integrator,
+      input: makeRotation(),
+      positions: new Float32Array([1, 0, 0, 0, 1, 0]),
+      radius: 1,
+      maximumTimeStep: 0.01
+    });
+    try {
+      for (let quarter = 1; quarter <= 4; quarter++) {
+        graph.advance(Math.PI / 2);
+        const bytes = await graph.output.readAsync();
+        const values = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+        expect(Math.hypot(values[0], values[1], values[2])).toBeCloseTo(1, 6);
+        expect(
+          Math.hypot(
+            values[0] - Math.cos((quarter * Math.PI) / 2),
+            values[1],
+            values[2] + Math.sin((quarter * Math.PI) / 2)
+          )
+        ).toBeLessThan(0.004);
+        expect(Math.hypot(values[4], values[5] - 1, values[6])).toBeLessThan(1e-6);
+        expect(values[3]).toBeCloseTo((quarter * Math.PI) / 2, 4);
+      }
+    } finally {
+      graph.destroy();
     }
-  } finally {
-    graph.destroy();
-  }
-});
+  });
+}
 
 it('refines the global grid and interpolates physical-time snapshots', async context => {
   const device = await getTestDevice('webgpu');
