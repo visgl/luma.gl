@@ -447,7 +447,7 @@ function validateGPUQueryBindingCapacity(
 }
 
 /** Creates one independently owned fixed-width GPU output chunk for every source batch. */
-function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
+export function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
   device: Device,
   name: string,
   lengths: readonly number[],
@@ -505,10 +505,16 @@ function selectGPUQueryValidity<Result extends GPUTypeMap>(
 }
 
 /** Builds a borrowed result table without repacking batches or changing ownership of source data. */
-function createGPUQueryDerivedTable<Result extends GPUTypeMap>(
-  selectedSource: GPUTable,
+export function createGPUQueryDerivedTable<
+  Result extends GPUTypeMap,
+  Source extends GPUTypeMap = GPUTypeMap
+>(
+  selectedSource: GPUTable<Source>,
   selectedColumns: readonly (keyof Result & string)[],
-  outputs: readonly GPUQueryDerivedOutput[]
+  outputs: readonly {
+    plan: Pick<GPUQueryExpressionOutput, 'name' | 'format' | 'nullable'>;
+    values: GPUVector<GPUExpressionNumericFormat>;
+  }[]
 ): GPUTable<Result> {
   const outputsByName = new Map(outputs.map(output => [output.plan.name, output]));
   const fields: GPUField<keyof Result & string>[] = selectedColumns.map(name => {
