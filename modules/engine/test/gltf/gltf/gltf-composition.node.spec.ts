@@ -4,7 +4,7 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLBWriter, GLTFLoader} from '@loaders.gl/scene/gltf';
+import {GLBWriter, GLTFLoader} from '@loaders.gl/scene/gltf/bundled';
 import {parseGLTFPhysics, type GLTFPhysicsDocument} from '@luma.gl/engine/gltf-physics';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {createComposedScenegraphsFromGLTF, type GLTFWithBuffers} from '@luma.gl/engine/gltf';

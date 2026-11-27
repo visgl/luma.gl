@@ -18,6 +18,9 @@ const {values} = parseArgs({options: {
   'gpu-timing': {type: 'boolean'},
   'compare-emitters': {type: 'boolean'},
   'compare-reconstruction': {type: 'boolean'},
+  'compare-motion': {type: 'boolean'},
+  'pose-frame': {type: 'string', default: '16'},
+  'reference-frames': {type: 'string', default: '64'},
   temporal: {type: 'string'},
   'maximum-rmse': {type: 'string'},
   view: {type: 'string', default: 'color'},
@@ -58,12 +61,14 @@ const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
 if (!Number.isInteger(history) || history < 1 || history > 256) throw new Error('history must be an integer between 1 and 256');
-const frameCounts = (values['frame-sweep'] ?? values.frames).split(',').map(Number);
+/** Whether to generate pose-matched HDR references and measure temporal reconstruction. */
+const compareMotion = values['compare-motion'];
+const frameCounts = (values['frame-sweep'] ?? (compareMotion ? '1,4,8,16' : values.frames)).split(',').map(Number);
 if (frameCounts.some((frames, index) => !Number.isInteger(frames) || frames < 1 || frames > 256 ||
   (index > 0 && frames <= frameCounts[index - 1]))) {
   throw new Error('Frame counts must be strictly increasing integers between 1 and 256');
 }
-if (values['frame-sweep'] && !values.reference) throw new Error('frame-sweep requires a reference image');
+if (values['frame-sweep'] && !values.reference && !compareMotion) throw new Error('frame-sweep requires a reference image');
 const seed = Number(values.seed);
 const width = Number(values.width);
 const height = Number(values.height);
@@ -75,7 +80,7 @@ if (values['linear-hdr'] && (values.renderer !== 'raytrace' || values.view !== '
 }
 const compareEmitters = values['compare-emitters'];
 const compareReconstruction = values['compare-reconstruction'];
-const gpuTiming = compareEmitters || compareReconstruction || values['gpu-timing'];
+const gpuTiming = compareMotion || compareEmitters || compareReconstruction || values['gpu-timing'];
 if (gpuTiming && values.renderer !== 'raytrace') throw new Error('GPU timing requires raytrace');
 if (compareEmitters && (!values['linear-hdr'] || !values['frame-sweep'] ||
   values['emitter-selection'] !== undefined || values.emitters === 'off' || values.motion)) {
@@ -88,9 +93,24 @@ if (compareReconstruction && (compareEmitters || values['linear-hdr'] || !values
 if (values.temporal !== undefined && (values.renderer !== 'raytrace' || !['on', 'off'].includes(values.temporal))) {
   throw new Error('Temporal override requires raytrace and must be on or off');
 }
+/** Target pose index on the capture timeline. */
+const poseFrame = Number(values['pose-frame']);
+/** Independent stationary reference frame count at four samples per frame. */
+const referenceFrames = Number(values['reference-frames']);
+if (compareMotion && (
+  compareEmitters || compareReconstruction || values.reference || values.view !== 'color' ||
+  values.temporal !== undefined || denoise !== 0 || values['variance-guidance'] ||
+  ['motion', 'diffuse', 'materials', 'shapes', 'lighting', 'small-emitter', 'mixed-emitters',
+    'antique-camera', 'transport', 'bounces', 'emitters', 'emitter-selection', 'resolution']
+    .some(option => values[option]) ||
+  !Number.isInteger(poseFrame) || poseFrame < 1 || poseFrame + frameCounts.at(-1) > 256 ||
+  !Number.isInteger(referenceFrames) || referenceFrames <= frameCounts.at(-1) || referenceFrames > 64
+)) throw new Error('Motion comparison requires the built-in scenes, unfiltered color, a positive pose frame, and a longer reference of at most 64 frames');
+/** The motion benchmark always compares pre-presentation linear radiance. */
+const linearHdr = compareMotion || values['linear-hdr'];
 const url = new URL(values.url);
 if (gpuTiming) url.searchParams.set('captureGpuTiming', '1');
-if (values['linear-hdr']) {
+if (linearHdr) {
   url.searchParams.set('captureRadiance', '1');
   url.searchParams.set('captureWidth', String(width));
   url.searchParams.set('captureHeight', String(height));
@@ -118,7 +138,9 @@ const referenceImage = referenceBytes
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
 const root = resolve(values.output);
 try {
-  if (compareEmitters) {
+  if (compareMotion) {
+    await captureMotionBenchmark();
+  } else if (compareEmitters) {
     url.searchParams.set('emitters', 'on');
     const measurementsBySelection = {};
     for (const selection of ['uniform', 'power']) {
@@ -154,6 +176,57 @@ try {
   await browser.close();
 }
 
+/** Capture references with a fresh scene and no motion history, then sweep the target pose. */
+async function captureMotionBenchmark() {
+  /** A disjoint sampling seed prevents the reference from repeating candidate samples. */
+  const referenceSeed = (seed ^ 0x80000000) >>> 0;
+  url.searchParams.set('capturePoseFrame', String(poseFrame));
+  url.searchParams.set('resolution', '1');
+  url.searchParams.set('history', '256');
+  const scenes = {};
+  for (const preset of ['chart-motion', 'chart-glossy-motion']) {
+    url.searchParams.set('preset', preset);
+    url.searchParams.set('captureReferencePose', '1');
+    url.searchParams.set('temporal', 'off');
+    url.searchParams.set('seed', String(referenceSeed));
+    url.searchParams.set('captureFrames', String(referenceFrames));
+    const referenceDirectory = resolve(root, preset, 'reference');
+    const reference = await captureFrameCount(browser, referenceDirectory, referenceFrames);
+    const referencePath = resolve(referenceDirectory, 'radiance.rgba16f');
+    const poseReference = decodeRadianceCapture(await readFile(referencePath));
+    url.searchParams.delete('captureReferencePose');
+    url.searchParams.set('seed', String(seed));
+    const measurements = {};
+    for (const mode of ['off', 'on']) {
+      url.searchParams.set('temporal', mode);
+      measurements[mode] = [];
+      for (const framesAtPose of frameCounts) {
+        const frames = poseFrame + framesAtPose;
+        url.searchParams.set('captureFrames', String(frames));
+        measurements[mode].push(await captureFrameCount(
+          browser,
+          resolve(root, preset, mode, String(framesAtPose)),
+          frames,
+          {image: poseReference, path: referencePath, pose: reference.pose, motionPrefixFrames: poseFrame}
+        ));
+      }
+    }
+    scenes[preset] = {reference, measurements};
+  }
+  await writeFile(resolve(root, 'motion-reconstruction.json'), JSON.stringify({
+    comparisonSpace: 'linear-hdr',
+    poseFrame,
+    poseTimeSeconds: poseFrame / 60,
+    referenceFrames,
+    seed,
+    referenceSeed,
+    viewport: [width, height],
+    hardware: values.hardware,
+    browser: browser.version(),
+    scenes
+  }, null, 2));
+}
+
 /** Capture each requested checkpoint in its own page. */
 async function captureSweep(directory) {
   const measurements = [];
@@ -169,7 +242,11 @@ async function captureSweep(directory) {
 }
 
 /** Capture one exact checkpoint and collect image error and optional GPU timings. */
-async function captureFrameCount(browser, output, frames) {
+async function captureFrameCount(browser, output, frames, poseReference) {
+  /** Use the seed passed to this page, including independently seeded references. */
+  const captureSeed = Number(url.searchParams.get('seed'));
+  const comparisonImage = poseReference?.image ?? referenceImage;
+  const comparisonPath = poseReference?.path ?? values.reference;
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
   try {
     const errors = [];
@@ -189,7 +266,8 @@ async function captureFrameCount(browser, output, frames) {
         rayFrame: document.querySelector('#scene-ray-tracing-frame').textContent,
         ownedMemory: document.querySelector('#scene-ray-memory').textContent,
         sceneError: document.querySelector('#scene-error').textContent,
-        animationTimeSeconds: canvas.dataset.animationTimeSeconds};
+        animationTimeSeconds: canvas.dataset.animationTimeSeconds,
+        pose: canvas.dataset.capturePose};
     });
     await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
     await mkdir(output, {recursive: true});
@@ -200,11 +278,24 @@ async function captureFrameCount(browser, output, frames) {
     const frameGpuTimes = gpuTiming ? await canvas.evaluate(element => element.readCaptureGpuTimes()) : undefined;
     const frameGpuTiming = summarizeFrameGpuTimes(frameGpuTimes, frames);
     const gpuTimeMilliseconds = frameGpuTiming?.totalMilliseconds ?? null;
-    const motionTimeSeconds = values.motion ? Number(metadata.animationTimeSeconds) : undefined;
+    const motionTimeSeconds = compareMotion || values.motion ? Number(metadata.animationTimeSeconds) : undefined;
+    if (compareMotion && (motionTimeSeconds !== poseFrame / 60 || !metadata.pose ||
+      (poseReference && poseReference.pose !== metadata.pose))) {
+      throw new Error('Captured camera or instance transforms do not match the target pose');
+    }
+    const motionPrefixFrames = poseReference?.motionPrefixFrames ?? 0;
+    const framesAtPose = frames - motionPrefixFrames;
+    const gpuTimeAtPoseMilliseconds = compareMotion
+      ? summarizeFrameGpuTimes(frameGpuTimes?.slice(motionPrefixFrames), framesAtPose)?.totalMilliseconds ?? null
+      : undefined;
+    const samplesAtPose = compareMotion ? framesAtPose * metadata.scene.renderer.samplesPerPixel : undefined;
+    if (compareMotion && !poseReference && metadata.accumulatedSamples !== samplesAtPose) {
+      throw new Error('The stationary reference did not accumulate its full sample budget');
+    }
     let comparison;
     let radianceSize;
     let historyConfidence;
-    if (values['linear-hdr']) {
+    if (linearHdr) {
       const radiance = await canvas.evaluate(element => element.readCaptureRadiance());
       if (!radiance) throw new Error('No ray-tracing history was available for linear HDR capture');
       const header = Buffer.alloc(8);
@@ -215,21 +306,21 @@ async function captureFrameCount(browser, output, frames) {
       radianceSize = [linearImage.width, linearImage.height];
       historyConfidence = summarizeHistoryConfidence(linearImage);
       await writeFile(`${output}/radiance.rgba16f`, bytes);
-      if (referenceImage) comparison = {reference: resolve(values.reference), ...compareRadianceCaptures(linearImage, referenceImage)};
+      if (comparisonImage) comparison = {reference: resolve(comparisonPath), ...compareRadianceCaptures(linearImage, comparisonImage)};
     } else if (referenceImage) {
       comparison = {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)};
     }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
-    await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
-      gpuTimeMilliseconds, frameGpuTimes, frameGpuTiming, motionTimeSeconds,
-      comparisonSpace: values['linear-hdr'] ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
+    await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed: captureSeed, frames, viewport: [width, height],
+      gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, motionTimeSeconds,
+      comparisonSpace: linearHdr ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
       note: 'Elapsed time includes startup and output readback; GPU pass timestamps exclude browser startup, screenshots and readback. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
     console.log(output);
     if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
-    return {frames, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
-      hardware: values.hardware, timeToCaptureMilliseconds, gpuTimeMilliseconds, frameGpuTiming,
-      motionTimeSeconds, drawingBuffer: metadata.drawingBuffer, ownedMemory: metadata.ownedMemory,
+    return {frames, seed: captureSeed, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
+      hardware: values.hardware, timeToCaptureMilliseconds, gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTiming,
+      motionTimeSeconds, pose: metadata.pose, drawingBuffer: metadata.drawingBuffer, ownedMemory: metadata.ownedMemory,
       radianceSize, historyConfidence, comparison};
   } finally {
     await page.close();

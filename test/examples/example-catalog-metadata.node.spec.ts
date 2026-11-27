@@ -43,14 +43,6 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
   'deck/gpu-culled-trace',
-  'deck/wind',
-  'deck/scene-buffers',
-  'deck/ambient-occlusion',
-  'deck/soft-shadows',
-  'deck/depth-of-field',
-  'deck/hdr-night-lighting',
-  'deck/global-illumination',
-  'deck/light-shafts',
   'tutorials/slang-particles'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
@@ -148,7 +140,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(145);
+    expect(LIVE_EXAMPLES).toHaveLength(129);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

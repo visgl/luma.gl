@@ -24,6 +24,7 @@ import {getFragmentShaderForRenderPass} from './get-fragment-shader';
 import {textureTransform} from './texture-transform-module';
 
 type ShaderPassLike = ShaderPass | CompositeShaderPass;
+type ComputeStage = Omit<CompositeShaderPassComputeOptimization, 'replacedPasses'>;
 type ShaderSubPass = NonNullable<ShaderPass['passes']>[0];
 
 type EffectiveSubPass = {
@@ -328,19 +329,27 @@ class PassRenderer {
     if (isCompositeShaderPass(passDefinition)) {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
-      if (supportsComputeOptimization(device, passDefinition)) {
+      const compute = passDefinition.initialPasses
+        ? passDefinition.initialPasses.compute
+        : passDefinition.compute;
+      if (compute && supportsComputeOptimization(device, passDefinition)) {
         this.computeRenderer = new CompositeShaderPassComputeRenderer(
           device,
-          passDefinition.compute!,
+          compute,
           this.renderTargets,
           shaderInputs
         );
       }
-      const executableSteps = this.computeRenderer
-        ? passDefinition.steps.filter(
-            step => !passDefinition.compute!.replacedPasses.includes(step.shaderPass.name)
-          )
-        : passDefinition.steps;
+      const executableSteps = passDefinition.initialPasses
+        ? [
+            ...(this.computeRenderer ? [] : passDefinition.initialPasses.fragment),
+            ...passDefinition.steps
+          ]
+        : this.computeRenderer
+          ? passDefinition.steps.filter(
+              step => !passDefinition.compute!.replacedPasses.includes(step.shaderPass.name)
+            )
+          : passDefinition.steps;
       this.subPassExecutions = executableSteps.flatMap(step =>
         this.createStepExecutions(passDefinition, step, flipY)
       );
@@ -593,7 +602,7 @@ class PassRenderer {
 
 /** Executes one optional WebGPU compute replacement before the remaining fragment passes. */
 class CompositeShaderPassComputeRenderer {
-  readonly optimization: CompositeShaderPassComputeOptimization;
+  readonly optimization: ComputeStage;
 
   private readonly renderTargets: Record<string, ManagedRenderTarget>;
   private readonly shaderInputs: ShaderInputs;
@@ -602,7 +611,7 @@ class CompositeShaderPassComputeRenderer {
 
   constructor(
     device: Device,
-    optimization: CompositeShaderPassComputeOptimization,
+    optimization: ComputeStage,
     renderTargets: Record<string, ManagedRenderTarget>,
     shaderInputs: ShaderInputs
   ) {
@@ -756,7 +765,11 @@ class SubPassRenderer {
 
 function getExecutableShaderPasses(shaderPasses: ShaderPassLike[]): ShaderPass[] {
   return shaderPasses.flatMap(shaderPass =>
-    isCompositeShaderPass(shaderPass) ? shaderPass.steps.map(step => step.shaderPass) : [shaderPass]
+    isCompositeShaderPass(shaderPass)
+      ? [...(shaderPass.initialPasses?.fragment ?? []), ...shaderPass.steps].map(
+          step => step.shaderPass
+        )
+      : [shaderPass]
   );
 }
 
@@ -769,7 +782,9 @@ export function supportsComputeOptimization(
   device: Device,
   compositeShaderPass: CompositeShaderPass
 ): boolean {
-  const optimization = compositeShaderPass.compute;
+  const optimization = compositeShaderPass.initialPasses
+    ? compositeShaderPass.initialPasses.compute
+    : compositeShaderPass.compute;
   if (!optimization || device.type !== 'webgpu') {
     return false;
   }

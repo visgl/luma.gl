@@ -63,6 +63,7 @@ export type {
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export {
   bloomCompositeShaderPass,
+  bloomLow,
   createBloomCompositeShaderPass
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export type {
@@ -140,6 +141,7 @@ export type {CameraReprojectionTAAUniforms} from './passes/screen-space/camera-r
 export {
   cameraReprojectionTaaDepthHistoryCopy,
   cameraReprojectionTaaResolve,
+  cameraReprojectionTaa,
   createCameraReprojectionTAACompositeShaderPass
 } from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
@@ -190,7 +192,7 @@ export {
   ssrTrace
 } from './passes/screen-space/screen-space-reflections';
 export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
-export {createSSAOCompositeShaderPass} from './passes/screen-space/ssao';
+export {createSSAOCompositeShaderPass, ssao} from './passes/screen-space/ssao';
 export {createTAACompositeShaderPass} from './passes/screen-space/temporal-antialiasing';
 export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
 

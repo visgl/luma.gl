@@ -5,7 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/graph/gpu-core';
-import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/graph/gpu-project-crs';
@@ -327,6 +327,88 @@ for (const nativeCRS of [false, true]) {
     }
   });
 }
+
+it('pairs separately bound offset chunks with masks and preserves parameter updates', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device || device.limits.maxStorageBuffersPerShaderStage < 9) return context.skip();
+  skipSoftwareDevice(device, context);
+  const lengths = [2, 0, 3, 1];
+  const graph = new GPUCommandGraph(device);
+  const makeVector = <Format extends GPUVectorFormat>(
+    name: string,
+    format: Format,
+    rowBytes: number,
+    initialize?: (length: number) => Float32Array | Uint32Array
+  ) =>
+    new GPUVector<Format>({
+      type: 'data',
+      name,
+      format,
+      ownsData: true,
+      data: lengths.map(length => {
+        const buffer = device.createBuffer({
+          byteLength: rowBytes * (1 + Math.max(length, 1)),
+          usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+        });
+        if (length && initialize) buffer.write(initialize(length), rowBytes);
+        return new GPUData({buffer, format, length, byteOffset: rowBytes, ownsBuffer: true});
+      })
+    });
+  const input = makeVector('input', 'float32x2', 8, length =>
+    Float32Array.from({length: 2 * length}, (_, index) => index + 1)
+  );
+  const mask = makeVector('mask', 'uint32', 4, length =>
+    Uint32Array.from({length}, (_, index) => (index === 1 ? 0 : 2))
+  );
+  const output = makeVector('output', 'float32x4', 16);
+  const validity = makeVector('validity', 'uint32', 4);
+  const makeProjection = (factor: number) =>
+    compileProjectionProgram({
+      precision: 'double-single',
+      operations: [{type: 'unit', factor}]
+    });
+  const program = new GPUProjectionProgram({
+    groupChunks: true,
+    projection: makeProjection(2),
+    positions: graph.importGPUVector('input', input),
+    inputValidity: graph.importGPUVector('mask', mask),
+    output: graph.importGPUVector('output', output),
+    validity: graph.importGPUVector('validity', validity)
+  });
+  program.addToGraph(graph);
+  const compiled = graph.compile();
+  try {
+    for (const factor of [2, 3]) {
+      program.updateProjection(makeProjection(factor));
+      const encoder = device.createCommandEncoder();
+      const result = compiled.encode(encoder, {parameters: undefined});
+      expect(result.stats.nodeCount).toBe(2);
+      device.submit(encoder.finish());
+      for (const [chunkIndex, length] of lengths.entries()) {
+        const outputBuffer = output.data[chunkIndex].buffer;
+        const validityBuffer = validity.data[chunkIndex].buffer;
+        const values = new Float32Array((await outputBuffer.readAsync()).buffer);
+        const flags = new Uint32Array((await validityBuffer.readAsync()).buffer);
+        expect([...values.slice(0, 4)]).toEqual([0, 0, 0, 0]);
+        expect(flags[0]).toBe(0);
+        for (let row = 0; row < length; row++) {
+          const valid = row !== 1;
+          expect(flags[row + 1]).toBe(Number(valid));
+          expect([...values.slice(4 * (row + 1), 4 * (row + 2))]).toEqual(
+            valid ? [(row * 2 + 1) * factor, 0, (row * 2 + 2) * factor, 0] : [0, 0, 0, 0]
+          );
+        }
+      }
+    }
+  } finally {
+    compiled.destroy();
+    program.destroy();
+    input.destroy();
+    mask.destroy();
+    output.destroy();
+    validity.destroy();
+  }
+});
 
 it('updates parameters on the existing graph and preserves empty source chunks', async context => {
   const device = await getWebGPUTestDevice();

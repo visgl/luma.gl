@@ -34,11 +34,18 @@ receiverModel.shaderInputs.setProps({shadow: shadowProps});
 // Record receiver draws after the shadow passes, then submit the device normally.
 ```
 
+## Sampling directional lights
+
+Call `shadow_getDirectionalLightFactor(lightIndex, worldPosition, worldNormal, viewDepth)`
+in GLSL or WGSL to sample the visibility of a directional light by its input index. Apply that
+factor to the corresponding direct-light contribution. The existing
+`shadow_getDirectionalFactor(worldPosition, worldNormal, viewDepth)` samples the first light.
+
 ## Lights and cameras
 
 `ShadowMapRendererProps` configures light capacities, map sizes, and the `low`, `balanced`,
-or `cinematic` quality preset. Defaults reserve one light of each type; spot and point capacities can increase to four. The renderer supports one directional light with up to four cascades. Each spot
-light has one view; each point light has six cube-face views. Active light counts must
+or `cinematic` quality preset. Defaults reserve one light of each type. Each capacity can increase to four. Each directional light
+has up to four cascades. Each spot light has one view, and each point light has six cube-face views. Active light counts must
 fit the configured capacities. `SHADOW_QUALITY_SETTINGS` exposes the frozen preset budgets.
 
 `ShadowCamera` includes view/projection matrices and near/far distances. Its optional

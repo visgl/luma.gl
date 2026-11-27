@@ -89,7 +89,7 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
     {
       name: 'anari',
       description: 'Describe retained 3D scenes and switch between raster rendering and progressive WebGPU ray tracing.',
-      image: 'deck/city-scene',
+      image: 'anari/scenes',
       status: 'Exploratory'
     },
     {

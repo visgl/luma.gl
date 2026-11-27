@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFScenegraph} from '@loaders.gl/scene/gltf';
+import type {GLTFScenegraph} from '@loaders.gl/scene/api';
 
 /** Decode the sample-era geometry.mesh references before glTF postprocessing. */
 export function makeLegacyMeshPositionResolver(scenegraph: GLTFScenegraph) {

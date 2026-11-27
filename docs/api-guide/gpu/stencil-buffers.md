@@ -182,3 +182,30 @@ zero. Color mask bits 0 through 3 select red, green, blue, and alpha respectivel
 See also [GPU parameters](/docs/api-guide/gpu/gpu-parameters), the
 [RenderPass API](/docs/api-reference/core/resources/render-pass), and the
 [WebGPU depth/stencil state specification](https://www.w3.org/TR/webgpu/#depth-stencil-state).
+
+## Read stencil in a shader
+
+On WebGL2, check `device.features.has('stencil-texturing-webgl')`. Create a stencil-only texture view with
+`texture.createView({aspect: 'stencil-only'})` from an attachment created with sampling
+usage. Bind it as `texture_2d<u32>` in WGSL or `usampler2D` in GLSL and use integer texel
+loads. WebGPU provides stencil aspect views in core. WebGL2 requires
+[WEBGL_stencil_texturing](https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/).
+On WebGL2 the selected aspect belongs to the texture object. Use separate draws when
+reading depth and stencil from the same packed texture.
+
+## Allocate stencil without depth
+
+Set `depthStencilAttachment: 'stencil8'` when a framebuffer only needs stencil. WebGPU
+allocates a texture. WebGL2 allocates a framebuffer-owned renderbuffer and keeps the
+`depthStencilAttachment` texture view null. The WebGL2 texture capability queries still
+report `stencil8` as unsupported because they describe texture storage.
+
+## Use multisampled stencil
+
+Start with [the offscreen multisampling workflow](/docs/api-guide/gpu/gpu-antialiasing#explicit-multisampling).
+
+For offscreen rendering, create a framebuffer with `samples: 4` and a packed
+`depthStencilAttachment: 'depth24plus-stencil8'`. Set `sampleCount: 4` on each pipeline
+drawing into it. The pass resolves color into the public single-sample color attachments.
+Depth and stencil remain in multisampled storage for subsequent passes on the same
+framebuffer. Only the resolved color attachments are portable sampling targets. Clear either aspect independently with the usual render-pass properties.

@@ -2,6 +2,12 @@
 
 ## Version 10.0
 
+- **Scientific trajectories.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md) adds opt-in conservative mask checks and bounded GPU trajectory history.
+
+- **Font atlas cache capacity.** Use `ensureFontAtlasCacheCapacity()` from `@luma.gl/engine/text-fonts` to grow the shared bitmap and SDF atlas cache while retaining cached atlases.
+
+- **Independent graph state.** Reuse a compiled graph with separate [mutable state instances](./api-reference/graph/gpu-graph-state.md) that borrow or copy GPU vectors and can be reset explicitly.
+
 - **GPU graphs.** [Graph](./api-reference/graph/README.md) composes compute and render
   operations, manages transient resources, and processes GPU vectors and tables.
 - **Shaders.** [Shaders](./api-reference/shaders/README.md) provides language-specific
@@ -23,6 +29,11 @@
 - GPU weighted shortest paths stop on the GPU once converged, continue past 1,024 rounds with
   `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing.
   [Weighted routes](./api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
+
+- WebGPU Cartesian point rendering and CPU picking share a prepared CRS transform. The GPU
+  subtracts the destination origin before narrowing to float32 and draws directly from borrowed
+  coordinate buffers. [GPU Project](./api-reference/experimental/gpu-project.md#inline-cartesian-rendering-and-cpu-picking)
+- **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 

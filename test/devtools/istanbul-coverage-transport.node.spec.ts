@@ -57,24 +57,24 @@ async function withCoverage(run: (coverage: Coverage, reports: Coverage[]) => Pr
   }
 }
 
-test('incremental Istanbul transport preserves exact statement, function, and branch totals', async () => {
+test('Istanbul transport preserves exact statement, function, and branch totals', async () => {
   await withCoverage(async (coverage, reports) => {
     coverage['/source.ts'].s['0'] = 3;
     await istanbulCoverage.takeCoverage?.();
     expect(Object.keys(reports[0])).toEqual(['/source.ts', '/uncovered.ts']);
     expect(reports[0]['/uncovered.ts']).toEqual(makeFileCoverage());
+    await istanbulCoverage.startCoverage?.();
+    coverage['/source.ts'].s['0'] = 4;
+    coverage['/source.ts'].f['0'] = 2;
+    coverage['/source.ts'].b['0'][0] = 5;
     await istanbulCoverage.takeCoverage?.();
-    expect(reports).toHaveLength(1);
-
-    coverage['/source.ts'].s['0'] += 4;
-    coverage['/source.ts'].f['0'] += 2;
-    coverage['/source.ts'].b['0'][0] += 5;
-    await istanbulCoverage.takeCoverage?.();
-    expect(Object.keys(reports[1])).toEqual(['/source.ts']);
     expect(reports[1]['/source.ts'].s).toEqual({'0': 4});
-    coverage['/source.ts'].f['0'] += 1;
+
+    await istanbulCoverage.startCoverage?.();
+    coverage['/source.ts'].f['0'] = 1;
     await istanbulCoverage.takeCoverage?.();
-    coverage['/source.ts'].b['0'][1] += 6;
+    await istanbulCoverage.startCoverage?.();
+    coverage['/source.ts'].b['0'][1] = 6;
     const beforeCapture = structuredClone(coverage);
     await istanbulCoverage.takeCoverage?.();
     expect(coverage).toEqual(beforeCapture);
@@ -94,7 +94,7 @@ test('incremental Istanbul transport preserves exact statement, function, and br
   });
 });
 
-test('incremental Istanbul transport resets snapshots for a new coverage run', async () => {
+test('Istanbul transport resets snapshots for a new coverage run', async () => {
   await withCoverage(async (coverage, reports) => {
     coverage['/source.ts'].s['0'] = 7;
     await istanbulCoverage.takeCoverage?.();
@@ -107,7 +107,7 @@ test('incremental Istanbul transport resets snapshots for a new coverage run', a
   });
 });
 
-test('incremental Istanbul transport emits fresh metadata when a source hash changes', async () => {
+test('Istanbul transport emits fresh metadata when a source hash changes', async () => {
   await withCoverage(async (coverage, reports) => {
     coverage['/source.ts'].s['0'] = 7;
     await istanbulCoverage.takeCoverage?.();

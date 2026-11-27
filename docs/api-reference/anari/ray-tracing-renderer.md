@@ -72,6 +72,8 @@ require a compatible raster renderer.
 | Visibility | Alpha masks and stochastic alpha blending for rendering and shadows |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
 | Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
+| Dispersion | glTF `KHR_materials_dispersion` uses channel-dependent IOR for smooth PBR continuation |
+| Face sidedness | Explicitly single-sided triangles cull back faces in rendering and visibility queries. Transmissive meshes keep both interfaces. |
 | Dielectric specular | RGB color and alpha intensity maps |
 | Clearcoat | Red strength, green roughness, and independent triangle normal maps |
 | Ambient occlusion | Red channel and scalar strength applied to ambient lighting |
@@ -100,6 +102,10 @@ Picking, depth, and normal channels deterministically return the nearest
 intersection with nonzero coverage. Low sample counts can show visible noise
 in translucent layers and their shadows. The existing filtered-cutout option
 also filters blend coverage for mipmapped triangle textures.
+
+Dispersion uses the glTF Abbe-number parameterization with three RGB bands.
+A dispersive path samples one band and retains it through subsequent
+interfaces. Progressive accumulation resolves the color spread.
 
 Triangle mesh normal maps use linear RGB and the interpolated glTF `TANGENT`
 frame when available, including its handedness and retained morph deltas. Meshes

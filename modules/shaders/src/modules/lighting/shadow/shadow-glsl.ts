@@ -39,11 +39,11 @@ layout(std140) uniform shadowUniforms {
   int cascadeCount;
   int blockerSampleCount;
   int filterSampleCount;
-  vec4 cascadeSplits;
-  mat4 directionalViewProjectionMatrices[4];
+  vec4 directionalCascadeSplits[4];
+  mat4 directionalViewProjectionMatrices[16];
   mat4 spotViewProjectionMatrices[4];
   mat4 pointViewProjectionMatrices[24];
-  DirectionalShadowLightUniform directionalLights[1];
+  DirectionalShadowLightUniform directionalLights[4];
   SpotShadowLightUniform spotLights[4];
   PointShadowLightUniform pointLights[4];
 } shadow;
@@ -105,42 +105,47 @@ float shadow_arrayPCSS(sampler2DArray shadowMap, int layer, vec3 projected, floa
   }
   return visibility / max(float(shadow.filterSampleCount), 1.0);
 }
-int shadow_directionalCascadeIndex(float viewDepth) {
+int shadow_directionalCascadeIndex(int lightIndex, float viewDepth) {
   int cascadeIndex = 0;
   for (int index = 0; index < 4; index++) {
     if (index >= shadow.cascadeCount) break;
     cascadeIndex = index;
-    if (viewDepth <= shadow.cascadeSplits[index]) break;
+    if (viewDepth <= shadow.directionalCascadeSplits[lightIndex][index]) break;
   }
   return cascadeIndex;
 }
 int shadow_getDirectionalCascadeIndex(float viewDepth) {
-  return shadow.directionalLightCount == 0 ? -1 : shadow_directionalCascadeIndex(viewDepth);
+  return shadow.directionalLightCount == 0 ? -1 : shadow_directionalCascadeIndex(0, viewDepth);
 }
-float shadow_directionalPCSS(int cascadeIndex, vec3 worldPosition, float viewDepth) {
-  DirectionalShadowLightUniform light = shadow.directionalLights[0];
-  return shadow_arrayPCSS(directionalShadowTexture, cascadeIndex,
-    shadow_project(shadow.directionalViewProjectionMatrices[cascadeIndex], worldPosition),
+float shadow_directionalPCSS(int lightIndex, int cascadeIndex, vec3 worldPosition, float viewDepth) {
+  DirectionalShadowLightUniform light = shadow.directionalLights[lightIndex];
+  int layerIndex = lightIndex * shadow.cascadeCount + cascadeIndex;
+  return shadow_arrayPCSS(directionalShadowTexture, layerIndex,
+    shadow_project(shadow.directionalViewProjectionMatrices[layerIndex], worldPosition),
     light.sourceAngularRadius * viewDepth / max(light.shadowDistance, 0.001),
     shadow_hash(worldPosition) * 2.0 * SHADOW_PI, 18.0);
 }
-float shadow_getDirectionalFactor(vec3 worldPosition, vec3 worldNormal, float viewDepth) {
-  if (shadow.directionalLightCount == 0 || viewDepth <= 0.0) return 1.0;
-  DirectionalShadowLightUniform light = shadow.directionalLights[0];
+float shadow_getDirectionalLightFactor(int lightIndex, vec3 worldPosition, vec3 worldNormal, float viewDepth) {
+  if (lightIndex < 0 || lightIndex >= shadow.directionalLightCount || viewDepth <= 0.0) return 1.0;
+  DirectionalShadowLightUniform light = shadow.directionalLights[lightIndex];
   if (viewDepth >= light.shadowDistance) return 1.0;
   vec3 position = worldPosition + normalize(worldNormal) * light.normalBias;
-  int cascadeIndex = shadow_directionalCascadeIndex(viewDepth);
-  float visibility = shadow_directionalPCSS(cascadeIndex, position, viewDepth);
+  int cascadeIndex = shadow_directionalCascadeIndex(lightIndex, viewDepth);
+  float visibility = shadow_directionalPCSS(lightIndex, cascadeIndex, position, viewDepth);
   if (cascadeIndex + 1 < shadow.cascadeCount) {
-    float cascadeStart = cascadeIndex > 0 ? shadow.cascadeSplits[cascadeIndex - 1] : 0.0;
-    float cascadeEnd = shadow.cascadeSplits[cascadeIndex];
+    float cascadeStart = cascadeIndex > 0 ? shadow.directionalCascadeSplits[lightIndex][cascadeIndex - 1] : 0.0;
+    float cascadeEnd = shadow.directionalCascadeSplits[lightIndex][cascadeIndex];
     float blendWidth = max((cascadeEnd - cascadeStart) * light.cascadeBlendFraction, 0.0001);
     float blend = smoothstep(cascadeEnd - blendWidth, cascadeEnd, viewDepth);
-    if (blend > 0.0) visibility = mix(visibility, shadow_directionalPCSS(cascadeIndex + 1, position, viewDepth), blend);
+    if (blend > 0.0) visibility = mix(visibility, shadow_directionalPCSS(lightIndex, cascadeIndex + 1, position, viewDepth), blend);
   }
   float fadeWidth = max(light.shadowDistance * light.farFadeFraction, 0.0001);
   visibility = mix(visibility, 1.0, smoothstep(light.shadowDistance - fadeWidth, light.shadowDistance, viewDepth));
   return mix(1.0, visibility, light.strength);
+}
+// Preserve the first-light helper used by existing shader consumers.
+float shadow_getDirectionalFactor(vec3 worldPosition, vec3 worldNormal, float viewDepth) {
+  return shadow_getDirectionalLightFactor(0, worldPosition, worldNormal, viewDepth);
 }
 float shadow_getSpotFactor(int lightIndex, vec3 worldPosition, vec3 worldNormal) {
   if (lightIndex < 0 || lightIndex >= shadow.spotLightCount) return 1.0;

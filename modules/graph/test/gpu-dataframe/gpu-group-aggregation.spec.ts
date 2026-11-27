@@ -40,13 +40,15 @@ it('GPUDataFrame groups nullable source batches into explicit dense GPU statisti
   const createBufferSpy = vi.spyOn(device, 'createBuffer');
   const submitSpy = vi.spyOn(device, 'submit');
 
-  const query = fixture.frame.groupBy('category', {maxMeanScratchBytes: 4}).aggregate({
-    count: 'count',
-    totalFare: {sum: 'fare'},
-    minimumFare: {min: 'fare'},
-    maximumFare: {max: 'fare'},
-    averageFare: {mean: 'fare'}
-  });
+  const query = fixture.frame
+    .groupBy('category', {maxMeanScratchBytes: 4, maxReductionScratchBytes: 8})
+    .aggregate({
+      count: 'count',
+      totalFare: {sum: 'fare'},
+      minimumFare: {min: 'fare'},
+      maximumFare: {max: 'fare'},
+      averageFare: {mean: 'fare'}
+    });
 
   expect(
     createBufferSpy.mock.calls.length,
@@ -65,8 +67,12 @@ it('GPUDataFrame groups nullable source batches into explicit dense GPU statisti
   try {
     const meanScratch = transientBuffers.mock.calls
       .map(([descriptor]) => descriptor)
-      .filter(descriptor => descriptor.id.endsWith('-metric-4-counts'));
+      .filter(descriptor => descriptor.id.endsWith('-metric-4-partial-counts'));
     expect(meanScratch.map(descriptor => descriptor.byteLength)).toEqual([4]);
+    const sumScratch = transientBuffers.mock.calls
+      .map(([descriptor]) => descriptor)
+      .filter(descriptor => descriptor.id.endsWith('-metric-1-partial-sums'));
+    expect(sumScratch.map(descriptor => descriptor.byteLength)).toEqual([8]);
     expect(compiled.groupCount, 'dictionary labels determine the dense group domain').toBe(4);
     expect(
       compiled.table.schema.fields.map(field => field.name),

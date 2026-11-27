@@ -57,6 +57,9 @@ export class WEBGLTexture extends Texture {
 
   // @ts-ignore TODO - currently unused in WebGL. Create dummy sampler?
   sampler: WEBGLSampler = undefined;
+
+  /** Last aspect selected by luma.gl. WebGL textures default to depth sampling. */
+  _stencilSampling = false;
   view: WEBGLTextureView;
 
   /**

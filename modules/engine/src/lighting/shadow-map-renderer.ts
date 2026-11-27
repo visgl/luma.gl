@@ -23,7 +23,7 @@ import type {
 } from '@luma.gl/shaders';
 export type {DirectionalShadowLight, SpotShadowLight, PointShadowLight} from '@luma.gl/shaders';
 
-const MAX_DIRECTIONAL_LIGHTS = 1;
+const MAX_DIRECTIONAL_LIGHTS = 4;
 const MAX_SPOT_LIGHTS = 4;
 const MAX_POINT_LIGHTS = 4;
 const MAX_CASCADES = 4;
@@ -179,10 +179,11 @@ export class ShadowMapRenderer {
     validateLightCount('point', pointLights.length, this.props.pointLightCapacity);
 
     const directionalViews: ComputedShadowView[] = [];
-    let cascadeSplits = padCascadeSplits([], options.camera.far);
-    if (directionalLights[0]) {
-      const light = resolveDirectionalLight(directionalLights[0], options.camera);
-      cascadeSplits = padCascadeSplits(
+    const resolvedDirectionalLights = directionalLights.map(light =>
+      resolveDirectionalLight(light, options.camera)
+    );
+    const directionalCascadeSplits = resolvedDirectionalLights.map((light, lightIndex) => {
+      const cascadeSplits = padCascadeSplits(
         getPracticalCascadeSplits(
           options.camera.near,
           light.shadowDistance,
@@ -191,21 +192,23 @@ export class ShadowMapRenderer {
         ),
         light.shadowDistance
       );
-      directionalViews.push(
-        ...getDirectionalCascadeViews(
-          options.camera,
-          light,
-          cascadeSplits,
-          this.props.cascadeCount,
-          this.props.directionalMapSize
-        )
+      const lightViews = getDirectionalCascadeViews(
+        options.camera,
+        light,
+        cascadeSplits,
+        this.props.cascadeCount,
+        this.props.directionalMapSize
       );
-      directionalViews.forEach((view, cascadeIndex) => {
+      directionalViews.push(...lightViews);
+      lightViews.forEach((view, cascadeIndex) => {
         this.renderView({
-          framebuffer: this.resources.directionalFramebuffers[cascadeIndex],
+          framebuffer:
+            this.resources.directionalFramebuffers[
+              lightIndex * this.props.cascadeCount + cascadeIndex
+            ],
           view,
           type: 'directional',
-          lightIndex: 0,
+          lightIndex,
           cascadeIndex,
           mapSize: this.props.directionalMapSize,
           light,
@@ -213,7 +216,8 @@ export class ShadowMapRenderer {
           prepareShadowCasters: options.prepareShadowCasters
         });
       });
-    }
+      return cascadeSplits;
+    });
 
     const spotViews = spotLights.map(light => getSpotShadowView(resolveSpotLight(light)));
     spotViews.forEach((view, lightIndex) => {
@@ -253,17 +257,16 @@ export class ShadowMapRenderer {
     return {
       quality: this.props.quality,
       cascadeCount: this.props.cascadeCount,
-      cascadeSplits,
+      cascadeSplits: directionalCascadeSplits[0] ?? padCascadeSplits([], options.camera.far),
+      directionalCascadeSplits,
       blockerSampleCount: this.props.blockerSampleCount,
       filterSampleCount: this.props.filterSampleCount,
-      directionalLights: directionalLights.map(light =>
-        resolveDirectionalLight(light, options.camera)
-      ),
+      directionalLights: resolvedDirectionalLights,
       spotLights: spotLights.map(resolveSpotLight),
       pointLights: pointLights.map(resolvePointLight),
       directionalViewProjectionMatrices: padMatrices(
         directionalViews.map(view => view.viewProjectionMatrix),
-        MAX_CASCADES
+        MAX_DIRECTIONAL_LIGHTS * MAX_CASCADES
       ),
       spotViewProjectionMatrices: padMatrices(
         spotViews.map(view => view.viewProjectionMatrix),

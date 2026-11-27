@@ -41,7 +41,7 @@ export class WebGPUTextureView extends TextureView {
 
     this.device.pushErrorScope('validation');
     this.handle = this.texture.handle.createView({
-      format: (this.props.format || this.texture.format) as GPUTextureFormat,
+      format: this.props.format as GPUTextureFormat | undefined,
       dimension: this.props.dimension || this.texture.dimension,
       aspect: this.props.aspect,
       baseMipLevel: this.props.baseMipLevel,

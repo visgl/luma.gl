@@ -58,6 +58,7 @@ stable Engine models and Shaders passes.
 | [GPU SQL](/docs/api-reference/experimental/gpu-sql) | Bounded SQL planning over registered GPU Dataframe inputs. |
 | [GPU Crossfilter](/docs/api-reference/experimental/gpu-crossfilter) | Linked GPU filtering, histograms, aggregates, and rendering masks. |
 | [Geospatial kernels](/docs/api-reference/experimental/geospatial) | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations. |
+| [Scientific flow tracing](/docs/api-reference/experimental/scientific-flow-tracer) | Adaptive 2D advection, explicit particle stopping and bounded GPU trajectory history. |
 
 ### Rendering moved to ANARI
 

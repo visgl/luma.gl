@@ -336,3 +336,31 @@ Batch size changes preserve the render resolution, history textures, and
 sample sequence. Reported progress in this mode counts completed sweeps.
 Devices without usable GPU timestamps keep the existing renderer policy.
 Offline captures keep their configured batch size.
+
+### Pose-matched motion and glossy reconstruction
+
+Run the playground's Vite server from `examples/anari/scenes`, then run the
+benchmark from the repository root.
+
+```sh
+node scripts/playwright/chart-baseline-capture.mjs --compare-motion \
+  --pose-frame 16 --frame-sweep 1,4,8,16 --reference-frames 64 \
+  --hardware "GPU and driver" --output /tmp/motion-reconstruction
+```
+
+The benchmark runs Chart Motion and a glossy variant that animates emissive
+marks above the reflective Chart Materials floor. For each scene it starts a
+fresh reference directly at the target pose, disables reprojection and spatial
+filtering, and accumulates 256 samples per pixel by default using an independent
+seed. Each candidate replays the same 60 Hz motion prefix, then holds the exact
+target pose with reprojection on or off. Each checkpoint starts in a fresh page.
+
+`motion-reconstruction.json` records linear RGB HDR error, including RMSE,
+against the matching reference for every checkpoint. Plot RMSE against
+`samplesAtPose` or `gpuTimeAtPoseMilliseconds` to compare recovery at equal
+target-pose work. `gpuTimeMilliseconds` includes the motion prefix.
+`historyConfidence` reports retained per-pixel confidence separately from the
+number of new samples. GPU time is null when the relevant timestamps are
+unavailable. The HDR capture measures temporal reconstruction before the spatial
+presentation filter. Each checkpoint also writes a display PNG, the raw HDR
+attachment, and metadata.

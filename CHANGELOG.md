@@ -2,6 +2,14 @@
 
 ## v10.0
 
+### v10.0.0-rc.1
+
+- Upgrade to math.gl 5.0.4 and loaders.gl 5.0.1 and adopt the updated loader entry points.
+- Make GPU grouped sums and means deterministic with a two-pass aggregation.
+- Add independent GPUGraph state and preserve registered operation handlers when loading built-in backends.
+- Support stencil-only WebGL2 framebuffers, capability-gated stencil sampling, and multisampled stencil with offscreen color resolve. Preserve depth-only WebGPU pipeline attachments and correct the SSAO G-buffer normal orientation.
+- Fix glTF audio stopping behavior and update build, test, and website dependencies.
+
 ### v10.0.0-beta.2
 
 - Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.

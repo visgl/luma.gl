@@ -2,4 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export * from './gpu-project/geoarrow';
+export {
+  makeGeoArrowColumnFromCPUVector,
+  makeCPUVectorFromGeoArrowColumn,
+  projectCPUVector,
+  tessellateCPUVectorPolygons,
+  tessellateGeoArrowColumnToCPUVectors
+} from './gpu-project/geoarrow';

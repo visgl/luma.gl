@@ -7,8 +7,8 @@ import type {CompositeShaderPassComputeOptimization} from '@luma.gl/shaders';
 
 const BLOOM_COMPUTE_WORKGROUP_SIZE = 16;
 
-type BloomComputePyramidOptions = {
-  levelNames: readonly string[];
+type BloomComputePyramidOptions<LevelName extends string> = {
+  levelNames: readonly LevelName[];
   colorFormat: TextureFormatColor;
   threshold: number;
   softKnee: number;
@@ -18,11 +18,11 @@ type BloomComputePyramidOptions = {
 };
 
 /** Builds a single-dispatch, workgroup-local HDR extraction and downsampling pyramid. */
-export function createBloomComputePyramid(
-  options: BloomComputePyramidOptions
-): CompositeShaderPassComputeOptimization {
+export function createBloomComputePyramid<LevelName extends string>(
+  options: BloomComputePyramidOptions<LevelName>
+): CompositeShaderPassComputeOptimization<`extract${LevelName}`> {
   const outputs = Object.fromEntries(
-    options.levelNames.map(levelName => [`output${levelName}`, `extract${levelName}`])
+    options.levelNames.map(levelName => [`output${levelName}`, `extract${levelName}`] as const)
   );
   const outputDeclarations = options.levelNames
     .map(
