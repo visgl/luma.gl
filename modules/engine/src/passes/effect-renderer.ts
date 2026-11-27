@@ -21,7 +21,7 @@ export type EffectPass<TargetName extends string = string> =
  * supplied for the frame. Passes write either private named targets or the shared
  * color chain. Each use of a definition gets its own render targets and history.
  *
- * Use `satisfies EffectDefinition<'targetA' | 'targetB'>` to check local target
+ * Use `EffectDefinition<'targetA' | 'targetB'>` to check local target
  * references when declaring an effect as a module-level constant. Treat the
  * definition as immutable once a renderer uses it.
  *

@@ -956,7 +956,15 @@ const bloomLowExtractionUniforms = {
 };
 
 /** Two-level HDR bloom with explicit compute and fragment extraction alternatives. */
-export const bloomLow = {
+export const bloomLow: EffectDefinition<
+  | 'extractHalf'
+  | 'blurHalfScratch'
+  | 'blurHalf'
+  | 'extractQuarter'
+  | 'blurQuarterScratch'
+  | 'blurQuarter'
+  | 'glow'
+> = {
   name: 'bloomLow',
   resources: {
     extractHalf: {
@@ -1100,15 +1108,7 @@ export const bloomLow = {
       }
     }
   ]
-} satisfies EffectDefinition<
-  | 'extractHalf'
-  | 'blurHalfScratch'
-  | 'blurHalf'
-  | 'extractQuarter'
-  | 'blurQuarterScratch'
-  | 'blurQuarter'
-  | 'glow'
->;
+};
 
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
 export function createBloomCompositeShaderPass(

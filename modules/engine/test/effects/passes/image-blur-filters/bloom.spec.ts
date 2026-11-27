@@ -509,13 +509,17 @@ it('HDR bloom replaces fragment extraction with one exposure-aware WebGPU dispat
       'runtime camera exposure changes the effective threshold without rebuilding the renderer'
     ).toBe(true);
 
+    const initialPasses = bloomLow.initialPasses;
+    if (!initialPasses) {
+      throw new Error('Expected bloom to declare two extraction paths.');
+    }
     const declarativeCompute = new EffectRenderer(device, {
       effects: [bloomLow],
       colorFormat: 'rgba16float',
       flipY: false
     });
     const declarativeFragment = new EffectRenderer(device, {
-      effects: [{...bloomLow, initialPasses: {fragment: bloomLow.initialPasses.fragment}}],
+      effects: [{...bloomLow, initialPasses: {fragment: initialPasses.fragment}}],
       colorFormat: 'rgba16float',
       flipY: false
     });

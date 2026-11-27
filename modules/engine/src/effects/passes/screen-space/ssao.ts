@@ -151,7 +151,7 @@ fn ssaoComposite_sampleColor(
 } as const satisfies ShaderPass;
 
 /** SSAO with normals reconstructed from the scene depth input. */
-export const ssao = {
+export const ssao: EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> = {
   name: 'ssaoCompositeShaderPass',
   resources: {
     ssaoRaw: {scale: [1, 1], format: 'rgba8unorm'},
@@ -187,4 +187,4 @@ export const ssao = {
       output: 'previous'
     }
   ]
-} satisfies EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'>;
+};

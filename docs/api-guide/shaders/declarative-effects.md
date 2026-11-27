@@ -57,7 +57,7 @@ samples. This example adjusts contrast and then applies a vignette, reusing two 
 import type {EffectDefinition} from '@luma.gl/engine';
 import {brightnessContrast, vignette} from '@luma.gl/engine/effects';
 
-export const softVignette = {
+export const softVignette: EffectDefinition<'adjusted'> = {
   name: 'softVignette',
   resources: {
     adjusted: {}
@@ -77,12 +77,12 @@ export const softVignette = {
       output: 'previous'
     }
   ]
-} satisfies EffectDefinition<'adjusted'>;
+};
 ```
 
 - **Resources** are private to each occurrence of the effect. Set the texture
   format and scale when the default format or full resolution is unsuitable.
-  `satisfies EffectDefinition<...>` checks that named targets are declared.
+  `EffectDefinition<...>` checks that named targets are declared.
 - **Inputs** map shader binding names to textures. `previous` reads the current
   color chain and `original` reads the input to the entire stack. Supply scene
   textures such as depth in the render call's `bindings`.
