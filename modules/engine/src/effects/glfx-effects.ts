@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {copyPass} from './passes/screen-space/copy-pass';
 import type {EffectDefinition} from '../passes/effect-renderer';
 import {brightnessContrast} from './passes/postprocessing/image-adjust-filters/brightnesscontrast';
 import {denoise} from './passes/postprocessing/image-adjust-filters/denoise';
@@ -58,10 +59,26 @@ export const noiseEffect: EffectDefinition<never> = {
   passes: [{kind: 'fullscreen', shaderPass: noise, output: 'previous'}]
 };
 
-export const persistence: EffectDefinition<never> = {
+/** Accumulates fading trails in a history texture owned by this effect. */
+export const persistence: EffectDefinition<'accumulation'> = {
   name: persistenceEffect.name,
-  resources: {},
-  passes: [{kind: 'fullscreen', shaderPass: persistenceEffect, output: 'previous'}]
+  resources: {
+    accumulation: {lifetime: 'history', initialize: {clearColor: [0, 0, 0, 0]}}
+  },
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: persistenceEffect,
+      inputs: {sourceTexture: 'previous', persistenceTexture: 'accumulation'},
+      output: 'accumulation'
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'accumulation'},
+      output: 'previous'
+    }
+  ]
 };
 
 export const sepiaEffect: EffectDefinition<never> = {
