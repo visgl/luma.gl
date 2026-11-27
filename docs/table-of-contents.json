@@ -1190,6 +1190,7 @@
                 "label": "Effects and transparency",
                 "items": [
                   "api-guide/shaders/rendering-techniques",
+                  "api-guide/shaders/declarative-effects",
                   "api-guide/shaders/transparency"
                 ]
               },
