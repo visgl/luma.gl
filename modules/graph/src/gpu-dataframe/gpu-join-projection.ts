@@ -4,7 +4,11 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer} from '@luma.gl/core';
-import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVector,
+  type GPUVectorWGSLFormat
+} from '@luma.gl/graph/gpu-data';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   createTransientView,
@@ -17,8 +21,7 @@ import {
   addGPUAnalyticsComputePass,
   getGPUAnalyticsInvocationIndexSource,
   LU_ANALYTICS_WORKGROUP_SIZE,
-  validateGPUAnalyticsSource,
-  type GPUAnalyticsScalarFormat
+  validateGPUAnalyticsSource
 } from './gpu-analytics-compiler-utils';
 import type {GPUDataFrame, GPUDataFrameDictionaries} from './gpu-data-frame';
 import {
@@ -44,7 +47,11 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
 ) {
   const {graph} = context;
   const sources = [...new Set(rightColumns.map(column => column.source))];
-  validateGPUAnalyticsSource(right, sources);
+  validateGPUAnalyticsSource(
+    right,
+    sources,
+    vector => getGPUVectorWGSLLayout(vector.format as GPUVectorWGSLFormat).packedByteStride
+  );
   const lengths = context.table.batches.map(batch => batch.numRows);
   const validity: Partial<Record<keyof Left & string, GPUVector<'uint32'>>> = {};
   const dictionaries: GPUDataFrameDictionaries<Left> = {};
@@ -77,10 +84,10 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   const projectedSources = new Map(
     sources.map((source, columnIndex) => {
       const field = right.schema.fields.find(candidate => candidate.name === source);
-      const format = field?.format;
-      if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+      const format = field?.format as GPUVectorWGSLFormat | undefined;
+      if (!format || !/^(float32|sint32|uint32)(x[234])?$/.test(format)) {
         throw new Error(
-          `GPUDataFrame right join projection requires a 32-bit scalar column: ${source}`
+          `GPUDataFrame right join projection requires a packed 32-bit numeric column: ${source}`
         );
       }
       const id = `${context.queryId}-join-projection-${columnIndex}`;
@@ -98,7 +105,7 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
         const validOutput = graph.importGPUVector(id + '-output-validity', valid);
         const chunks = sortedRanges.map(({batchIndex, first}) => ({
           first,
-          input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
+          input: input.data[batchIndex] as GraphDataView<GPUVectorWGSLFormat>,
           inputValidity: validInput?.data[batchIndex]
         }));
         const projection = reusePackedChunks
@@ -142,8 +149,8 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
 type GPUJoinProjectionChunk = {
   /** Source-row ID of the first value in the range. */
   first: number;
-  /** Packed scalar payload for every row in the range. */
-  input: GraphDataView<GPUAnalyticsScalarFormat>;
+  /** Packed numeric payload for every row in the range. */
+  input: GraphDataView<GPUVectorWGSLFormat>;
   /** Optional validity words aligned one-to-one with the payload rows. */
   inputValidity?: GraphDataView<'uint32'>;
 };
@@ -152,20 +159,20 @@ type GPUJoinProjectionChunk = {
 function stageGPUJoinProjectionRanges(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
-  format: GPUAnalyticsScalarFormat,
+  format: GPUVectorWGSLFormat,
   chunks: GPUJoinProjectionChunk[],
   maxScratchBytes: number
 ): {chunks: GPUJoinProjectionChunk[]; scratchBytes: number} {
   const projectionChunks: GPUJoinProjectionChunk[] = [];
   const {maxBufferSize, maxStorageBufferBindingSize} = graph.device.limits;
-  const wordBytes = Uint32Array.BYTES_PER_ELEMENT;
+  const rowBytes = getGPUVectorWGSLLayout(format).packedByteStride;
   const maxBindingRows = Math.floor(
-    Math.min(maxBufferSize, maxStorageBufferBindingSize) / wordBytes
+    Math.min(maxBufferSize, maxStorageBufferBindingSize) / rowBytes
   );
   let scratchBytes = 0;
   for (let start = 0; start < chunks.length; ) {
     const firstChunk = chunks[start];
-    const bytesPerRow = wordBytes * (firstChunk.inputValidity ? 2 : 1);
+    const bytesPerRow = rowBytes + (firstChunk.inputValidity ? Uint32Array.BYTES_PER_ELEMENT : 0);
     const maxRows = Math.min(
       maxBindingRows,
       Math.floor((maxScratchBytes - scratchBytes) / bytesPerRow)
@@ -209,7 +216,7 @@ function stageGPUJoinProjectionRanges(
 function packGPUJoinProjectionRange(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   id: string,
-  format: GPUAnalyticsScalarFormat,
+  format: GPUVectorWGSLFormat,
   chunks: GPUJoinProjectionChunk[],
   length: number
 ): GPUJoinProjectionChunk {
@@ -227,7 +234,7 @@ function packGPUJoinProjectionRange(
         target: graph.createDataView(input.buffer, {
           format,
           length: chunk.input.length,
-          byteOffset: offset * Uint32Array.BYTES_PER_ELEMENT
+          byteOffset: offset * input.rowByteLength
         })
       },
       ...(inputValidity && chunk.inputValidity
@@ -257,7 +264,7 @@ function packGPUJoinProjectionRange(
               sourceOffset: source.byteOffset,
               destinationBuffer: getBuffer(target),
               destinationOffset: target.byteOffset,
-              size: source.length * Uint32Array.BYTES_PER_ELEMENT
+              size: source.length * source.rowByteLength
             });
           }
         }
@@ -274,15 +281,16 @@ function addGPUJoinProjectionPass(
   props: {
     rows: GraphDataView<'uint32'>;
     matches: GraphDataView<'uint32'>;
-    input: GraphDataView<GPUAnalyticsScalarFormat>;
+    input: GraphDataView<GPUVectorWGSLFormat>;
     inputValidity?: GraphDataView<'uint32'>;
-    output: GraphDataView<GPUAnalyticsScalarFormat>;
+    output: GraphDataView<GPUVectorWGSLFormat>;
     outputValidity: GraphDataView<'uint32'>;
     first: number;
     initialize: boolean;
   }
 ): void {
   const {rows, matches, input, inputValidity, output, outputValidity, first, initialize} = props;
+  const components = input.rowByteLength / Uint32Array.BYTES_PER_ELEMENT;
   const source = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> rightRows: array<u32>;
 @group(0) @binding(1) var<storage, read> found: array<u32>;
@@ -298,12 +306,23 @@ fn main(
 ) {
   ${getGPUAnalyticsInvocationIndexSource(graph, rows.length)}
   if (index >= ${rows.length}u) { return; }
-  ${initialize ? 'outputValues[index] = 0u; outputValid[index] = 0u;' : ''}
+  let outputStart = index * ${components}u;
+  ${
+    initialize
+      ? `for (var component = 0u; component < ${components}u; component++) {
+    outputValues[outputStart + component] = 0u;
+  }
+  outputValid[index] = 0u;`
+      : ''
+  }
   let id = rightRows[${getViewElementOffset(rows)}u + index];
   let relative = id - ${first}u;
   if (found[${getViewElementOffset(matches)}u + index] != 0u &&
       id >= ${first}u && relative < ${input.length}u) {
-    outputValues[index] = rightValues[${getViewElementOffset(input)}u + relative];
+    let inputStart = ${getViewElementOffset(input)}u + relative * ${components}u;
+    for (var component = 0u; component < ${components}u; component++) {
+      outputValues[outputStart + component] = rightValues[inputStart + component];
+    }
     outputValid[index] = ${inputValidity ? `rightValid[${getViewElementOffset(inputValidity)}u + relative]` : '1u'};
   }
 }`;
