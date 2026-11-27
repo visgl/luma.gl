@@ -128,9 +128,13 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   return {table, validity, dictionaries, destroy: () => table.destroy()};
 }
 
+/** A contiguous right-side payload range available to the projection. */
 type GPUJoinProjectionChunk = {
+  /** Source-row ID of the first value in the range. */
   first: number;
+  /** Packed scalar payload for every row in the range. */
   input: GraphDataView<GPUAnalyticsScalarFormat>;
+  /** Optional validity words aligned one-to-one with the payload rows. */
   inputValidity?: GraphDataView<'uint32'>;
 };
 
