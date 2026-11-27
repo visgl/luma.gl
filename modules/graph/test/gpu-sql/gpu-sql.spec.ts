@@ -674,10 +674,13 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
     ownership: 'owned'
   });
   try {
-    for (const [rightBatchCount, expectedPasses] of [
-      [1, 8],
-      [2, 8],
-      [8, 8]
+    for (const [rightBatchCount, budget, stagedColumns, expectedScratchBytes] of [
+      [1, undefined, 0, 0],
+      [2, undefined, 2, 384],
+      [8, 384, 2, 384],
+      [8, 383, 1, 256],
+      [8, 128, 1, 128],
+      [8, 0, 0, 0]
     ] as const) {
       const right = new GPUDataFrame({
         ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(rightRows, rightBatchCount)),
@@ -686,6 +689,7 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
       const graph = new GPUCommandGraph(device);
       const addComputePass = vi.spyOn(graph, 'addComputePass');
       const addCopyPass = vi.spyOn(graph, 'addCopyPass');
+      const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
       try {
         expect(left.numRows).toBe(rowCount);
         expect(right.numRows).toBe(rowCount);
@@ -693,18 +697,26 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
         expect(right.batches).toHaveLength(rightBatchCount);
         const result = new GPUSQLContext({trips: left, accounts: right})
           .query(
-            'SELECT a.score FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier'
+            'SELECT a.score, a.identifier AS account FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier',
+            {maxJoinProjectionScratchBytes: budget}
           )
           .compile(graph);
         try {
           const projectionPasses = addComputePass.mock.calls.filter(([pass]) =>
             pass.id.includes('-join-projection-')
           );
-          expect(projectionPasses).toHaveLength(expectedPasses);
+          expect(projectionPasses).toHaveLength(
+            leftBatchCount * (stagedColumns + (2 - stagedColumns) * rightBatchCount)
+          );
           const packingPasses = addCopyPass.mock.calls.filter(([pass]) =>
             pass.id.includes('-join-projection-')
           );
-          expect(packingPasses).toHaveLength(rightBatchCount > 1 ? rightBatchCount : 0);
+          expect(packingPasses).toHaveLength(stagedColumns * rightBatchCount);
+          const scratchBytes = createTransientBuffer.mock.calls
+            .map(([buffer]) => buffer)
+            .filter(buffer => buffer.id.includes('-join-projection-'))
+            .reduce((bytes, buffer) => bytes + buffer.byteLength, 0);
+          expect(scratchBytes).toBe(expectedScratchBytes);
           const encoder = device.createCommandEncoder();
           result.encode(encoder);
           device.submit(encoder.finish());
@@ -715,13 +727,15 @@ it('GPUSQL reuses packed right projection across fixed-row batch layouts', async
             selectedCounts: result.selectedCounts
           });
           expect(output.batches).toHaveLength(leftBatchCount);
-          expect(Array.from(output.getChild('score') ?? [])).toEqual(Array.from(scores));
+          expect(Array.from(output.getChild('score') ?? [])).toEqual(scores);
+          expect(Array.from(output.getChild('account') ?? [])).toEqual(Array.from(identifiers));
         } finally {
           result.destroy();
         }
       } finally {
         addComputePass.mockRestore();
         addCopyPass.mockRestore();
+        createTransientBuffer.mockRestore();
         right.destroy();
       }
     }

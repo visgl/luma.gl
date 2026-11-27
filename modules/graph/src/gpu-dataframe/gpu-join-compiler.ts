@@ -174,7 +174,8 @@ export function compileGPUDataFrameJoin<
   joinType: GPUDataFrameJoinType,
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   resultColumns?: readonly (keyof Selection & string)[],
-  rightColumns: readonly GPUJoinRightColumn[] = []
+  rightColumns: readonly GPUJoinRightColumn[] = [],
+  maxProjectionScratchBytes = Infinity
 ): CompiledGPUDataFrameJoin<Selection, Right> {
   validateGPUJoinSources(source, right, options, graph);
   const retainedRight = right.select(right.columnNames);
@@ -186,7 +187,15 @@ export function compileGPUDataFrameJoin<
       CompiledGPUDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
       prepare: context =>
-        addGPUJoinToGraph(context, retainedRight, options, joinType, resultColumns, rightColumns)
+        addGPUJoinToGraph(
+          context,
+          retainedRight,
+          options,
+          joinType,
+          resultColumns,
+          rightColumns,
+          maxProjectionScratchBytes
+        )
     });
   } catch (error) {
     retainedRight.destroy();
@@ -268,7 +277,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
   options: GPUDataFrameNormalizedJoinOptions,
   joinType: GPUDataFrameJoinType,
   resultColumns: readonly (keyof Left & string)[] | undefined,
-  rightColumns: readonly GPUJoinRightColumn[]
+  rightColumns: readonly GPUJoinRightColumn[],
+  maxProjectionScratchBytes: number
 ): GPUDataFrameQueryExtensionResult<Left, CompiledGPUDataFrameJoin<Left, Right>> {
   const ownedVectors: GPUVector[] = [];
   const id = `${context.queryId}-${joinType}-join`;
@@ -418,7 +428,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
             rightColumns,
             matchedRightRows,
             matches,
-            ownedVectors
+            ownedVectors,
+            maxProjectionScratchBytes
           )
         : projectGPUDataFrameQueryResult(context, resultColumns));
     return {
