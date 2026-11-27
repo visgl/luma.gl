@@ -10,7 +10,8 @@ export function createOcclusionFixture(
   device: Device,
   width: number,
   height: number,
-  depthFormat: TextureFormatDepthStencil = 'depth32float'
+  depthFormat: TextureFormatDepthStencil = 'depth32float',
+  fineDetail = false
 ) {
   const usage = Texture.RENDER_ATTACHMENT | Texture.SAMPLE;
   const sampler = {minFilter: 'nearest', magFilter: 'nearest'} as const;
@@ -31,16 +32,22 @@ struct Output {
 };
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> Output {
-  let foreground = all(abs(inputs.uv - vec2f(0.5)) < vec2f(0.15));
-  return Output(vec4f(0.5, 0.5, 1.0, 1.0), select(0.985, 0.982, foreground));
+  let offset = inputs.uv - vec2f(0.5);
+  let rectangle = all(abs(offset) < vec2f(0.15));
+  let diagonal = abs(offset.x + 0.5 * offset.y - 0.19) < 0.001;
+  let foreground = rectangle || (${fineDetail} && diagonal && abs(offset.y) < 0.24);
+  return Output(vec4f(0.5, 0.5, 1.0, 1.0), select(0.985, ${fineDetail ? 0.984 : 0.982}, foreground));
 }`,
     fs: /* glsl */ `#version 300 es
 precision highp float;
 in vec2 uv;
 out vec4 normal;
 void main() {
-  bool foreground = all(lessThan(abs(uv - vec2(0.5)), vec2(0.15)));
-  gl_FragDepth = foreground ? 0.982 : 0.985;
+  vec2 offset = uv - vec2(0.5);
+  bool rectangle = all(lessThan(abs(offset), vec2(0.15)));
+  bool diagonal = abs(offset.x + 0.5 * offset.y - 0.19) < 0.001;
+  bool foreground = rectangle || (${fineDetail} && diagonal && abs(offset.y) < 0.24);
+  gl_FragDepth = foreground ? ${fineDetail ? 0.984 : 0.982} : 0.985;
   normal = vec4(0.5, 0.5, 1.0, 1.0);
 }`
   });

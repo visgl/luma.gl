@@ -144,12 +144,19 @@ bool cortao_loadPosition(ivec2 pixel, out vec3 position) {
   if (any(lessThan(pixel, ivec2(0))) || any(greaterThanEqual(pixel, size))) {
     return false;
   }
-  float depth = texelFetch(depthTexture, pixel, 0).r;
+#if CORTAO_SCALED_DEPTH
+  ivec2 depthSize = textureSize(depthTexture, 0);
+  ivec2 depthPixel = ivec2((vec2(pixel) + 0.5) * (vec2(depthSize) / vec2(size)));
+#else
+  ivec2 depthSize = size;
+  ivec2 depthPixel = pixel;
+#endif
+  float depth = texelFetch(depthTexture, depthPixel, 0).r;
   if (depth == cortao_skyDepth()) {
     return false;
   }
   float linearDepth = 1.0 / (depth * cortaoPrepass.depthScale + cortaoPrepass.depthOffset);
-  vec2 texCoords = (vec2(pixel) + 0.5) / cortaoPrepass.resolution;
+  vec2 texCoords = (vec2(depthPixel) + 0.5) / vec2(depthSize);
   position = cortao_unproject(cortaoPrepass.unprojectParams, texCoords, linearDepth);
   return true;
 }

@@ -69,15 +69,15 @@ export class CORTAOWebGLPasses implements CORTAOPasses {
   private readonly lookupTableTexture: Texture;
   private targets: WebGLTargets | null = null;
 
-  constructor(device: Device, id: string, options: CORTAOShaderOptions) {
+  constructor(device: Device, id: string, options: CORTAOShaderOptions, scaled: boolean) {
     this.device = device;
     this.id = id;
     this.options = options;
-    this.models = this.createModels();
+    this.models = this.createModels(scaled);
     this.lookupTableTexture = this.createLookupTable();
   }
 
-  renderOcclusion({camera, configuration, depthTexture, filter}: CORTAOFrame): Texture {
+  renderOcclusion({camera, configuration, depthView, filter}: CORTAOFrame): Texture {
     const {models} = this;
     const {width, height} = configuration;
     const targets = this.getTargets(width, height);
@@ -85,7 +85,7 @@ export class CORTAOWebGLPasses implements CORTAOPasses {
     models.prepass.shaderInputs.setProps({
       cortaoPrepass: getCORTAOPrepassUniforms(camera, configuration)
     });
-    models.prepass.setBindings({depthTexture});
+    models.prepass.setBindings({depthTexture: depthView.texture});
     this.renderFullScreen(models.prepass, targets.prepassFramebuffer, width, height);
 
     const [atlasWidth, atlasHeight] = getCORTAOMipAtlasSize(width, height);
@@ -146,13 +146,14 @@ export class CORTAOWebGLPasses implements CORTAOPasses {
     renderPass.end();
   }
 
-  private createModels(): WebGLModels {
+  private createModels(scaled: boolean): WebGLModels {
     const {device, id, options} = this;
     return {
       prepass: new ClipSpace(device, {
         id: `${id}-prepass`,
         fs: CORTAO_PREPASS_FS,
         modules: [cortaoPrepass],
+        defines: {CORTAO_SCALED_DEPTH: scaled ? 1 : 0},
         parameters: PASS_PARAMETERS
       }),
       mipmap: new ClipSpace(device, {

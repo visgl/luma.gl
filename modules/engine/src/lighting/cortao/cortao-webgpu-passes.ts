@@ -27,7 +27,7 @@ import {
 } from './cortao-passes';
 import {
   CORTAO_MIPMAP_WGSL,
-  CORTAO_PREPASS_WGSL,
+  getCORTAOPrepassWGSL,
   CORTAO_WORKGROUP_SIZE,
   getCORTAOFilterPassWGSL,
   getCORTAOMainPassWGSL
@@ -84,9 +84,8 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
   private readonly pointSampler: Sampler;
   private readonly lookupTableTexture: Texture;
   private targets: WebGPUTargets | null = null;
-  private depthOnlyView: TextureView | null = null;
 
-  constructor(device: Device, id: string, options: CORTAOShaderOptions) {
+  constructor(device: Device, id: string, options: CORTAOShaderOptions, scaled: boolean) {
     this.device = device;
     this.id = id;
     this.options = options;
@@ -109,11 +108,11 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge'
     });
-    this.pipelines = this.createPipelines();
+    this.pipelines = this.createPipelines(scaled);
     this.lookupTableTexture = this.createLookupTable();
   }
 
-  renderOcclusion({camera, configuration, depthTexture, filter}: CORTAOFrame): Texture {
+  renderOcclusion({camera, configuration, depthView, filter}: CORTAOFrame): Texture {
     const {pipelines, uniformBuffers} = this;
     const {width, height} = configuration;
     const targets = this.getTargets(width, height);
@@ -127,7 +126,7 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     ]);
     this.dispatch(pipelines.prepass, width, height, {
       cortaoPrepass: uniformBuffers.prepass,
-      depthTexture: this.getDepthView(depthTexture),
+      depthTexture: depthView,
       packedOutput: targets.packedLevelViews[0],
       normalOutput: targets.normalTexture.view
     });
@@ -199,26 +198,10 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     this.destroyTargets();
     this.lookupTableTexture.destroy();
     this.pointSampler.destroy();
-    this.depthOnlyView?.destroy();
-    this.depthOnlyView = null;
     const {prepass, mipmap, main, filter} = this.uniformBuffers;
     for (const buffer of [prepass, ...mipmap, main, filter]) {
       buffer.destroy();
     }
-  }
-
-  private getDepthView(depthTexture: Texture): TextureView {
-    if (this.depthOnlyView?.texture === depthTexture) {
-      return this.depthOnlyView;
-    }
-
-    this.depthOnlyView?.destroy();
-    // A depth binding cannot use the all-aspects view of a combined depth-stencil texture.
-    this.depthOnlyView =
-      this.device.getTextureFormatInfo(depthTexture.format).attachment === 'depth-stencil'
-        ? depthTexture.createView({aspect: 'depth-only', mipLevelCount: 1, arrayLayerCount: 1})
-        : null;
-    return this.depthOnlyView ?? depthTexture.view;
   }
 
   /** Runs one compute pass over a width x height grid of invocations. */
@@ -239,7 +222,7 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     computePass.end();
   }
 
-  private createPipelines(): WebGPUPipelines {
+  private createPipelines(scaled: boolean): WebGPUPipelines {
     const {device, id, options} = this;
     const uniform = (name: string, location: number): BindingDeclaration => ({
       name,
@@ -279,7 +262,7 @@ export class CORTAOWebGPUPasses implements CORTAOPasses {
     return {
       prepass: new Computation(device, {
         id: `${id}-prepass`,
-        source: CORTAO_PREPASS_WGSL,
+        source: getCORTAOPrepassWGSL(scaled),
         shaderLayout: {
           bindings: [
             uniform('cortaoPrepass', 0),

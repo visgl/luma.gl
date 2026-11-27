@@ -111,7 +111,7 @@ red channel stores visibility from zero (occluded) to one (unoccluded).
 ```typescript
 import {CORTAOPass} from '@luma.gl/engine/lighting';
 
-const occlusion = new CORTAOPass(device, {sampleCount: 16, rayCount: 16});
+const occlusion = new CORTAOPass(device, {sampleCount: 16, rayCount: 16, resolutionScale: 0.5});
 const visibility = occlusion.render({
   depthTexture,
   camera: {projectionMatrix, nearPlane: 0.1, farPlane: 40},
@@ -126,14 +126,23 @@ combined depth-stencil texture. Use the same view-space units for the camera pla
 20% of the input height. The filter defaults to the symmetric 13-tap kernel. Construct
 another pass to change the sample count, ray count, or filter specialization.
 
+`resolutionScale` controls the resolution of AO evaluation and filtering per axis. Use `1`
+(the default) for the original full-resolution path, `0.5` for half width and height, or
+`0.25` for quarter width and height. Scaled evaluation samples full-resolution depth at
+low-resolution texel centers. A final depth-aware reconstruction pass returns a full-size
+mask, so downstream passes keep the same texture contract. Fine geometry can fall between
+low-resolution samples and lose some occlusion.
+
 The pass borrows depth and owns its output. Rebind the output after the input dimensions or
 filter selection changes. On WebGPU, submit commands before rendering again with the same
 instance, resizing or destroying it. Call `destroy()` when finished.
 
 The opt-in benchmark compares full-resolution CORTAO and GTAO on the same WebGPU device
-and pre-rendered depth at 360p, 720p and 1080p. It sums GPU timestamp durations for the AO
-passes, including filtering and excluding scene capture and final composition.
+and pre-rendered depth at 360p, 720p and 1080p. At 1080p, it also measures half- and
+quarter-resolution CORTAO, with a separate timestamp for the full-resolution reconstruction.
+The totals include filtering and reconstruction and exclude scene capture and final
+composition. A second 1080p fixture compares visibility around silhouettes and fine geometry.
 
 ```bash
-yarn test-browser-benchmarks --reporter=default modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts
+yarn test-browser-benchmarks --reporter=default --silent=false modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts
 ```

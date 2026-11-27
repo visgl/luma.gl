@@ -91,7 +91,8 @@ fn cortao_flipRow(coords: vec2i, size: vec2i) -> vec2i {
  * Prepass. Port of `cortao_prepass()` for level 0 only, with normals from depth, as in the GLSL
  * port. Bindings: 0 uniforms, 1 hardware depth, 2 packed level 0 (storage), 3 normal (storage).
  */
-export const CORTAO_PREPASS_WGSL = /* wgsl */ `\
+export function getCORTAOPrepassWGSL(scaled: boolean): string {
+  return /* wgsl */ `\
 ${CORTAO_BASE_WGSL}
 struct CORTAOPrepassUniforms {
   unprojectParams: vec4f,
@@ -121,12 +122,20 @@ fn cortao_loadPosition(pixel: vec2i) -> CORTAOPosition {
   if (any(pixel < vec2i(0)) || any(pixel >= size)) {
     return CORTAOPosition(false, vec3f(0.0));
   }
-  let depth = textureLoad(depthTexture, cortao_flipRow(pixel, size), 0);
+  ${
+    scaled
+      ? `let depthSize = vec2i(textureDimensions(depthTexture));
+  let sampleScale = vec2f(depthSize) / vec2f(size);
+  let depthPixel = vec2i((vec2f(cortao_flipRow(pixel, size)) + 0.5) * sampleScale);
+  let texCoords = (vec2f(cortao_flipRow(depthPixel, depthSize)) + 0.5) / vec2f(depthSize);`
+      : `let depthPixel = cortao_flipRow(pixel, size);
+  let texCoords = (vec2f(pixel) + 0.5) / cortaoPrepass.resolution;`
+  }
+  let depth = textureLoad(depthTexture, depthPixel, 0);
   if (depth == cortao_skyDepth()) {
     return CORTAOPosition(false, vec3f(0.0));
   }
   let linearDepth = 1.0 / (depth * cortaoPrepass.depthScale + cortaoPrepass.depthOffset);
-  let texCoords = (vec2f(pixel) + 0.5) / cortaoPrepass.resolution;
   return CORTAOPosition(true, cortao_unproject(cortaoPrepass.unprojectParams, texCoords, linearDepth));
 }
 
@@ -190,6 +199,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   textureStore(normalOutput, texel, vec4f(normal * 0.5 + 0.5, 1.0));
 }
 `;
+}
 
 /**
  * Mip pass for one level. Port of the mip chain part of `cortao_prepass()`. CORTAO does not average

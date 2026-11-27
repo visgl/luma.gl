@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {RenderPipelineParameters, Texture} from '@luma.gl/core';
+import type {RenderPipelineParameters, Texture, TextureView} from '@luma.gl/core';
 import type {CORTAOCamera, CORTAOConfiguration} from './cortao-parameters';
 import type {CORTAORayCount} from './cortao-occluder-lookup-table';
 
@@ -19,7 +19,7 @@ export type CORTAOFrame = {
   camera: CORTAOCamera;
   configuration: CORTAOConfiguration;
   /** The hardware depth of the captured layers. */
-  depthTexture: Texture;
+  depthView: TextureView;
   /** Apply the bilateral filter pass. */
   filter: boolean;
 };
