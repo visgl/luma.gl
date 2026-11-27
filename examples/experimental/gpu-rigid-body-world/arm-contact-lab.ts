@@ -11,55 +11,103 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from './info-box';
 import {makeArmContactTrial} from './robot-arm-contact';
+import {makeGripperTrial, GRIPPER_PHASES} from './gripper';
 import {RobotArmScene} from './robot-arm-scene';
 
+const gripper = document.body.dataset.lab === 'gripper';
+const friction = new URLSearchParams(location.search).get('friction') === '0' ? 0 : 0.9;
 const backend = document.querySelector<HTMLSelectElement>('#backend')!;
 const reduced = new URLSearchParams(location.search).get('solver') !== 'ordered';
 backend.value = reduced ? 'tree' : 'ordered';
 backend.onchange = () => {
-  location.search = '?solver=' + backend.value;
+  const url = new URL(location.href);
+  url.searchParams.set('solver', backend.value);
+  location.href = url.href;
 };
 const output = document.querySelector<HTMLOutputElement>('#reading')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
-const panel = createRigidBodyPanel(diagnostics, 'Robot arm', '3 kg work-stop comparison');
+const panel = createRigidBodyPanel(
+  diagnostics,
+  gripper ? 'Pick and place' : 'Robot arm',
+  gripper ? 'Two-finger gripper · 120 Hz' : '3 kg work-stop comparison'
+);
 try {
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
     type: 'webgpu',
     createCanvasContext: {canvas, autoResize: true}
   });
-  const trial = makeArmContactTrial(reduced, true);
-  const {world} = trial;
+  const trial = gripper ? undefined : makeArmContactTrial(reduced, true);
+  const pick = gripper ? makeGripperTrial(reduced, friction, true) : undefined;
+  const {world, bodies} = (pick ?? trial)!;
   const definition = new GPUCommandGraph(device);
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
   const scene = new RobotArmScene(
     device,
-    {poseMatrices: world.poseMatrices, count: reduced ? 5 : 8},
-    reduced ? trial.bodies : undefined
+    {poseMatrices: world.poseMatrices, count: reduced ? 5 : bodies.length},
+    reduced ? bodies : undefined,
+    gripper
   );
   const camera = new PerspectiveCamera(42, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
-  camera.position.set(5, -8, 5);
+  camera.position.fromArray(gripper ? [3.4, -3.6, 2.9] : [5, -8, 5]);
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(1.8, 0, 1.5);
+  controls.target.fromArray(gripper ? [0.75, 0.45, 0.65] : [1.8, 0, 1.5]);
   controls.update();
-  document.querySelector<HTMLButtonElement>('#press')!.onclick = () => trial.command(true);
-  document.querySelector<HTMLButtonElement>('#lift')!.onclick = () => trial.command(false);
-  trial.command(true);
+  let phase = 0,
+    phaseSteps = 0,
+    cycling = false;
+  const selectPhase = (index: number) => {
+    phase = index;
+    phaseSteps = 0;
+    pick?.command(index);
+    const label = document.querySelector<HTMLOutputElement>('#phase');
+    if (label) label.value = GRIPPER_PHASES[index];
+  };
+  if (pick) {
+    const advance = document.querySelector<HTMLButtonElement>('#advance')!;
+    advance.onclick = () => {
+      cycling = false;
+      selectPhase(Math.min(phase + 1, 5));
+    };
+    document.querySelector<HTMLButtonElement>('#cycle')!.onclick = () => {
+      cycling = true;
+      selectPhase(phase);
+    };
+    document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => location.reload();
+    const grip = document.querySelector<HTMLSelectElement>('#friction')!;
+    grip.value = String(friction);
+    grip.onchange = () => {
+      const url = new URL(location.href);
+      url.searchParams.set('friction', grip.value);
+      location.href = url.href;
+    };
+    selectPhase(0);
+  } else if (trial) {
+    document.querySelector<HTMLButtonElement>('#press')!.onclick = () => trial.command(true);
+    document.querySelector<HTMLButtonElement>('#lift')!.onclick = () => trial.command(false);
+    trial.command(true);
+  }
   let last = performance.now(),
     accumulator = world.timeStep,
     lastReading = 0;
   const frame = async (now: number) => {
     accumulator = Math.min(accumulator + (now - last) / 1000, 4 * world.timeStep);
     last = now;
-    const encoder = device.createCommandEncoder();
-    while (accumulator >= world.timeStep) {
-      diagnostics.encode(graph, encoder, {parameters: undefined});
-      accumulator -= world.timeStep;
+    if (cycling && phaseSteps >= 180) {
+      if (phase < 5) selectPhase(phase + 1);
+      else cycling = false;
     }
-    device.submit(encoder.finish());
+    while (accumulator >= world.timeStep) {
+      if (pick && phaseSteps <= 120 && phaseSteps % 4 === 0) pick.command(phase, phaseSteps);
+      const encoder = device.createCommandEncoder();
+      diagnostics.encode(graph, encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      accumulator -= world.timeStep;
+      phaseSteps++;
+    }
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
@@ -73,7 +121,11 @@ try {
     ]);
     device.submit();
     panel.update();
-    if (now - lastReading > 250) {
+    if (now - lastReading > 250 && pick) {
+      const positions = await pick.positions();
+      output.value = `Payload height ${positions[4][2].toFixed(3)} m`;
+      lastReading = now;
+    } else if (now - lastReading > 250 && trial) {
       const [height, status] = await Promise.all([
         trial.payloadHeight(),
         world.readSimulationDiagnostics()

@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {payloadDeclarations} from './articulation-payload-shader';
+
 /** Fixed-base joint-space forward dynamics. One invocation owns a whole small tree. */
 export function getArticulationTreeShader(
   count: number,
   contact = false,
-  publishMatrices = false
+  publishMatrices = false,
+  freePayload = false
 ): string {
   return /* wgsl */ `
 const N = ${count}u;
@@ -14,7 +17,7 @@ struct Link {
   parentAnchor:vec4f, childAnchor:vec4f, axisMass:vec4f, inertia:vec4f, rest:vec4f
 }
 struct Pose { position:vec4f, rotation:vec4f, velocity:vec4f, spin:vec4f }
-struct Settings { base:vec4f, gravityStep:vec4f, boxCenterRadius:vec4f, boxExtentsLink:vec4f }
+struct Settings { base:vec4f, gravityStep:vec4f, boxCenterRadius:vec4f, boxExtentsLink:vec4f ${freePayload ? ', payloadSizeMass:vec4f, surface:vec4f, pads:array<vec4f,2>' : ''} }
 @group(0) @binding(0) var<storage,read> links:array<Link>;
 @group(0) @binding(1) var<storage,read> drives:array<vec4f>;
 @group(0) @binding(2) var<storage,read_write> coordinates:array<vec4f>;
@@ -58,6 +61,7 @@ fn kinematics(){
   solved[i]=Pose(vec4f(pivot[i]+radius,1),rotation,vec4f(velocity,0),vec4f(spin,0));
  }
 }
+${freePayload ? payloadDeclarations : ''}
 fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
 @compute @workgroup_size(1) fn main(){
  if(counters[1]!=0u){return;}
@@ -124,6 +128,7 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
  var normalImpulse=0.0;`
      : ''
  }
+${freePayload ? 'preparePayload(dt,&inverse);' : ''}
  // Implicit spring/damper impulses in coupled joint space. Project each update
  // onto its torque budget and propagate the resulting velocity change to all axes.
  for(var sweep=0u;sweep<64u;sweep++){
@@ -146,6 +151,7 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
   }`
       : ''
   }
+${freePayload ? 'change=max(change,solvePayload());' : ''}
   if(change<1e-7){break;}
  }
  for(var i=0u;i<N;i++){angle[i]+=dt*speed[i];}
@@ -153,12 +159,20 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
  for(var i=0u;i<N;i++){let pose=solved[i];
   if(!finite(vec4f(angle[i],speed[i],impulse[i]/dt,0))||!finite(pose.position)||!finite(pose.rotation)||!finite(pose.velocity)||!finite(pose.spin)){counters[1]=1u;return;}
  }
+ ${
+   freePayload
+     ? `payload.position+=dt*payload.velocity;
+ payload.rotation=normalize(payload.rotation+0.5*dt*product(vec4f(payload.spin.xyz,0),payload.rotation));
+ if(!finite(payload.position)||!finite(payload.rotation)||!finite(payload.velocity)||!finite(payload.spin)){counters[1]=1u;return;}
+ poses[N]=payload;`
+     : ''
+ }
  for(var i=0u;i<N;i++){coordinates[i]=vec4f(angle[i],speed[i],impulse[i]/dt,0);poses[i]=solved[i];}
  ${contact ? 'counters[2]=bitcast<u32>(normalImpulse/dt);' : ''}
  ${
    publishMatrices
-     ? `for(var i=0u;i<N;i++){
-  let pose=solved[i];let q=pose.rotation;
+     ? `for(var i=0u;i<${freePayload ? 'N+1u' : 'N'};i++){
+  let pose=poses[i];let q=pose.rotation;
   matrices[i]=mat4x4f(vec4f(rotate(q,vec3f(1,0,0)),0),vec4f(rotate(q,vec3f(0,1,0)),0),vec4f(rotate(q,vec3f(0,0,1)),0),pose.position);
  }`
      : ''

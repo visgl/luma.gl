@@ -56,3 +56,20 @@ Start the Rigid Body Lab and run the comparison against its local URL:
 ```sh
 node scripts/physics/benchmark-arm-contact.mjs http://127.0.0.1:5317/
 ```
+
+## Two-finger pick and place
+
+Two driven spherical fingertips squeeze a free 1 kg box. A four-axis mechanism raises the box, slews one radian to a marked destination, lowers it and opens the fingers. Each solver gets the same smooth targets, link inertias, torque caps, pad friction (0.9), bench friction (0.65) and six phases of 180 fixed steps. A second trial removes pad friction while keeping bench friction.
+
+| Solver | Step p50 / p95 | Height after lift / carry | Max radial slip | Max bench penetration | Landing error |
+| --- | --- | --- | --- | --- | --- |
+| Reduced-coordinate | 0.8 / 2.0 ms | 0.748 / 0.742 m | 5.1 mm | 1.2 mm | 12.5 cm |
+| Ordered, 64 iterations | 9.8 / 12.4 ms | 0.603 / 0.701 m | 12.7 mm | 4.1 mm | 8.2 cm |
+
+The 900 timed steps per run include drive updates, encoding, submission and waiting for GPU completion. Rendering and diagnostic reads are excluded. Both solvers completed 1,080 steps, lifted and carried above 0.58 m, kept radial slip below 5 cm and released within 25 cm of the destination at a resting center height within 6 cm of 0.24 m. With zero pad friction both payloads remained at bench height during lift. Only reduced-coordinate met the 8.33 ms p95 budget on this Apple WebGPU adapter.
+
+Slip measures change in distance from the payload center to the fingertip midpoint relative to the end of grip. Bench penetration uses the projected vertical extent of the oriented box. Both are sampled every 12 steps. Ordered landed closer to the mark and settled with a lower center height. These runs qualify one discrete contact fixture and adapter. [Raw measurements](./gripper-apple.json).
+
+```sh
+node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5330/
+```

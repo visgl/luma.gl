@@ -47,6 +47,17 @@ export type GPUArticulationContact = {
   halfExtents: Vector;
 };
 
+/** One unconstrained rigid box with two spherical link contacts and a horizontal support. */
+export type GPUArticulationPayload = {
+  position: Vector;
+  halfExtents: Vector;
+  mass: number;
+  pads: readonly [{link: string; radius: number}, {link: string; radius: number}];
+  friction: number;
+  supportHeight: number;
+  supportFriction: number;
+};
+
 /** Small fixed-base trees. The graph owns the kernel and the tree owns the buffers. */
 export class GPUArticulationTree {
   readonly timeStep: number;
@@ -57,8 +68,9 @@ export class GPUArticulationTree {
   private readonly base: Vector;
   private readonly gravity: Vector;
   private readonly contact?: GPUArticulationContact;
+  private readonly payload?: GPUArticulationPayload;
   private readonly publishMatrices: boolean;
-  /** Column-major world transforms in link order, available after registration with publishMatrices. */
+  /** Column-major world transforms in link order followed by the optional free payload, available after registration with publishMatrices. */
   get poseMatrices() {
     return this.buffers[6] ?? null;
   }
@@ -71,10 +83,12 @@ export class GPUArticulationTree {
     gravity?: Vector;
     timeStep?: number;
     contact?: GPUArticulationContact;
+    payload?: GPUArticulationPayload;
     publishMatrices?: boolean;
   }) {
     this.id = props.id ?? 'articulation-tree';
     this.timeStep = props.timeStep ?? 1 / 120;
+    this.payload = structuredClone(props.payload);
     this.contact = structuredClone(props.contact);
     this.publishMatrices = Boolean(props.publishMatrices);
     this.links = structuredClone([...props.links]);
@@ -110,6 +124,19 @@ export class GPUArticulationTree {
         throw new Error('Invalid articulation link');
       this.indices.set(link.id, index);
     }
+    const payload = this.payload;
+    if (
+      payload &&
+      (payload.pads.length !== 2 ||
+        payload.pads[0].link === payload.pads[1].link ||
+        !payload.pads.every(pad => this.indices.has(pad.link)) ||
+        ![...payload.position, payload.supportHeight].every(finite) ||
+        ![payload.mass, ...payload.halfExtents, ...payload.pads.map(pad => pad.radius)].every(
+          value => finite(value) && Math.fround(value) > 0
+        ) ||
+        ![payload.friction, payload.supportFriction].every(value => finite(value) && value >= 0))
+    )
+      throw new Error('Invalid articulation payload');
     const contact = this.contact;
     if (
       contact &&
@@ -127,6 +154,9 @@ export class GPUArticulationTree {
     if (this.destroyed || this.buffers.length)
       throw new Error('Inactive or already registered articulation');
     const names = ['links', 'drives', 'coordinates', 'poses', 'counters', 'settings'];
+    const poseCount = this.links.length + Number(Boolean(this.payload));
+    const poses = new Float32Array(poseCount * 16);
+    if (this.payload) poses.set([...this.payload.position, 1, 0, 0, 0, 1], this.links.length * 16);
     const data = [
       new Float32Array(
         this.links.flatMap(link => [
@@ -143,7 +173,7 @@ export class GPUArticulationTree {
       ),
       new Float32Array(this.links.length * 4),
       new Float32Array(this.links.flatMap(link => [link.angle ?? 0, link.speed ?? 0, 0, 0])),
-      new Float32Array(this.links.length * 16),
+      poses,
       new Uint32Array(4),
       new Float32Array([
         ...this.base,
@@ -153,12 +183,23 @@ export class GPUArticulationTree {
         ...(this.contact?.center ?? [0, 0, 0]),
         this.contact?.radius ?? 0,
         ...(this.contact?.halfExtents ?? [0, 0, 0]),
-        this.contact ? this.indices.get(this.contact.link)! : 0
+        this.contact ? this.indices.get(this.contact.link)! : 0,
+        ...(this.payload
+          ? [
+              ...this.payload.halfExtents,
+              this.payload.mass,
+              this.payload.supportHeight,
+              this.payload.friction,
+              this.payload.supportFriction,
+              0,
+              ...this.payload.pads.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0])
+            ]
+          : [])
       ])
     ];
     if (this.publishMatrices) {
       names.push('matrices');
-      data.push(new Float32Array(this.links.length * 16));
+      data.push(new Float32Array(poseCount * 16));
     }
     try {
       const handles = data.map((values, index) => {
@@ -189,7 +230,8 @@ export class GPUArticulationTree {
         source: getArticulationTreeShader(
           this.links.length,
           Boolean(this.contact),
-          this.publishMatrices
+          this.publishMatrices,
+          Boolean(this.payload)
         ),
         shaderLayout
       };
@@ -245,11 +287,11 @@ export class GPUArticulationTree {
     return new DataView(bytes.buffer, bytes.byteOffset, 4).getFloat32(0, true);
   }
 
-  /** Read COM poses and world-space velocities in link order after stepping. */
+  /** Read COM poses and world-space velocities in link order followed by the optional free payload after stepping. */
   async readState() {
     const bytes = await this.buffers[3].readAsync();
     const values = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-    return this.links.map((_, index) => {
+    return Array.from({length: values.length / 16}, (_, index) => {
       const start = index * 16;
       return {
         position: Array.from(values.subarray(start, start + 3)),

@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  makeGripperTrial,
+  REACH,
+  DESTINATION_ANGLE
+} from '../../../../examples/experimental/gpu-rigid-body-world/gripper';
 import {expect, it} from 'vitest';
 import {makeArmContactTrial} from '../../../../examples/experimental/gpu-rigid-body-world/robot-arm-contact';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
@@ -123,6 +128,53 @@ it('transmits a compressive reaction through the tree and releases it on lift', 
         expect(force).toBe(0);
       }
     }
+  } finally {
+    graph.destroy();
+    trial.world.destroy();
+  }
+});
+
+it.for([
+  0.9, 0
+])('can lift and release the free gripper payload only with pad friction (%s)', async (friction, context) => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const trial = makeGripperTrial(true, friction, true);
+  const definition = new GPUCommandGraph(device);
+  trial.world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let phase = 0; phase < 6; phase++) {
+      for (let step = 0; step < 180; step += 4) {
+        if (step <= 120) trial.command(phase, step);
+        const encoder = device.createCommandEncoder();
+        for (let substep = 0; substep < 4; substep++)
+          graph.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+      }
+      const positions = await trial.positions();
+      const [x, y, z] = positions[4];
+      if (phase === 2 || phase === 3) {
+        if (friction) expect(z).toBeGreaterThan(0.58);
+        else expect(z).toBeLessThan(0.32);
+      }
+      if (phase === 5 && friction) {
+        expect(
+          Math.hypot(
+            x - REACH * Math.cos(DESTINATION_ANGLE),
+            y - REACH * Math.sin(DESTINATION_ANGLE)
+          )
+        ).toBeLessThan(0.25);
+        expect(z).toBeCloseTo(0.24, 1);
+        const bytes = await trial.world.poseMatrices!.readAsync(4 * 64, 64);
+        const matrix = new Float32Array(bytes.buffer, bytes.byteOffset, 16);
+        expect([...matrix.slice(12, 15)]).toEqual([x, y, z]);
+      }
+    }
+    expect(await trial.world.readSimulationDiagnostics()).toMatchObject({
+      complete: true,
+      steps: 1080
+    });
   } finally {
     graph.destroy();
     trial.world.destroy();
