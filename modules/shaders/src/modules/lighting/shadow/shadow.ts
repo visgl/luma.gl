@@ -13,6 +13,7 @@ import type {
 } from './shadow-types';
 
 const MAX_CASCADES = 4;
+const MAX_DIRECTIONAL_LIGHTS = 4;
 const MAX_SPOT_LIGHTS = 4;
 const MAX_POINT_LIGHTS = 4;
 const MAX_POINT_MATRICES = 24;
@@ -54,7 +55,7 @@ export type ShadowUniforms = {
   cascadeCount: number;
   blockerSampleCount: number;
   filterSampleCount: number;
-  cascadeSplits: Readonly<NumberArray4>;
+  directionalCascadeSplits: readonly Readonly<NumberArray4>[];
   directionalViewProjectionMatrices: readonly Readonly<NumberArray16>[];
   spotViewProjectionMatrices: readonly Readonly<NumberArray16>[];
   pointViewProjectionMatrices: readonly Readonly<NumberArray16>[];
@@ -140,11 +141,11 @@ struct ShadowUniforms {
   cascadeCount: i32,
   blockerSampleCount: i32,
   filterSampleCount: i32,
-  cascadeSplits: vec4f,
-  directionalViewProjectionMatrices: array<mat4x4f, 4>,
+  directionalCascadeSplits: array<vec4f, 4>,
+  directionalViewProjectionMatrices: array<mat4x4f, 16>,
   spotViewProjectionMatrices: array<mat4x4f, 4>,
   pointViewProjectionMatrices: array<mat4x4f, 24>,
-  directionalLights: array<DirectionalShadowLightUniform, 1>,
+  directionalLights: array<DirectionalShadowLightUniform, 4>,
   spotLights: array<SpotShadowLightUniform, 4>,
   pointLights: array<PointShadowLightUniform, 4>,
 };
@@ -177,27 +178,28 @@ fn shadow_validProjection(projected: vec3f) -> bool {
     projected.z >= 0.0 && projected.z <= 1.0;
 }
 
-fn shadow_directionalCascadeIndex(viewDepth: f32) -> i32 {
+fn shadow_directionalCascadeIndex(lightIndex: i32, viewDepth: f32) -> i32 {
   var cascadeIndex = 0;
   for (var index: i32 = 0; index < 4; index++) {
     if (index >= shadow.cascadeCount) { break; }
     cascadeIndex = index;
-    if (viewDepth <= shadow.cascadeSplits[index]) { break; }
+    if (viewDepth <= shadow.directionalCascadeSplits[lightIndex][index]) { break; }
   }
   return cascadeIndex;
 }
 
 fn shadow_getDirectionalCascadeIndex(viewDepth: f32) -> i32 {
   if (shadow.directionalLightCount == 0) { return -1; }
-  return shadow_directionalCascadeIndex(viewDepth);
+  return shadow_directionalCascadeIndex(0, viewDepth);
 }
 
-fn shadow_directionalPCSS(cascadeIndex: i32, worldPosition: vec3f, viewDepth: f32) -> f32 {
-  let projected = shadow_project(shadow.directionalViewProjectionMatrices[cascadeIndex], worldPosition);
+fn shadow_directionalPCSS(lightIndex: i32, cascadeIndex: i32, worldPosition: vec3f, viewDepth: f32) -> f32 {
+  let layerIndex = lightIndex * shadow.cascadeCount + cascadeIndex;
+  let projected = shadow_project(shadow.directionalViewProjectionMatrices[layerIndex], worldPosition);
   if (!shadow_validProjection(projected)) { return 1.0; }
   let dimensions = vec2f(textureDimensions(directionalShadowTexture));
   let texel = 1.0 / dimensions;
-  let light = shadow.directionalLights[0];
+  let light = shadow.directionalLights[lightIndex];
   let rotation = shadow_hash(worldPosition) * 2.0 * SHADOW_PI;
   let searchRadius = max(texel.x, light.sourceAngularRadius * viewDepth / max(light.shadowDistance, 0.001));
   var blockerDepth = 0.0;
@@ -209,7 +211,7 @@ fn shadow_directionalPCSS(cascadeIndex: i32, worldPosition: vec3f, viewDepth: f3
       directionalShadowTexture,
       directionalShadowTextureSampler,
       clamp(projected.xy + offset, vec2f(0.0), vec2f(1.0)),
-      cascadeIndex,
+      layerIndex,
       0
     );
     if (sampleDepth < projected.z) {
@@ -229,30 +231,30 @@ fn shadow_directionalPCSS(cascadeIndex: i32, worldPosition: vec3f, viewDepth: f3
       directionalShadowTexture,
       shadowComparisonSampler,
       clamp(projected.xy + offset, vec2f(0.0), vec2f(1.0)),
-      cascadeIndex,
+      layerIndex,
       projected.z
     );
   }
   return visibility / max(f32(shadow.filterSampleCount), 1.0);
 }
 
-fn shadow_getDirectionalFactor(worldPosition: vec3f, worldNormal: vec3f, viewDepth: f32) -> f32 {
-  if (shadow.directionalLightCount == 0 || viewDepth <= 0.0) { return 1.0; }
-  let light = shadow.directionalLights[0];
+fn shadow_getDirectionalLightFactor(lightIndex: i32, worldPosition: vec3f, worldNormal: vec3f, viewDepth: f32) -> f32 {
+  if (lightIndex < 0 || lightIndex >= shadow.directionalLightCount || viewDepth <= 0.0) { return 1.0; }
+  let light = shadow.directionalLights[lightIndex];
   if (viewDepth >= light.shadowDistance) { return 1.0; }
   let biasedPosition = worldPosition + normalize(worldNormal) * light.normalBias;
-  let cascadeIndex = shadow_directionalCascadeIndex(viewDepth);
-  var visibility = shadow_directionalPCSS(cascadeIndex, biasedPosition, viewDepth);
+  let cascadeIndex = shadow_directionalCascadeIndex(lightIndex, viewDepth);
+  var visibility = shadow_directionalPCSS(lightIndex, cascadeIndex, biasedPosition, viewDepth);
   if (cascadeIndex + 1 < shadow.cascadeCount) {
     var cascadeStart = 0.0;
-    if (cascadeIndex > 0) { cascadeStart = shadow.cascadeSplits[cascadeIndex - 1]; }
-    let cascadeEnd = shadow.cascadeSplits[cascadeIndex];
+    if (cascadeIndex > 0) { cascadeStart = shadow.directionalCascadeSplits[lightIndex][cascadeIndex - 1]; }
+    let cascadeEnd = shadow.directionalCascadeSplits[lightIndex][cascadeIndex];
     let blendWidth = max((cascadeEnd - cascadeStart) * light.cascadeBlendFraction, 0.0001);
     let blend = smoothstep(cascadeEnd - blendWidth, cascadeEnd, viewDepth);
     if (blend > 0.0) {
       visibility = mix(
         visibility,
-        shadow_directionalPCSS(cascadeIndex + 1, biasedPosition, viewDepth),
+        shadow_directionalPCSS(lightIndex, cascadeIndex + 1, biasedPosition, viewDepth),
         blend
       );
     }
@@ -261,6 +263,11 @@ fn shadow_getDirectionalFactor(worldPosition: vec3f, worldNormal: vec3f, viewDep
   let farFade = smoothstep(light.shadowDistance - fadeWidth, light.shadowDistance, viewDepth);
   visibility = mix(visibility, 1.0, farFade);
   return mix(1.0, visibility, light.strength);
+}
+
+// Preserve the first-light helper used by existing shader consumers.
+fn shadow_getDirectionalFactor(worldPosition: vec3f, worldNormal: vec3f, viewDepth: f32) -> f32 {
+  return shadow_getDirectionalLightFactor(0, worldPosition, worldNormal, viewDepth);
 }
 
 fn shadow_spotPCSS(lightIndex: i32, worldPosition: vec3f) -> f32 {
@@ -393,11 +400,11 @@ export const shadow = {
     cascadeCount: 'i32',
     blockerSampleCount: 'i32',
     filterSampleCount: 'i32',
-    cascadeSplits: 'vec4<f32>',
-    directionalViewProjectionMatrices: ['mat4x4<f32>', MAX_CASCADES],
+    directionalCascadeSplits: ['vec4<f32>', MAX_DIRECTIONAL_LIGHTS],
+    directionalViewProjectionMatrices: ['mat4x4<f32>', MAX_DIRECTIONAL_LIGHTS * MAX_CASCADES],
     spotViewProjectionMatrices: ['mat4x4<f32>', MAX_SPOT_LIGHTS],
     pointViewProjectionMatrices: ['mat4x4<f32>', MAX_POINT_MATRICES],
-    directionalLights: [DIRECTIONAL_LIGHT_UNIFORM_TYPE, 1],
+    directionalLights: [DIRECTIONAL_LIGHT_UNIFORM_TYPE, MAX_DIRECTIONAL_LIGHTS],
     spotLights: [SPOT_LIGHT_UNIFORM_TYPE, MAX_SPOT_LIGHTS],
     pointLights: [POINT_LIGHT_UNIFORM_TYPE, MAX_POINT_LIGHTS]
   },
@@ -432,7 +439,13 @@ export const shadow = {
       cascadeCount: props.cascadeCount,
       blockerSampleCount: props.blockerSampleCount,
       filterSampleCount: props.filterSampleCount,
-      cascadeSplits: props.cascadeSplits as Readonly<NumberArray4>,
+      directionalCascadeSplits: padArray(
+        (props.directionalCascadeSplits ?? [
+          props.cascadeSplits
+        ]) as readonly Readonly<NumberArray4>[],
+        MAX_DIRECTIONAL_LIGHTS,
+        [0, 0, 0, 0]
+      ),
       directionalViewProjectionMatrices:
         props.directionalViewProjectionMatrices as readonly Readonly<NumberArray16>[],
       spotViewProjectionMatrices:
@@ -455,28 +468,27 @@ export const shadow = {
 function padDirectionalLights(
   lights: readonly DirectionalShadowLight[]
 ): DirectionalShadowUniform[] {
-  const light = lights[0];
-  return [
-    light
-      ? {
-          direction: light.direction,
-          strength: light.strength ?? 1,
-          normalBias: light.normalBias ?? 0.04,
-          sourceAngularRadius: light.sourceAngularRadius ?? 0.00465,
-          cascadeBlendFraction: light.cascadeBlendFraction ?? 0.1,
-          farFadeFraction: light.farFadeFraction ?? 0.1,
-          shadowDistance: light.shadowDistance ?? 1
-        }
-      : {
-          direction: [0, 1, 0],
-          strength: 0,
-          normalBias: 0,
-          sourceAngularRadius: 0,
-          cascadeBlendFraction: 0,
-          farFadeFraction: 0,
-          shadowDistance: 1
-        }
-  ];
+  return padArray(
+    lights.map(light => ({
+      direction: light.direction,
+      strength: light.strength ?? 1,
+      normalBias: light.normalBias ?? 0.04,
+      sourceAngularRadius: light.sourceAngularRadius ?? 0.00465,
+      cascadeBlendFraction: light.cascadeBlendFraction ?? 0.1,
+      farFadeFraction: light.farFadeFraction ?? 0.1,
+      shadowDistance: light.shadowDistance ?? 1
+    })),
+    MAX_DIRECTIONAL_LIGHTS,
+    {
+      direction: [0, 1, 0],
+      strength: 0,
+      normalBias: 0,
+      sourceAngularRadius: 0,
+      cascadeBlendFraction: 0,
+      farFadeFraction: 0,
+      shadowDistance: 1
+    }
+  );
 }
 
 function padSpotLights(lights: readonly SpotShadowLight[]): SpotShadowUniform[] {

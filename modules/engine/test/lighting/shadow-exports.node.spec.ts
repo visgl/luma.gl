@@ -42,7 +42,8 @@ for (const backend of ['webgl', 'webgpu']) {
     };
     const uniforms = shadow.getUniforms(properties);
     expect(uniforms.directionalLightCount).toBe(0);
-    expect(uniforms.directionalLights).toHaveLength(1);
+    expect(uniforms.directionalLights).toHaveLength(4);
+    expect(uniforms.directionalCascadeSplits?.[0]).toEqual(properties.cascadeSplits);
     expect(uniforms.spotLights).toHaveLength(4);
     expect(uniforms.pointLights).toHaveLength(4);
     expect(uniforms.directionalLights?.[0].strength).toBe(0);

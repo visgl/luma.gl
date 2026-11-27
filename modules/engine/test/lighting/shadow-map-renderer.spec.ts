@@ -20,6 +20,48 @@ const CAMERA = {
 };
 
 for (const getDevice of [getWebGPUTestDevice, getWebGLTestDevice]) {
+  it(`ShadowMapRenderer renders independent directional cascades (${getDevice.name})`, async () => {
+    const device = await getDevice();
+    if (!device) return;
+    const renderer = new ShadowMapRenderer(device, {
+      quality: 'low',
+      directionalLightCapacity: 4,
+      directionalMapSize: 16,
+      spotMapSize: 16,
+      pointMapSize: 16
+    });
+    try {
+      const views: Array<[number, number | undefined]> = [];
+      const framebuffers = new Set();
+      const props = renderer.render({
+        camera: CAMERA,
+        directionalLights: [
+          {direction: [0, 1, 1], shadowDistance: 20},
+          {direction: [1, 1, 0], shadowDistance: 40},
+          {direction: [-1, 1, 0], shadowDistance: 60},
+          {direction: [0, 1, -1], shadowDistance: 80}
+        ],
+        drawShadowCasters: view => {
+          views.push([view.lightIndex, view.cascadeIndex]);
+          framebuffers.add(view.framebuffer);
+        }
+      });
+      expect(props.directionalCascadeSplits?.map(splits => splits[props.cascadeCount - 1])).toEqual(
+        [20, 40, 60, 80]
+      );
+      expect(props.cascadeSplits).toEqual(props.directionalCascadeSplits?.[0]);
+      expect(views).toEqual(
+        props.directionalLights.flatMap((_, lightIndex) =>
+          Array.from({length: props.cascadeCount}, (_, cascadeIndex) => [lightIndex, cascadeIndex])
+        )
+      );
+      expect(framebuffers.size).toBe(views.length);
+    } finally {
+      device.submit();
+      renderer.destroy();
+    }
+  });
+
   it(`ShadowMapRenderer reuses, reconstructs and destroys resources (${getDevice.name})`, async () => {
     const device = await getDevice();
     if (!device) {
