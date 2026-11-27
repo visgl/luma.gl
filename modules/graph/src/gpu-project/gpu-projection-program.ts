@@ -41,11 +41,17 @@ export type GPUProjectionProgramProps = {
   groupChunks?: boolean;
 };
 
+/** Aligned graph views describing one physical projection chunk. */
 type ProjectionChunk = {
+  /** Original physical chunk index, including preceding empty chunks. */
   index: number;
+  /** Borrowed source coordinate rows. */
   input: GraphDataView<ProjectionInputFormat>;
+  /** Destination coordinate rows in the compiled program's output format. */
   output: GraphDataView<'float32x2' | 'float32x4'>;
+  /** Optional upstream mask, where zero marks an invalid source row. */
   inputValidity?: GraphDataView<'uint32'>;
+  /** Optional destination mask written by projection. */
   validity?: GraphDataView<'uint32'>;
 };
 
@@ -212,6 +218,10 @@ fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_id)
     this.registered = true;
   }
 
+  /**
+   * Registers one dispatch for two compatible chunks.
+   * Returns false without modifying the graph when the pair needs separate dispatches.
+   */
   private addPairedPass<Parameters>(
     graph: GPUCommandGraph<Parameters>,
     shader: ProjectionShader,
