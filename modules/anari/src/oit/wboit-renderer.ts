@@ -11,12 +11,9 @@ import {
   Texture,
   type TextureFormatColor
 } from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
-import {
-  createWBOITResolveCompositeShaderPass,
-  type WBOITResolveBindings
-} from './wboit-resolve-composite-shader-pass';
+import {wboitResolveEffect, type WBOITResolveBindings} from './wboit-resolve-composite-shader-pass';
 
 const WBOIT_COLOR_FORMAT = 'rgba16float';
 let nextWBOITResourceId = 0;
@@ -117,7 +114,7 @@ export class WBOITRenderer {
 
   readonly device: Device;
   private renderTargets: WBOITRenderTargets;
-  private readonly resolveRenderer: ShaderPassRenderer;
+  private readonly resolveRenderer: EffectRenderer;
 
   /** Creates a renderer and validates floating-point render-target blending support. */
   constructor(device: Device, props: WBOITRendererProps = {}) {
@@ -128,9 +125,9 @@ export class WBOITRenderer {
 
     this.device = device;
     this.renderTargets = createWBOITRenderTargets(device, 1, 1);
-    this.resolveRenderer = new ShaderPassRenderer(device, {
+    this.resolveRenderer = new EffectRenderer(device, {
       colorFormat: props.colorFormat,
-      shaderPasses: [createWBOITResolveCompositeShaderPass()]
+      effects: [wboitResolveEffect]
     });
   }
 
