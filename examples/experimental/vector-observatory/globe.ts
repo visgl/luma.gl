@@ -45,7 +45,11 @@ const PI: f32 = 3.14159265359;
   let rim = pow(1.0 - normal.z, 4.0);
   // Compress dense HDR trails without clipping their hue or washing out the Earth.
   let peak = max(trails.r, max(trails.g, trails.b));
-  let windGlow = trails * (0.38 / (0.38 + peak));
+  // Suppress the diffuse low-energy veil while retaining a bounded, bright core.
+  // Fewer, wider streaks remain distinct instead of blending into an opaque atlas.
+  let contrast = smoothstep(0.015, 0.16, peak);
+  let intensity = 0.52 * (1.0 - exp(-peak * 3.0)) * contrast;
+  let windGlow = trails / max(peak, 0.00001) * intensity;
   let color = base + windGlow * (0.45 + 0.55 * light) + rim * vec3f(0.06, 0.28, 0.5);
   return vec4f(color, 1);
 }`;

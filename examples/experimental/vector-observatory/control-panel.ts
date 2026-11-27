@@ -18,7 +18,7 @@ import globeSource from './globe.ts?raw';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
 export type ObservatorySettings = {
-  field: 'gyre' | 'vortex' | 'jet' | 'weather';
+  field: 'gyre' | 'vortex' | 'jet' | 'weather' | 'spherical';
   rotateGlobe: boolean;
   particleCount: number;
   integrator: 'rk2' | 'rk4' | 'rk45';
@@ -26,6 +26,8 @@ export type ObservatorySettings = {
   coloring: 'speed' | 'step' | 'status';
   timeScale: number;
   exposure: number;
+  streakWidth: number;
+  trailPersistence: number;
   paused: boolean;
 };
 
@@ -45,12 +47,14 @@ export class ObservatoryControlPanel {
   readonly settings: ObservatorySettings = {
     field: 'weather',
     rotateGlobe: true,
-    particleCount: 262144,
+    particleCount: 65536,
     integrator: 'rk4',
     tolerance: 1e-5,
     coloring: 'speed',
     timeScale: 1,
-    exposure: 0.6,
+    exposure: 0.85,
+    streakWidth: 1.7,
+    trailPersistence: 0.7,
     paused: false
   };
   private readonly manager: PanelManager;
@@ -74,14 +78,24 @@ export class ObservatoryControlPanel {
           next.field === 'gyre' ||
           next.field === 'vortex' ||
           next.field === 'jet' ||
-          next.field === 'weather'
+          next.field === 'weather' ||
+          next.field === 'spherical'
         )
           this.settings.field = next.field;
         if (next.integrator === 'rk2' || next.integrator === 'rk4' || next.integrator === 'rk45')
           this.settings.integrator = next.integrator;
+        if (this.settings.field === 'spherical' && this.settings.integrator === 'rk45')
+          this.settings.integrator = 'rk4';
         if (next.coloring === 'speed' || next.coloring === 'step' || next.coloring === 'status')
           this.settings.coloring = next.coloring;
-        for (const name of ['particleCount', 'tolerance', 'timeScale', 'exposure'] as const) {
+        for (const name of [
+          'particleCount',
+          'tolerance',
+          'timeScale',
+          'exposure',
+          'streakWidth',
+          'trailPersistence'
+        ] as const) {
           if (typeof next[name] === 'number') this.settings[name] = next[name];
         }
         if (typeof next.rotateGlobe === 'boolean') this.settings.rotateGlobe = next.rotateGlobe;
@@ -133,7 +147,7 @@ export class ObservatoryControlPanel {
               makeHtmlCustomPanel({
                 id: 'observatory-info',
                 title: 'Info',
-                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
+                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its atlas rendering suppresses long segments at pole crossings; this is a rendering limitation, not particle termination.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
               <p>The double gyre has a ten-second cycle with linearly interpolated snapshots every 0.25 seconds. Streaks connect GPU particle states; the clock reports simulated seconds.</p>
               <p>RK2 and RK4 continuously respawn particles. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
               <p>RK45 tolerance controls estimated local integration error in field units, not total trajectory or interpolation error. Its bounded work can lag behind wall time; Diagnostics shows pending particles and queued time.</p>
@@ -299,13 +313,14 @@ export class ObservatoryControlPanel {
               persist: 'none',
               options: [
                 {label: 'Weather globe · synthetic', value: 'weather'},
+                {label: 'Pole-crossing globe · spherical', value: 'spherical'},
                 {label: 'GFS Atlantic · archived model winds', value: 'gfs'},
                 {label: 'Evolving double gyre', value: 'gyre'},
                 {label: 'Vortex pair', value: 'vortex'},
                 {label: 'Meandering jet', value: 'jet'}
               ]
             },
-            ...(this.settings.field === 'weather'
+            ...(this.settings.field === 'weather' || this.settings.field === 'spherical'
               ? [
                   {
                     name: 'rotateGlobe',
@@ -334,7 +349,9 @@ export class ObservatoryControlPanel {
               options: [
                 {label: 'Runge–Kutta 4', value: 'rk4'},
                 {label: 'Midpoint / RK2', value: 'rk2'},
-                {label: 'Adaptive RK45', value: 'rk45'}
+                ...(this.settings.field === 'spherical'
+                  ? []
+                  : [{label: 'Adaptive RK45', value: 'rk45'}])
               ]
             },
             ...(this.settings.integrator === 'rk45'
@@ -380,6 +397,24 @@ export class ObservatoryControlPanel {
               min: 0.15,
               max: 1.5,
               step: 0.05
+            },
+            {
+              name: 'streakWidth',
+              label: 'Streak width',
+              type: 'number',
+              persist: 'none',
+              min: 0.7,
+              max: 3,
+              step: 0.1
+            },
+            {
+              name: 'trailPersistence',
+              label: 'Trail persistence (s)',
+              type: 'number',
+              persist: 'none',
+              min: 0.2,
+              max: 2,
+              step: 0.1
             },
             {name: 'paused', label: 'Pause', type: 'boolean', persist: 'none'}
           ]

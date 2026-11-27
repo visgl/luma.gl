@@ -64,3 +64,6 @@ export {
   MLS_MPM_FLUID_STAGE_ORDER,
   MLSMPMFluidSimulation
 } from './simulation/index';
+
+export {SphericalFlowField, SphericalFlowGraph} from './simulation/index';
+export type {SphericalVectorFieldInput, SphericalFlowGraphProps} from './simulation/index';

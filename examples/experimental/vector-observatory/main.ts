@@ -7,11 +7,13 @@ import {Model, loadImageBitmap} from '@luma.gl/engine';
 import earthTextureUrl from '../../showcase/globe/earth.jpg';
 import {GLOBE_PRESENTATION} from './globe';
 import {
+  SphericalFlowGraph,
   ScientificFlowGraph,
   ScientificFlowTracer,
   type ScientificFlowTraceResult
 } from '@luma.gl/graph/experimental-simulation';
 import {makeField} from './fields';
+import {makeSphericalField, makeSphericalPositions} from './spherical-field';
 import {ObservatoryControlPanel} from './control-panel';
 import './style.css';
 
@@ -33,8 +35,13 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   let index = instance % particleCount;
   var wrapOffset = 0.0;
   if (instance >= particleCount) {wrapOffset = select(-1.0, 1.0, previous[index].x < 0.5);}
-  let particle = current[index];
-  let before = previous[index];
+  var particle = current[index];
+  var before = previous[index];
+  if (view.options.z > 1.5) {
+    particle = vec4f(atan2(particle.y, particle.x) / 6.28318530718 + 0.5, asin(clamp(particle.z, -1.0, 1.0)) / 3.14159265359 + 0.5, particle.w, 1);
+    before = vec4f(atan2(before.y, before.x) / 6.28318530718 + 0.5, asin(clamp(before.z, -1.0, 1.0)) / 3.14159265359 + 0.5, before.w, 1);
+  }
+  if (instance >= particleCount) {wrapOffset = select(-1.0, 1.0, before.x < 0.5);}
   var displacement = particle.xy - before.xy;
   if (view.options.z > 0.5) {displacement.x -= round(displacement.x);}
   let velocity = length(displacement) / max(particle.z - before.z, 0.00001) * select(1.0, 3.0, view.options.z > 0.5);
@@ -45,8 +52,8 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   let normal = vec2f(-direction.y, direction.x) / max(length(direction), 0.001);
   var output: Vertex;
   let center = before.xy + displacement * corner.x + vec2f(wrapOffset, 0);
-  output.position = vec4f((center - 0.5) * extent + normal * corner.y * 1.1 / view.size.xy, 0, 1);
-  if (particle.z < 0.0 || particle.w != before.w) {output.position = vec4f(3,3,0,1);}
+  output.position = vec4f((center - 0.5) * extent + normal * corner.y * view.size.z / view.size.xy, 0, 1);
+  if (particle.z < 0.0 || particle.w != before.w || (view.options.z > 1.5 && abs(displacement.x) > 0.25)) {output.position = vec4f(3,3,0,1);}
   let cold = mix(vec3f(0.05,0.16,0.42),vec3f(0.07,0.8,0.85),smoothstep(0.0,0.15,velocity));
   output.color = mix(cold,vec3f(1.0,0.68,0.3),smoothstep(0.15,0.3,velocity));
   if (view.options.y > 0.5) {
@@ -105,7 +112,7 @@ struct Vertex {@builtin(position) position: vec4f};
       `
 struct View {size: vec4f, options: vec4f};
 @group(0) @binding(0) var<uniform> view: View;
-@fragment fn fragmentMain() -> @location(0) vec4f {return vec4f(0.018,0.035,0.055,select(0.035,0.014,view.options.z > 0.5));}`,
+@fragment fn fragmentMain() -> @location(0) vec4f {return vec4f(0.018,0.035,0.055,view.options.w);}`,
     vertexCount: 3,
     parameters: {
       blend: true,
@@ -153,7 +160,7 @@ struct View {size: vec4f, options: vec4f};
   let dragPosition: {horizontal: number; vertical: number} | undefined;
   canvas.style.touchAction = 'none';
   canvas.addEventListener('pointerdown', event => {
-    if (controls.settings.field !== 'weather') return;
+    if (controls.settings.field !== 'weather' && controls.settings.field !== 'spherical') return;
     dragPosition = {horizontal: event.clientX, vertical: event.clientY};
     canvas.setPointerCapture(event.pointerId);
   });
@@ -193,7 +200,7 @@ struct View {size: vec4f, options: vec4f};
     device.submit();
     present.setBindings({history: historyTexture});
   }
-  let graph: ScientificFlowGraph | ScientificFlowTracer;
+  let graph: ScientificFlowGraph | ScientificFlowTracer | SphericalFlowGraph;
   let activeField = 'gyre';
   let activeIntegrator = 'rk4';
   let activeCount = 262144;
@@ -248,7 +255,16 @@ struct View {size: vec4f, options: vec4f};
       periodicLongitude: activeField === 'weather',
       lifetime: 45
     };
-    if (activeIntegrator === 'rk45') {
+    if (activeField === 'spherical') {
+      graph = new SphericalFlowGraph(device, {
+        input: makeSphericalField(0),
+        nextInput: makeSphericalField(snapshotEnd),
+        timeRange: [0, snapshotEnd],
+        positions: makeSphericalPositions(activeCount),
+        radius: 1,
+        integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
+      });
+    } else if (activeIntegrator === 'rk45') {
       const positions = new Float32Array(activeCount * 2);
       const side = Math.ceil(Math.sqrt(activeCount));
       for (let index = 0; index < activeCount; index++) {
@@ -283,7 +299,9 @@ struct View {size: vec4f, options: vec4f};
       id: 'scientific-flow-streaks',
       source,
       vertexCount: 6,
-      instanceCount: controls.settings.particleCount * (activeField === 'weather' ? 2 : 1),
+      instanceCount:
+        controls.settings.particleCount *
+        (activeField === 'weather' || activeField === 'spherical' ? 2 : 1),
       shaderLayout: {
         attributes: [],
         bindings: [
@@ -328,15 +346,17 @@ struct View {size: vec4f, options: vec4f};
         let firstSegment = true;
         while (queuedTime > 0 || (graph instanceof ScientificFlowTracer && graph.hasPendingWork)) {
           if (
-            (activeField === 'gyre' || activeField === 'weather') &&
+            (activeField === 'gyre' || activeField === 'weather' || activeField === 'spherical') &&
             graph.remainingTime === 0 &&
             !(graph instanceof ScientificFlowTracer && graph.hasPendingWork)
           ) {
             snapshotEnd += 0.25;
-            graph.setNextSnapshot(makeField(activeField, snapshotEnd), snapshotEnd);
+            if (graph instanceof SphericalFlowGraph)
+              graph.setNextSnapshot(makeSphericalField(snapshotEnd), snapshotEnd);
+            else graph.setNextSnapshot(makeField(activeField, snapshotEnd), snapshotEnd);
           }
           deltaTime =
-            activeField === 'gyre' || activeField === 'weather'
+            activeField === 'gyre' || activeField === 'weather' || activeField === 'spherical'
               ? Math.min(queuedTime, graph.remainingTime)
               : queuedTime;
           if (graph instanceof ScientificFlowTracer) {
@@ -347,7 +367,15 @@ struct View {size: vec4f, options: vec4f};
             }
             controls.diagnostics.record(graph.commandGraph, traceResult.encoding);
           } else {
-            const substeps = Math.max(1, Math.ceil(deltaTime / graph.simulation.maximumTimeStep));
+            const substeps = Math.max(
+              1,
+              Math.ceil(
+                deltaTime /
+                  (graph instanceof SphericalFlowGraph
+                    ? graph.maximumTimeStep
+                    : graph.simulation.maximumTimeStep)
+              )
+            );
             const querySet =
               graphSamples++ % 60 === 0 && device.features.has('timestamp-query')
                 ? device.createQuerySet({type: 'timestamp', count: 2})
@@ -368,7 +396,7 @@ struct View {size: vec4f, options: vec4f};
             new Float32Array([
               canvas.width,
               canvas.height,
-              deltaTime,
+              controls.settings.streakWidth,
               (controls.settings.exposure * 1.2 * 65536) / activeCount,
               controls.settings.coloring === 'step'
                 ? 1
@@ -376,8 +404,8 @@ struct View {size: vec4f, options: vec4f};
                   ? 2
                   : 0,
               activeIntegrator === 'rk45' ? 1 : 0,
-              activeField === 'weather' ? 1 : 0,
-              0
+              activeField === 'spherical' ? 2 : activeField === 'weather' ? 1 : 0,
+              1 - Math.exp(-frameSeconds / controls.settings.trailPersistence)
             ])
           );
           particles.setBindings({
@@ -397,7 +425,7 @@ struct View {size: vec4f, options: vec4f};
         }
       }
       if (
-        activeField === 'weather' &&
+        (activeField === 'weather' || activeField === 'spherical') &&
         controls.settings.rotateGlobe &&
         !controls.settings.paused &&
         dragPosition === undefined
@@ -409,7 +437,7 @@ struct View {size: vec4f, options: vec4f};
           canvas.width,
           canvas.height,
           globeLongitude,
-          activeField === 'weather' ? 1 : 0,
+          activeField === 'spherical' ? 2 : activeField === 'weather' ? 1 : 0,
           globeLatitude,
           0,
           0,
