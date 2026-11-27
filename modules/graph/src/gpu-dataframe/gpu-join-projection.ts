@@ -39,7 +39,8 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   rightColumns: readonly GPUJoinRightColumn[],
   matchedRows: GraphVectorView<'uint32'>,
   matches: GraphVectorView<'uint32'>,
-  ownedVectors: GPUVector[]
+  ownedVectors: GPUVector[],
+  maxScratchBytes: number
 ) {
   const {graph} = context;
   validateGPUAnalyticsSource(
@@ -73,6 +74,8 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
     throw new Error('GPUDataFrame right join projection requires nonoverlapping source row IDs');
   }
 
+  const reusePackedChunks = lengths.filter(length => length > 0).length > 1;
+  let remainingScratchBytes = maxScratchBytes;
   const outputs = rightColumns.map(({name, source}, columnIndex) => {
     const field = right.schema.fields.find(candidate => candidate.name === source);
     const format = field?.format;
@@ -104,10 +107,12 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
         input: input.data[batchIndex] as GraphDataView<GPUAnalyticsScalarFormat>,
         inputValidity: validInput?.data[batchIndex]
       }));
+      const scratchBytes = input.length * Uint32Array.BYTES_PER_ELEMENT * (validInput ? 2 : 1);
       const projectionChunks =
-        lengths.filter(length => length > 0).length > 1
+        reusePackedChunks && scratchBytes <= remainingScratchBytes
           ? packGPUJoinProjectionChunks(graph, id, format, chunks)
           : chunks;
+      if (projectionChunks !== chunks) remainingScratchBytes -= scratchBytes;
       for (const [leftBatch, rows] of matchedRows.data.entries()) {
         if (!rows.length) continue;
         for (const [chunkIndex, chunk] of projectionChunks.entries()) {

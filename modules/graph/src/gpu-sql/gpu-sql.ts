@@ -55,6 +55,8 @@ export type GPUSQLQueryOptions = Readonly<{
   maxMeanScratchBytes?: number;
   /** Combined byte limit per grouped deterministic SUM or AVG. */
   maxReductionScratchBytes?: number;
+  /** Combined byte cap on staged right-side JOIN payloads and validity. Zero disables staging. */
+  maxJoinProjectionScratchBytes?: number;
 }>;
 
 /** A source column name with its optional, separately parsed table qualifier. */
@@ -194,6 +196,13 @@ export class GPUSQLContext {
 
   /** Parses and validates one immutable SELECT plan without touching registered GPU sources. */
   query(source: string, options: GPUSQLQueryOptions = {}): GPUSQLQuery {
+    const {maxJoinProjectionScratchBytes} = options;
+    if (
+      maxJoinProjectionScratchBytes !== undefined &&
+      (!Number.isSafeInteger(maxJoinProjectionScratchBytes) || maxJoinProjectionScratchBytes < 0)
+    ) {
+      throw new Error('GPUSQL join projection scratch budget must be a nonnegative safe integer');
+    }
     const statement = parseGPUSQLStatement(source);
     return new GPUSQLQuery(
       source,
@@ -202,7 +211,8 @@ export class GPUSQLContext {
         statement,
         options.parameters ?? {},
         options.maxMeanScratchBytes,
-        options.maxReductionScratchBytes
+        options.maxReductionScratchBytes,
+        maxJoinProjectionScratchBytes
       )
     );
   }
@@ -237,7 +247,8 @@ function buildGPUSQLPlan(
   statement: GPUSQLStatement,
   parameters: GPUDataFrameQueryParameters,
   maxMeanScratchBytes?: number,
-  maxReductionScratchBytes?: number
+  maxReductionScratchBytes?: number,
+  maxJoinProjectionScratchBytes?: number
 ): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
@@ -704,7 +715,8 @@ function buildGPUSQLPlan(
             joinType,
             graph,
             selected,
-            rightColumns
+            rightColumns,
+            maxJoinProjectionScratchBytes
           )
       },
       'unique-right-join',
