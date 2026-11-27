@@ -58,6 +58,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | [GPU SQL](https://luma.gl/next/docs/api-reference/experimental/gpu-sql.md)                                 | Bounded SQL planning over registered GPU Dataframe inputs.                                                             |
 | [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md)                 | Linked GPU filtering, histograms, aggregates, and rendering masks.                                                     |
 | [Geospatial kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)                   | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations.                                 |
+| [Scientific flow tracing](https://luma.gl/next/docs/api-reference/experimental/scientific-flow-tracer.md)  | Adaptive 2D advection, explicit particle stopping and bounded GPU trajectory history.                                  |
 
 ### Rendering moved to ANARI[​](#rendering-moved-to-anari "Direct link to Rendering moved to ANARI")
 
