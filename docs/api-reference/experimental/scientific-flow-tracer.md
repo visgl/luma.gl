@@ -264,3 +264,10 @@ RK45 tolerance and 300-second maximum step, every retained point must be within
 polynomial to avoid backend-dependent trigonometric drift. The reference's
 15-second and 30-second integrations agree within 0.0013 m. This qualifies a pinned, 8-bit-quantized model-wind archive, not
 observations or unquantized GFS. See the [fixture provenance and reproduction guide](https://github.com/visgl/luma.gl/blob/master/modules/graph/test/experimental/simulation/fixtures/README.md).
+
+
+The [Vector Observatory GFS lab](https://github.com/visgl/luma.gl/tree/master/examples/experimental/vector-observatory#archived-gfs-trajectory-lab)
+visualizes the same archive and reference releases. It demonstrates bounded GPU
+history, explicit readback, common-horizon comparison and physical-coordinate CSV
+export. Its optional accuracy/cost sweep separates solver settings from changes
+to grid spacing and snapshot interpolation, with backend-tagged JSON results.
