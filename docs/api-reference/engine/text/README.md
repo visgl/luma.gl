@@ -256,3 +256,6 @@ const atlas = buildBrowserFontAtlas({
 `setFontAtlasCacheLimit(limit)` resets the shared browser-font atlas cache and sets its
 capacity. The default and minimum capacity are three atlases. Set it once during application
 initialization; changing it clears existing cache entries. Uncached custom atlases are unaffected.
+
+Use `ensureFontAtlasCacheCapacity(limit)` to request room for more atlases while preserving
+cached entries and their eviction order. This call can only increase the capacity.
