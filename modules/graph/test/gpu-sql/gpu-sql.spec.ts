@@ -566,6 +566,87 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   void 0;
 });
 
+it('GPUSQL projects nullable right payloads across independent Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const first = arrow.tableFromArrays({
+    identifier: Uint32Array.of(40),
+    score: arrow.vectorFromArray([null], new arrow.Float32())
+  });
+  const second = arrow.tableFromArrays({
+    identifier: Uint32Array.of(20),
+    score: arrow.vectorFromArray([2.5], new arrow.Float32())
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(
+      device,
+      new arrow.Table([...first.batches, ...second.batches])
+    ),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [joinType, batchLengths, expected] of [
+      [
+        'LEFT',
+        [2, 0, 3],
+        [
+          [null, 10, null],
+          [2.5, 20, 20],
+          [null, 30, null],
+          [null, 40, 40],
+          [null, 50, null]
+        ]
+      ],
+      [
+        'INNER',
+        [1, 0, 1],
+        [
+          [2.5, 20, 20],
+          [null, 40, 40]
+        ]
+      ]
+    ] as const) {
+      const result = context
+        .query(
+          `SELECT a.score AS rating, t.identifier, a.identifier AS account
+         FROM trips AS t ${joinType} JOIN accounts AS a ON t.identifier = a.identifier`
+        )
+        .compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(output.schema.fields.map(field => field.name)).toEqual([
+          'rating',
+          'identifier',
+          'account'
+        ]);
+        expect(output.batches.map(batch => batch.numRows)).toEqual(batchLengths);
+        expect(Array.from(output, row => [row.rating, row.identifier, row.account])).toEqual(
+          expected
+        );
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
 it('GPUSQL aggregates only observed dictionary pairs across Arrow batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

@@ -33,6 +33,7 @@ import {
 import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
 import {compileGPUDataFrameAggregation} from '../gpu-dataframe/gpu-global-aggregation-compiler';
 import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
+import type {GPUJoinRightColumn} from '../gpu-dataframe/gpu-join-projection';
 import {compileGPUDataFrameJoin, type GPUAggregateJoin} from '../gpu-dataframe/gpu-join-compiler';
 import type {
   GPUDataFrameJoinType,
@@ -614,6 +615,9 @@ function buildGPUSQLPlan(
     throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
+  const rightColumns: GPUJoinRightColumn[] = [];
+  const boundJoin = statement.join && bindJoin(statement.join);
+  const rightQualifier = statement.join && (statement.join.alias ?? statement.join.table);
   for (const item of statement.items) {
     if (item.star) {
       if (statement.items.length !== 1)
@@ -621,7 +625,33 @@ function buildGPUSQLPlan(
       selected.push(...frame.columnNames);
       continue;
     }
-    const node = lowerSQLExpression(item.expression!, parameters, resolve);
+    const expression = item.expression!;
+    if (
+      boundJoin &&
+      rightQualifier &&
+      (expression.type === 'MemberExpression' ||
+        (expression.type === 'Identifier' && !('gpuSQLParameter' in expression)))
+    ) {
+      const reference = readGPUSQLColumn(expression);
+      const matchesRight = matchesGPUSQLColumn(
+        reference,
+        rightQualifier,
+        boundJoin.right.columnNames
+      );
+      const matchesLeft = matchesGPUSQLColumn(reference, qualifier, frame.columnNames);
+      if (matchesRight && !matchesLeft) {
+        if (statement.join?.type !== 'inner' && statement.join?.type !== 'left') {
+          throw new Error('GPUSQL right projections require INNER or LEFT JOIN');
+        }
+        const name = item.alias ?? reference.name;
+        if (selected.includes(name))
+          throw new Error(`GPUSQL output column "${name}" is duplicated`);
+        selected.push(name);
+        rightColumns.push({name, source: reference.name});
+        continue;
+      }
+    }
+    const node = lowerSQLExpression(expression, parameters, resolve);
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
     if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
     if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
@@ -638,13 +668,16 @@ function buildGPUSQLPlan(
     if (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined) {
       throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
-    const {right, leftKey, rightKey} = bindJoin(statement.join);
-    const keyIsSelected = selected.includes(leftKey);
-    const workingColumns = keyIsSelected ? selected : [...selected, leftKey];
+    const {right, leftKey, rightKey} = boundJoin!;
+    const leftColumns = selected.filter(name => !rightColumns.some(column => column.name === name));
+    const keyIsSelected = leftColumns.includes(leftKey);
+    const workingColumns = keyIsSelected ? leftColumns : [...leftColumns, leftKey];
     const workingQuery = query.select(workingColumns);
     const joinType = statement.join.type;
     const join = workingQuery[joinMethods[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
-    if (keyIsSelected) return describe(join, 'unique-right-join', selected, workingColumns, 1);
+    if (keyIsSelected && rightColumns.length === 0) {
+      return describe(join, 'unique-right-join', selected, workingColumns, 1);
+    }
 
     const {predicates, derivedColumns} = workingQuery;
     return describe(
@@ -659,7 +692,8 @@ function buildGPUSQLPlan(
             join.options,
             joinType,
             graph,
-            selected
+            selected,
+            rightColumns
           )
       },
       'unique-right-join',
