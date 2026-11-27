@@ -163,3 +163,27 @@ Related technique and integration references:
 
 See [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques)
 for comparisons between related effects, their GPU inputs, backend support, and composition order.
+
+### Declarative fullscreen effects prototype
+
+An effect definition declares its resources and pass sequence. The renderer owns the textures and
+history for each use. The following stack applies ambient occlusion, camera-reprojection TAA, and
+two-level HDR bloom to rendered scene color. Supply the current TAA matrices and jitter in
+`uniforms` alongside the textures.
+
+```ts
+import {EffectRenderer} from '@luma.gl/engine';
+import {bloomLow, cameraReprojectionTaa, ssao} from '@luma.gl/engine/effects';
+
+const renderer = new EffectRenderer(device, {
+  effects: [ssao, cameraReprojectionTaa, bloomLow],
+  colorFormat: 'rgba16float'
+});
+
+renderer.resize([width, height]);
+renderer.renderToScreen({sourceTexture, bindings: {depthTexture}, uniforms});
+```
+
+Bloom declares two initial extraction paths that write the same half- and quarter-resolution
+textures. The renderer selects fused compute on capable WebGPU devices and uses the fragment
+sequence otherwise. Reconstruction and composition are shared.

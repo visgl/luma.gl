@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer, ShaderPassRenderer} from '@luma.gl/engine';
 import {
   bloom,
   bloomCompositeShaderPass,
@@ -509,13 +509,13 @@ it('HDR bloom replaces fragment extraction with one exposure-aware WebGPU dispat
       'runtime camera exposure changes the effective threshold without rebuilding the renderer'
     ).toBe(true);
 
-    const declarativeCompute = new ShaderPassRenderer(device, {
-      shaderPasses: [bloomLow],
+    const declarativeCompute = new EffectRenderer(device, {
+      effects: [bloomLow],
       colorFormat: 'rgba16float',
       flipY: false
     });
-    const declarativeFragment = new ShaderPassRenderer(device, {
-      shaderPasses: [{...bloomLow, initialPasses: {fragment: bloomLow.initialPasses.fragment}}],
+    const declarativeFragment = new EffectRenderer(device, {
+      effects: [{...bloomLow, initialPasses: {fragment: bloomLow.initialPasses.fragment}}],
       colorFormat: 'rgba16float',
       flipY: false
     });

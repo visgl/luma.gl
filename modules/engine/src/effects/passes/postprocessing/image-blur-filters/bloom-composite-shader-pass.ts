@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '../../../../passes/effect-renderer';
+
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
 import type {
   ShaderPass,
@@ -956,7 +958,7 @@ const bloomLowExtractionUniforms = {
 /** Two-level HDR bloom with explicit compute and fragment extraction alternatives. */
 export const bloomLow = {
   name: 'bloomLow',
-  renderTargets: {
+  resources: {
     extractHalf: {
       scale: [0.5, 0.5],
       format: 'rgba16float',
@@ -1003,6 +1005,7 @@ export const bloomLow = {
     }),
     fragment: [
       {
+        kind: 'fullscreen',
         shaderPass: bloomExtractPass,
         inputs: {
           sourceTexture: 'previous'
@@ -1011,6 +1014,7 @@ export const bloomLow = {
         uniforms: bloomLowExtractionUniforms
       },
       {
+        kind: 'fullscreen',
         shaderPass: bloomDownsamplePass,
         inputs: {
           sourceTexture: 'extractHalf'
@@ -1019,8 +1023,9 @@ export const bloomLow = {
       }
     ]
   },
-  steps: [
+  passes: [
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {
         sourceTexture: 'extractHalf'
@@ -1032,6 +1037,7 @@ export const bloomLow = {
       }
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {
         sourceTexture: 'blurHalfScratch'
@@ -1043,6 +1049,7 @@ export const bloomLow = {
       }
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {
         sourceTexture: 'extractQuarter'
@@ -1054,6 +1061,7 @@ export const bloomLow = {
       }
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {
         sourceTexture: 'blurQuarterScratch'
@@ -1065,6 +1073,7 @@ export const bloomLow = {
       }
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomUpsamplePass,
       inputs: {
         sourceTexture: 'blurQuarter',
@@ -1077,6 +1086,7 @@ export const bloomLow = {
       }
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomAdaptiveCompositePass,
       inputs: {
         sourceTexture: 'previous',
@@ -1090,7 +1100,7 @@ export const bloomLow = {
       }
     }
   ]
-} satisfies CompositeShaderPass<
+} satisfies EffectDefinition<
   | 'extractHalf'
   | 'blurHalfScratch'
   | 'blurHalf'

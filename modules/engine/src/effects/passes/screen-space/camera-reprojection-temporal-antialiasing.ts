@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
 import {copyPass} from './copy-pass';
 import {temporalHelpers} from './screen-space-shader-helpers';
@@ -188,17 +190,14 @@ fn cameraReprojectionTaaDepthHistoryCopy_sampleColor(
 } as const satisfies ShaderPass;
 
 /**
- * Creates a full-resolution HDR camera-reprojection TAA pipeline.
+ * Full-resolution HDR camera-reprojection TAA pipeline.
  *
  * The caller must bind current depth and update both matrices/jitter every frame. Reset the
  * renderer history after resize, camera cuts, or moving-object topology changes.
  */
-export function createCameraReprojectionTAACompositeShaderPass(): CompositeShaderPass<
-  'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
-> {
-  return {
+export const cameraReprojectionTaa = {
     name: 'cameraReprojectionTaaCompositeShaderPass',
-    renderTargets: {
+    resources: {
       cameraReprojectionTaaHistoryColor: {
         format: 'rgba16float',
         lifetime: 'history',
@@ -210,8 +209,9 @@ export function createCameraReprojectionTAACompositeShaderPass(): CompositeShade
         initialize: {clearColor: [1, 0, 0, 1]}
       }
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen',
         shaderPass: cameraReprojectionTaaResolve,
         inputs: {
           sourceTexture: 'previous',
@@ -221,15 +221,22 @@ export function createCameraReprojectionTAACompositeShaderPass(): CompositeShade
         output: 'cameraReprojectionTaaHistoryColor'
       },
       {
+        kind: 'fullscreen',
         shaderPass: copyPass,
         inputs: {sourceTexture: 'cameraReprojectionTaaHistoryColor'},
         output: 'previous'
       },
       {
+        kind: 'fullscreen',
         shaderPass: cameraReprojectionTaaDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'cameraReprojectionTaaHistoryDepth'
       }
     ]
-  };
+  } satisfies EffectDefinition<
+  'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
+>;
+
+export function createCameraReprojectionTAACompositeShaderPass() {
+  return resolveEffect(cameraReprojectionTaa);
 }
