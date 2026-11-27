@@ -108,8 +108,8 @@ the branch. Numeric column branches must have the same scalar format. An omitted
   GROUP BY keys may be omitted from SELECT. Queries with hidden keys return only groups observed after WHERE.
   A projected computed key such as `FLOOR(fare) AS bucket` requires an explicit SELECT alias. Computed keys use observed grouping.
   HAVING filters grouped results before ordering and pagination. It can reference SELECT output names and aggregate calls, including calls omitted from SELECT. For unordered HAVING results, pass `rowIndices` and `selectedCounts` to Arrow readback.
-  Set `maxMeanScratchBytes` in the query options to limit the temporary count buffer used by grouped AVG. The GPU reuses that buffer across key ranges.
-  Grouped queries accept ORDER BY on SELECT output names or positions, followed by LIMIT and OFFSET. Pass `globalRowIndices` and `globalSelectedCount` to Arrow readback for ordered groups.
+  Set `maxReductionScratchBytes` in the query options to cap temporary partial buffers per grouped SUM or AVG. AVG counts both the sum and count buffers. The GPU reuses scratch across key ranges. `maxMeanScratchBytes` can also constrain the size of an individual AVG partial buffer.
+  Grouped queries accept ORDER BY on SELECT output names, positions, or aggregate calls. Aggregate sort keys may be omitted from SELECT. Apply LIMIT and OFFSET to the sorted groups. Pass `globalRowIndices` and `globalSelectedCount` to Arrow readback for ordered groups.
   Grouped results preserve SELECT column order and retain key dictionaries under their output names.
   A projected single dictionary key returns the full category domain. Single numeric keys and multi-key queries return only groups observed after WHERE.
   Observed grouping supports uint32, sint32, float32, and dictionary-encoded keys, including nulls. Float keys group both signed zeros together and treat all NaNs as a single value.
@@ -119,7 +119,7 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
   Aggregates can consume the selected left rows of a unique-right join directly on the GPU. The join and aggregate execute in one graph. An invalid right key index contributes no rows.
-  The SELECT list controls which left-side columns appear in the result. The left join key can be omitted.
+  The SELECT list controls result order and may omit either join key. `INNER JOIN` and `LEFT JOIN` can project direct right-side packed 32-bit numeric columns, including two- to four-component vectors and dictionary codes with adapter metadata. For example, `SELECT t.identifier, a.score AS account_score FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier`. The GPU gathers right payloads into the original left batch layout. For multiple left batches, the join can stage contiguous right payload chunks in GPU scratch, then gather each staged range once per left batch and projected column. Each staged range spans consecutive right chunks that fit in one storage binding. The GPU copies chunks with copy-source usage directly and can stage storage-only chunks with compute passes when the staging and gather steps together use fewer compute passes than direct gathering. The join gathers directly from any remaining source chunks. Set `maxJoinProjectionScratchBytes` to cap the combined staged payload and validity bytes across projected right columns. The planner considers columns in SELECT order and can stage a partial range when the whole column exceeds the remaining budget. A budget of zero disables staging. The cap applies to projection staging only. Multiple aliases for the same right source column share its gather work, GPU values, validity mask, and staging allocation. The result retains each alias in SELECT order. An unmatched left row yields null for every right field. Right-side expressions and aggregate inputs are outside this projection path.
   Qualify the ON operands when the join sides cannot be determined from their field names.
 
 SQL keywords and registered table names are case-insensitive. Column names must match the
@@ -146,3 +146,17 @@ Call `context.query(sql).explain()` to inspect the bound execution route, projec
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Core](/docs/api-reference/experimental/gpu-core)
 - [Arrow](/docs/api-reference/arrow)
+
+
+## Benchmark right-side projection
+
+Run the opt-in WebGPU benchmark with fixed row counts and varying right batch counts:
+
+```sh
+yarn test-browser-benchmarks modules/graph/test/gpu-sql/gpu-join-projection-benchmark.spec.ts
+```
+
+The benchmark checks result parity and records projection compute passes, copy passes, and staging
+bytes. It separately reports graph compilation, command encoding, and the wall time from encoding
+to GPU completion. Separate GPU timestamp runs measure the graph's compute passes when the device exposes timestamp
+queries. Native copies contribute to wall time. Arrow readback runs outside the timed samples.

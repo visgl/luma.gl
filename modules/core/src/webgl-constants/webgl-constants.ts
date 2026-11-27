@@ -1037,6 +1037,9 @@ enum GLEnum {
   CLIP_ORIGIN_EXT = 0x935c,
   CLIP_DEPTH_MODE_EXT = 0x935d,
 
+  /** Texture parameter exposed by WEBGL_stencil_texturing. */
+  DEPTH_STENCIL_TEXTURE_MODE_WEBGL = 0x90ea,
+
   /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
   SRC1_COLOR_WEBGL = 0x88f9,
   SRC1_ALPHA_WEBGL = 0x8589,

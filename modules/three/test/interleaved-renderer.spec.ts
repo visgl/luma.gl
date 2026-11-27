@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {ScatterplotLayer, PathLayer} from '@deck.gl/layers';
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
@@ -21,7 +20,7 @@ import {ThreeDeckInterleaved, getThreeDeckInterleavedSupport} from '../src/inter
 const makeLayers = (depth: number) => [
   new ScatterplotLayer({
     id: 'depth-point',
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     data: [[0, 0, depth]],
     getPosition: position => position,
     getFillColor: [0, 0, 255],
@@ -31,7 +30,7 @@ const makeLayers = (depth: number) => [
   }),
   new PathLayer({
     id: 'depth-path',
-    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    coordinateSystem: 'cartesian',
     data: [
       {
         path: [

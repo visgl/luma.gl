@@ -18,6 +18,12 @@ const OWNED_MODULE = {
 };
 
 class AssemblerModel extends Model {
+  /** Exercise the fallback assembler without inheriting Deck's process-wide default. */
+  static override defaultProps: typeof Model.defaultProps = {
+    ...Model.defaultProps,
+    shaderAssembler: undefined!
+  };
+
   getShaderAssembler(): ShaderAssembler {
     return this.props.shaderAssembler;
   }

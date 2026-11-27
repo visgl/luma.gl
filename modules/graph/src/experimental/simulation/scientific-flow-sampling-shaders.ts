@@ -4,6 +4,15 @@
 
 /** Shared collocated sampling. Validity: 1 valid, 0 missing, -1 outside domain. */
 export const SCIENTIFIC_FLOW_SAMPLING = /* wgsl */ `
+// Geographic fields are restricted to latitudes within +/-85 degrees. Evaluate
+// cosine on that bounded interval explicitly: native GPU trig approximations can
+// otherwise accumulate metres of longitudinal drift over long integrations.
+fn latitudeCosine(latitude: f32) -> f32 {
+  let angle = latitude * 0.017453292519943295;
+  let squared = angle * angle;
+  return 1.0 + squared * (-0.5 + squared * (1.0/24.0 + squared * (-1.0/720.0 +
+    squared * (1.0/40320.0 + squared * (-1.0/3628800.0 + squared / 479001600.0)))));
+}
 fn wrapPosition(position: vec2<f32>) -> vec2<f32> {
   if ((parameters.counters.y & 2u) != 0u) {return vec2<f32>(fract(position.x), position.y);}
   return position;
@@ -37,7 +46,7 @@ fn velocity(position: vec2<f32>, fraction: f32) -> vec3<f32> {
   var velocityComponents = sampled.xy;
   if ((parameters.counters.y & 1u) != 0u) {
     let latitude = parameters.domain.y + parameters.domain.w * position.y;
-    velocityComponents = velocityComponents / (111195.08 * vec2<f32>(cos(radians(latitude)), 1.0));
+    velocityComponents = velocityComponents / (111195.08 * vec2<f32>(latitudeCosine(latitude), 1.0));
   }
   return vec3<f32>(velocityComponents / parameters.domain.zw, sampled.z);
 }

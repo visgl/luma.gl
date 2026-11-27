@@ -391,7 +391,7 @@ resources and adapt their underlying textures without introducing an experimenta
 ```ts
 import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 import {load} from '@loaders.gl/core';
-import {ImageLoader} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
 
 const loadedEnvironment = loadPBREnvironment(device, {
   loadImage: url => load(url, ImageLoader),

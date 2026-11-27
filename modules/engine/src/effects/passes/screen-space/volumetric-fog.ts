@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
-import {heightFogPass} from './height-fog';
+import {heightFog} from './height-fog';
 
 export type VolumetricFogCompositeShaderPassOptions = {
   /** Existing stylized screen-space fog, or analytic metre-space height fog without history. */
@@ -78,25 +83,39 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createVolumetricFogCompositeShaderPass(
-  options: VolumetricFogCompositeShaderPassOptions = {}
-): CompositeShaderPass<'fogHistory'> {
-  if (options.mode === 'height') {
-    return {
-      name: 'heightFogCompositeShaderPass',
-      steps: [{shaderPass: heightFogPass, inputs: {sourceTexture: 'previous'}, output: 'previous'}]
-    };
-  }
+export const volumetricFog: ConfigurableEffectDefinition<VolumetricFogCompositeShaderPassOptions> =
+  {
+    name: 'volumetricFogCompositeShaderPass',
+    configure(options = {}) {
+      return options.mode === 'height' ? heightFog : configureVolumetricFog();
+    }
+  };
+
+function configureVolumetricFog(): EffectDefinition<'fogHistory'> {
   return {
     name: 'volumetricFogCompositeShaderPass',
-    renderTargets: {fogHistory: {lifetime: 'history', initialize: 'original'}},
-    steps: [
+    resources: {fogHistory: {lifetime: 'history', initialize: 'original'}},
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: volumetricFogPass,
         inputs: {sourceTexture: 'previous', historyTexture: 'fogHistory'},
         output: 'fogHistory'
       },
-      {shaderPass: copyPass, inputs: {sourceTexture: 'fogHistory'}, output: 'previous'}
+      {
+        kind: 'fullscreen' as const,
+        shaderPass: copyPass,
+        inputs: {sourceTexture: 'fogHistory'},
+        output: 'previous'
+      }
     ]
   };
+}
+
+export function createVolumetricFogCompositeShaderPass(
+  options: VolumetricFogCompositeShaderPassOptions = {}
+): CompositeShaderPass<'fogHistory'> {
+  return options.mode === 'height'
+    ? {name: heightFog.name, steps: heightFog.passes}
+    : resolveEffect(configureVolumetricFog());
 }

@@ -52,7 +52,10 @@ export type PointShadowLight = ShadowBiasProps & {
 export type ShadowProps<TextureT extends ShadowTexture = ShadowTexture, SamplerT = unknown> = {
   quality: 'low' | 'balanced' | 'cinematic';
   cascadeCount: number;
+  /** Cascade split distances for the first directional light. */
   cascadeSplits: readonly number[];
+  /** Cascade split distances for each directional light, in input order. */
+  directionalCascadeSplits?: readonly (readonly number[])[];
   blockerSampleCount: number;
   filterSampleCount: number;
   directionalLights: readonly DirectionalShadowLight[];

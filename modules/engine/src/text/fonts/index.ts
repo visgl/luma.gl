@@ -47,6 +47,7 @@ export {
   buildBrowserFontAtlas,
   resolveBrowserFontAtlasSettings,
   setFontAtlasCacheLimit,
+  ensureFontAtlasCacheCapacity,
   type BrowserFontAtlasBuildOptions,
   type BrowserFontAtlasSettings,
   type ResolvedBrowserFontAtlasSettings,

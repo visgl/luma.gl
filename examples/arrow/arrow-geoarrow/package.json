@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-arrow-geoarrow",
-  "version": "10.0.0-beta.2",
+  "version": "10.0.0-rc.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,11 +9,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@luma.gl/core": "10.0.0-beta.2",
-    "@luma.gl/engine": "10.0.0-beta.2",
-    "@luma.gl/graph": "10.0.0-beta.2",
-    "@luma.gl/shaders": "10.0.0-beta.2",
+    "@deck.gl-community/panels": "9.4.10",
+    "@luma.gl/core": "10.0.0-rc.1",
+    "@luma.gl/engine": "10.0.0-rc.1",
+    "@luma.gl/graph": "10.0.0-rc.1",
+    "@luma.gl/shaders": "10.0.0-rc.1",
     "apache-arrow": "^17.0.0"
   },
   "devDependencies": {

@@ -27,7 +27,7 @@ Coverage integrates the periodic pulse over the fragment's derivative footprint.
 ## Compose stroke styles
 
 Dash coverage can multiply `sketchStroke_getCoverage` for pencil paths or the radiance returned by
-`pointGlow_getColor` for luminous paths. The [Riverfront routes example](/examples/deck/styled-paths)
+`pointGlow_getColor` for luminous paths. The [Riverfront routes example](https://visgl.github.io/deck.gl-community/examples/layers/styled-paths)
 uses both with the same `makeStrokeGeometry` output. It passes metres to the pencil shader and sets
 `minimumAntialias: 0` to rely on derivatives; existing pixel-sized pencil strokes retain the `0.7`
 default. Glow maps transverse distance, and endpoint distance for caps, into the point shader's

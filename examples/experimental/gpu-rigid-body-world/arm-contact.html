@@ -7,5 +7,5 @@ html,body{margin:0;height:100%;background:#e6e9e4;font:13px system-ui}canvas{wid
 <section id="lab-controls" class="control-card" hidden>
 <label>Solver <select id="backend"><option value="tree">Reduced-coordinate</option><option value="ordered">Ordered · 64 iterations</option></select></label>
 <div class="toolbar"><button id="press">Press against stop</button><button id="lift">Lift away</button></div>
-<output id="reading" role="status">Compiling…</output></section>
+<a href="./gripper.html">Try pick and place</a><output id="reading" role="status">Compiling…</output></section>
 <section id="lab-details" hidden>Four powered joints carry a 3 kg payload. Press commands the elbow down with a 25 N·m cap. Lift raises the cap to 300 N·m. Both solvers use a 120 Hz fixed step. Drag to orbit.</section><div id="startup-error" role="alert"></div><script type="module" src="./arm-contact-lab.ts"></script></body></html>

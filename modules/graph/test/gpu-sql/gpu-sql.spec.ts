@@ -10,7 +10,7 @@ import {planGPUDataFrameQuery} from '../../../../examples/experimental/gpu-data-
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   CompiledGPUDataFrameAggregation as CompiledGPUDataFrameAggregation,
   CompiledGPUDataFrameGlobalSort as CompiledGPUDataFrameGlobalSort,
@@ -22,7 +22,7 @@ import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 it('GPUSQL executes Arrow filters, derived columns, global ordering, and selected Arrow output on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
@@ -566,6 +566,424 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   void 0;
 });
 
+it('GPUSQL projects nullable right payloads across independent Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const first = arrow.tableFromArrays({
+    identifier: Uint32Array.of(40),
+    score: arrow.vectorFromArray([null], new arrow.Float32())
+  });
+  const second = arrow.tableFromArrays({
+    identifier: Uint32Array.of(20),
+    score: arrow.vectorFromArray([2.5], new arrow.Float32())
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(
+      device,
+      new arrow.Table([...first.batches, ...second.batches])
+    ),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [joinType, batchLengths, expected] of [
+      [
+        'LEFT',
+        [2, 0, 3],
+        [
+          [null, 10, null],
+          [2.5, 20, 20],
+          [null, 30, null],
+          [null, 40, 40],
+          [null, 50, null]
+        ]
+      ],
+      [
+        'INNER',
+        [1, 0, 1],
+        [
+          [2.5, 20, 20],
+          [null, 40, 40]
+        ]
+      ]
+    ] as const) {
+      const result = context
+        .query(
+          `SELECT a.score AS rating, t.identifier, a.identifier AS account
+         FROM trips AS t ${joinType} JOIN accounts AS a ON t.identifier = a.identifier`
+        )
+        .compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(output.schema.fields.map(field => field.name)).toEqual([
+          'rating',
+          'identifier',
+          'account'
+        ]);
+        expect(output.batches.map(batch => batch.numRows)).toEqual(batchLengths);
+        expect(Array.from(output, row => [row.rating, row.identifier, row.account])).toEqual(
+          expected
+        );
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
+it('GPU SQL and typed joins project nullable packed right vectors with and without staging', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const positionType = new arrow.FixedSizeList(
+    3,
+    new arrow.Field('item', new arrow.Float32(), false)
+  );
+  const first = arrow.tableFromArrays({
+    identifier: Uint32Array.of(40, 50),
+    position: arrow.vectorFromArray([[4, 40, -4], null], positionType)
+  });
+  const second = arrow.tableFromArrays({
+    identifier: Uint32Array.of(20),
+    position: arrow.vectorFromArray([[2, 20, -2]], positionType)
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(
+      device,
+      new arrow.Table([...first.batches, ...second.batches])
+    ),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  const selectedLeft = left.select(['identifier']);
+  const join = selectedLeft.leftJoin(right, {leftOn: 'identifier', rightOn: 'identifier'});
+  try {
+    expect(() =>
+      join.compileWithRightColumns(new GPUCommandGraph(device), {
+        rightColumns: {identifier: 'position'}
+      })
+    ).toThrow(/invalid or already selected/);
+    expect(() =>
+      join.compileWithRightColumns(new GPUCommandGraph(device), {
+        rightColumns: {location: 'position'},
+        maxJoinProjectionScratchBytes: -1
+      })
+    ).toThrow(/nonnegative safe integer/);
+    for (const [budget, expectedScratch, typed] of [
+      [47, 0, false],
+      [48, 48, false],
+      [47, 0, true],
+      [48, 48, true]
+    ] as const) {
+      const graph = new GPUCommandGraph(device);
+      const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
+      const result = typed
+        ? join.compileWithRightColumns(graph, {
+            rightColumns: {location: 'position'},
+            maxJoinProjectionScratchBytes: budget
+          })
+        : context
+            .query(
+              'SELECT a.position AS location FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
+              {maxJoinProjectionScratchBytes: budget}
+            )
+            .compile(graph);
+      try {
+        const scratch = createTransientBuffer.mock.calls
+          .map(([buffer]) => buffer)
+          .filter(buffer => buffer.id.includes('-join-projection-'))
+          .reduce((total, buffer) => total + buffer.byteLength, 0);
+        expect(scratch).toBe(expectedScratch);
+        expect(result.table.gpuVectors.location.format).toBe('float32x3');
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(output.schema.fields.map(field => field.name)).toEqual(
+          typed ? ['identifier', 'location'] : ['location']
+        );
+        expect(output.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+        expect(
+          Array.from(output.getChild('location') ?? [], value => value && Array.from(value))
+        ).toEqual([null, [2, 20, -2], null, [4, 40, -4], null]);
+      } finally {
+        createTransientBuffer.mockRestore();
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    selectedLeft.destroy();
+    left.destroy();
+  }
+});
+
+it.each([
+  {layout: 'mixed', copyableSecondChunk: true},
+  {layout: 'storage-only', copyableSecondChunk: false}
+])('GPUSQL stages $layout right chunks only when two left batches save a compute pass', async ({
+  copyableSecondChunk
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const leftRows = arrow.tableFromArrays({identifier: Uint32Array.of(20, 50, 40, 10)});
+  const leftArrow = new arrow.Table([
+    leftRows.slice(0, 2).batches[0],
+    leftRows.slice(2, 4).batches[0]
+  ]);
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, leftArrow),
+    ownership: 'owned'
+  });
+  const rightBatches = [20, 40].map(
+    (identifier, index) =>
+      new GPURecordBatch<{identifier: 'uint32'; position: 'float32x3'}>({
+        gpuData: {
+          identifier: new GPUData({
+            buffer: device.createBuffer({data: Uint32Array.of(identifier), usage: Buffer.STORAGE}),
+            format: 'uint32',
+            length: 1,
+            ownsBuffer: true
+          }),
+          position: new GPUData({
+            buffer: device.createBuffer({
+              data: Float32Array.of(identifier, -identifier, index),
+              usage: Buffer.STORAGE | (index === 1 && copyableSecondChunk ? Buffer.COPY_SRC : 0)
+            }),
+            format: 'float32x3',
+            length: 1,
+            ownsBuffer: true
+          })
+        },
+        fields: [
+          {name: 'identifier', format: 'uint32', nullable: false},
+          {name: 'position', format: 'float32x3', nullable: true}
+        ]
+      })
+  );
+  const validity = new GPUVector({
+    type: 'data',
+    format: 'uint32',
+    name: 'position-validity',
+    data: [1, 0].map(
+      (value, index) =>
+        new GPUData({
+          buffer: device.createBuffer({
+            data: Uint32Array.of(value),
+            usage: Buffer.STORAGE | (index === 1 && copyableSecondChunk ? Buffer.COPY_SRC : 0)
+          }),
+          format: 'uint32',
+          length: 1,
+          ownsBuffer: true
+        })
+    ),
+    ownsData: true
+  });
+  const right = new GPUDataFrame({
+    table: new GPUTable({batches: rightBatches}),
+    validity: {position: validity},
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: left, accounts: right});
+  try {
+    for (const [budget, stageCount] of [
+      [0, 0],
+      [32, Number(copyableSecondChunk)]
+    ] as const) {
+      const graph = new GPUCommandGraph(device);
+      const compute = vi.spyOn(graph, 'addComputePass');
+      const copy = vi.spyOn(graph, 'addCopyPass');
+      const result = context
+        .query(
+          'SELECT a.position FROM trips AS t LEFT JOIN accounts AS a ON t.identifier = a.identifier',
+          {maxJoinProjectionScratchBytes: budget}
+        )
+        .compile(graph);
+      try {
+        expect(
+          compute.mock.calls.filter(
+            ([pass]) => pass.id.includes('-join-projection-') && pass.id.includes('-pack-')
+          )
+        ).toHaveLength(stageCount);
+        expect(
+          copy.mock.calls.filter(([pass]) => pass.id.includes('-join-projection-'))
+        ).toHaveLength(stageCount);
+        expect(
+          compute.mock.calls.filter(
+            ([pass]) => pass.id.includes('-join-projection-') && !pass.id.includes('-pack-')
+          )
+        ).toHaveLength(stageCount ? 2 : 4);
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(
+          Array.from(output.getChild('position') ?? [], value => value && Array.from(value))
+        ).toEqual([[20, -20, 0], null, null, null]);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+    left.destroy();
+  }
+});
+
+it('GPUSQL shares right projection storage and work across aliases and batch layouts', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const rowCount = 32;
+  const leftBatchCount = 8;
+  const identifiers = Uint32Array.from({length: rowCount}, (_, row) => row);
+  const scores = Array.from(identifiers, identifier => (identifier % 5 ? identifier * 0.5 : null));
+  const leftRows = arrow.tableFromArrays({identifier: identifiers});
+  const rightRows = arrow.tableFromArrays({
+    identifier: identifiers,
+    score: arrow.vectorFromArray(scores, new arrow.Float32())
+  });
+  const batchRows = (table: arrow.Table, batchCount: number) => {
+    const rowsPerBatch = table.numRows / batchCount;
+    return new arrow.Table(
+      Array.from({length: batchCount}, (_, batchIndex) =>
+        table.slice(batchIndex * rowsPerBatch, (batchIndex + 1) * rowsPerBatch)
+      ).flatMap(batch => batch.batches)
+    );
+  };
+
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(leftRows, leftBatchCount)),
+    ownership: 'owned'
+  });
+  try {
+    for (const [
+      rightBatchCount,
+      budget,
+      expectedProjectionRanges,
+      expectedCopyPasses,
+      expectedScratchBytes,
+      gap
+    ] of [
+      [1, undefined, 2, 0, 0],
+      [2, undefined, 2, 4, 384],
+      [8, 384, 2, 16, 384],
+      [8, 384, 4, 16, 384, 100],
+      [8, 383, 3, 15, 368],
+      [8, 128, 13, 4, 128],
+      [8, 0, 16, 0, 0]
+    ] as const) {
+      const right = new GPUDataFrame({
+        ...makeGPUAnalyticsTableFromArrowTable(device, batchRows(rightRows, rightBatchCount)),
+        ownership: 'owned'
+      });
+      const graph = new GPUCommandGraph(device);
+      const addComputePass = vi.spyOn(graph, 'addComputePass');
+      const addCopyPass = vi.spyOn(graph, 'addCopyPass');
+      const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
+      try {
+        expect(left.numRows).toBe(rowCount);
+        expect(right.numRows).toBe(rowCount);
+        expect(left.batches).toHaveLength(leftBatchCount);
+        expect(right.batches).toHaveLength(rightBatchCount);
+        if (gap) {
+          for (const batch of right.batches.slice(rightBatchCount / 2)) {
+            if (!batch.sourceInfo) throw new Error('Expected Arrow source-row IDs');
+            batch.sourceInfo.sourceRowIndexOffset += gap;
+          }
+        }
+        const result = new GPUSQLContext({trips: left, accounts: right})
+          .query(
+            'SELECT a.score, a.identifier AS account, a.score AS rating, a.identifier AS account_copy FROM trips AS t INNER JOIN accounts AS a ON t.identifier = a.identifier',
+            {maxJoinProjectionScratchBytes: budget}
+          )
+          .compile(graph);
+        try {
+          const projectionPasses = addComputePass.mock.calls.filter(([pass]) =>
+            pass.id.includes('-join-projection-')
+          );
+          expect(projectionPasses).toHaveLength(leftBatchCount * expectedProjectionRanges);
+          const packingPasses = addCopyPass.mock.calls.filter(([pass]) =>
+            pass.id.includes('-join-projection-')
+          );
+          expect(packingPasses).toHaveLength(expectedCopyPasses);
+          const scratchBytes = createTransientBuffer.mock.calls
+            .map(([buffer]) => buffer)
+            .filter(buffer => buffer.id.includes('-join-projection-'))
+            .reduce((bytes, buffer) => bytes + buffer.byteLength, 0);
+          expect(scratchBytes).toBe(expectedScratchBytes);
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder);
+          device.submit(encoder.finish());
+          const output = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          expect(output.batches).toHaveLength(leftBatchCount);
+          expect(Array.from(output.getChild('score') ?? [])).toEqual(scores);
+          expect(Array.from(output.getChild('account') ?? [])).toEqual(Array.from(identifiers));
+          expect(output.schema.fields.map(field => field.name)).toEqual([
+            'score',
+            'account',
+            'rating',
+            'account_copy'
+          ]);
+          expect(Array.from(output.getChild('rating') ?? [])).toEqual(scores);
+          expect(Array.from(output.getChild('account_copy') ?? [])).toEqual(
+            Array.from(identifiers)
+          );
+          expect(result.validity.rating).toBe(result.validity.score);
+          expect(result.validity.account_copy).toBe(result.validity.account);
+          for (const batch of result.table.batches) {
+            expect(batch.gpuData.rating.buffer).toBe(batch.gpuData.score.buffer);
+            expect(batch.gpuData.account_copy.buffer).toBe(batch.gpuData.account.buffer);
+          }
+        } finally {
+          result.destroy();
+        }
+      } finally {
+        addComputePass.mockRestore();
+        addCopyPass.mockRestore();
+        createTransientBuffer.mockRestore();
+        right.destroy();
+      }
+    }
+  } finally {
+    left.destroy();
+  }
+});
+
 it('GPUSQL aggregates only observed dictionary pairs across Arrow batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
@@ -974,7 +1392,19 @@ it('GPUSQL applies ORDER BY and pagination after grouping', async () => {
         'SELECT COUNT(*) AS trips FROM trips WHERE fare > 100 GROUP BY fare ORDER BY trips LIMIT 1',
         []
       ],
-      ['SELECT COUNT(*) AS trips FROM trips GROUP BY fare ORDER BY trips OFFSET 100', []]
+      ['SELECT COUNT(*) AS trips FROM trips GROUP BY fare ORDER BY trips OFFSET 100', []],
+      [
+        'SELECT category FROM trips GROUP BY category HAVING SUM(fare + 1) > 0 ORDER BY SUM(trips.fare + 1) DESC LIMIT 1',
+        [['premium']]
+      ],
+      [
+        'SELECT category FROM trips GROUP BY category ORDER BY SUM(fare) DESC, COUNT(*) ASC OFFSET 1 LIMIT 1',
+        [['economy']]
+      ],
+      [
+        'SELECT COUNT(*) AS trips FROM trips GROUP BY NULLIF(fare, 8) ORDER BY SUM(NULLIF(fare, 8)) DESC NULLS FIRST LIMIT 1',
+        [[2]]
+      ]
     ] as const) {
       const result = context.query(sql).compile(new GPUCommandGraph(device));
       try {

@@ -231,7 +231,10 @@ describe('GPURasterRegionMeasurements graph composition', () => {
       'affine-regions-intensity-mask',
       'affine-regions-calibrated-intensity',
       'affine-regions-column-values',
-      'affine-regions-row-values'
+      'affine-regions-row-values',
+      'affine-regions-intensity-sum-partial-sums',
+      'affine-regions-column-sum-partial-sums',
+      'affine-regions-row-sum-partial-sums'
     ]);
     expect(graph.passes.map(pass => pass.id)).toEqual([
       'affine-regions-prepare-membership',
@@ -240,18 +243,18 @@ describe('GPURasterRegionMeasurements graph composition', () => {
       'affine-regions-pixel-count-local',
       'affine-regions-intensity-count-clear',
       'affine-regions-intensity-count-local',
-      'affine-regions-intensity-sum-clear',
       'affine-regions-intensity-sum-sum',
+      'affine-regions-intensity-sum-finalize',
       'affine-regions-intensity-minimum-initialize',
       'affine-regions-intensity-minimum-min',
       'affine-regions-intensity-minimum-finalize',
       'affine-regions-intensity-maximum-initialize',
       'affine-regions-intensity-maximum-max',
       'affine-regions-intensity-maximum-finalize',
-      'affine-regions-column-sum-clear',
       'affine-regions-column-sum-sum',
-      'affine-regions-row-sum-clear',
+      'affine-regions-column-sum-finalize',
       'affine-regions-row-sum-sum',
+      'affine-regions-row-sum-finalize',
       'affine-regions-finalize-intensity',
       'affine-regions-finalize-geometry'
     ]);

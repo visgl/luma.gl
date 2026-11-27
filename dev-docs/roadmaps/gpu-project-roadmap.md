@@ -42,15 +42,18 @@ P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
 [#3402](https://github.com/visgl/luma.gl/pull/3402):
 `ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
 that borrows source batches and materializes derived positions/validity in a caller-owned graph.
-P.9a.4 (inline rendering/deck adapter) is proposed separately in
-[#3403](https://github.com/visgl/luma.gl/pull/3403), not assumed landed here.
+This change implements the bounded Cartesian consumer in P.9a.4: `ProjectionRenderTransform` and
+`GPUProjectedPointLayer` share the retained CPU transform and adaptive GPU plan, explicit frame
+conversion, invalid-row rejection and borrowed chunk ownership. Altitude and map/globe views are
+rejected, not silently interpreted. The P.8a.2b Cartesian capture is complete on Apple WebGPU. Follow-up focuses on materialized
+projection for GPU-resident data. Geographic viewport integration remains separate P.9a.5 coverage.
 [#3404](https://github.com/visgl/luma.gl/pull/3404) landed P.8a.2a's production table benchmark
 foundation. [#3405](https://github.com/visgl/luma.gl/pull/3405) covers **all P.5 items** and extends that benchmark through 4M
 rows, with separate GPU-resident and CPU-round-trip ratios. Native Lambert/Albers are explicit
 Float32 optimizations; high-precision adaptive coverage remains the default. P.5b qualifies bounded
 spherical gnomonic/orthographic domains, not geometry clipping or new native kernels.
 This P.8 change adds fixed-arithmetic routing measurements, opt-in indexed routing, conservative
-domain partitions and an exact-capture execution selector. Inline-render evidence waits for #3403;
+domain partitions and an exact-capture execution selector. Inline-render evidence is the next measurement step;
 external-vendor captures remain pending rather than inferred from the local adapter.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
@@ -241,16 +244,20 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.8a.1 — alpha.13 CPU/GPU rebaseline | Evidence: scalar, reusable-output, contiguous flat and strided/column CPU APIs against inline/materialized GPU paths | Upgraded math.gl and existing harness; no new kernels required | Separate preparation, fitting/compile, first-use, allocation, upload/readback and resident execution; match domains, validity, accuracy and consumer work; record version/API/layout | Landed in #3401 | Complete |
 | P.8a.2 — Consumer, routing and cross-vendor evidence | Evidence umbrella; implementation slices below | P.8a.1; P.9a.3/P.9a.4 for consumers | Reproducible workloads, transfer boundaries and precision budgets; no extrapolation from one device | Partial | — |
 | P.8a.2a — Table-consumer transfer and batching evidence | Evidence, not optimization: production CPU/GPU table adapters; resident, upload/project and round-trip paths | Landed P.9a.3 | Row/batch-size sweeps through 4M, valid/invalid rows, explicit memory/setup; separate resident-data and CPU-memory comparisons at a fixed error budget | Landed in #3404/#3405; local device only | Complete |
-| P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | **Blocked on #3403**; this PR targets master, by explicit request | Medium |
+| P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | [Apple WebGPU capture and GPU-resident comparison](../benchmarks/gpu-project-cartesian-rendering.md) | Complete local capture |
 | P.8a.2c — Routing attribution and cross-vendor qualification | Evidence, not optimization: fixed-fit lookup-only and full-program measurements | Existing harness and available hardware | Report routing/build/storage costs separately; qualify precision on each adapter before timing | Implemented runner; local capture and reproducible external-vendor protocol; **external captures pending** | Partial evidence |
+| P.8a.2d — GPU-resident materialization attribution | Evidence: isolate kernel execution, graph encoding/submission, queue synchronization, batch count, and update cadence | P.8a.2b baseline and available hardware | Hold the fit, accuracy, valid rows, and consumer work fixed; compare the CPU round trip at matched batch sizes; report latency distributions, bytes transferred, and adapter-specific results | [Apple dispatch attribution captured](../benchmarks/gpu-project-cartesian-rendering.md#p8a2d-batch-size-attribution); non-Apple adapter pending | Medium |
 | P.8b.1 — Indexed patch routing | **Optimization only**: opt-in conservative stackless index, same evaluator and first-match semantics | P.8a.2 routing evidence | Indexed/scan paths agree at boundaries and invalid seams; include routing storage/build costs and measured benefit | Implemented; default remains scan; per-workload/device qualification required | Complete implementation |
 | P.8b.2 — Discontinuous-domain partitioning | Coverage: explicit disjoint branches, conservative disk cells and source-segment clipping | Caller-declared domains, independent forward/inverse providers | Strict per-patch guards preserve gaps; unresolved curved cells are rejected, not sampled; inverse plans are independent | Implemented bounded point/segment coverage; exact curved clipping and polygon reconstruction remain caller-owned | Complete bounded scope |
-| P.8c — Consumer fusion and cost selection | **Optimization only**: measurement-gated selection of existing inline/materialized paths | Qualified reports; P.9a.4 for real-render qualification | Match program, rows, patches, reuse, memory, capabilities and precision; no extrapolation or implicit submission | Implemented exact-capture selector; real-render policy waits for P.8a.2b; no universal thresholds/default changes | Complete mechanism; qualification pending |
+| P.8c — Consumer fusion and cost selection | **Optimization only**: measurement-gated selection of existing inline/materialized paths | Qualified reports; P.9a.4 for real-render qualification | Match program, rows, patches, reuse, memory, capabilities and precision; no extrapolation or implicit submission | Implemented exact-capture selector; defer further Cartesian inline projection work based on P.8a.2b; no universal thresholds/default changes | Complete mechanism; qualification pending |
+| P.8d — Materialization batching and scheduling | Optimize measured dispatch or submission overhead in the resident producer-to-consumer workload | P.8a.2d and P.9a.6 identify an end-to-end bottleneck | Preserve source chunk identity, output precision and validity; measure wall-clock benefit and memory cost before adopting a change | Opt-in paired-dispatch implementation; [Apple benchmark](../benchmarks/gpu-project-cartesian-rendering.md#p8d-grouped-dispatch), H3 producer measured in P.9a.6; cross-vendor qualification pending | Medium |
 | P.9a.1 — Provider preparation boundary | Caller-prepared synchronous transforms without an engine-catalogue import | Adaptive compiler and program contracts | Eager/preloaded providers share double-single, inverse-domain and failure contracts; bundle/no-implicit-loading tests pass | Landed in #3399; alpha.13 migration in #3400 | Complete |
 | P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Landed in #3401 | Complete |
 | P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: ProjectionTableTransform and GPUProjectionTable expose explicit CPU/GPU execution | P.9a.2 and P.3d.2 for metadata inputs | Preserved/empty batches, offsets, source identity, explicit masks, batch-atomic CPU failures, borrowed inputs, caller submission and explicit output encodings; UTM CPU/hardware regressions | Landed in #3402 | Complete |
-| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Proposed in #3403 | Medium–large |
-| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider and table boundaries implemented; inline consumer remains | — |
+| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU picking and the same planned transform in a real Cartesian point consumer | P.9a.2; P.3d.2 for coordinate metadata | Explicit origin/axes/units before float32 narrowing; masked rows discarded; CPU/materialized/inline comparison and lifecycle regression | Implemented for 2D non-geospatial Cartesian views; altitude/map/globe explicitly rejected | Medium–large |
+| P.9a.5 — Geographic viewport adapter | Coverage/interoperability, **not optimization only**: deck map/globe common-space and altitude contracts | P.9a.4 | Explicit CRS-to-deck mapping, viewport rebasing/invalidation and altitude policy; compare CPU/GPU picking across zoom and seams without implicit inverse guesses | Planned | Medium–large |
+| P.9a.6 — GPU-resident producer-to-render consumer | Connect one existing GPU coordinate producer to the materialized projection graph and reuse its output across draws and picks | P.9a.3 and P.8a.2b | Borrow producer buffers, preserve validity and physical chunks, verify dependency ordering and update invalidation, and measure the complete path with no coordinate readback or re-upload | [GPU H3 → UTM → Cartesian capture on Apple WebGPU](../benchmarks/gpu-project-cartesian-rendering.md#p9a6-gpu-h3-producer-to-cartesian-render-consumer); other producers and adapters pending | Medium |
+| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.6 | Existing program contracts and explicit adapters | Cover table, Cartesian point and GPU-resident producer workloads | Table, bounded Cartesian, and GPU H3 materialization captures available | — |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -275,14 +282,20 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    GPU materialization is not a synchronous CPU `ProjectionInstance`. No native-kernel or
    3D/datum/grid coverage is implied. Bulk failures remain different from GPU row validity;
    benchmark adapters explicitly compact validated rows and propagate coordinate exceptions.
-2. **P.9a.3 landed; P.8a.2a measures it. Next land P.9a.4, then P.8a.2b/P.8a.2c.** The table
-   consumer preserves batches and uses explicit CPU/GPU selection without hidden uploads/readbacks.
-   CPU exceptions abort the current batch rather than exposing a bulk API's partially committed prefix;
-   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. Add the inline workload.
-   The deck adapter must distinguish CRS projected coordinates from deck common space and give
-   altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
-   No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
-   Axis-swap fixtures alone are not production consumers.
+2. **Prioritize GPU-resident materialization.** The [Cartesian capture](../benchmarks/gpu-project-cartesian-rendering.md)
+   found that materialized GPU projection avoids moving coordinate buffers through the CPU and can
+   match CPU projection at 4,096-row batches on Apple WebGPU. At 1,024-row batches the CPU round trip
+   was faster at the two larger point counts. Defer further Cartesian inline projection work.
+   - **P.8a.2d:** The Apple sweep held total workgroups fixed. The penalty tracked the number of
+     small projection dispatches, primarily after submission. The all-masked control and
+     split-pass run showed much smaller effects. Repeat on a non-Apple adapter before
+     generalizing the result.
+   - **P.9a.6:** The H3 cell-center producer now feeds materialized UTM directly in the Cartesian
+     benchmark. The capture includes first draw, reuse, and picking without a coordinate round
+     trip. Extend qualification to another adapter or producer workload before generalizing.
+   - **P.8d:** Opt-in pairing now reduces dispatch count while preserving batch identity and
+     precision. The H3 producer capture shows a benefit at 1,024-row chunks. Test on other
+     adapters and workloads before changing defaults or broadening the scheduling policy.
 3. **P.5 landed in #3405; P.8 mechanisms are implemented here without changing defaults.** The
    [native conic capture](../benchmarks/gpu-project-conic-performance.md) supports opt-in Float32
    planning/storage/execution improvements at a 20 m budget. It does not change default precision.
@@ -295,8 +308,7 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    Degree/patch-count sweeps do not isolate routing cost, and Float32 timings at looser accuracy
    cannot justify replacing double-single fitting. The new routing runner holds the complete fit
    fixed and measures lookup separately. See the [P.8 qualification protocol](../benchmarks/gpu-project-routing-performance.md).
-   Land #3403 before adding real-render captures; collect external vendor captures before claiming
-   cross-vendor qualification. Explicit wrapping still does not automatically infer partitions.
+   Collect external vendor captures before claiming cross-vendor qualification. Explicit wrapping still does not automatically infer partitions.
 4. **Independent expansion: P.7a.1, P.7a.2, then conditional P.7b.** CPU ECEF, Helmert, grids and
    temporal pipelines are reference/preparation tools, not implemented GPU capabilities. Validate
    greater-than-Float32 arithmetic in all three components; high/low storage around Float32

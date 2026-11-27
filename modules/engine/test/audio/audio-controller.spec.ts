@@ -69,3 +69,46 @@ test('engine audio copies only active borrowed byte ranges and preserves source 
     decode.mockRestore();
   }
 });
+
+test('stopping clears delayed samples and playback resumes through a fresh delay', async () => {
+  const context = new OfflineAudioContext(1, 8192, 48000);
+  const controller = new AudioController({
+    scene: new GroupNode(),
+    audioContext: context,
+    baseUrl: 'https://example.com/',
+    emitterIndices: [0],
+    definition: {
+      audio: [],
+      sources: [{graph: {oscillator: {type: 'sine', frequency: 440}}}],
+      emitters: [{type: 'global', sources: [0]}]
+    },
+    graphs: [
+      {
+        nodes: [
+          {kind: 'delay', params: {delayTime: 0.05}},
+          {kind: 'gain', params: {gain: 1}}
+        ],
+        connections: [{from: {node: 0}, to: {node: 1}}],
+        inputs: [{source: 0, node: 0}],
+        outputs: [{node: 1, emitter: 0}]
+      }
+    ]
+  });
+  try {
+    controller.setGraphGain(0, 1, 0.25);
+    await controller.play();
+    const pause = context.suspend(0.025);
+    const rendering = context.startRendering();
+    await pause;
+    controller.stop();
+    await controller.play({restart: false});
+    await context.resume();
+
+    const samples = (await rendering).getChannelData(0);
+    expect(samples.slice(2400, 3500).every(value => Math.abs(value) < 1e-6)).toBe(true);
+    expect(samples.slice(3800, 5000).some(value => Math.abs(value) > 0.2)).toBe(true);
+    expect(samples.slice(3800, 5000).every(value => Math.abs(value) <= 0.251)).toBe(true);
+  } finally {
+    controller.destroy();
+  }
+});

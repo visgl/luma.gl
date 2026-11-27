@@ -1019,3 +1019,7 @@ Remaining: scheduling/status still scan instance records; optional events/public
 noncompact fallback retain capacity work. Dense single-instance list traversal, heterogeneous
 ensembles, independent failure recovery, and the multi-vendor device matrix remain open. This
 package advances the G10 throughput gate; it does not claim unrestricted large-world qualification.
+
+### G9 two-finger pick and place
+
+A fixed-base tree can squeeze and carry one freely rotating box using two spherical pads with Coulomb friction. The benchmark compares the reduced-coordinate and ordered formulations at 120 Hz and includes a zero-pad-friction control. See the [pick-and-place qualification](../benchmarks/robot-arm.md#two-finger-pick-and-place). General manifold discovery, arbitrary payload geometry, multiple free counterparts, floating bases and loop closure remain open.

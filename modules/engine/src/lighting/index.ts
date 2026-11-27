@@ -61,7 +61,8 @@ export type {
   PBRSurfaceRenderView
 } from './pbr-surface-pass';
 
-export {createContactShadowCompositeShaderPass} from './contact-shadow-composite';
+export type {ContactShadowCompositeShaderPassOptions} from './contact-shadow-composite';
+export {contactShadows, createContactShadowCompositeShaderPass} from './contact-shadow-composite';
 
 export {ContactShadowPass} from './contact-shadow-pass';
 export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
@@ -123,3 +124,8 @@ export type {
   LightmapAtlasOptions,
   LightmapAtlasChart
 } from './lightmap-atlas';
+
+export {CORTAOPass} from './cortao/cortao-pass';
+export type {CORTAOPassProps, CORTAORenderOptions} from './cortao/cortao-pass';
+export type {CORTAOCamera} from './cortao/cortao-parameters';
+export type {CORTAORayCount} from './cortao/cortao-occluder-lookup-table';

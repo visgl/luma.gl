@@ -68,27 +68,43 @@ export class GPUUploadOperation implements GPUOperation {
   }
 }
 
-export type GPUCopyOperationProps = {id?: string; input: string; output: string};
+export type GPUCopyOperationProps = {id?: string; input: string} & (
+  | {output: string; target?: never}
+  | {target: string; output?: never}
+);
 
-/** Copy every row into independent storage, preserving format and chunk boundaries. */
+/** Copy rows into a new result or an explicitly named mutable target. */
 export class GPUCopyOperation implements GPUOperation {
   readonly type = 'vector-copy';
   readonly id: string;
   readonly input: string;
   readonly output: string;
+  readonly target?: string;
   constructor(props: GPUCopyOperationProps) {
-    this.id = props.id ?? `${props.output}-copy`;
+    this.output = props.output ?? props.target!;
+    this.target = props.target;
+    this.id = props.id ?? `${this.output}-copy`;
     this.input = props.input;
-    this.output = props.output;
+    // Copy either produces a result or writes an existing target, never both or itself.
+    assert((props.output === undefined) !== (props.target === undefined));
+    assert(this.input !== this.output);
   }
   get contract(): GPUOperationContract {
     return {
       outputs: ({getValue}) => {
         const input = getValue(this.input);
-        // Copy is a vector transfer, not a scalar assignment or conversion.
-        if (input.type === 'texture')
+        if (input.type === 'texture') {
+          // Explicit mutable targets are declared vector state.
+          assert(this.target === undefined);
           return {[this.output]: gpuGraph.texture({...input, extent: {like: this.input}})};
+        }
         assert(input.type === 'vector');
+        if (this.target !== undefined) {
+          const target = getValue(this.target);
+          // Target copies preserve type; conversions belong in expressions.
+          assert(target.type === 'vector' && target.format === input.format);
+          return {};
+        }
         return {
           [this.output]: gpuGraph.vector(input.format, {
             length: input.length,

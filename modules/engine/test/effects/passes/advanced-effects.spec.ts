@@ -4,10 +4,12 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer, ShaderPassRenderer} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   bloomCompositeShaderPass,
+  bloomLow,
+  cameraReprojectionTaa,
   brightnessContrast,
   clusteredVolumetricDepthHistoryCopy,
   clusteredVolumetricTemporal,
@@ -20,6 +22,9 @@ import {
   createHDRAutoExposureCompositeShaderPass,
   createOutlineCompositeShaderPass,
   createSSAOCompositeShaderPass,
+  gaussianBlurEffect,
+  sepiaEffect,
+  ssaoEffect,
   createSSGICompositeShaderPass,
   createSSRCompositeShaderPass,
   createTAACompositeShaderPass,
@@ -834,6 +839,29 @@ it('advanced effects compose in order with existing effects', async () => {
       }
     });
     device.submit();
+
+    const effectRenderer = new EffectRenderer(device, {
+      effects: [
+        {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+        cameraReprojectionTaa,
+        bloomLow,
+        gaussianBlurEffect,
+        sepiaEffect
+      ],
+      colorFormat: 'rgba16float',
+      flipY: false
+    });
+    try {
+      effectRenderer.resize([width, height]);
+      for (let frameIndex = 0; frameIndex < 2; frameIndex++) {
+        expect(
+          effectRenderer.renderToTexture({sourceTexture, bindings: {depthTexture, normalTexture}})
+        ).toBeTruthy();
+      }
+      device.submit();
+    } finally {
+      effectRenderer.destroy();
+    }
 
     expect(Boolean(outputTexture), 'mixed old and new effect stack renders on WebGPU').toBe(true);
     expect(

@@ -14,6 +14,7 @@ export type {
   ClusteredLightGridBindings,
   ClusteredLightGridShaderPassUniforms
 } from '@luma.gl/engine/lighting';
+import type {EffectDefinition} from '@luma.gl/engine';
 import {DEFAULT_CLUSTER_DIMENSIONS, DEFAULT_MAX_LIGHTS_PER_CLUSTER} from '@luma.gl/engine/lighting';
 import type {
   ClusteredLightGridBindings,
@@ -334,15 +335,23 @@ fn clusteredDeferredLighting_sampleColor(
 >;
 
 /** Creates a fullscreen clustered deferred-lighting step for the previous color chain. */
+/** Resolves the scene buffers with the clusteredDeferredLighting shader. */
+export const clusteredDeferredLightingEffect: EffectDefinition<never> = {
+  name: 'clusteredDeferredLightingCompositeShaderPass',
+  resources: {},
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: clusteredDeferredLighting,
+      inputs: {sourceTexture: 'previous'},
+      output: 'previous'
+    }
+  ]
+};
+
 export function createClusteredDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'clusteredDeferredLightingCompositeShaderPass',
-    steps: [
-      {
-        shaderPass: clusteredDeferredLighting,
-        inputs: {sourceTexture: 'previous'},
-        output: 'previous'
-      }
-    ]
+    name: clusteredDeferredLightingEffect.name,
+    steps: clusteredDeferredLightingEffect.passes.map(pass => ({...pass}))
   };
 }

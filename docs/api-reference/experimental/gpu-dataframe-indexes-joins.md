@@ -84,6 +84,21 @@ All four join modes support the same `capacity`, `indexCapacity`, and `maxProbeC
 compose with filtered, projected, or derived left plans. Publication remains stable within each
 original left batch; no implicit global row ordering or source-column materialization occurs.
 
+To include right payloads in an inner or left join, call `compileWithRightColumns`:
+
+```ts
+const compiled = trips.leftJoin(accounts, {leftOn: 'accountId', rightOn: 'id'})
+  .compileWithRightColumns(graph, {
+    rightColumns: {accountPosition: 'position'},
+    maxJoinProjectionScratchBytes: 1_048_576
+  });
+```
+
+The alias follows the selected left fields and inherits the right column's packed numeric format.
+Read the joined rows using `compiled.rowIndices` and `compiled.selectedCounts`. The projected
+validity mask marks unmatched left rows and null right payloads. The optional budget caps staging
+for right values and validity across all projected fields. Zero selects direct gathers.
+
 The six GPU-resident index statistic words are, in order, unique entries, duplicate keys, index
 overflow, invalid keys, total probe count, and maximum probe count. A valid key equal to
 `0xffffffff` is reserved and therefore invalid; nullable right rows are ignored. Duplicate right

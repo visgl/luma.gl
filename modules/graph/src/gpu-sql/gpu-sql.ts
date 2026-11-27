@@ -33,6 +33,7 @@ import {
 import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
 import {compileGPUDataFrameAggregation} from '../gpu-dataframe/gpu-global-aggregation-compiler';
 import type {GPUDataFrameAggregationDefinition} from '../gpu-dataframe/gpu-group-by-query';
+import type {GPUJoinRightColumn} from '../gpu-dataframe/gpu-join-projection';
 import {compileGPUDataFrameJoin, type GPUAggregateJoin} from '../gpu-dataframe/gpu-join-compiler';
 import type {
   GPUDataFrameJoinType,
@@ -52,6 +53,10 @@ export type GPUSQLQueryOptions = Readonly<{
   parameters?: GPUDataFrameQueryParameters;
   /** Maximum temporary count bytes per grouped AVG operation. */
   maxMeanScratchBytes?: number;
+  /** Combined byte limit per grouped deterministic SUM or AVG. */
+  maxReductionScratchBytes?: number;
+  /** Combined byte cap on staged right-side JOIN payloads and validity. Zero disables staging. */
+  maxJoinProjectionScratchBytes?: number;
 }>;
 
 /** A source column name with its optional, separately parsed table qualifier. */
@@ -191,10 +196,24 @@ export class GPUSQLContext {
 
   /** Parses and validates one immutable SELECT plan without touching registered GPU sources. */
   query(source: string, options: GPUSQLQueryOptions = {}): GPUSQLQuery {
+    const {maxJoinProjectionScratchBytes} = options;
+    if (
+      maxJoinProjectionScratchBytes !== undefined &&
+      (!Number.isSafeInteger(maxJoinProjectionScratchBytes) || maxJoinProjectionScratchBytes < 0)
+    ) {
+      throw new Error('GPUSQL join projection scratch budget must be a nonnegative safe integer');
+    }
     const statement = parseGPUSQLStatement(source);
     return new GPUSQLQuery(
       source,
-      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {}, options.maxMeanScratchBytes)
+      buildGPUSQLPlan(
+        this.tables,
+        statement,
+        options.parameters ?? {},
+        options.maxMeanScratchBytes,
+        options.maxReductionScratchBytes,
+        maxJoinProjectionScratchBytes
+      )
     );
   }
 }
@@ -227,7 +246,9 @@ function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
   statement: GPUSQLStatement,
   parameters: GPUDataFrameQueryParameters,
-  maxMeanScratchBytes?: number
+  maxMeanScratchBytes?: number,
+  maxReductionScratchBytes?: number,
+  maxJoinProjectionScratchBytes?: number
 ): GPUSQLBoundPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
@@ -303,7 +324,7 @@ function buildGPUSQLPlan(
   if (statement.having && !statement.groupBy) {
     throw new Error('GPUSQL HAVING requires GROUP BY');
   }
-  if (aggregates.length > 0 || statement.having) {
+  if (aggregates.length > 0 || statement.having || (statement.groupBy && statement.orderBy)) {
     if (
       !statement.groupBy &&
       (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined)
@@ -444,45 +465,42 @@ function buildGPUSQLPlan(
       if (!statement.orderBy && (statement.limit !== undefined || statement.offset !== undefined)) {
         throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
       }
+      /** Resolves or registers an aggregate used by a post-group clause. */
+      const bindAggregateCall = (call: Extract<Expression, {type: 'CallExpression'}>) => {
+        const name =
+          call.callee.type === 'Identifier' ? String(call.callee['name']).toLowerCase() : '';
+        const operation = name === 'avg' ? 'mean' : name;
+        if (
+          operation !== 'count' &&
+          operation !== 'sum' &&
+          operation !== 'min' &&
+          operation !== 'max' &&
+          operation !== 'mean'
+        )
+          return undefined;
+        if (call.arguments.length !== 1) throw new Error('GPUSQL aggregates require one argument');
+        const argument = call.arguments[0] as Expression;
+        const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+        if (wildcard && operation !== 'count') {
+          throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
+        }
+        const input = wildcard ? undefined : lowerSQLExpression(argument, parameters, resolve);
+        const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
+        if (output !== undefined) return column(output).node;
+        let hiddenName: string;
+        do {
+          hiddenName = '__sqlPostGroupAggregate' + inputIndex++;
+        } while (occupied.has(hiddenName));
+        occupied.add(hiddenName);
+        return column(registerAggregate(operation, input, hiddenName)).node;
+      };
       const having = statement.having
         ? new GPUExpression<boolean, string>(
             lowerSQLExpression(
               statement.having,
               parameters,
               reference => resolveGPUSQLColumn(reference, '', columns),
-              call => {
-                const name =
-                  call.callee.type === 'Identifier'
-                    ? String(call.callee['name']).toLowerCase()
-                    : '';
-                const operation = name === 'avg' ? 'mean' : name;
-                if (
-                  operation !== 'count' &&
-                  operation !== 'sum' &&
-                  operation !== 'min' &&
-                  operation !== 'max' &&
-                  operation !== 'mean'
-                )
-                  return undefined;
-                if (call.arguments.length !== 1)
-                  throw new Error('GPUSQL aggregates require one argument');
-                const argument = call.arguments[0] as Expression;
-                const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
-                if (wildcard && operation !== 'count') {
-                  throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
-                }
-                const input = wildcard
-                  ? undefined
-                  : lowerSQLExpression(argument, parameters, resolve);
-                const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
-                if (output !== undefined) return column(output).node;
-                let hiddenName: string;
-                do {
-                  hiddenName = '__sqlHavingAggregate' + inputIndex++;
-                } while (occupied.has(hiddenName));
-                occupied.add(hiddenName);
-                return column(registerAggregate(operation, input, hiddenName)).node;
-              }
+              bindAggregateCall
             )
           )
         : undefined;
@@ -494,11 +512,16 @@ function buildGPUSQLPlan(
               : expression.type === 'Identifier' && !('gpuSQLParameter' in expression)
                 ? expression.name
                 : undefined;
-          if (column === undefined || !columns.includes(column)) {
-            throw new Error('GPUSQL grouped ORDER BY requires a SELECT output name or position');
+          const aggregate =
+            expression.type === 'CallExpression' ? bindAggregateCall(expression) : undefined;
+          const sortColumn = aggregate?.kind === 'column' ? aggregate.name : column;
+          if (sortColumn === undefined || (!aggregate && !columns.includes(sortColumn))) {
+            throw new Error(
+              'GPUSQL grouped ORDER BY requires a SELECT output name, position, or aggregate call'
+            );
           }
           return {
-            column,
+            column: sortColumn,
             options: {
               direction,
               nulls: nulls ?? 'last',
@@ -510,6 +533,9 @@ function buildGPUSQLPlan(
         }
       );
       const {predicates, selectedColumns, derivedColumns} = query;
+      if (Object.keys(definitions).length === 0) {
+        throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+      }
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,
@@ -543,7 +569,8 @@ function buildGPUSQLPlan(
                 ordering,
                 having,
                 aggregateJoin,
-                maxMeanScratchBytes
+                maxMeanScratchBytes,
+                maxReductionScratchBytes
               )
           },
           'observed-grouping',
@@ -571,7 +598,8 @@ function buildGPUSQLPlan(
               ordering,
               having,
               aggregateJoin,
-              maxMeanScratchBytes
+              maxMeanScratchBytes,
+              maxReductionScratchBytes
             )
         },
         'dense-grouping',
@@ -609,6 +637,9 @@ function buildGPUSQLPlan(
     throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
+  const rightColumns: GPUJoinRightColumn[] = [];
+  const boundJoin = statement.join && bindJoin(statement.join);
+  const rightQualifier = statement.join && (statement.join.alias ?? statement.join.table);
   for (const item of statement.items) {
     if (item.star) {
       if (statement.items.length !== 1)
@@ -616,7 +647,33 @@ function buildGPUSQLPlan(
       selected.push(...frame.columnNames);
       continue;
     }
-    const node = lowerSQLExpression(item.expression!, parameters, resolve);
+    const expression = item.expression!;
+    if (
+      boundJoin &&
+      rightQualifier &&
+      (expression.type === 'MemberExpression' ||
+        (expression.type === 'Identifier' && !('gpuSQLParameter' in expression)))
+    ) {
+      const reference = readGPUSQLColumn(expression);
+      const matchesRight = matchesGPUSQLColumn(
+        reference,
+        rightQualifier,
+        boundJoin.right.columnNames
+      );
+      const matchesLeft = matchesGPUSQLColumn(reference, qualifier, frame.columnNames);
+      if (matchesRight && !matchesLeft) {
+        if (statement.join?.type !== 'inner' && statement.join?.type !== 'left') {
+          throw new Error('GPUSQL right projections require INNER or LEFT JOIN');
+        }
+        const name = item.alias ?? reference.name;
+        if (selected.includes(name))
+          throw new Error(`GPUSQL output column "${name}" is duplicated`);
+        selected.push(name);
+        rightColumns.push({name, source: reference.name});
+        continue;
+      }
+    }
+    const node = lowerSQLExpression(expression, parameters, resolve);
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
     if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
     if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
@@ -633,13 +690,16 @@ function buildGPUSQLPlan(
     if (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined) {
       throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
-    const {right, leftKey, rightKey} = bindJoin(statement.join);
-    const keyIsSelected = selected.includes(leftKey);
-    const workingColumns = keyIsSelected ? selected : [...selected, leftKey];
+    const {right, leftKey, rightKey} = boundJoin!;
+    const leftColumns = selected.filter(name => !rightColumns.some(column => column.name === name));
+    const keyIsSelected = leftColumns.includes(leftKey);
+    const workingColumns = keyIsSelected ? leftColumns : [...leftColumns, leftKey];
     const workingQuery = query.select(workingColumns);
     const joinType = statement.join.type;
     const join = workingQuery[joinMethods[joinType]](right, {leftOn: leftKey, rightOn: rightKey});
-    if (keyIsSelected) return describe(join, 'unique-right-join', selected, workingColumns, 1);
+    if (keyIsSelected && rightColumns.length === 0) {
+      return describe(join, 'unique-right-join', selected, workingColumns, 1);
+    }
 
     const {predicates, derivedColumns} = workingQuery;
     return describe(
@@ -654,7 +714,9 @@ function buildGPUSQLPlan(
             join.options,
             joinType,
             graph,
-            selected
+            selected,
+            rightColumns,
+            maxJoinProjectionScratchBytes
           )
       },
       'unique-right-join',

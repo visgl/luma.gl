@@ -45,6 +45,7 @@ export type {GPUDataFrameSortOptions} from './gpu-sort-query';
 export {GPUDataFrameJoinQuery, GPUDataFrameLookupQuery} from './gpu-join-query';
 export type {
   GPUDataFrameJoinOptions,
+  GPUDataFrameJoinProjectionOptions,
   GPUDataFrameJoinType,
   GPUDataFrameLookupOptions
 } from './gpu-join-query';

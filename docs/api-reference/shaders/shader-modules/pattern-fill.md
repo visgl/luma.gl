@@ -40,4 +40,4 @@ ink area at distance. Crosshatching combines the two filtered directions. Dots b
 analytic mean area when subpixel. The dot filter and oblique crosshatch intersection filter are
 approximations; there is no temporal accumulation or texture dependency.
 
-See [Riverfront patterns](/examples/deck/pattern-fills) for controls on both rendering backends.
+See [Riverfront patterns](https://visgl.github.io/deck.gl-community/examples/layers/pattern-fills) for controls on both rendering backends.

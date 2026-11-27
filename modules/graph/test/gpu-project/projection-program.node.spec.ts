@@ -5,6 +5,7 @@
 import {describe, expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shaders';
 import {
@@ -83,6 +84,64 @@ describe('projection programs', () => {
     input.destroy();
     output.destroy();
     device.destroy();
+  });
+
+  it.each([
+    [false, 9, 3],
+    [true, 8, 3],
+    [true, 9, 2]
+  ])('pairs nonempty chunks only with opt-in and sufficient storage bindings (%s, %s)', (groupChunks, limit, count) => {
+    const device = new NullDevice({});
+    Object.defineProperty(device, 'type', {value: 'webgpu'});
+    Object.defineProperty(device.limits, 'maxComputeWorkgroupsPerDimension', {value: 65_535});
+    Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {value: limit});
+    const graph = new GPUCommandGraph(device);
+    const makeVector = (name: string) =>
+      new GPUVector({
+        type: 'data',
+        name,
+        format: 'float32x2',
+        ownsData: true,
+        data: [3, 0, 5, 2].map(
+          length =>
+            new GPUData({
+              format: 'float32x2',
+              length,
+              ownsBuffer: true,
+              buffer: device.createBuffer({
+                byteLength: Math.max(length, 1) * 8,
+                usage: Buffer.STORAGE
+              })
+            })
+        )
+      });
+    const input = makeVector('input');
+    const output = makeVector('output');
+    const addPass = vi.spyOn(graph, 'addComputePass');
+    const program = new GPUProjectionProgram({
+      groupChunks,
+      projection: compileProjectionProgram({precision: 'local-f32', operations: []}),
+      positions: graph.importGPUVector('input', input),
+      output: graph.importGPUVector('output', output)
+    });
+    try {
+      program.addToGraph(graph);
+      expect(addPass).toHaveBeenCalledTimes(count);
+      expect(addPass.mock.calls.map(([pass]) => pass.id)).toEqual(
+        count === 2
+          ? ['gpu-projection-program-chunks-0-2', 'gpu-projection-program-chunk-3']
+          : [
+              'gpu-projection-program-chunk-0',
+              'gpu-projection-program-chunk-2',
+              'gpu-projection-program-chunk-3'
+            ]
+      );
+    } finally {
+      program.destroy();
+      input.destroy();
+      output.destroy();
+      device.destroy();
+    }
   });
 
   it('inverts noncommuting operations in reverse order', () => {
@@ -176,6 +235,23 @@ describe('projection programs', () => {
       defines: shader.defines
     }).source;
     expect(assembled).toContain('fn fp64_accumulate_f32_integer');
+  });
+
+  it.each([
+    ['d3d12', 'intel', false],
+    ['vulkan', 'nvidia', false],
+    ['metal', 'apple', true]
+  ] as const)('selects fp64 arithmetic and retains uniform metadata on %s', (gpuBackend, gpu, integer) => {
+    const device = new NullDevice({});
+    Object.defineProperty(device, 'info', {
+      value: {...device.info, type: 'webgpu', gpu, gpuType: 'discrete', gpuBackend, fallback: false}
+    });
+    const shader = compileProjectionProgram(nativeProgram).getShader({device});
+    expect(shader.defines.LUMA_FP64_INTEGER_ARITHMETIC).toBe(integer);
+    expect(shader.defines.LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND).toBe(
+      gpu === 'intel' ? true : undefined
+    );
+    expect(shader.modules[0].uniformTypes).toEqual({ONE: 'f32', SPLIT: 'f32'});
   });
 
   it('calls each heavy fp64 helper from one site in adaptive stages', () => {
