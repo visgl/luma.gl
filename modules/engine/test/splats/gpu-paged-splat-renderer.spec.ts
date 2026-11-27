@@ -15,6 +15,86 @@ import {
 } from '../../src/splats/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
 
+// Run the offscreen readback before tests that exercise the browser swapchain.
+it('draws transformed and tinted pages into a color-only host pass with blending disabled', async () => {
+  const device = await webgpuAdapter.create({
+    featureLevel: 'max',
+    createCanvasContext: false,
+    debug: true
+  });
+  const source = makeBrowserPagedSplatSource([0], 0, 0);
+  source.scales.set([0.12, 0.12, 0.12]);
+  source.colors.set([255, 255, 255, 255]);
+  const data = makeGPUSplatData(device, source);
+  const renderer = new GPUPagedSplatRenderer(device, {
+    pages: [
+      {
+        id: 'left',
+        data,
+        modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.5, 0, 0, 1],
+        colorScale: [1, 0, 0],
+        alphaScale: 0.5
+      },
+      {
+        id: 'right',
+        data,
+        modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0, 0, 1],
+        colorScale: [0, 1, 0]
+      }
+    ],
+    viewportSize: [32, 16],
+    kernel2DSize: 0,
+    toneMapping: 'none'
+  });
+  const colorTexture = device.createTexture({
+    format: 'rgba8unorm',
+    width: 32,
+    height: 16,
+    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 32,
+    height: 16,
+    samples: 4,
+    colorAttachments: [colorTexture]
+  });
+  const layout = colorTexture.computeMemoryLayout({width: 32, height: 16});
+  const readback = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    renderer.prepare(device.commandEncoder);
+    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1]});
+    renderer.draw(renderPass, {blend: false, depthCompare: 'always', depthWriteEnabled: false});
+    renderPass.end();
+    device.submit();
+
+    colorTexture.readBuffer({width: 32, height: 16}, readback);
+    const pixels = await readback.readAsync();
+    const left = 8 * layout.bytesPerRow + 8 * 4;
+    const center = 8 * layout.bytesPerRow + 16 * 4;
+    const right = 8 * layout.bytesPerRow + 24 * 4;
+    expect(pixels[left]).toBeGreaterThan(220);
+    expect(pixels[left + 1]).toBeLessThan(5);
+    expect(pixels[left + 2]).toBeLessThan(5);
+    expect(pixels[left + 3]).toBeGreaterThan(90);
+    expect(pixels[left + 3]).toBeLessThan(140);
+    expect(Array.from(pixels.slice(center, center + 4))).toEqual([0, 0, 255, 255]);
+    expect(pixels[right]).toBeLessThan(5);
+    expect(pixels[right + 1]).toBeGreaterThan(220);
+    expect(pixels[right + 2]).toBeLessThan(5);
+    expect(pixels[right + 3]).toBeGreaterThan(195);
+  } finally {
+    readback.destroy();
+    framebuffer.destroy();
+    colorTexture.destroy();
+    renderer.destroy();
+    data.destroy();
+    device.destroy();
+  }
+});
+
 it.each([
   [-0.5, 1, 'less-equal', true],
   [0, 0.4, 'less-equal', false],
@@ -257,82 +337,6 @@ it('GPUPagedSplatRenderer prepares before and draws repeatedly inside host-owned
     renderer.destroy();
     expect(page.destroyed).toBe(false);
     page.destroy();
-  }
-});
-
-it('draws transformed and tinted pages into a color-only host pass with blending disabled', async () => {
-  // Use a dedicated device for this offscreen pass so swapchain tests cannot lose its context.
-  const device = await webgpuAdapter.create({createCanvasContext: false, debug: true});
-  const source = makeBrowserPagedSplatSource([0], 0, 0);
-  source.scales.set([0.12, 0.12, 0.12]);
-  source.colors.set([255, 255, 255, 255]);
-  const data = makeGPUSplatData(device, source);
-  const renderer = new GPUPagedSplatRenderer(device, {
-    pages: [
-      {
-        id: 'left',
-        data,
-        modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.5, 0, 0, 1],
-        colorScale: [1, 0, 0],
-        alphaScale: 0.5
-      },
-      {
-        id: 'right',
-        data,
-        modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0, 0, 1],
-        colorScale: [0, 1, 0]
-      }
-    ],
-    viewportSize: [32, 16],
-    kernel2DSize: 0,
-    toneMapping: 'none'
-  });
-  const colorTexture = device.createTexture({
-    format: 'rgba8unorm',
-    width: 32,
-    height: 16,
-    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
-  });
-  const framebuffer = device.createFramebuffer({
-    width: 32,
-    height: 16,
-    samples: 4,
-    colorAttachments: [colorTexture]
-  });
-  const layout = colorTexture.computeMemoryLayout({width: 32, height: 16});
-  const readback = device.createBuffer({
-    byteLength: layout.byteLength,
-    usage: Buffer.COPY_DST | Buffer.MAP_READ
-  });
-  try {
-    renderer.prepare(device.commandEncoder);
-    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 1, 1]});
-    renderer.draw(renderPass, {blend: false, depthCompare: 'always', depthWriteEnabled: false});
-    renderPass.end();
-    device.submit();
-
-    colorTexture.readBuffer({width: 32, height: 16}, readback);
-    const pixels = await readback.readAsync();
-    const left = 8 * layout.bytesPerRow + 8 * 4;
-    const center = 8 * layout.bytesPerRow + 16 * 4;
-    const right = 8 * layout.bytesPerRow + 24 * 4;
-    expect(pixels[left]).toBeGreaterThan(220);
-    expect(pixels[left + 1]).toBeLessThan(5);
-    expect(pixels[left + 2]).toBeLessThan(5);
-    expect(pixels[left + 3]).toBeGreaterThan(90);
-    expect(pixels[left + 3]).toBeLessThan(140);
-    expect(Array.from(pixels.slice(center, center + 4))).toEqual([0, 0, 255, 255]);
-    expect(pixels[right]).toBeLessThan(5);
-    expect(pixels[right + 1]).toBeGreaterThan(220);
-    expect(pixels[right + 2]).toBeLessThan(5);
-    expect(pixels[right + 3]).toBeGreaterThan(195);
-  } finally {
-    readback.destroy();
-    framebuffer.destroy();
-    colorTexture.destroy();
-    renderer.destroy();
-    data.destroy();
-    device.destroy();
   }
 });
 
