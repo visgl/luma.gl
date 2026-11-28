@@ -80,7 +80,8 @@ const H3_PATH_TEST_KEYS = [
   0x8428309ffffffffn,
   0x842a101ffffffffn,
   0x84194adffffffffn,
-  0x842f5a3ffffffffn
+  0x842f5a3ffffffffn,
+  0x89283080c83ffffn
 ] as const;
 
 const H3_UNSUPPORTED_PATH_TEST_KEYS = [
