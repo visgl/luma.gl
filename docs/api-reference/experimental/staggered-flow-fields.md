@@ -61,3 +61,26 @@ contracts. The opt-in scientific-flow benchmark reports sparse/dense C-grid trac
 at a fixed error threshold with batch sizes 1, 4 and 16, discarded warmup and reversed
 sample order. It separates compute time, end-to-end stepping time, counter bytes,
 dispatch counts and buffer memory. These tests do not establish real-ocean accuracy.
+
+### Example measurement
+
+A local Apple WebGPU/Metal-3 run on 2026-11-27 used 4096 particles, a uniform
+1 × 1 C-grid, a 0.64-second horizon, 0.01-second maximum timestep and 1e-5
+tolerance. Two samples per configuration followed discarded warmup, with reversed
+order. Stepping wall time includes counter and optional timing readback, but excludes
+allocation, final particle readback and rendering. The shared host was under load.
+
+| Active slots | Dispatches per readback | Counter synchronizations | Submitted dispatches | Mean wall time |
+| --- | --- | --- | --- | --- |
+| 4096 | 1 | 65 | 65 | 107.05 ms |
+| 4096 | 4 | 17 | 68 | 39.80 ms |
+| 4096 | 16 | 5 | 80 | 24.25 ms |
+| 64 | 1 | 65 | 65 | 80.15 ms |
+| 64 | 4 | 17 | 68 | 37.50 ms |
+| 64 | 16 | 5 | 80 | 23.15 ms |
+
+All configurations had position error 7.95e-7 or less in bounds units. Larger
+batches reduced synchronization here but increased counter bytes and idle dispatches;
+they do not compact the inactive slots. These small samples do not establish a
+hardware-independent speedup. [Raw measurements](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/advection-cgrid-batches.json)
+include compute timing, byte counts and device metadata.

@@ -9,8 +9,8 @@ it('manufactures closed faces and vanishing finite-volume cell divergence', () =
   const [rows, columns] = field.shape;
   let maximumDivergence = 0;
   for (let row = 0; row < rows; row++) {
-    expect(field.eastward[row * (columns + 1)]).toBe(0);
-    expect(field.eastward[row * (columns + 1) + columns]).toBe(0);
+    expect(Math.abs(field.eastward[row * (columns + 1)])).toBe(0);
+    expect(Math.abs(field.eastward[row * (columns + 1) + columns])).toBe(0);
     for (let column = 0; column < columns; column++) {
       const divergence =
         (field.eastward[row * (columns + 1) + column + 1] -
