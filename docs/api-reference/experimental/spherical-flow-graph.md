@@ -69,11 +69,16 @@ before destruction.
 The GPU tests compare solid-body rotations against analytic positions through both
 poles and the antimeridian, check unit-radius drift and stable slots, and separate
 grid refinement from integration using time-varying angular speed. These tests
-qualify dense manufactured global fields, not weather forecast accuracy. Adaptive
+qualify dense manufactured global fields, not weather forecast accuracy. Direct sampler
+tests additionally cover both exact poles, offsets of 0.0001 radians from each pole,
+and seam-adjacent queries on 17×9, 33×17 and 65×33 grids, independently of timestep.
+Latitude uses `atan2(z, length(xy))` to retain offsets that float32 `asin(z)` loses. Adaptive
 spherical RK45, masked boundaries, staggered grids and observational qualification
 remain follow-ups.
 
 The Vector Observatory's **Pole-crossing globe · spherical** preset uses an
-illustrative evolving rotation and equal-area release. Its separate atlas renderer
-suppresses very long longitude segments at pole crossings; this visual limitation
-does not alter solver positions.
+illustrative evolving rotation and equal-area release. Its renderer retains bounded GPU Cartesian history and draws subdivided short
+great-circle arcs directly on the globe. Camera changes reproject history, including
+while paused; back-facing arcs are hidden. Rendering samples at most 8192 stable
+particle slots and retains at most 24 frames, independently of the simulation count.
+Antipodal endpoints are not rendered because they do not define a unique short arc.
