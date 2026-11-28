@@ -241,7 +241,8 @@ export function normalizeGPUDataFrameAggregations<
     'source' | 'selectedColumns' | 'derivedColumns'
   >,
   outputKey: string | undefined,
-  definitions: Readonly<Record<string, unknown>>
+  definitions: Readonly<Record<string, unknown>>,
+  joinedFormats: ReadonlyMap<string, string | undefined> = new Map()
 ): GPUDataFrameAggregationDefinition[] {
   const entries = Object.entries(definitions);
   if (entries.length === 0) {
@@ -276,10 +277,13 @@ export function normalizeGPUDataFrameAggregations<
     ) {
       throw new Error(`GPUDataFrame aggregation "${name}" has an unsupported operation`);
     }
-    if (typeof column !== 'string' || !query.selectedColumns.includes(column as SelectedColumns)) {
+    if (
+      typeof column !== 'string' ||
+      (!query.selectedColumns.includes(column as SelectedColumns) && !joinedFormats.has(column))
+    ) {
       throw new Error(`GPUDataFrame aggregation "${name}" requires a selected input column`);
     }
-    if (operation !== 'count' && formats.get(column) !== 'float32') {
+    if (operation !== 'count' && (joinedFormats.get(column) ?? formats.get(column)) !== 'float32') {
       throw new Error(`GPUDataFrame aggregation "${name}" requires a float32 input column`);
     }
     normalized.push(Object.freeze({name, operation, column}));

@@ -557,6 +557,10 @@ export type GPUAggregateJoin = Readonly<{
   right: GPUDataFrame;
   options: GPUDataFrameNormalizedJoinOptions;
   type: GPUDataFrameJoinType;
+  /** Right payload fields gathered into the left-aligned aggregate input. */
+  rightColumns?: readonly GPUJoinRightColumn[];
+  /** Optional combined budget for staging gathered payloads. */
+  maxProjectionScratchBytes?: number;
 }>;
 
 /** Inserts join matching before an aggregate contribution without compacting the left columns. */
@@ -577,6 +581,7 @@ export function prepareGPUJoinAggregation<
   validateGPUJoinSources(source, join.right, join.options, graph);
   const right = join.right.select(join.right.columnNames);
   const ownedVectors: GPUVector[] = [];
+  let projection: ReturnType<typeof projectGPUJoinColumns<Selection, GPUTypeMap>> | undefined;
   const id = context.queryId + '-aggregate-join';
   try {
     const state = buildGPUJoinIndex(context, right, join.options, ownedVectors, id);
@@ -614,13 +619,29 @@ export function prepareGPUJoinAggregation<
         joinType: join.type
       });
     }
-    const result = prepare({...context, selectionMask: included});
+    if (join.rightColumns?.length) {
+      projection = projectGPUJoinColumns(
+        context,
+        right,
+        [
+          ...context.table.schema.fields.map(field => field.name),
+          ...join.rightColumns.map(column => column.name)
+        ] as (keyof Selection & string)[],
+        join.rightColumns,
+        values,
+        matches,
+        ownedVectors,
+        join.maxProjectionScratchBytes ?? Infinity
+      );
+    }
+    const result = prepare({...context, ...projection, selectionMask: included});
     return {
       ...result,
       ownedVectors: [...ownedVectors, ...(result.ownedVectors ?? [])],
-      ownedTables: [...(result.ownedTables ?? []), right]
+      ownedTables: [...(result.ownedTables ?? []), ...(projection ? [projection] : []), right]
     };
   } catch (error) {
+    projection?.destroy();
     for (const vector of ownedVectors) vector.destroy();
     right.destroy();
     throw error;

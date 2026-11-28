@@ -17,6 +17,7 @@ import {
   compileGPUDataFrameGroupedAggregation,
   compileGPUDataFrameObservedAggregation
 } from '../gpu-dataframe/gpu-group-aggregation-compiler';
+import {normalizeGPUDataFrameGlobalAggregations} from '../gpu-dataframe/gpu-global-aggregation-query';
 import {normalizeGPUDataFrameAggregations} from '../gpu-dataframe/gpu-group-by-query';
 import {
   compileGPUDataFrameGlobalSort,
@@ -334,17 +335,62 @@ function buildGPUSQLPlan(
       );
     }
     let aggregateJoin: GPUAggregateJoin | undefined;
+    const rightColumns: GPUJoinRightColumn[] = [];
+    const joinedFormats = new Map<string, string | undefined>();
     if (statement.join) {
       const {right, leftKey, rightKey} = bindJoin(statement.join);
       const type = statement.join.type;
       const join = query[joinMethods[type]](right, {leftOn: leftKey, rightOn: rightKey});
-      aggregateJoin = {right, type, options: join.options};
+      aggregateJoin = {
+        right,
+        type,
+        options: join.options,
+        rightColumns,
+        maxProjectionScratchBytes: maxJoinProjectionScratchBytes
+      };
     }
     const definitions: GPUSQLAggregationDefinitions = Object.create(null);
     const reservedNames = new Set(frame.columnNames);
     const outputNames = new Map<GPUSQLSelectItem, string>();
     const aggregateOutputs = new Map<string, string>();
     let inputIndex = 0;
+
+    /** Binds direct right fields to internal aggregate inputs without changing the left selection. */
+    const bindAggregateInput = (expression: Expression): GPUExpressionNode => {
+      const join = statement.join;
+      if (
+        aggregateJoin &&
+        join &&
+        (expression.type === 'MemberExpression' ||
+          (expression.type === 'Identifier' && !('gpuSQLParameter' in expression)))
+      ) {
+        const reference = readGPUSQLColumn(expression);
+        const right = aggregateJoin.right;
+        if (
+          matchesGPUSQLColumn(reference, join.alias ?? join.table, right.columnNames) &&
+          !matchesGPUSQLColumn(reference, qualifier, frame.columnNames)
+        ) {
+          if (join.type !== 'inner' && join.type !== 'left') {
+            throw new Error('GPUSQL right aggregate inputs require INNER or LEFT JOIN');
+          }
+          const existing = rightColumns.find(candidate => candidate.source === reference.name);
+          if (existing) return column(existing.name).node;
+          let name: string;
+          do {
+            name = '__sqlJoinAggregateInput' + inputIndex++;
+          } while (reservedNames.has(name));
+          reservedNames.add(name);
+          rightColumns.push({name, source: reference.name});
+          joinedFormats.set(
+            name,
+            right.schema.fields.find(field => field.name === reference.name)?.format
+          );
+          return column(name).node;
+        }
+      }
+      return lowerSQLExpression(expression, parameters, resolve);
+    };
+
     /** Registers an aggregate and materializes its computed input when needed. */
     const registerAggregate = (
       operation: NonNullable<GPUSQLSelectItem['aggregate']>,
@@ -361,7 +407,8 @@ function buildGPUSQLPlan(
         reservedNames.add(inputColumn);
         query = query.withColumn(inputColumn, new GPUExpression<number | null, string>(input));
       }
-      const name = alias ?? `${operation}_${inputColumn ?? 'all'}`;
+      const sourceName = rightColumns.find(candidate => candidate.name === inputColumn)?.source;
+      const name = alias ?? `${operation}_${sourceName ?? inputColumn ?? 'all'}`;
       if (Object.hasOwn(definitions, name)) {
         throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       }
@@ -379,8 +426,7 @@ function buildGPUSQLPlan(
       return name;
     };
     for (const item of aggregates) {
-      const input =
-        item.aggregateInput && lowerSQLExpression(item.aggregateInput, parameters, resolve);
+      const input = item.aggregateInput && bindAggregateInput(item.aggregateInput);
       outputNames.set(item, registerAggregate(item.aggregate!, input, item.alias));
     }
     if (statement.groupBy !== undefined) {
@@ -484,7 +530,7 @@ function buildGPUSQLPlan(
         if (wildcard && operation !== 'count') {
           throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
         }
-        const input = wildcard ? undefined : lowerSQLExpression(argument, parameters, resolve);
+        const input = wildcard ? undefined : bindAggregateInput(argument);
         const output = aggregateOutputs.get(JSON.stringify([operation, input ?? null]));
         if (output !== undefined) return column(output).node;
         let hiddenName: string;
@@ -539,7 +585,8 @@ function buildGPUSQLPlan(
       const normalized = normalizeGPUDataFrameAggregations<GPUTypeMap, string, GPUTypeMap>(
         {...query, source: frame},
         keys[0].output,
-        definitions
+        definitions,
+        joinedFormats
       );
 
       if (keys.length > 1 || keys[0].output === undefined || !frame.dictionaries[keys[0].source]) {
@@ -611,7 +658,14 @@ function buildGPUSQLPlan(
     if (aggregates.length !== statement.items.length) {
       throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
     }
-    const aggregate = query.aggregate(definitions);
+    const aggregate = joinedFormats.size ? undefined : query.aggregate(definitions);
+    const normalized =
+      aggregate?.definitions ??
+      normalizeGPUDataFrameGlobalAggregations<GPUTypeMap, string, GPUTypeMap>(
+        {...query, source: frame},
+        definitions,
+        joinedFormats
+      );
     const {predicates, selectedColumns, derivedColumns} = query;
     return describe(
       aggregateJoin
@@ -622,12 +676,12 @@ function buildGPUSQLPlan(
                 predicates,
                 selectedColumns,
                 derivedColumns,
-                aggregate.definitions,
+                normalized,
                 graph,
                 aggregateJoin
               )
           }
-        : aggregate,
+        : aggregate!,
       'global-aggregation',
       statement.items.map(item => outputNames.get(item)!),
       query.selectedColumns
