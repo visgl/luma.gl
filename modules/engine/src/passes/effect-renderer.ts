@@ -75,6 +75,10 @@ export type EffectDefinition<TargetName extends string = string> = {
 
 type EffectOptionKey<Options> = Options extends unknown ? Extract<keyof Options, string> : never;
 
+/** Value accepted by a fullscreen pass uniform. */
+type EffectUniform = NonNullable<EffectPass['uniforms']>[string];
+
+/** Reads a construction option directly or through a lookup table. */
 type EffectOptionValue<Options, Value = unknown> = {
   option: EffectOptionKey<Options>;
   values?: Readonly<Record<string, Value>>;
@@ -108,7 +112,7 @@ export type ConfigurableEffectDefinition<Options, TargetName extends string = st
         Record<TargetName, {option: EffectOptionKey<Options>; minimum?: number}>
       >;
       /** Map options to uniform defaults by shader module and uniform name. */
-      optionUniforms?: Record<string, Record<string, EffectOptionValue<Options>>>;
+      optionUniforms?: Record<string, Record<string, EffectOptionValue<Options, EffectUniform>>>;
       /** Map option choices to logical inputs by shader module and binding name. */
       optionInputs?: Record<
         string,
@@ -200,7 +204,7 @@ export function resolveEffectOptions<Options, TargetName extends string>(
     const uniforms = {...pass.uniforms};
     const inputs = {...pass.inputs};
     for (const [name, mapping] of Object.entries(uniformOptions ?? {})) {
-      const value = readValue(mapping);
+      const value = readValue(mapping) as EffectUniform | undefined;
       if (value !== undefined) uniforms[name] = value;
     }
     for (const [name, mapping] of Object.entries(inputOptions ?? {})) {

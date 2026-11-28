@@ -656,6 +656,7 @@ fn ssrComposite_sampleColor(
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
 const ssrOptionDefaults: SSRCompositeShaderPassOptions = {reprojection: 'velocity'};
+/** Targets shared by the reflection passes, with velocity history as the default. */
 const ssrTargets = {
   ssrRaw: {scale: [1, 1], format: 'rgba16float'},
   ssrHistory: {
@@ -673,12 +674,14 @@ const ssrTargets = {
   ssrScratch: {scale: [1, 1], format: 'rgba16float'},
   ssrReflection: {scale: [1, 1], format: 'rgba16float'}
 } as const satisfies NonNullable<EffectDefinition['resources']>;
+/** Trace screen-space rays from the current scene color. */
 const ssrTraceStep = {
   kind: 'sample',
   module: ssrTrace,
   inputs: {sourceTexture: 'previous'},
   output: 'ssrRaw'
 } as const;
+/** Denoise the accumulated reflection and composite it over scene color. */
 const ssrDenoiseAndComposite = [
   {
     kind: 'sample',
@@ -700,11 +703,13 @@ const ssrDenoiseAndComposite = [
     inputs: {sourceTexture: 'previous', reflectionTexture: 'ssrReflection'}
   }
 ] as const;
+/** Bindings shared by velocity and camera reprojection. */
 const ssrTemporalInputs = {
   sourceTexture: 'ssrRaw',
   historyTexture: 'ssrHistory',
   previousDepthTexture: 'ssrHistoryDepth'
 } as const;
+/** History weight supplied by an explicitly selected quality preset. */
 const ssrHistoryWeight = {
   option: 'quality',
   values: {

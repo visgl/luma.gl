@@ -173,13 +173,16 @@ vec4 imageOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
+/** Use depth and reconstructed normals with the full sample pattern. */
 const outlineOptionDefaults: Required<OutlineCompositeShaderPassOptions> = {
   mode: 'depth-normal',
   normalSource: 'reconstruct-from-depth',
   quality: 'high'
 };
+/** Enable diagonal edge samples for the high-quality outline. */
 const diagonalSamples = {option: 'quality', values: {fast: 0, high: 1}} as const;
 
+/** Selects depth-normal or image-based outlines with declarative quality options. */
 export const outlines = {
   name: 'outlineCompositeShaderPass',
   optionDefaults: outlineOptionDefaults,

@@ -412,6 +412,15 @@ it('advanced effects expose composable pipeline shapes', () => {
     reflections.renderTargets?.ssrRaw.scale,
     'SSR honors the requested tracing resolution'
   ).toEqual([0.5, 0.5]);
+  const cameraReflections = resolveEffectOptions(ssr, {
+    quality: 'fast',
+    resolutionScale: 0.75,
+    reprojection: 'camera'
+  });
+  expect(cameraReflections.resources?.['ssrRaw'].scale).toEqual([0.75, 0.75]);
+  expect(cameraReflections.resources?.['ssrHistoryDepth'].scale).toBeUndefined();
+  expect(cameraReflections.resources?.['ssrHistoryNormal'].lifetime).toBe('history');
+  expect(cameraReflections.passes[0].uniforms?.['sampleCount']).toBe(32);
   expect(
     reflections.renderTargets?.ssrHistory.lifetime,
     'SSR retains reflection radiance history'

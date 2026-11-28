@@ -263,6 +263,7 @@ const hdrExposureOptionDefaults: Required<HDRAutoExposureCompositeShaderPassOpti
   initialExposure: 1
 };
 
+/** Meters HDR luminance and accumulates exposure in a history texture. */
 export const hdrAutoExposure = {
   optionDefaults: hdrExposureOptionDefaults,
   scaleResources: {

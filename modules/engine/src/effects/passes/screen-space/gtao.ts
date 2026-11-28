@@ -547,6 +547,7 @@ const gtaoPreparationPasses = [
   }
 ] as const;
 
+/** Apply visibility to the whole lit image by default. */
 const gtaoCompositeStep = {
   kind: 'fullscreen' as const,
   shaderPass: gtaoComposite,
@@ -554,11 +555,13 @@ const gtaoCompositeStep = {
   output: 'previous'
 } as const;
 
+/** Use full resolution and composite over the entire color buffer. */
 const gtaoOptionDefaults: Required<GTAOCompositeShaderPassOptions> = {
   resolutionScale: 1,
   composition: 'color'
 };
 
+/** GTAO with full-color and ambient-only composition modes. */
 export const gtao = {
   optionDefaults: gtaoOptionDefaults,
   scaleResources: {

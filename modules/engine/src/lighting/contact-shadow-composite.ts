@@ -14,10 +14,12 @@ import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 /** Builds the quality-scaled trace, bilateral cleanup, and direct-light composite pipeline. */
 export type ContactShadowCompositeShaderPassOptions = {quality?: 'low' | 'balanced' | 'cinematic'};
 
+/** Use the balanced contact shadow preset by default. */
 const contactShadowOptionDefaults: Required<ContactShadowCompositeShaderPassOptions> = {
   quality: 'balanced'
 };
 
+/** Trace and filter contact visibility using the selected quality preset. */
 export const contactShadows = {
   optionDefaults: contactShadowOptionDefaults,
   scaleResources: {
