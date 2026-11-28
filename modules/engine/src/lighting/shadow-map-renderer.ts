@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '../passes/scene-capture-pass';
 import type {
   Framebuffer,
   RenderPass,
@@ -80,6 +84,25 @@ export type ShadowRenderOptions = {
   /** Upload resources before opening the depth render pass. */
   prepareShadowCasters?: (view: Omit<ShadowRenderView, 'renderPass'>) => void;
 };
+
+type ShadowCaptureFrame = {
+  view: Omit<ShadowRenderView, 'renderPass'>;
+  drawShadowCasters: ShadowRenderOptions['drawShadowCasters'];
+  prepareShadowCasters?: ShadowRenderOptions['prepareShadowCasters'];
+};
+
+/** Depth capture shared by directional cascades, spot lights, and point-light cube faces. */
+export const shadowMapCapturePass = {
+  name: 'shadow-map',
+  target: 'shadowDepth',
+  pass: {clearDepth: 1},
+  prepare: (_commandEncoder, {view, prepareShadowCasters}) => {
+    prepareShadowCasters?.(view);
+  },
+  draw: (renderPass, {view, drawShadowCasters}) => {
+    drawShadowCasters({...view, renderPass});
+  }
+} as const satisfies SceneCapturePassDefinition<ShadowCaptureFrame, 'shadowDepth'>;
 
 /** GPU resource props returned by the renderer for the shadow sampling module. */
 export type ShadowShaderProps = ShadowProps<Texture, Sampler>;
@@ -325,28 +348,16 @@ export class ShadowMapRenderer {
       mapSize: options.mapSize,
       rasterParameters
     };
-    options.prepareShadowCasters?.(context);
-    const renderPass = this.device.beginRenderPass({
-      id: makeShadowResourceId(`${options.type}-shadow-pass`),
-      framebuffer: options.framebuffer,
-      clearDepth: 1
+    encodeSceneCapturePass(shadowMapCapturePass, {
+      commandEncoder: this.device.commandEncoder,
+      id: makeShadowResourceId(options.type + '-shadow-pass'),
+      framebuffers: {shadowDepth: options.framebuffer},
+      frame: {
+        view: context,
+        drawShadowCasters: options.drawShadowCasters,
+        prepareShadowCasters: options.prepareShadowCasters
+      }
     });
-    try {
-      options.drawShadowCasters({
-        renderPass,
-        framebuffer: options.framebuffer,
-        type: options.type,
-        lightIndex: options.lightIndex,
-        cascadeIndex: options.cascadeIndex,
-        pointFace: options.pointFace,
-        camera: options.view.camera,
-        viewProjectionMatrix: options.view.viewProjectionMatrix,
-        mapSize: options.mapSize,
-        rasterParameters
-      });
-    } finally {
-      renderPass.end();
-    }
   }
 
   private assertNotDestroyed(): void {

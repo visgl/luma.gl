@@ -200,6 +200,8 @@ export type {
   EffectRendererProps
 } from './passes/effect-renderer';
 export {configureEffect, EffectRenderer} from './passes/effect-renderer';
+export type {SceneCapturePassDefinition} from './passes/scene-capture-pass';
+export {encodeSceneCapturePass} from './passes/scene-capture-pass';
 
 export {Swap} from './compute/swap';
 export {SwapBuffers} from './compute/swap';
