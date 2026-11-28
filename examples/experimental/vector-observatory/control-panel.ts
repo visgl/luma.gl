@@ -229,7 +229,7 @@ export class ObservatoryControlPanel {
   private updateGraphNotice(notice: HTMLElement): void {
     notice.textContent =
       this.settings.integrator === 'rk45'
-        ? 'Live RK45 graph: reset counters, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
+        ? 'Live RK45 graph: reset counters, optionally compact active slots, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
         : 'Live compiled advection graph. Timings are sampled every 60 encodings; trail rendering is submitted separately.';
   }
 

@@ -479,6 +479,12 @@ export class ScientificFlowTracer {
       graph.addCopyPass({
         id: 'reset-active-queue',
         description: 'Reset queue length and indirect workgroups without a CPU readback.',
+        workload: {
+          operation: 'ResetActiveQueue',
+          commandCount: 2,
+          readByteLength: 16,
+          writeByteLength: 16
+        },
         resources: [
           {buffer: emptyDispatchArguments, usage: 'copy-source'},
           {buffer: activeIndices, usage: 'copy-destination'},
