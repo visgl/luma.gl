@@ -2,20 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  Deck,
-  Layer,
-  OrthographicView,
-  picking,
-  project32,
-  type LayerContext,
-  type LayerProps,
-  type PickingInfo
-} from '@deck.gl/core';
-import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
+import {Deck, OrthographicView} from '@deck.gl/core';
+import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {WebGPUDevice} from '@luma.gl/core/webgpu';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPUVectorModel} from '@luma.gl/engine';
 import {cellToLatLng, latLngToCell} from 'h3-js';
 import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
@@ -30,20 +20,12 @@ import {expect, it} from 'vitest';
 import {parsePerformanceSweep} from '../../graph/test/gpu-project/projection-performance-fixtures';
 import {
   GPUProjectedPointLayer,
-  getProjectedPointShader,
   type GPUProjectedPointPickingInfo
 } from '../src/layers/gpu-projected-point-layer';
-import {
-  createGPUVectorStyleBuffer,
-  getGPUDataBuffer,
-  getGPUVectorBuffer,
-  getGPUVectorPickingProvenance,
-  getGPUVectorStyleBufferBinding,
-  makeGPUVectorBufferLayout
-} from '../src/layers/gpu-vector-layer-utils';
+import {GPUMaterializedPointLayer} from '../src/layers/gpu-materialized-point-layer';
+import {getGPUDataBuffer} from '../src/layers/gpu-vector-layer-utils';
 
 const TARGET_SIZE = 768;
-const STYLE_BYTES = 32;
 const DESTINATION = '+proj=utm +zone=10 +datum=WGS84';
 const BOUNDS = [-122.5, 37.7, -122.3, 37.9] as const;
 const TOLERANCE_METERS = 0.0005;
@@ -71,97 +53,6 @@ type Input = {
   inputValidity: Uint32Array;
   cells?: BigUint64Array;
 };
-type CommonProps = {
-  transform: ProjectionRenderTransform;
-  getSourcePosition: (rowIndex: number) => ProjectionCoordinates | null;
-};
-type LocalProps = LayerProps &
-  CommonProps & {
-    positions: GPUVector<'float32x2'>;
-    validity: GPUVector<'uint32'>;
-  };
-
-/** Draws the same point and picking passes as the inline layer from already-local positions. */
-class LocalPointLayer extends Layer<LocalProps> {
-  static override layerName = 'BenchmarkLocalPointLayer';
-  static override defaultProps = {coordinateSystem: 'cartesian'};
-  declare state: {model: GPUVectorModel; style: Buffer};
-
-  override getAttributeManager() {
-    return null;
-  }
-
-  override initializeState({device}: LayerContext): void {
-    const {positions, validity} = this.props;
-    const style = createGPUVectorStyleBuffer(
-      device,
-      'benchmark-style',
-      STYLE_BYTES,
-      positions.data.length
-    );
-    try {
-      const model = new GPUVectorModel(device, {
-        shaderAssembler: this.context.shaderAssembler,
-        ...this.getShaders({modules: [project32, picking], source: getProjectedPointShader()}),
-        topology: 'triangle-list',
-        isInstanced: true,
-        inferDrawCount: 'instance',
-        vertexCount: 6,
-        attributes: {
-          positions: getGPUVectorBuffer(positions),
-          validity: getGPUVectorBuffer(validity)
-        },
-        bufferLayout: [
-          makeGPUVectorBufferLayout(positions, 'positions'),
-          makeGPUVectorBufferLayout(validity, 'validity')
-        ],
-        bindings: {projectedPointStyle: getGPUVectorStyleBufferBinding(style, STYLE_BYTES)}
-      });
-      this.setState({model, style});
-    } catch (error) {
-      style.destroy();
-      throw error;
-    }
-  }
-
-  override getModels(): GPUVectorModel[] {
-    return this.state.model ? [this.state.model] : [];
-  }
-
-  override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, style} = this.state;
-    const {positions, validity} = this.props;
-    const bytes = new ArrayBuffer(STYLE_BYTES);
-    new Float32Array(bytes).set([1, 0, 0, 1, 4]);
-    const words = new Uint32Array(bytes);
-    model.drawBatches(renderPass, {
-      vectors: {positions, validity},
-      onBatch: batch => {
-        words[5] = batch.rowIndexOffset;
-        const binding = getGPUVectorStyleBufferBinding(style, STYLE_BYTES, batch.batchIndex);
-        style.write(new Uint8Array(bytes), binding.offset);
-        model.setBindings({projectedPointStyle: binding});
-      }
-    });
-  }
-
-  override getPickingInfo({info}: {info: PickingInfo}): GPUProjectedPointPickingInfo {
-    const result: GPUProjectedPointPickingInfo = info;
-    if (info.index >= 0 && info.index < this.props.positions.length) {
-      result.gpuVector = getGPUVectorPickingProvenance(this.props.positions, info.index);
-      const source = this.props.getSourcePosition(info.index);
-      result.projection = source ? this.props.transform.projectPosition(source) : null;
-    }
-    return result;
-  }
-
-  override finalizeState(context: LayerContext): void {
-    this.state.model?.destroy();
-    this.state.style?.destroy();
-    super.finalizeState(context);
-  }
-}
-
 const rowCounts = parsePerformanceSweep(
   import.meta.env['VITE_GPU_PROJECT_RENDER_ROWS'],
   [1024, 4096, 16384]
@@ -485,7 +376,12 @@ async function measurePath(
           getColor: [255, 0, 0],
           pointSize: 4
         })
-      : new LocalPointLayer({...common, positions: local!, validity: outputValidity!});
+      : new GPUMaterializedPointLayer({
+          ...common,
+          positions: local!,
+          validity: outputValidity!,
+          getColor: [255, 0, 0]
+        });
   const errors: string[] = [];
   let renderedFrames = 0;
   function uploadResidentInputs(): number {

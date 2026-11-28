@@ -2,6 +2,47 @@
 
 Reusable deck.gl layers for geographic rendering that consume caller-owned GPU buffers.
 
+## Materialized Cartesian points
+
+Use `GPUMaterializedPointLayer` to draw borrowed local `float32x2` positions and a
+row-aligned `uint32` validity mask. A `GPUH3ProjectedPointSource` can produce those vectors
+directly from resident split-uint64 H3 IDs. The source keeps the projected buffers across
+updates. The layer reuses them for color rendering and picking.
+
+```ts
+import {GPUH3ProjectedPointSource, GPUMaterializedPointLayer} from '@deck.gl-community/gpu-layers';
+
+const source = new GPUH3ProjectedPointSource(device, {
+  cells, // GPUVector<'uint32x2'> with little-endian H3 IDs
+  transform // ProjectionRenderTransform prepared for longitude/latitude input
+});
+source.updateChunks(); // Initial projection in source chunk order.
+
+const layer = new GPUMaterializedPointLayer({
+  id: 'h3-centers',
+  positions: source.positions,
+  validity: source.validity,
+  transform: source.transform,
+  getSourcePosition, // Optional CPU lookup for the picked row, for example from its H3 ID.
+  pickable: true
+});
+
+// After a GPU producer updates the resident H3 buffer for chunk 1:
+source.updateChunks([1]);
+deck.redraw('H3 chunk updated');
+```
+
+Submit producer writes on the same device before calling `updateChunks`. Only the listed
+nonempty chunks run H3 decoding and projection. Camera changes within the same frame and
+picks need no source update. A pick returns global row and physical chunk identity. Supplying
+both `transform` and `getSourcePosition` adds CPU projection metadata for the selected row.
+
+The H3 source snapshots topology and the render frame. Create a replacement source when either
+changes. Its inputs remain caller-owned. Detach the layer and let queued work finish before
+destroying the source. The layer owns its draw model and leaves the position and validity
+vectors with their owner. Pairing is opt-in via `groupChunks: true` and requires at least nine
+storage bindings. A one-chunk update always uses a single projection dispatch.
+
 ## Inline CRS-projected points
 
 `GPUProjectedPointLayer` renders raw binary64 coordinate pairs (`GPUVector<'uint32x4'>`) through a

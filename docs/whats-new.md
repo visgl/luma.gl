@@ -2,10 +2,7 @@
 
 ## Version 10.0
 
-- Arrow analytics uploads can pack small streamed record batches into one buffer per
-  column with `packBatches`. [GPU DataFrame operations](./api-reference/experimental/gpu-dataframe-operations.md#upload-arrow-data-or-borrow-an-existing-table)
-
-- **Scientific trajectories.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md) adds crossed-cell mask checks, bounded GPU trajectory history with explicit readback, and offline GFS trajectory qualification.
+- **Scientific trajectories.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md) adds crossed-cell mask checks, bounded GPU trajectory history with explicit readback, and offline GFS trajectory qualification. Vector Observatory adds archived-wind playback, trajectory CSV export and controlled accuracy/cost sweeps.
 
 - **Font atlas cache capacity.** Use `ensureFontAtlasCacheCapacity()` from `@luma.gl/engine/text-fonts` to grow the shared bitmap and SDF atlas cache while retaining cached atlases.
 
@@ -37,6 +34,9 @@
   subtracts the destination origin before narrowing to float32 and draws directly from borrowed
   coordinate buffers. [GPU Project](./api-reference/experimental/gpu-project.md#inline-cartesian-rendering-and-cpu-picking)
 - **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
+
+- Arrow analytics uploads can pack small streamed record batches into one buffer per
+  column with `packBatches`. [GPU DataFrame operations](./api-reference/experimental/gpu-dataframe-operations.md#upload-arrow-data-or-borrow-an-existing-table)
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 

@@ -509,7 +509,7 @@ With `transportMode: 'pbr'` and positive `maxBounces`, `transmissionFactor` and 
 smooth dielectric continuation with Fresnel reflection, refraction, total internal reflection,
 and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
 handling. See [ray material support](/docs/api-reference/anari/ray-tracing-renderer#material-support)
-for the supported extension maps. Rough transmission and nested dielectric media remain open. Base-color texture alpha masks apply to primary/secondary
+for the supported extension maps. Enable `roughDielectricTransmission` for GGX dielectric continuation. Nested dielectric media remain open. Base-color texture alpha masks apply to primary/secondary
 rays, shadows, explicit emitter samples, picking and channels. Alpha blending samples fractional coverage in radiance and shadow rays.
 
 The **Indirect Light Study** playground preset provides a fixed-camera emissive scene with

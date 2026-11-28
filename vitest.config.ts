@@ -11,7 +11,7 @@ const excludePatterns = [
   '**/*.disabled.*',
   // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-projected-point-performance).spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-projected-point-performance).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -152,6 +152,7 @@ const browserBenchmarkTestPatterns = [
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
 
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
+  'modules/graph/test/experimental/simulation/scientific-flow-gfs-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',

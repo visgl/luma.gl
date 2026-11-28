@@ -65,6 +65,10 @@ export class ObservatoryControlPanel {
       schema: this.makeSchema(),
       settings: this.settings,
       onSettingsChange: next => {
+        if (next.field === 'gfs') {
+          window.location.href = './gfs.html';
+          return;
+        }
         const before = {...this.settings};
         if (
           next.field === 'gyre' ||
@@ -295,6 +299,7 @@ export class ObservatoryControlPanel {
               persist: 'none',
               options: [
                 {label: 'Weather globe · synthetic', value: 'weather'},
+                {label: 'GFS Atlantic · archived model winds', value: 'gfs'},
                 {label: 'Evolving double gyre', value: 'gyre'},
                 {label: 'Vortex pair', value: 'vortex'},
                 {label: 'Meandering jet', value: 'jet'}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <title>GFS Atlantic · luma.gl</title>
+  </head>
+  <body>
+    <canvas id="flow" aria-label="Archived GFS winds and GPU reference trajectories"></canvas>
+    <div id="observatory-panels"></div>
+    <section class="gfs-playback" aria-label="Trajectory playback">
+      <button id="gfs-play" disabled>Pause</button>
+      <label for="gfs-timeline">Model time</label>
+      <input id="gfs-timeline" type="range" min="0" max="21600" step="300" value="0" disabled>
+      <output id="gfs-time">0 / 6 h</output>
+      <label for="gfs-speed">Speed</label>
+      <select id="gfs-speed"><option value="300">5 min/s</option><option value="900" selected>15 min/s</option><option value="1800">30 min/s</option></select>
+      <button id="gfs-export" disabled>Export CSV</button>
+    </section>
+    <footer class="observatory-status"><output id="status">Initializing WebGPU…</output></footer>
+    <div id="error" role="alert" hidden></div>
+    <script type="module" src="./gfs-main.ts"></script>
+  </body>
+</html>
