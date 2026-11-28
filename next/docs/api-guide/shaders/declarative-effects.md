@@ -124,6 +124,12 @@ For scene lighting, use `AmbientOcclusionPass` or `ContactShadowPass` to size th
 
 To run either definition directly, configure it in `EffectRenderer`, set `colorFormat: 'rgba8unorm'`, and call `renderToTexture` with camera uniforms, the normal texture as the source, and `depthTexture` and `normalTexture` bindings. Run visibility generation before the lighting pass that samples it.
 
+## Upscale with temporal history[​](#upscale-with-temporal-history "Direct link to Upscale with temporal history")
+
+The experimental WebGPU `TemporalUpscaler` records two named framebuffer passes. Accumulation writes both HDR color and auxiliary history in one draw. Sharpening reads the new color and writes the caller's output framebuffer. Both use the same pass encoder as scene capture, which supports multiple attachments. The upscaler manages its ping-pong framebuffers and only advances history after both passes have been recorded.
+
+Call `resetHistory()` after a camera cut. Call `setSize()` when the input or output dimensions change. Submit pending work before rendering another frame, resizing, or destroying the upscaler.
+
 ## Resolve scene buffers[​](#resolve-scene-buffers "Direct link to Resolve scene buffers")
 
 ANARI exposes fullscreen definitions for deferred direct lighting, ambient lighting, clustered deferred lighting, weighted blended transparency, and A-buffer transparency. Import them from `@luma.gl/anari`.
