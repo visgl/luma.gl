@@ -86,6 +86,33 @@ export class GPUArticulationTree {
   private worldContacts = false;
   private destroyed = false;
 
+  /** Compile independent fixed bases into one joint-space solve. Link IDs are shared across roots. */
+  static fromRoots(
+    roots: readonly {base: Vector; links: readonly GPUArticulationLink[]}[],
+    options: {
+      id?: string;
+      gravity?: Vector;
+      timeStep?: number;
+      publishMatrices?: boolean;
+    } = {}
+  ) {
+    const links: GPUArticulationLink[] = [];
+    for (const root of roots) {
+      const start = links.length;
+      for (const [index, link] of root.links.entries()) {
+        if (!Number.isInteger(link.parent) || link.parent < -1 || link.parent >= index)
+          throw new Error('Invalid local parent');
+        const [x, y, z] = link.parentAnchor;
+        links.push(
+          link.parent === -1
+            ? {...link, parentAnchor: [root.base[0] + x, root.base[1] + y, root.base[2] + z]}
+            : {...link, parent: start + link.parent}
+        );
+      }
+    }
+    return new GPUArticulationTree({...options, links});
+  }
+
   constructor(props: {
     id?: string;
     links: readonly GPUArticulationLink[];
@@ -173,7 +200,7 @@ export class GPUArticulationTree {
   ) {
     const colliders = coupling?.colliders;
     const packedColliders = colliders?.flatMap(
-      ({link, shape, position = [0, 0, 0], orientation = [0, 0, 0, 1]}) => {
+      ({link, shape, faceManifold, position = [0, 0, 0], orientation = [0, 0, 0, 1]}) => {
         const dimensions =
           shape.type === 'box'
             ? [...shape.halfExtents]
@@ -182,6 +209,7 @@ export class GPUArticulationTree {
               : [shape.radius, 0, 0];
         if (
           !this.indices.has(link) ||
+          (faceManifold && shape.type !== 'box') ||
           (shape.type === 'capsule' && shape.radiusTop !== shape.radiusBottom) ||
           ![...position, ...orientation, ...dimensions].every(Number.isFinite) ||
           Math.abs(Math.hypot(...orientation) - 1) > 1e-5 ||
@@ -195,7 +223,7 @@ export class GPUArticulationTree {
           this.indices.get(link)!,
           ...orientation,
           ...dimensions,
-          shape.type === 'sphere' ? 0 : shape.type === 'capsule' ? 1 : 2
+          shape.type === 'sphere' ? 0 : shape.type === 'capsule' ? 1 : faceManifold ? 3 : 2
         ];
       }
     );
@@ -424,6 +452,7 @@ export class GPUArticulationTree {
   async readSimulationDiagnostics() {
     const bytes = await this.buffers[4].readAsync();
     const values = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+    const floats = new Float32Array(bytes.buffer, bytes.byteOffset, values.length);
     return {
       steps: values[0],
       complete: values[1] === 0,
@@ -435,6 +464,10 @@ export class GPUArticulationTree {
               body: values[8 + index * 12],
               collider: values[9 + index * 12]
             })),
+            /** World-space impulse applied to each counterpart, in contactPairs order (N·s). */
+            contactImpulses: Array.from({length: values[5]}, (_, index) =>
+              Array.from(floats.subarray(16 + 12 * index, 19 + 12 * index))
+            ),
             contactOverflow: values[6] !== 0,
             reusedContacts: values[7]
           }
