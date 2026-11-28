@@ -14,6 +14,7 @@ import {
   type ScientificFlowTraceResult
 } from '@luma.gl/graph/experimental-simulation';
 import {makeField} from './fields';
+import {makeStaggeredGyre} from './staggered-field';
 import {makeSphericalField, makeSphericalPositions} from './spherical-field';
 import {ObservatoryControlPanel} from './control-panel';
 import './style.css';
@@ -248,7 +249,7 @@ struct View {size: vec4f, options: vec4f};
     queuedTime = 0;
     traceResult = undefined;
     const fields = {
-      input: makeField(activeField, 0),
+      input: activeField === 'c-grid' ? makeStaggeredGyre() : makeField(activeField, 0),
       ...(activeField === 'gyre' || activeField === 'weather'
         ? {nextInput: makeField(activeField, snapshotEnd), timeRange: [0, snapshotEnd] as const}
         : {}),

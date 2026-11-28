@@ -12,7 +12,7 @@ import {
 import {
   ScientificFlowField,
   type ScientificFlowFieldProps,
-  type ScientificVectorFieldInput
+  type ScientificFlowInput
 } from './scientific-flow-field';
 import {SCIENTIFIC_FLOW_RK45} from './scientific-flow-rk45-shaders';
 
@@ -29,7 +29,7 @@ export enum ScientificParticleStatus {
 export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   /** Interleaved normalized x/y positions. These are copied, never borrowed. */
   positions: Float32Array;
-  nextInput?: ScientificVectorFieldInput;
+  nextInput?: ScientificFlowInput;
   timeRange?: readonly [number, number];
   /** Absolute local position-error tolerance: bounds units, or metres for lnglat. */
   tolerance: number;
@@ -41,13 +41,21 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   lifetime?: number;
   /** Maximum trials per particle per dispatch, including rejected trials (1–256). */
   maximumAttempts?: number;
+  /** Fixed dispatches submitted before one counter readback (1–32). Default 1 retains interactive behavior. */
+  dispatchesPerReadback?: number;
 };
 
 export type ScientificFlowTraceResult = {
-  /** Submitted encoding; resource previews read current allocations, not historical particles. */
+  /** Final submitted encoding; resource previews read current allocations, not historical particles. */
   encoding: GPUCommandGraphEncoding;
   /** One-based dispatch number across all requests on this tracer. */
   dispatchIndex: number;
+  /** Actual encodings in submission order, including any idle tail dispatches. */
+  encodings: readonly GPUCommandGraphEncoding[];
+  /** Number of bounded dispatches submitted by this call. */
+  dispatchCount: number;
+  /** Bytes in the single counter readback; never particle state. */
+  counterReadbackBytes: number;
   isContinuation: boolean;
   /** Requested horizon, including while individual particles are still catching up. */
   targetTime: number;
@@ -61,20 +69,21 @@ export type ScientificFlowTraceResult = {
   missingData: number;
   toleranceFailure: number;
   numericalFailure: number;
-  /** Work counters for this dispatch only. */
+  /** Work counters summed across this call's dispatch batch. */
   acceptedSteps: number;
   rejectedSteps: number;
-  /** Compute-pass duration, present only when timestamp queries are supported. */
+  /** Sum of batch compute-pass durations, present only when timestamp queries are supported. */
   gpuMilliseconds?: number;
 };
 
-/** Adaptive forward scientific tracing. Each advance/continue submits exactly one bounded dispatch. */
+/** Adaptive forward tracing with bounded dispatch batches and one counter readback per call. */
 export class ScientificFlowTracer {
   readonly particleCount: number;
   /** Execution graph for inspection. Use advance()/continue() to execute it. */
   readonly commandGraph: CompiledGPUCommandGraph;
   /** Normalized x/y, age in seconds, generation (always 1; no implicit respawning). */
   readonly output: Buffer;
+  /** Particle records before the latest advance/continue batch, including idle-tail batches. */
   readonly previous: Buffer;
   /** Per particle: elapsed request seconds, proposed dt, status, last accepted dt. */
   readonly diagnostics: Buffer;
@@ -86,6 +95,12 @@ export class ScientificFlowTracer {
   >;
   private readonly device: Device;
   private readonly uniforms: Buffer;
+  /** One immutable uniform allocation per dispatch in a submitted batch. */
+  private readonly batchUniforms: Buffer[];
+  /** Contiguous per-dispatch counter snapshots for one explicit readback. */
+  private readonly batchStatistics: Buffer;
+  /** Bounded batch size; completed particles skip subsequent trials. */
+  private readonly dispatchesPerReadback: number;
   private readonly statistics: Buffer;
   private readonly emptyStatistics: Buffer;
   private dispatchIndex = 0;
@@ -121,6 +136,12 @@ export class ScientificFlowTracer {
     this.maximumTimeStep = props.maximumTimeStep ?? 1;
     this.lifetime = props.lifetime ?? 1e30;
     this.maximumAttempts = props.maximumAttempts ?? 32;
+    this.dispatchesPerReadback = props.dispatchesPerReadback ?? 1;
+    assert(
+      Number.isInteger(this.dispatchesPerReadback) &&
+        this.dispatchesPerReadback >= 1 &&
+        this.dispatchesPerReadback <= 32
+    );
     const initialTimeStep = props.initialTimeStep ?? this.maximumTimeStep;
     // Parameters must remain positive finite f32 values in the shader.
     assert(
@@ -186,11 +207,21 @@ export class ScientificFlowTracer {
       this.diagnostics = makeBuffer('scientific-tracer-diagnostics', diagnostics);
       this.statistics = makeBuffer('scientific-tracer-statistics', new Uint32Array(9));
       this.emptyStatistics = makeBuffer('scientific-tracer-empty-statistics', new Uint32Array(9));
-      this.uniforms = own(
+      this.batchUniforms = Array.from({length: this.dispatchesPerReadback}, (_, index) =>
+        own(
+          device.createBuffer({
+            id: `scientific-tracer-parameters-${index}`,
+            byteLength: 64,
+            usage: Buffer.UNIFORM | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        )
+      );
+      this.uniforms = this.batchUniforms[0];
+      this.batchStatistics = own(
         device.createBuffer({
-          id: 'scientific-tracer-parameters',
-          byteLength: 64,
-          usage: Buffer.UNIFORM | Buffer.COPY_SRC | Buffer.COPY_DST
+          id: 'scientific-tracer-batch-statistics',
+          byteLength: 36 * this.dispatchesPerReadback,
+          usage: Buffer.COPY_SRC | Buffer.COPY_DST
         })
       );
       this.kernel = own(
@@ -224,7 +255,9 @@ export class ScientificFlowTracer {
       );
       this.commandGraph = own(this.makeCommandGraph());
       if (device.features.has('timestamp-query'))
-        this.queries = own(device.createQuerySet({type: 'timestamp', count: 2}));
+        this.queries = own(
+          device.createQuerySet({type: 'timestamp', count: 2 * this.dispatchesPerReadback})
+        );
     } catch (error) {
       for (const resource of owned.reverse()) resource.destroy();
       throw error;
@@ -244,7 +277,7 @@ export class ScientificFlowTracer {
     return this.pendingDuration !== undefined;
   }
 
-  /** Starts one request. Readback is nine counters (36 bytes), never particle positions. */
+  /** Start one horizon; submit the configured dispatch batch, then read only its counter snapshots. */
   async advance(deltaTime: number): Promise<ScientificFlowTraceResult> {
     assert(!this.destroyed && !this.failed && !this.busy && !this.hasPendingWork); // Finish pending work before starting another horizon.
     assert(Number.isFinite(deltaTime) && deltaTime >= 0 && Number.isFinite(Math.fround(deltaTime)));
@@ -254,14 +287,14 @@ export class ScientificFlowTracer {
     return await this.dispatch(true);
   }
 
-  /** Resume the same horizon after exhausting a dispatch's trial budget. */
+  /** Resume the same horizon after exhausting the previous batch's trial budget. */
   async continue(): Promise<ScientificFlowTraceResult> {
     assert(!this.destroyed && !this.failed && !this.busy && this.pendingDuration !== undefined);
     return await this.dispatch(false);
   }
 
   /** Rotate only after all active particles have reached the endpoint (or stopped explicitly). */
-  setNextSnapshot(input: ScientificVectorFieldInput, endTime: number): void {
+  setNextSnapshot(input: ScientificFlowInput, endTime: number): void {
     assert(
       !this.destroyed &&
         !this.failed &&
@@ -300,7 +333,8 @@ export class ScientificFlowTracer {
       this.diagnostics,
       this.statistics,
       this.emptyStatistics,
-      this.uniforms
+      this.batchStatistics,
+      ...this.batchUniforms
     ])
       buffer.destroy();
     this.currentField.destroy();
@@ -389,7 +423,8 @@ export class ScientificFlowTracer {
 
   private validateField(field: ScientificFlowField): void {
     assert(
-      field.texture.width === this.currentField.texture.width &&
+      field.layout === this.currentField.layout &&
+        field.texture.width === this.currentField.texture.width &&
         field.texture.height === this.currentField.texture.height &&
         field.field.coordinates === this.currentField.field.coordinates &&
         field.field.bounds.every((value, index) => value === this.currentField.field.bounds[index])
@@ -422,7 +457,8 @@ export class ScientificFlowTracer {
         this.particleCount,
         (this.currentField.field.coordinates === 'lnglat' ? 1 : 0) |
           (this.currentField.periodicLongitude ? 2 : 0) |
-          (this.conservativeMask ? 4 : 0),
+          (this.conservativeMask ? 4 : 0) |
+          (this.currentField.layout === 'c-grid' ? 8 : 0),
         this.maximumAttempts,
         first ? 1 : 0
       ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));
@@ -432,20 +468,51 @@ export class ScientificFlowTracer {
         duration,
         0
       ].forEach((value, index) => view.setFloat32(48 + index * 4, value, true));
-      this.uniforms.write(new Uint8Array(bytes));
       const encoder = this.device.createCommandEncoder({timeProfilingQuerySet: this.queries});
-      const encoding = this.commandGraph.encode(encoder, {
-        parameters: undefined,
-        textures: {
-          'tracer-velocity': this.currentField.texture,
-          'tracer-next-velocity': this.nextField.texture
-        }
-      });
+      const encodings: GPUCommandGraphEncoding[] = [];
+      for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
+        // Later dispatches resume progress rather than restarting the request clock.
+        view.setUint32(44, (first && batchIndex === 0 ? 1 : 0) | (batchIndex === 0 ? 2 : 0), true);
+        this.batchUniforms[batchIndex].write(new Uint8Array(bytes));
+        encodings.push(
+          this.commandGraph.encode(encoder, {
+            parameters: undefined,
+            buffers: {[this.uniforms.id]: this.batchUniforms[batchIndex]},
+            textures: {
+              'tracer-velocity': this.currentField.texture,
+              'tracer-next-velocity': this.nextField.texture
+            }
+          })
+        );
+        // Preserve each dispatch's work counts before the next graph reset. These
+        // copies are readback staging, outside the inspected integration graph.
+        encoder.copyBufferToBuffer({
+          sourceBuffer: this.statistics,
+          destinationBuffer: this.batchStatistics,
+          destinationOffset: batchIndex * 36,
+          size: 36
+        });
+      }
       this.device.submit(encoder.finish());
-      this.dispatchIndex++;
-      const result = await this.statistics.readAsync();
-      const counts = new Uint32Array(result.buffer, result.byteOffset, 9);
-      const {gpuTimeMilliseconds: gpuMilliseconds} = await encoding.readTimings();
+      this.dispatchIndex += this.dispatchesPerReadback;
+      const result = await this.batchStatistics.readAsync();
+      const batchCounts = new Uint32Array(
+        result.buffer,
+        result.byteOffset,
+        9 * this.dispatchesPerReadback
+      );
+      const counts = batchCounts.subarray(batchCounts.length - 9);
+      let acceptedSteps = 0;
+      let rejectedSteps = 0;
+      for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
+        acceptedSteps += batchCounts[batchIndex * 9 + 7];
+        rejectedSteps += batchCounts[batchIndex * 9 + 8];
+      }
+      const timings = await Promise.all(encodings.map(encoding => encoding.readTimings()));
+      const gpuMilliseconds = timings.every(timing => timing.gpuTimeMilliseconds !== undefined)
+        ? timings.reduce((sum, timing) => sum + timing.gpuTimeMilliseconds!, 0)
+        : undefined;
+      const encoding = encodings[encodings.length - 1];
       const targetTime = this.time + duration;
       const complete = counts[6] === 0;
       if (complete) {
@@ -461,6 +528,9 @@ export class ScientificFlowTracer {
       }
       return {
         encoding,
+        encodings,
+        dispatchCount: this.dispatchesPerReadback,
+        counterReadbackBytes: this.batchStatistics.byteLength,
         dispatchIndex: this.dispatchIndex,
         isContinuation: !first,
         targetTime,
@@ -473,8 +543,8 @@ export class ScientificFlowTracer {
         toleranceFailure: counts[4],
         numericalFailure: counts[5],
         pending: counts[6],
-        acceptedSteps: counts[7],
-        rejectedSteps: counts[8],
+        acceptedSteps,
+        rejectedSteps,
         ...(gpuMilliseconds === undefined ? {} : {gpuMilliseconds})
       };
     } catch (error) {

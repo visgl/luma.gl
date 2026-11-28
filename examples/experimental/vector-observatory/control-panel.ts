@@ -18,7 +18,7 @@ import globeSource from './globe.ts?raw';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
 export type ObservatorySettings = {
-  field: 'gyre' | 'vortex' | 'jet' | 'weather' | 'spherical';
+  field: 'gyre' | 'vortex' | 'jet' | 'weather' | 'spherical' | 'c-grid';
   rotateGlobe: boolean;
   particleCount: number;
   integrator: 'rk2' | 'rk4' | 'rk45';
@@ -79,7 +79,8 @@ export class ObservatoryControlPanel {
           next.field === 'vortex' ||
           next.field === 'jet' ||
           next.field === 'weather' ||
-          next.field === 'spherical'
+          next.field === 'spherical' ||
+          next.field === 'c-grid'
         )
           this.settings.field = next.field;
         if (next.integrator === 'rk2' || next.integrator === 'rk4' || next.integrator === 'rk45')
@@ -147,7 +148,7 @@ export class ObservatoryControlPanel {
               makeHtmlCustomPanel({
                 id: 'observatory-info',
                 title: 'Info',
-                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its atlas rendering suppresses long segments at pole crossings; this is a rendering limitation, not particle termination.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
+                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its bounded Cartesian history renders great-circle trails continuously through poles and the antimeridian, and reprojects while paused.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations. The C-grid gyre instead samples normal velocities on 32 × 32 cell faces, with a discrete streamfunction preserving cell flux balance and zero flow across the exterior faces.</p>
               <p>The double gyre has a ten-second cycle with linearly interpolated snapshots every 0.25 seconds. Streaks connect GPU particle states; the clock reports simulated seconds.</p>
               <p>RK2 and RK4 continuously respawn particles. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
               <p>RK45 tolerance controls estimated local integration error in field units, not total trajectory or interpolation error. Its bounded work can lag behind wall time; Diagnostics shows pending particles and queued time.</p>
@@ -316,6 +317,7 @@ export class ObservatoryControlPanel {
                 {label: 'Pole-crossing globe · spherical', value: 'spherical'},
                 {label: 'GFS Atlantic · archived model winds', value: 'gfs'},
                 {label: 'Evolving double gyre', value: 'gyre'},
+                {label: 'C-grid gyre · face velocities', value: 'c-grid'},
                 {label: 'Vortex pair', value: 'vortex'},
                 {label: 'Meandering jet', value: 'jet'}
               ]

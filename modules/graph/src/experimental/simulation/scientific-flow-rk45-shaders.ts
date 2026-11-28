@@ -32,7 +32,7 @@ export const SCIENTIFIC_FLOW_RK45 = /* wgsl */ `
 struct Parameters {
   domain: vec4<f32>,
   integration: vec4<f32>, // tolerance (physical distance), minimum dt, maximum dt, lifetime
-  counters: vec4<u32>, // particle count, flags (geographic=1, periodic longitude=2), attempts per dispatch, first dispatch
+  counters: vec4<u32>, // particle count, flags (geographic=1, periodic longitude=2), attempts per dispatch, lifecycle flags (reset=1, capture previous=2)
   temporal: vec4<f32> // start fraction, end fraction, requested duration, unused
 };
 @group(0) @binding(0) var<uniform> parameters: Parameters;
@@ -117,9 +117,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let index = invocation.x;
   if (index >= parameters.counters.x) {return;}
   var particle = particles[index];
-  previous[index] = particle;
+  if ((parameters.counters.w & 2u) != 0u) {previous[index] = particle;}
   var state = diagnostics[index]; // request elapsed, proposed dt, status, last accepted dt
-  if (parameters.counters.w != 0u) {state.x = 0.0;}
+  if ((parameters.counters.w & 1u) != 0u) {state.x = 0.0;}
   let startingAge = particle.z;
   let startingElapsed = state.x;
   var accepted = 0u;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-/** Shared collocated sampling. Validity: 1 valid, 0 missing, -1 outside domain. */
+/** Shared collocated and Cartesian C-grid sampling. Validity: 1 valid, 0 missing, -1 outside domain. */
 export const SCIENTIFIC_FLOW_SAMPLING = /* wgsl */ `
 // Geographic fields are restricted to latitudes within +/-85 degrees. Evaluate
 // cosine on that bounded interval explicitly: native GPU trig approximations can
@@ -24,6 +24,17 @@ fn sampleField(field: texture_2d<f32>, unwrappedPosition: vec2<f32>) -> vec3<f32
   }
   let dimensions = vec2<i32>(textureDimensions(field));
   let grid = position * vec2<f32>(dimensions - vec2<i32>(1));
+  if ((parameters.counters.y & 8u) != 0u) {
+    let cell = min(vec2<i32>(floor(grid)), dimensions - vec2<i32>(2));
+    let fraction = grid - vec2<f32>(cell);
+    let lower = textureLoad(field, cell, 0);
+    let right = textureLoad(field, cell + vec2<i32>(1, 0), 0);
+    let upper = textureLoad(field, cell + vec2<i32>(0, 1), 0);
+    if (min(min(lower.z, lower.w), min(right.z, upper.w)) < 0.5) {return vec3<f32>(0.0);}
+    // Each normal component varies only along its normal axis. This reproduces
+    // the cell's finite-volume divergence and preserves normal face velocities.
+    return vec3<f32>(mix(lower.x, right.x, fraction.x), mix(lower.y, upper.y, fraction.y), 1.0);
+  }
   let low = vec2<i32>(floor(grid));
   let high = min(low + vec2<i32>(1), dimensions - vec2<i32>(1));
   let fraction = fract(grid);

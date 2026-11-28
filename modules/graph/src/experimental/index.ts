@@ -35,6 +35,8 @@ export {
   type FlowFieldAtlasProps,
   ScientificFlowField,
   type ScientificVectorFieldInput,
+  type ScientificFlowInput,
+  type StaggeredVectorFieldInput,
   type ScientificFlowFieldProps,
   ScientificFlowGraph,
   ScientificFlowCompute,
