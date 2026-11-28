@@ -14,6 +14,7 @@ import {
   type ScientificFlowTraceResult
 } from '@luma.gl/graph/experimental-simulation';
 import {makeField} from './fields';
+import {makeStaggeredGyre} from './staggered-field';
 import {makeSphericalField, makeSphericalPositions} from './spherical-field';
 import {ObservatoryControlPanel} from './control-panel';
 import './style.css';
@@ -248,7 +249,7 @@ struct View {size: vec4f, options: vec4f};
     queuedTime = 0;
     traceResult = undefined;
     const fields = {
-      input: makeField(activeField, 0),
+      input: activeField === 'c-grid' ? makeStaggeredGyre() : makeField(activeField, 0),
       ...(activeField === 'gyre' || activeField === 'weather'
         ? {nextInput: makeField(activeField, snapshotEnd), timeRange: [0, snapshotEnd] as const}
         : {}),
@@ -279,7 +280,9 @@ struct View {size: vec4f, options: vec4f};
         ...fields,
         positions,
         tolerance: controls.settings.tolerance,
-        maximumAttempts: 16
+        maximumAttempts: 16,
+        scheduling: controls.settings.scheduling,
+        dispatchesPerReadback: controls.settings.dispatchesPerReadback
       });
     } else {
       graph = new ScientificFlowGraph(device, {
@@ -367,7 +370,9 @@ struct View {size: vec4f, options: vec4f};
               queuedTime -= deltaTime;
               traceResult = await graph.advance(deltaTime);
             }
-            controls.diagnostics.record(graph.commandGraph, traceResult.encoding);
+            /** Every dispatch in the batch contributes a separate inspectable trace. */
+            for (const encoding of traceResult.encodings)
+              controls.diagnostics.record(graph.commandGraph, encoding);
           } else {
             const substeps = Math.max(
               1,
@@ -399,7 +404,9 @@ struct View {size: vec4f, options: vec4f};
               canvas.width,
               canvas.height,
               controls.settings.streakWidth,
-              (controls.settings.exposure * 1.2 * 65536) / activeCount,
+              // Dense closed-cell circulation needs less additive exposure than the weather atlas.
+              (controls.settings.exposure * 1.2 * 65536 * (activeField === 'c-grid' ? 0.08 : 1)) /
+                activeCount,
               controls.settings.coloring === 'step'
                 ? 1
                 : controls.settings.coloring === 'status'

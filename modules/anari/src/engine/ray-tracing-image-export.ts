@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {fromHalfFloat} from '@luma.gl/shaders';
 import {assert, Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
   RayTracingSceneRenderer,
@@ -72,18 +73,42 @@ export function* iterateRayTracingImageTiles(
   }
 }
 
+export type RayTracingRadianceTile = Omit<RayTracingImageTile, 'data'> & {
+  /** Tightly packed little-endian RGBA16F rows, top to bottom. Alpha stores history confidence. */
+  data: Uint8Array;
+};
+
+type ExportScene = Omit<
+  RayTracingSceneRenderOptions,
+  'id' | 'width' | 'height' | 'framebuffer' | 'imageRegion' | 'samplingFrameIndex'
+>;
+
 /**
- * Exports a fixed scene one RGBA8 tile at a time, submitting and reading its own commands.
- * Camera matrices describe the complete output image. Keep scene inputs unchanged while iterating.
- * Breaking/returning from iteration releases all export-owned GPU resources.
+ * Exports a fixed scene one RGBA8 tile at a time. Camera matrices describe the full image.
+ * Keep scene inputs unchanged while iterating. Closing the iterator releases GPU resources.
  */
-export async function* exportRayTracingImage(
+export function exportRayTracingImage(
   device: Device,
-  scene: Omit<
-    RayTracingSceneRenderOptions,
-    'id' | 'width' | 'height' | 'framebuffer' | 'imageRegion' | 'samplingFrameIndex'
-  >,
+  scene: ExportScene,
   options: RayTracingImageExportOptions
+): AsyncGenerator<RayTracingImageTile> {
+  return exportTiles(device, scene, options, false);
+}
+
+/** Exports linear HDR history before display filtering, exposure, and tone mapping. */
+export function exportRayTracingRadiance(
+  device: Device,
+  scene: ExportScene,
+  options: RayTracingImageExportOptions
+): AsyncGenerator<RayTracingRadianceTile> {
+  return exportTiles(device, {...scene, denoiseRadius: 0, exposure: 1}, options, true);
+}
+
+async function* exportTiles(
+  device: Device,
+  scene: ExportScene,
+  options: RayTracingImageExportOptions,
+  linearRadiance: boolean
 ): AsyncGenerator<RayTracingImageTile> {
   const tileSize = options.tileSize ?? 512;
   const frames = options.frames ?? 1;
@@ -134,6 +159,7 @@ export async function* exportRayTracingImage(
             resolutionScale: 1,
             adaptiveResolution: false,
             temporalReprojection: false,
+            rayBatchPhaseCount: undefined,
             debugView: 'color'
           });
           device.submit();
@@ -144,20 +170,33 @@ export async function* exportRayTracingImage(
           width: tile.width,
           height: tile.height
         };
-        const layout = color.computeMemoryLayout(readOptions);
-        buffer = device.createBuffer({
-          byteLength: layout.byteLength,
-          usage: Buffer.COPY_DST | Buffer.MAP_READ
-        });
-        color.readBuffer(readOptions, buffer);
-        const bytes = await buffer.readAsync();
+        const bytesPerPixel = linearRadiance ? 8 : 4;
+        let bytes: Uint8Array;
+        let bytesPerRow: number;
+        let readOffset = 0;
+        if (linearRadiance) {
+          const radiance = await renderer.readRadiance('ray-image-export');
+          // The rendered frame has a completed history texture.
+          assert(radiance);
+          bytes = radiance.data;
+          bytesPerRow = radiance.width * bytesPerPixel;
+          readOffset = readOptions.y * bytesPerRow + readOptions.x * bytesPerPixel;
+        } else {
+          const layout = color.computeMemoryLayout(readOptions);
+          buffer = device.createBuffer({
+            byteLength: layout.byteLength,
+            usage: Buffer.COPY_DST | Buffer.MAP_READ
+          });
+          color.readBuffer(readOptions, buffer);
+          bytes = await buffer.readAsync();
+          bytesPerRow = layout.bytesPerRow;
+        }
         options.signal?.throwIfAborted();
-        data = new Uint8Array(tile.width * tile.height * 4);
+        const rowBytes = tile.width * bytesPerPixel;
+        data = new Uint8Array(rowBytes * tile.height);
         for (let row = 0; row < tile.height; row++) {
-          data.set(
-            bytes.subarray(row * layout.bytesPerRow, row * layout.bytesPerRow + tile.width * 4),
-            row * tile.width * 4
-          );
+          const offset = readOffset + row * bytesPerRow;
+          data.set(bytes.subarray(offset, offset + rowBytes), row * rowBytes);
         }
       } finally {
         buffer?.destroy();
@@ -169,4 +208,64 @@ export async function* exportRayTracingImage(
   } finally {
     renderer.destroy();
   }
+}
+
+/** Encodes a complete row-major HDR tile stream as a little-endian RGB PFM file. */
+export async function encodeRayTracingRadiancePFM(
+  width: number,
+  height: number,
+  tiles: AsyncIterable<RayTracingRadianceTile> | Iterable<RayTracingRadianceTile>
+): Promise<Uint8Array<ArrayBuffer>> {
+  // Match the limits of the tile iterator.
+  assert(
+    Number.isInteger(width) &&
+      Number.isInteger(height) &&
+      width > 0 &&
+      height > 0 &&
+      width * height <= 0xffffffff
+  );
+  const header = new TextEncoder().encode(`PF\n${width} ${height}\n-1.0\n`);
+  const file = new Uint8Array(header.length + width * height * 12);
+  file.set(header);
+  const pixels = new DataView(file.buffer, header.length);
+  let expectedX = 0;
+  let expectedY = 0;
+  let bandHeight = 0;
+  for await (const tile of tiles) {
+    if (expectedX === 0) bandHeight = tile.height;
+    // Accept contiguous tile bands covering the image exactly once.
+    assert(
+      tile.x === expectedX &&
+        tile.y === expectedY &&
+        tile.height === bandHeight &&
+        Number.isInteger(tile.width) &&
+        Number.isInteger(tile.height) &&
+        tile.width > 0 &&
+        tile.height > 0 &&
+        tile.x + tile.width <= width &&
+        tile.y + tile.height <= height &&
+        tile.data.byteLength === tile.width * tile.height * 8
+    );
+    const samples = new DataView(tile.data.buffer, tile.data.byteOffset, tile.data.byteLength);
+    for (let row = 0; row < tile.height; row++) {
+      // PFM stores the bottom row first.
+      const outputRow = height - 1 - tile.y - row;
+      for (let column = 0; column < tile.width; column++) {
+        const source = (row * tile.width + column) * 8;
+        const target = (outputRow * width + tile.x + column) * 12;
+        for (let channel = 0; channel < 3; channel++) {
+          const bits = samples.getUint16(source + channel * 2, true);
+          pixels.setFloat32(target + channel * 4, fromHalfFloat(bits), true);
+        }
+      }
+    }
+    expectedX += tile.width;
+    if (expectedX === width) {
+      expectedX = 0;
+      expectedY += bandHeight;
+    }
+  }
+  // Reject a prematurely terminated tile stream.
+  assert(expectedX === 0 && expectedY === height);
+  return file;
 }

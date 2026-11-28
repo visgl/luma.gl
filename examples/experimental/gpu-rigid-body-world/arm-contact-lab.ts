@@ -118,7 +118,10 @@ try {
     const graph = await definition.compileAsync();
     const scene = new RobotArmScene(
       device,
-      {poseMatrices: world.poseMatrices, count: reduced ? (bin ? 4 : 5) : bodies.length},
+      {
+        poseMatrices: world.poseMatrices,
+        count: reduced ? (bin && pick ? pick.armBodyCount - 2 : 5) : bodies.length
+      },
       reduced ? bodies : undefined,
       gripper,
       pick?.workcell,
@@ -179,6 +182,7 @@ try {
     grip.onchange = () => {
       const url = new URL(location.href);
       url.searchParams.set('friction', grip.value);
+      if (bin?.ring) url.searchParams.set('bin', 'ring');
       location.href = url.href;
     };
     selectPhase(0);
@@ -250,7 +254,7 @@ try {
         if (pick) {
           const matrices = pick.binWorld?.poseMatrices ?? world.poseMatrices!;
           const target = pick.targetIndex(phase);
-          const index = pick.binWorld ? 1 + target : (reduced ? 4 : 6) + target;
+          const index = pick.binWorld ? 1 + target : pick.armBodyCount - (reduced ? 2 : 0) + target;
           const [bytes, status] = await Promise.all([
             matrices.readAsync((index * 16 + 14) * 4, 4),
             bin?.parts && world instanceof GPUArticulationTree

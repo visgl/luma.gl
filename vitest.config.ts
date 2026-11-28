@@ -11,7 +11,7 @@ const excludePatterns = [
   '**/*.disabled.*',
   // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-materialized-map-point-layer|gpu-h3-map-point-source.node|gpu-projected-point-performance).spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-materialized-map-point-layer|gpu-resident-table-map|gpu-h3-map-point-source.node|gpu-projected-point-performance).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',

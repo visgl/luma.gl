@@ -9,9 +9,10 @@ import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
 import {copyPass} from './copy-pass';
 import {temporalHelpers} from './screen-space-shader-helpers';
+import type {TemporalFrameJitter} from './temporal-frame';
 
 /** Uniforms needed to reproject a static-world pixel into the previous camera frame. */
-export type CameraReprojectionTAAUniforms = {
+export type CameraReprojectionTAAUniforms = TemporalFrameJitter & {
   /**
    * Inverse of the current unjittered view-projection matrix.
    * Jitter is supplied separately in UV units.
@@ -23,10 +24,6 @@ export type CameraReprojectionTAAUniforms = {
   historyWeight: number;
   /** Maximum normalized-device-depth disagreement before history is rejected. */
   depthThreshold: number;
-  /** Current projection jitter in UV units. */
-  currentJitter: [number, number];
-  /** Previous projection jitter in UV units. */
-  previousJitter: [number, number];
 };
 
 type CameraReprojectionTAABindings = {

@@ -181,15 +181,17 @@ export const ssaoEffect = {
     option: 'resolutionScale',
     targets: ['ssaoRaw', 'ssaoScratch', 'ssaoBlurred']
   },
-  passVariants: {
+  variants: {
     option: 'normalSource',
     values: {
-      'normal-texture': [
-        {...ssao.passes[0], inputs: {sourceTexture: 'previous'}, uniforms: {useNormalTexture: 1}},
-        ssao.passes[1],
-        ssao.passes[2],
-        ssao.passes[3]
-      ]
+      'normal-texture': {
+        passes: [
+          {...ssao.passes[0], inputs: {sourceTexture: 'previous'}, uniforms: {useNormalTexture: 1}},
+          ssao.passes[1],
+          ssao.passes[2],
+          ssao.passes[3]
+        ]
+      }
     }
   }
 } as const satisfies ConfigurableEffectDefinition<

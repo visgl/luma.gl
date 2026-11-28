@@ -182,6 +182,8 @@ In the gripper workcell selector, **Crowded bin** picks and regrasps a block, **
 
 ### Rendering a ring of independent workpieces
 
-The gripper lab authors each workpiece as a scenegraph node with its own dimensions, transform and rigid-body mass. Several nodes reference the same cube geometry and the same named finish, much as several glTF nodes can reference one mesh. The scene renderer groups compatible opaque instances for drawing and reads a separate physics pose matrix for each one. A teal shim can be lighter, smaller and moving independently of a teal die.
+The gripper lab authors each workpiece as a scenegraph node with its own dimensions, transform and rigid-body mass. Several nodes reference the same cube geometry and the same named finish, much as several glTF nodes can reference one mesh. The scene renderer groups compatible opaque instances for drawing and reads a separate physics pose matrix for each one. An aluminum shim can be lighter, smaller and moving independently of a die with the same finish.
 
-Give a piece its own material when its finish needs to change independently. Its physics body, joint targets and pickup sequence work the same way. The crowded-bin scenario uses the same scenegraph and materials for all 64 bodies.
+Give a piece its own material when its finish needs to change independently. Its physics body, joint targets and pickup sequence work the same way.
+
+The ring arm has a sliding carriage between its boom and fingers. Set a tree link’s `jointType` to `'prismatic'` and supply a unit axis in the parent frame. For example, `tree.setLinearDrive('slide', {position: -0.44, stiffness: 1000, damping: 60, maximumForce: 80})` commands 44 cm of retraction from the authored pose. Both fingers travel with the carriage, and friction carries the grasped piece. Read the signed motor force in newtons with `tree.readForce('slide')`. The crowded-bin scenario uses the same scenegraph and materials for all 64 bodies.

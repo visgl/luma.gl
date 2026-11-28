@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {WebMercatorViewport} from '@deck.gl/core';
-import type {GPUH3MapPointSource} from '../projection/gpu-h3-map-point-source';
+import type {MaterializedMapPointSource} from '../projection/materialized-map-frame';
 import {
   GPUMaterializedPointLayer,
   type GPUMaterializedPointLayerProps
 } from './gpu-materialized-point-layer';
 
-/** Props for drawing retained H3 map positions in a 2D Web Mercator viewport. */
+/** Props for drawing retained map positions in a 2D Web Mercator viewport. */
 export type GPUMaterializedMapPointLayerProps = Omit<
   GPUMaterializedPointLayerProps,
   | 'positions'
@@ -21,10 +21,10 @@ export type GPUMaterializedMapPointLayerProps = Omit<
   | 'wrapLongitude'
 > & {
   /** Caller-owned materialized source. Call updateChunks when its resident inputs change. */
-  source: GPUH3MapPointSource;
+  source: MaterializedMapPointSource;
 };
 
-/** Draws retained H3 positions using Deck's Cartesian rebasing in a Web Mercator map. */
+/** Draws retained positions using Deck's Cartesian rebasing in a Web Mercator map. */
 export class GPUMaterializedMapPointLayer extends GPUMaterializedPointLayer {
   /** Deck layer name. */
   static override layerName = 'GPUMaterializedMapPointLayer';

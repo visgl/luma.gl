@@ -25,13 +25,16 @@ export type GPUArticulationLink = {
   parent: number;
   parentAnchor: Vector;
   childAnchor: Vector;
-  /** Unit revolute axis in the parent frame. Omit for a welded attachment. */
+  /** A slider translates along its axis. The default is a revolute joint. */
+  jointType?: 'revolute' | 'prismatic';
+  /** Unit joint axis in the parent frame. Omit for a welded attachment. */
   axis?: Vector;
   /** Child-to-parent orientation at zero angle. */
   restOrientation?: readonly [number, number, number, number];
   mass: number;
   /** Principal moments about the COM in the child frame. */
   inertia: Vector;
+  /** Initial joint coordinate in radians for a hinge or meters for a slider. */
   angle?: number;
   speed?: number;
 };
@@ -113,6 +116,7 @@ export class GPUArticulationTree {
     for (const [index, link] of this.links.entries()) {
       if (
         !link.id ||
+        (link.jointType === 'prismatic' && !link.axis) ||
         this.indices.has(link.id) ||
         !Number.isInteger(link.parent) ||
         link.parent < -1 ||
@@ -223,7 +227,7 @@ export class GPUArticulationTree {
           ...link.parentAnchor,
           link.parent,
           ...link.childAnchor,
-          0,
+          Number(link.jointType === 'prismatic'),
           ...(link.axis ?? [0, 0, 0]),
           link.mass,
           ...link.inertia,
@@ -315,7 +319,8 @@ export class GPUArticulationTree {
           this.publishMatrices,
           Boolean(this.payload),
           coupling?.count ?? 0,
-          colliders?.length ?? 0
+          colliders?.length ?? 0,
+          this.links.some(link => link.jointType === 'prismatic')
         ),
         shaderLayout
       };
@@ -349,22 +354,38 @@ export class GPUArticulationTree {
     this.initialState();
   }
 
-  private driveIndex(id: string) {
+  private driveIndex(id: string, kind: 'revolute' | 'prismatic' = 'revolute') {
     const index = this.indices.get(id);
     if (this.destroyed || !this.buffers.length || index === undefined || !this.links[index].axis)
-      throw new Error('Inactive or missing revolute drive');
+      throw new Error('Inactive or missing joint drive');
+    if ((this.links[index].jointType ?? 'revolute') !== kind)
+      throw new Error('Unexpected joint type');
     return index;
   }
 
   /** Update the named revolute drive between submitted steps. */
   setDrive(id: string, drive: GPUArticulationDrive) {
     const index = this.driveIndex(id);
-    const values = new Float32Array([
-      drive.angle,
-      drive.stiffness,
-      drive.damping,
-      drive.maximumTorque
-    ]);
+    this.writeDrive(index, drive.angle, drive.stiffness, drive.damping, drive.maximumTorque);
+  }
+
+  /** Drive a slider in meters with a spring in N/m, damping in N·s/m and a force limit in newtons. */
+  setLinearDrive(
+    id: string,
+    drive: {position: number; stiffness: number; damping: number; maximumForce: number}
+  ) {
+    const index = this.driveIndex(id, 'prismatic');
+    this.writeDrive(index, drive.position, drive.stiffness, drive.damping, drive.maximumForce);
+  }
+
+  private writeDrive(
+    index: number,
+    target: number,
+    stiffness: number,
+    damping: number,
+    maximum: number
+  ) {
+    const values = new Float32Array([target, stiffness, damping, maximum]);
     if (!values.every(Number.isFinite) || values.slice(1).some(value => value < 0))
       throw new Error('Invalid articulation drive');
     this.buffers[1].write(values, index * 16);
@@ -372,7 +393,15 @@ export class GPUArticulationTree {
 
   /** Signed motor torque during the most recently accepted step. */
   async readTorque(id: string) {
-    const index = this.driveIndex(id);
+    return this.readEffort(this.driveIndex(id));
+  }
+
+  /** Signed slider motor force in newtons during the most recently accepted step. */
+  async readForce(id: string) {
+    return this.readEffort(this.driveIndex(id, 'prismatic'));
+  }
+
+  private async readEffort(index: number) {
     const bytes = await this.buffers[2].readAsync(index * 16 + 8, 4);
     return new DataView(bytes.buffer, bytes.byteOffset, 4).getFloat32(0, true);
   }

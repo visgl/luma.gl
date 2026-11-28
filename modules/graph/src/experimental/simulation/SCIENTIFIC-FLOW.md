@@ -140,3 +140,25 @@ It records copies into a caller-owned encoder without submission or readback.
 most two contiguous ranges.
 See the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md)
 for synchronization, memory costs and completed-horizon capture.
+
+## Cartesian C-grid transport and batched tracing
+
+`ScientificFlowInput` also accepts `StaggeredVectorFieldInput`. Bounds enclose
+cells; normal face velocities and separate component masks are retained in the
+packed texture. Face reconstruction reproduces cell divergence without collocation.
+See the [field contract](../../../../../docs/api-reference/experimental/staggered-flow-fields.md).
+
+RK45 `dispatchesPerReadback` batches 1–32 bounded dispatches before reading their
+counter snapshots together. Results retain individual graph encodings, aggregate
+work and final status counts. This reduces synchronization without compacting
+active particles. The opt-in scientific-flow benchmark reports sparse/dense costs.
+
+### Active scheduling
+
+`ScientificFlowTracer` optionally compacts unfinished stable IDs and dispatches RK45
+indirectly. A separate GPU scan applies per-call lifecycle changes to all slots and
+counts skipped statuses; integration counts queued statuses. Empty queues launch
+zero integration workgroups. Queue ordering never changes public particle storage.
+Dense scheduling remains the default. Scheduling telemetry and matched-error costs
+include an explicit distinction between integration work and full-slot queue scans;
+see the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md).

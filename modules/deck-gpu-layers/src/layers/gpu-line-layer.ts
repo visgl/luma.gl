@@ -30,6 +30,10 @@ import {
 export type GPULineLayerProps = Omit<LayerProps, 'data'> & {
   getSourcePosition: GPUVector<'float32x2'>;
   getTargetPosition: GPUVector<'float32x2'>;
+  /** Optional per-endpoint masks. A zero endpoint suppresses the entire segment. */
+  sourceValidity?: GPUVector<'uint32'>;
+  /** Optional per-endpoint mask aligned with the target positions. */
+  targetValidity?: GPUVector<'uint32'>;
   getColor?: Color | GPUVector<'unorm8x4'>;
   getWidth?: number | GPUVector<'float32'>;
   widthScale?: number;
@@ -70,6 +74,8 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   @location(1) targetPositions: vec2<f32>,
   @location(2) colors: vec4<f32>,
   @location(3) widths: f32,
+  @location(4) sourceValidity: u32,
+  @location(5) targetValidity: u32,
   @builtin(vertex_index) vertexIndex: u32,
   @builtin(instance_index) instanceIndex: u32
 ) -> VertexOutput {
@@ -89,7 +95,7 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   let pickingColor = encodePickingColor(instanceIndex + lineStyle.rowIndexOffset);
   geometry.worldPosition = vec3<f32>(mix(sourcePositions, targetPositions, corner.x), 0.0); geometry.pickingColor = pickingColor;
   var output: VertexOutput;
-  output.position = clipPosition;
+  output.position = select(vec4<f32>(2.0, 2.0, 2.0, 1.0), clipPosition, sourceValidity != 0u && targetValidity != 0u);
   output.color = select(lineStyle.color, colors, lineStyle.useColors != 0u);
   output.pickingColor = pickingColor;
   return output;
@@ -106,6 +112,7 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPULineLayer requires WebGPU');
+    const {sourceValidity, targetValidity} = this.props;
     const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
     const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
     getGPUVectorLayerBatches(
@@ -114,13 +121,17 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
         sourcePositions: this.props.getSourcePosition,
         targetPositions: this.props.getTargetPosition,
         colors,
-        widths
+        widths,
+        sourceValidity,
+        targetValidity
       },
       {
         sourcePositions: ['float32x2'],
         targetPositions: ['float32x2'],
         colors: ['unorm8x4'],
-        widths: ['float32']
+        widths: ['float32'],
+        sourceValidity: ['uint32'],
+        targetValidity: ['uint32']
       }
     );
     if (this.props.getSourcePosition.data.length === 0) {
@@ -141,6 +152,10 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       id: `${this.id}-default-width`,
       data: new Float32Array([1])
     });
+    const defaultValidity =
+      sourceValidity && targetValidity
+        ? null
+        : device.createBuffer({id: `${this.id}-default-validity`, data: new Uint32Array([1])});
     const model = new GPUVectorModel(device, {
       shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_LINE_SHADER}),
@@ -154,7 +169,9 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
         sourcePositions: getGPUVectorBuffer(this.props.getSourcePosition),
         targetPositions: getGPUVectorBuffer(this.props.getTargetPosition),
         colors: colors ? getGPUVectorBuffer(colors) : defaultColor,
-        widths: widths ? getGPUVectorBuffer(widths) : defaultWidth
+        widths: widths ? getGPUVectorBuffer(widths) : defaultWidth,
+        sourceValidity: sourceValidity ? getGPUVectorBuffer(sourceValidity) : defaultValidity!,
+        targetValidity: targetValidity ? getGPUVectorBuffer(targetValidity) : defaultValidity!
       },
       bufferLayout: [
         makeGPUVectorBufferLayout(this.props.getSourcePosition, 'sourcePositions'),
@@ -174,7 +191,18 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
               byteStride: 0,
               stepMode: 'instance',
               attributes: [{attribute: 'widths', format: 'float32'}]
-            }
+            },
+        ...(['sourceValidity', 'targetValidity'] as const).map(name => {
+          const vector = this.props[name];
+          return vector
+            ? makeGPUVectorBufferLayout(vector, name)
+            : {
+                name,
+                byteStride: 0,
+                stepMode: 'instance' as const,
+                attributes: [{attribute: name, format: 'uint32' as const}]
+              };
+        })
       ],
       bindings: {lineStyle: getGPUVectorStyleBufferBinding(styleBuffer, 48)}
     });
@@ -182,12 +210,16 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       this.props.getSourcePosition,
       this.props.getTargetPosition,
       colors,
-      widths
+      widths,
+      sourceValidity,
+      targetValidity
     ];
     this.setState({
       model,
       styleBuffer,
-      defaults: [defaultColor, defaultWidth]
+      defaults: defaultValidity
+        ? [defaultColor, defaultWidth, defaultValidity]
+        : [defaultColor, defaultWidth]
     } satisfies GPULineLayerState);
   }
 
@@ -204,7 +236,9 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       props.getSourcePosition !== boundInputs[0] ||
       props.getTargetPosition !== boundInputs[1] ||
       colors !== boundInputs[2] ||
-      widths !== boundInputs[3]
+      widths !== boundInputs[3] ||
+      props.sourceValidity !== boundInputs[4] ||
+      props.targetValidity !== boundInputs[5]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
@@ -247,7 +281,9 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
         sourcePositions: this.props.getSourcePosition,
         targetPositions: this.props.getTargetPosition,
         colors,
-        widths
+        widths,
+        sourceValidity: this.props.sourceValidity,
+        targetValidity: this.props.targetValidity
       },
       onBatch: batch => {
         uints[10] = batch.rowIndexOffset;

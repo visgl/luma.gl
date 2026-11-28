@@ -18,11 +18,15 @@ import globeSource from './globe.ts?raw';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
 export type ObservatorySettings = {
-  field: 'gyre' | 'vortex' | 'jet' | 'weather' | 'spherical';
+  field: 'gyre' | 'vortex' | 'jet' | 'weather' | 'spherical' | 'c-grid';
   rotateGlobe: boolean;
   particleCount: number;
   integrator: 'rk2' | 'rk4' | 'rk45';
   tolerance: number;
+  /** Dense or compacted RK45 integration work. */
+  scheduling: 'dense' | 'active';
+  /** Bounded number of RK45 dispatches per counter synchronization. */
+  dispatchesPerReadback: number;
   coloring: 'speed' | 'step' | 'status';
   timeScale: number;
   exposure: number;
@@ -50,6 +54,8 @@ export class ObservatoryControlPanel {
     particleCount: 65536,
     integrator: 'rk4',
     tolerance: 1e-5,
+    scheduling: 'dense',
+    dispatchesPerReadback: 1,
     coloring: 'speed',
     timeScale: 1,
     exposure: 0.85,
@@ -79,18 +85,22 @@ export class ObservatoryControlPanel {
           next.field === 'vortex' ||
           next.field === 'jet' ||
           next.field === 'weather' ||
-          next.field === 'spherical'
+          next.field === 'spherical' ||
+          next.field === 'c-grid'
         )
           this.settings.field = next.field;
         if (next.integrator === 'rk2' || next.integrator === 'rk4' || next.integrator === 'rk45')
           this.settings.integrator = next.integrator;
         if (this.settings.field === 'spherical' && this.settings.integrator === 'rk45')
           this.settings.integrator = 'rk4';
+        if (next.scheduling === 'dense' || next.scheduling === 'active')
+          this.settings.scheduling = next.scheduling;
         if (next.coloring === 'speed' || next.coloring === 'step' || next.coloring === 'status')
           this.settings.coloring = next.coloring;
         for (const name of [
           'particleCount',
           'tolerance',
+          'dispatchesPerReadback',
           'timeScale',
           'exposure',
           'streakWidth',
@@ -107,7 +117,9 @@ export class ObservatoryControlPanel {
           before.field !== this.settings.field ||
             before.particleCount !== this.settings.particleCount ||
             before.integrator !== this.settings.integrator ||
-            before.tolerance !== this.settings.tolerance
+            before.tolerance !== this.settings.tolerance ||
+            before.scheduling !== this.settings.scheduling ||
+            before.dispatchesPerReadback !== this.settings.dispatchesPerReadback
         );
       }
     });
@@ -147,7 +159,7 @@ export class ObservatoryControlPanel {
               makeHtmlCustomPanel({
                 id: 'observatory-info',
                 title: 'Info',
-                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its atlas rendering suppresses long segments at pole crossings; this is a rendering limitation, not particle termination.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
+                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its bounded Cartesian history renders great-circle trails continuously through poles and the antimeridian, and reprojects while paused.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations. The C-grid gyre instead samples normal velocities on 32 × 32 cell faces, with a discrete streamfunction preserving cell flux balance and zero flow across the exterior faces.</p>
               <p>The double gyre has a ten-second cycle with linearly interpolated snapshots every 0.25 seconds. Streaks connect GPU particle states; the clock reports simulated seconds.</p>
               <p>RK2 and RK4 continuously respawn particles. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
               <p>RK45 tolerance controls estimated local integration error in field units, not total trajectory or interpolation error. Its bounded work can lag behind wall time; Diagnostics shows pending particles and queued time.</p>
@@ -217,7 +229,7 @@ export class ObservatoryControlPanel {
   private updateGraphNotice(notice: HTMLElement): void {
     notice.textContent =
       this.settings.integrator === 'rk45'
-        ? 'Live RK45 graph: reset counters, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
+        ? 'Live RK45 graph: reset counters, optionally compact active slots, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
         : 'Live compiled advection graph. Timings are sampled every 60 encodings; trail rendering is submitted separately.';
   }
 
@@ -278,7 +290,10 @@ export class ObservatoryControlPanel {
         ['Tolerance failure', result.toleranceFailure],
         ['Numerical failure', result.numericalFailure],
         ['Accepted steps', result.acceptedSteps],
-        ['Rejected steps', result.rejectedSteps]
+        ['Rejected steps', result.rejectedSteps],
+        ['Scheduled integration slots', result.scheduledParticles],
+        ['Integration workgroups', result.integrationWorkgroups],
+        ['Counter readback bytes', result.counterReadbackBytes]
       ] as const)
         entries.push([label, value.toLocaleString()]);
     }
@@ -293,7 +308,7 @@ export class ObservatoryControlPanel {
     }
     const note = document.createElement('p');
     note.textContent = result
-      ? 'Work counts describe the latest dispatch. GPU time excludes counter readback and rendering. Pending particles may be at different intermediate times.'
+      ? 'Work counts describe the latest batch. Scheduled slots exclude the full-slot queue scan; GPU time includes it, but excludes counter readback and rendering. Pending particles may be at different intermediate times.'
       : 'Frame rate measures the animation loop, not GPU compute time. Select RK45 for adaptive work and particle-state diagnostics.';
     this.telemetryHost.replaceChildren(list, note);
   }
@@ -316,6 +331,7 @@ export class ObservatoryControlPanel {
                 {label: 'Pole-crossing globe · spherical', value: 'spherical'},
                 {label: 'GFS Atlantic · archived model winds', value: 'gfs'},
                 {label: 'Evolving double gyre', value: 'gyre'},
+                {label: 'C-grid gyre · face velocities', value: 'c-grid'},
                 {label: 'Vortex pair', value: 'vortex'},
                 {label: 'Meandering jet', value: 'jet'}
               ]
@@ -365,6 +381,27 @@ export class ObservatoryControlPanel {
                       {label: '1e-3 · exploratory', value: 1e-3},
                       {label: '1e-5 · precise', value: 1e-5},
                       {label: '1e-7 · demanding', value: 1e-7}
+                    ]
+                  },
+                  {
+                    name: 'scheduling',
+                    label: 'RK45 scheduling',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: 'Dense · all slots', value: 'dense'},
+                      {label: 'Active · GPU queue', value: 'active'}
+                    ]
+                  },
+                  {
+                    name: 'dispatchesPerReadback',
+                    label: 'Dispatches per readback',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: '1 · interactive', value: 1},
+                      {label: '4', value: 4},
+                      {label: '16 · throughput', value: 16}
                     ]
                   },
                   {

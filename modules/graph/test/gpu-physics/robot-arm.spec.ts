@@ -351,3 +351,49 @@ it('latches link contact capacity before publishing partial impulses and clears 
     world.destroy();
   }
 });
+
+it('drives a prismatic carriage along the parent axis and supports its payload against gravity', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const tree = new GPUArticulationTree({
+    links: [
+      {
+        id: 'rail',
+        parent: -1,
+        parentAnchor: [0, 0, 0],
+        childAnchor: [0, 0, 0],
+        restOrientation: [0, -Math.SQRT1_2, 0, Math.SQRT1_2],
+        mass: 1,
+        inertia: [1, 1, 1]
+      },
+      {
+        id: 'slide',
+        parent: 0,
+        parentAnchor: [0, 0, 0],
+        childAnchor: [0, 0, 0],
+        jointType: 'prismatic',
+        axis: [1, 0, 0],
+        mass: 2,
+        inertia: [1, 1, 1]
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  tree.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (const position of [0.6, 0.2]) {
+      tree.setLinearDrive('slide', {position, stiffness: 1000, damping: 60, maximumForce: 80});
+      const encoder = device.createCommandEncoder();
+      for (let step = 0; step < 150; step++) graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const [, carriage] = await tree.readState();
+      expect(carriage.position[0]).toBeCloseTo(0, 3);
+      expect(carriage.position[2]).toBeCloseTo(position - (2 * 9.81) / 1000, 3);
+      expect(await tree.readForce('slide')).toBeCloseTo(2 * 9.81, 1);
+    }
+  } finally {
+    graph.destroy();
+    tree.destroy();
+  }
+});

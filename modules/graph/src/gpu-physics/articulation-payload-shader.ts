@@ -50,7 +50,7 @@ fn prepareContact(index:u32, link:i32, point:vec3f, normal:vec3f, gap:f32, dt:f3
   row.angularResponse=inversePayloadInertia(moment);
   row.effectiveInverseMass=${boxCount ? 'payload.velocity.w' : '1.0/settings.payloadSizeMass.w'}+dot(moment,row.angularResponse);
   for(var ancestor=link;ancestor>=0;ancestor=i32(links[ancestor].parentAnchor.w)){
-   row.jacobian[ancestor]= -dot(direction,cross(axis[ancestor],point-pivot[ancestor]));
+   row.jacobian[ancestor]= -dot(direction,linearColumn(ancestor,point));
   }
   for(var j=0u;j<N;j++){
    for(var k=0u;k<N;k++){row.response[j]+=(*inverse)[j][k]*row.jacobian[k];}

@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {CubeGeometry, GroupNode, type ScenegraphTransformBinding} from '@luma.gl/engine';
+import {
+  CubeGeometry,
+  RingGeometry,
+  GroupNode,
+  type ScenegraphTransformBinding
+} from '@luma.gl/engine';
 import {makePhysicsControllerScene, type PhysicsBodyOptions} from '@luma.gl/engine/physics';
 import {SceneMeshNode, type SceneMaterial} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core/matrix';
@@ -13,6 +18,7 @@ export const BIN_LIFT_ANGLE = -0.55;
 export const STACK_RELEASE_ANGLE = -0.32;
 export const FINGER_LENGTH = 0.74;
 export const BIN_DESTINATION = 1.65;
+export const RING_RETRACTION = 0.44;
 export type BinScenario = {
   target: number;
   ring?: boolean;
@@ -24,23 +30,26 @@ export type BinScenario = {
 };
 type Vector = [number, number, number];
 
-function finish(id: string, color: Vector): SceneMaterial {
-  return {id, uniforms: {baseColorFactor: [...color, 1], metallicRoughnessValues: [0.15, 0.4]}};
+function finish(id: string, color: Vector, metallic = 0.15, roughness = 0.4): SceneMaterial {
+  return {
+    id,
+    uniforms: {baseColorFactor: [...color, 1], metallicRoughnessValues: [metallic, roughness]}
+  };
 }
 const graphite = finish('graphite', [0.27, 0.32, 0.34]);
 const steel = finish('steel', [0.12, 0.18, 0.2]);
 const stock = [
-  finish('teal', [0.035, 0.55, 0.5]),
-  finish('copper', [0.92, 0.29, 0.045]),
-  finish('cobalt', [0.42, 0.56, 0.84])
+  finish('brushed-aluminum', [0.74, 0.76, 0.78], 0.54, 0.34),
+  finish('satin-nickel', [0.61, 0.59, 0.55], 0.51, 0.38),
+  finish('gunmetal', [0.35, 0.39, 0.42], 0.48, 0.31)
 ];
 export const RING_PIECES: {name: string; size: Vector; mass: number}[] = [
   {name: 'Shim', size: [0.15, 0.18, 0.16], mass: 0.35},
   {name: 'Spacer', size: [0.18, 0.17, 0.22], mass: 0.55},
   {name: 'Billet', size: [0.22, 0.2, 0.19], mass: 0.8},
-  {name: 'Die', size: [0.18, 0.21, 0.25], mass: 1},
-  {name: 'Gauge block', size: [0.23, 0.19, 0.21], mass: 1.2},
-  {name: 'Counterweight', size: [0.21, 0.22, 0.27], mass: 1.4}
+  {name: 'Die', size: [0.18, 0.21, 0.25], mass: 2.5},
+  {name: 'Gauge block', size: [0.23, 0.19, 0.21], mass: 4.8},
+  {name: 'Counterweight', size: [0.21, 0.22, 0.27], mass: 12}
 ];
 export const ringAngle = (index: number) =>
   ((index - (RING_PIECES.length - 1) / 2) * 2 * Math.PI) / RING_PIECES.length;
@@ -73,8 +82,21 @@ export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
   }
   box('bench', [0, 0, -0.12], 0, [2.4, 2.4, 0.12], 0, graphite);
   if (bin.ring) {
+    const marker = new RingGeometry({innerRadius: 0.299, outerRadius: 0.312, height: 0.0015});
+    const marking = finish('inlaid-target', [0.78, 0.76, 0.69], 0.18, 0.64);
     for (const [index, piece] of RING_PIECES.entries()) {
       const yaw = ringAngle(index);
+      const innerRadius = reach - RING_RETRACTION;
+      root.add(
+        new SceneMeshNode({
+          id: 'target-' + index,
+          geometry: marker,
+          material: marking,
+          matrix: new Matrix4()
+            .translate([innerRadius * Math.cos(yaw), innerRadius * Math.sin(yaw), 0.002])
+            .rotateX(Math.PI / 2)
+        })
+      );
       box(
         piece.name,
         [reach * Math.cos(yaw), reach * Math.sin(yaw), piece.size[2]],
@@ -165,12 +187,16 @@ export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
   const {definition} = makePhysicsControllerScene(root, definitions, {});
   return {
     root,
+    ring: Boolean(bin.ring),
     bodies: definition.world.bodies,
     bind(matrices: Buffer, count: number, ordered: boolean) {
       const bindings = new Map<SceneMeshNode, ScenegraphTransformBinding>();
       for (const [node, localMatrix] of localScales) {
         const index = definition.bodies.get(node)!;
-        bindings.set(node, {matrixIndex: ordered && index > 0 ? index + 5 : index, localMatrix});
+        bindings.set(node, {
+          matrixIndex: ordered && index > 0 ? index + (bin.ring ? 6 : 5) : index,
+          localMatrix
+        });
       }
       root.transformSource = {
         getFrame: () => ({matrices, matrixCount: count, revision: 0, bindings})

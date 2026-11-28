@@ -147,6 +147,25 @@ Preparation and draw hooks let the scene supply view-specific models and
 bindings. The capture outputs remain available to the existing shadow
 sampling and fullscreen resolve stages.
 
+## Produce visibility textures for lighting
+
+`ambientOcclusionVisibilityEffect` and `contactShadowVisibilityEffect` in
+`@luma.gl/engine/lighting` generate visibility for a later lighting pass.
+Each effect traces visibility and filters it in two directions using depth
+and normals. The final output is a visibility texture that can be sampled
+from its red channel.
+
+For scene lighting, use `AmbientOcclusionPass` or `ContactShadowPass` to
+size the renderer from the inputs, set the camera uniforms, and get a borrowed
+RGBA8 texture. Callers own the depth and normal textures. The pass owns its
+output and may overwrite it on the next render. Ambient occlusion requires
+WebGPU unless its mode is `none`, which returns a white texture.
+
+To run either definition directly, configure it in `EffectRenderer`, set
+`colorFormat: 'rgba8unorm'`, and call `renderToTexture` with camera uniforms,
+the normal texture as the source, and `depthTexture` and `normalTexture`
+bindings. Run visibility generation before the lighting pass that samples it.
+
 ## Resolve scene buffers
 
 ANARI exposes fullscreen definitions for deferred direct lighting, ambient
@@ -241,6 +260,21 @@ support, binding limits, and workgroup dimensions. On other devices it runs
 the fragment sequence. Both paths should populate every resource the shared
 passes read.
 
+## Temporal frame conventions
+
+Supply projection jitter in top-left UV units. Divide jitter in render pixels
+by the render width and height to convert it. Motion vectors point from the
+previous unjittered position to the current unjittered position, in UV units.
+Subtract the motion vector from the current unjittered UV to find the previous
+position. Apply previous jitter only when sampling history stored in jittered
+coordinates.
+
+The velocity-based TAA effect takes motion from the scene. Camera-reprojection
+TAA derives it from current depth and unjittered camera matrices. Supply
+hardware depth from the same view used to render the current color. Reset
+history after a camera cut, scene replacement, or a change in resolution that
+invalidates history.
+
 ## Record a frame with EffectRenderer
 
 Use `render({sourceTexture, target: null})` to draw to the canvas. Supply a
@@ -271,3 +305,16 @@ const renderer = new EffectRenderer(device, {
 
 The sepia `amount` remains a shader uniform. SSAO resolves its target scales
 and normal-source pass sequence from its definition when the renderer is created.
+
+### Share a resolution option or select a variant
+
+Use `optionDefaults` to give construction options default values. Use
+`scaleResources` when several targets should follow one resolution option.
+SSGI and clustered volumetric lighting use this to keep their evaluation,
+history, and filter textures at the same relative size.
+
+Use `variants` when an option selects a different set of passes or resources.
+Each value replaces the listed fields for that instance. A value without an
+entry uses the base definition. For example, `volumetricFog` uses screen-space
+passes and a history texture by default. Set the effect's `mode` option to
+`'height'` to use the analytic pass without allocating a fog history texture.

@@ -2,6 +2,8 @@
 
 ## Version 10.0
 
+- **Active advection scheduling.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md#gpu-active-scheduling) adds opt-in GPU compaction and indirect dispatch, scheduling counters, and sparse/dense cost qualification. Vector Observatory exposes scheduling and batch controls.
+- **Staggered advection and batching.** [Cartesian C-grid fields](./api-reference/experimental/staggered-flow-fields.md) retain face velocities and masks. RK45 supports bounded dispatch batches with one counter synchronization per batch.
 - **Spherical transport.** [Unit-sphere RK2/RK4](./api-reference/experimental/spherical-flow-graph.md) crosses poles with stable particle identities. Vector Observatory adds geodesic spherical trails, stronger weather streaks and adjustable trail persistence. Direct GPU sampling tests qualify near-pole precision independently of integration.
 - **Scientific trajectories.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md) adds crossed-cell mask checks, bounded GPU trajectory history with explicit readback, and offline GFS trajectory qualification. Vector Observatory adds archived-wind playback, trajectory CSV export and controlled accuracy/cost sweeps.
 

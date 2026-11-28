@@ -9,12 +9,12 @@ import {
   type GPUCommandGraphEncoding
 } from '../../gpu-core/index';
 import {ScientificFlowCompute} from './scientific-flow-compute';
-import {ScientificFlowField, type ScientificVectorFieldInput} from './scientific-flow-field';
+import {ScientificFlowField, type ScientificFlowInput} from './scientific-flow-field';
 
 export type ScientificFlowGraphProps = {
-  input: ScientificVectorFieldInput;
+  input: ScientificFlowInput;
   /** Optional following snapshot; requires timeRange. Both snapshots share one grid. */
-  nextInput?: ScientificVectorFieldInput;
+  nextInput?: ScientificFlowInput;
   timeRange?: readonly [number, number];
   particleCount?: number;
   lifetime?: number;
@@ -167,7 +167,7 @@ export class ScientificFlowGraph {
   }
 
   /** At the interval endpoint, retain its last snapshot and upload the following one. */
-  setNextSnapshot(input: ScientificVectorFieldInput, endTime: number): void {
+  setNextSnapshot(input: ScientificFlowInput, endTime: number): void {
     // Submit previously recorded commands before rotating or destroying their textures.
     if (this.nextField === this.field) throw new Error('A temporal field pair is required');
     const nextField = new ScientificFlowField(this.device, {

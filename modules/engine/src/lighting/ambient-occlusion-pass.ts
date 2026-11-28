@@ -2,10 +2,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type Device, type Texture} from '@luma.gl/core';
-import type {CompositeShaderPass} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumberArray16} from '@math.gl/core/types';
-import {ShaderPassRenderer} from '../passes/shader-pass-renderer';
+import {
+  EffectRenderer,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../passes/effect-renderer';
 import {ssaoEvaluate} from '../effects/passes/screen-space/ssao';
 import {gtaoEvaluate} from '../effects/passes/screen-space/gtao';
 import {depthAwareBlur} from '../effects/passes/screen-space/depth-aware-blur';
@@ -27,11 +30,65 @@ export type AmbientOcclusionRenderOptions = {
   intensity?: number;
 };
 
+/** Settings for an active ambient visibility effect. */
+export type AmbientOcclusionVisibilityOptions = Omit<AmbientOcclusionPassProps, 'mode'> & {
+  mode?: Exclude<AmbientOcclusionMode, 'none'>;
+};
+
+/** Evaluates WebGPU ambient visibility from scene depth and view-space normals. */
+export const ambientOcclusionVisibilityEffect = {
+  name: 'ambientOcclusionVisibility',
+  configure: configureAmbientOcclusionVisibility
+} as const satisfies ConfigurableEffectDefinition<
+  AmbientOcclusionVisibilityOptions,
+  'ambientOcclusionRaw' | 'ambientOcclusionScratch'
+>;
+
+function configureAmbientOcclusionVisibility(
+  props: AmbientOcclusionVisibilityOptions = {}
+): EffectDefinition<'ambientOcclusionRaw' | 'ambientOcclusionScratch'> {
+  const scale = props.resolutionScale ?? 0.5;
+  // Resolution scale must describe a positive fractional input resolution.
+  assert(scale > 0 && scale <= 1);
+  const useSSAO = props.mode === 'ssao';
+  const evaluate = useSSAO ? ssaoEvaluate : gtaoEvaluate;
+  return {
+    name: 'ambientOcclusionVisibility',
+    resources: {
+      ambientOcclusionRaw: {scale: [scale, scale], format: 'rgba8unorm'},
+      ambientOcclusionScratch: {scale: [scale, scale], format: 'rgba8unorm'}
+    },
+    passes: [
+      {
+        kind: 'fullscreen',
+        shaderPass: evaluate,
+        inputs: {sourceTexture: 'original'},
+        output: 'ambientOcclusionRaw',
+        uniforms: useSSAO ? {useNormalTexture: 1} : undefined
+      },
+      {
+        kind: 'fullscreen',
+        shaderPass: depthAwareBlur,
+        inputs: {sourceTexture: 'ambientOcclusionRaw'},
+        output: 'ambientOcclusionScratch',
+        uniforms: {direction: [1, 0]}
+      },
+      {
+        kind: 'fullscreen',
+        shaderPass: depthAwareBlur,
+        inputs: {sourceTexture: 'ambientOcclusionScratch'},
+        output: 'previous',
+        uniforms: {direction: [0, 1]}
+      }
+    ]
+  };
+}
+
 /** Reuses the effects evaluators to produce ambient visibility, without color composition or history. */
 export class AmbientOcclusionPass {
   readonly device: Device;
   readonly mode: AmbientOcclusionMode;
-  private readonly renderer: ShaderPassRenderer | null;
+  private readonly renderer: EffectRenderer | null;
   private readonly unoccluded: Texture;
   private destroyed = false;
 
@@ -52,31 +109,8 @@ export class AmbientOcclusionPass {
       this.renderer = null;
       return;
     }
-    const evaluate = this.mode === 'ssao' ? ssaoEvaluate : gtaoEvaluate;
-    const shaderPass: CompositeShaderPass<'ambientOcclusionRaw' | 'ambientOcclusionScratch'> = {
-      name: 'ambientOcclusionVisibility',
-      renderTargets: {
-        ambientOcclusionRaw: {scale: [scale, scale], format: 'rgba8unorm'},
-        ambientOcclusionScratch: {scale: [scale, scale], format: 'rgba8unorm'}
-      },
-      steps: [
-        {shaderPass: evaluate, inputs: {sourceTexture: 'original'}, output: 'ambientOcclusionRaw'},
-        {
-          shaderPass: depthAwareBlur,
-          inputs: {sourceTexture: 'ambientOcclusionRaw'},
-          output: 'ambientOcclusionScratch',
-          uniforms: {direction: [1, 0]}
-        },
-        {
-          shaderPass: depthAwareBlur,
-          inputs: {sourceTexture: 'ambientOcclusionScratch'},
-          output: 'previous',
-          uniforms: {direction: [0, 1]}
-        }
-      ]
-    };
-    this.renderer = new ShaderPassRenderer(device, {
-      shaderPasses: [shaderPass],
+    this.renderer = new EffectRenderer(device, {
+      effects: [{effect: ambientOcclusionVisibilityEffect, options: {...props, mode: this.mode}}],
       colorFormat: 'rgba8unorm'
     });
   }

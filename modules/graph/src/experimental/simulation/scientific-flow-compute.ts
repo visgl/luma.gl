@@ -164,6 +164,7 @@ export class ScientificFlowCompute {
     if (
       !timeRange.every(Number.isFinite) ||
       timeRange[1] <= timeRange[0] ||
+      field.layout !== nextField.layout ||
       field.texture.width !== nextField.texture.width ||
       field.texture.height !== nextField.texture.height ||
       field.field.coordinates !== nextField.field.coordinates ||
@@ -232,7 +233,9 @@ export class ScientificFlowCompute {
     ].forEach((value, index) => view.setFloat32(index * 4, value, true));
     [
       this.particleCount,
-      (this.field.field.coordinates === 'lnglat' ? 1 : 0) | (this.field.periodicLongitude ? 2 : 0),
+      (this.field.field.coordinates === 'lnglat' ? 1 : 0) |
+        (this.field.periodicLongitude ? 2 : 0) |
+        (this.field.layout === 'c-grid' ? 8 : 0),
       this.seed,
       this.frame
     ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));

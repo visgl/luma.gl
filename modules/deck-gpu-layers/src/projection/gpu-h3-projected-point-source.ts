@@ -3,11 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
 import {GPUProjectionProgram, type CompiledProjection} from '@luma.gl/graph/gpu-project';
 import type {ProjectionRenderTransform} from '@luma.gl/graph/gpu-project-crs';
+import {MaterializedProjectionChunks} from './materialized-projection-chunks';
 import {getGPUDataBuffer} from '../layers/gpu-vector-layer-utils';
 
 /** Inputs for materializing resident H3 cell centers in a fixed Cartesian render frame. */
@@ -18,14 +19,6 @@ export type GPUH3ProjectedPointSourceProps = {
   transform: ProjectionRenderTransform;
   /** Pair adjacent dirty chunks on supported adapters. Defaults to one dispatch per chunk. */
   groupChunks?: boolean;
-};
-
-/** An executable for one chunk or one pair, with its owned projection parameters. */
-type ChunkExecution = {
-  /** Graph that writes the retained render buffers. */
-  graph: CompiledGPUCommandGraph<void>;
-  /** Contributor that owns the parameter buffer. */
-  program: GPUProjectionProgram;
 };
 
 /** Owns materialized coordinates for a fixed set of resident H3 chunks. */
@@ -44,10 +37,8 @@ export class GPUH3ProjectedPointSource {
   private readonly centerValidity: GPUVector<'uint32'>;
   /** Compiled Cartesian projection for the producer's longitude/latitude format. */
   private readonly projection: CompiledProjection;
-  /** Whether supported dirty chunks may share a projection dispatch. */
-  private readonly groupChunks: boolean;
-  /** Cached single- and paired-chunk executables. */
-  private readonly executables = new Map<string, ChunkExecution>();
+  /** Retained dirty-chunk scheduling. */
+  private readonly chunks: MaterializedProjectionChunks;
   /** Whether the retained graphs and buffers have been released. */
   private destroyed = false;
 
@@ -59,7 +50,12 @@ export class GPUH3ProjectedPointSource {
     if (device.type !== 'webgpu') throw new Error('H3 materialized points require WebGPU');
     this.cells = [...cells.data];
     this.transform = transform;
-    this.groupChunks = groupChunks && device.limits.maxStorageBuffersPerShaderStage >= 9;
+    this.chunks = new MaterializedProjectionChunks(
+      device,
+      this.cells.map(chunk => chunk.length),
+      indices => this.createExecution(indices),
+      groupChunks && device.limits.maxStorageBuffersPerShaderStage >= 9
+    );
     this.projection = transform.compileForInputFormat('float32x2');
 
     for (const chunk of this.cells) {
@@ -109,56 +105,24 @@ export class GPUH3ProjectedPointSource {
   }
 
   /** Submits only the requested physical chunks. An omitted list updates all nonempty chunks. */
-  updateChunks(chunkIndices: readonly number[] = this.cells.map((_, index) => index)): void {
-    if (this.destroyed) throw new Error('H3 materialized point source is destroyed');
-    const indices = [...new Set(chunkIndices)].sort((first, second) => first - second);
-    for (const index of indices) {
-      if (!Number.isSafeInteger(index) || index < 0 || index >= this.cells.length) {
-        throw new Error(`Invalid H3 chunk index ${index}`);
-      }
-    }
-    const dirty = indices.filter(index => this.cells[index].length);
-    if (!dirty.length) return;
-    const executions: ChunkExecution[] = [];
-    for (let offset = 0; offset < dirty.length; offset++) {
-      const first = dirty[offset];
-      const second = dirty[offset + 1];
-      const pair = this.groupChunks && second === first + 1;
-      executions.push(this.getExecution(pair ? [first, second] : [first]));
-      if (pair) offset++;
-    }
-    const encoder = this.device.createCommandEncoder({id: 'update-h3-materialized-points'});
-    let commandBuffer;
-    try {
-      for (const {graph} of executions) graph.encode(encoder, {parameters: undefined});
-      commandBuffer = encoder.finish();
-    } catch (error) {
-      encoder.destroy();
-      throw error;
-    }
-    this.device.submit(commandBuffer);
+  updateChunks(chunkIndices?: readonly number[]): void {
+    this.chunks.update(chunkIndices);
   }
 
   /** Releases owned buffers and graphs after the layer is detached and queued work completes. */
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    for (const {graph, program} of this.executables.values()) {
-      graph.destroy();
-      program.destroy();
-    }
-    this.executables.clear();
+    this.chunks.destroy();
     this.centers.destroy();
     this.centerValidity.destroy();
     this.positions.destroy();
     this.validity.destroy();
   }
 
-  /** Returns the cached graph for these dirty chunks, creating it on first use. */
-  private getExecution(indices: readonly number[]): ChunkExecution {
+  /** Compiles one H3 producer and projection chain for the selected chunks. */
+  private createExecution(indices: readonly number[]) {
     const key = indices.join('-');
-    const cached = this.executables.get(key);
-    if (cached) return cached;
     const graph = new GPUCommandGraph(this.device);
     const importChunks = <Format extends 'float32x2' | 'uint32'>(
       id: string,
@@ -193,9 +157,7 @@ export class GPUH3ProjectedPointSource {
     });
     try {
       program.addToGraph(graph);
-      const execution = {graph: graph.compile(), program};
-      this.executables.set(key, execution);
-      return execution;
+      return {graph: graph.compile(), destroy: () => program.destroy()};
     } catch (error) {
       program.destroy();
       throw error;

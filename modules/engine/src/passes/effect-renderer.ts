@@ -92,10 +92,13 @@ export type ConfigurableEffectDefinition<Options, TargetName extends string = st
       optionDefaults: Required<Options>;
       /** A numeric option used for both dimensions of the listed render targets. */
       scaleResources?: {option: EffectOptionKey<Options>; targets: readonly TargetName[]};
-      /** Choose a pass sequence using the value of a declared option. */
-      passVariants?: {
+      /** Select replacement passes and resources using the value of an option. */
+      variants?: {
         option: EffectOptionKey<Options>;
-        values: Record<string, readonly EffectPass<TargetName>[]>;
+        values: Record<
+          string,
+          Partial<Pick<EffectDefinition<TargetName>, 'name' | 'resources' | 'passes'>>
+        >;
       };
     });
 
@@ -105,26 +108,29 @@ export function resolveEffectOptions<Options, TargetName extends string>(
   options?: NoInfer<Options>
 ): EffectDefinition<TargetName> {
   if ('configure' in effect) return effect.configure(options);
-  const {scaleResources, passVariants, optionDefaults} = effect;
+  const {scaleResources, variants, optionDefaults} = effect;
   const overrides = options as Partial<Record<EffectOptionKey<Options>, unknown>> | undefined;
   const defaults = optionDefaults as Partial<Record<EffectOptionKey<Options>, unknown>>;
-  const resources = {...effect.resources} as NonNullable<EffectDefinition<TargetName>['resources']>;
+  const value = variants && String(overrides?.[variants.option] ?? defaults[variants.option]);
+  const variant =
+    variants && value !== undefined && Object.hasOwn(variants.values, value)
+      ? variants.values[value]
+      : undefined;
+  const resolved = {...effect, ...variant};
+  const resources = {...resolved.resources} as NonNullable<
+    EffectDefinition<TargetName>['resources']
+  >;
   if (scaleResources) {
     const scale = overrides?.[scaleResources.option] ?? defaults[scaleResources.option];
     if (typeof scale !== 'number' || !Number.isFinite(scale) || scale <= 0) {
       throw new Error(effect.name + ': resource scale must be a finite positive number');
     }
     for (const name of scaleResources.targets) {
-      resources[name] = {...resources[name], scale: [scale, scale]};
+      const resource = resources[name];
+      if (resource) resources[name] = {...resource, scale: [scale, scale]};
     }
   }
-  const variant =
-    passVariants && String(overrides?.[passVariants.option] ?? defaults[passVariants.option]);
-  const passes =
-    variant && passVariants && Object.hasOwn(passVariants.values, variant)
-      ? [...passVariants.values[variant]]
-      : effect.passes;
-  return {...effect, resources, passes};
+  return {...resolved, resources};
 }
 
 /** @internal Lowers an effect definition to the fullscreen renderer's execution format. */

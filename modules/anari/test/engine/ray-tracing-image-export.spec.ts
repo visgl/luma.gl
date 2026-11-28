@@ -5,6 +5,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
   exportRayTracingImage,
+  exportRayTracingRadiance,
   RayTracingSceneRenderer,
   type RayTracingSceneRenderOptions
 } from '@luma.gl/anari';
@@ -179,6 +180,30 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
         expect(stitched.some(value => value > 30 && value < 255)).toBe(true);
       }
     }
+    const radiance = await renderer.readRadiance(scene.id);
+    expect(radiance).not.toBeNull();
+    const radianceTiles = exportRayTracingRadiance(
+      device,
+      {...scene, exposure: 4, rayBatchPhaseCount: 8},
+      {
+        width,
+        height,
+        tileSize,
+        frames: 2
+      }
+    );
+    let radianceTileCount = 0;
+    for await (const tile of radianceTiles) {
+      expect(tile.data.length).toBe(tile.width * tile.height * 8);
+      for (let row = 0; row < tile.height; row++) {
+        const offset = ((tile.y + row) * width + tile.x) * 8;
+        expect(tile.data.slice(row * tile.width * 8, (row + 1) * tile.width * 8)).toEqual(
+          radiance!.data.slice(offset, offset + tile.width * 8)
+        );
+      }
+      radianceTileCount++;
+    }
+    expect(radianceTileCount).toBe(9);
     const getOwnedAllocationCounts = () => {
       const counts = device.statsManager.getStats('Resource Counts');
       return [counts.get('Buffers Active').count, counts.get('Textures Active').count];

@@ -12,7 +12,8 @@ export function getArticulationTreeShader(
   publishMatrices = false,
   freePayload = false,
   boxCount = 0,
-  colliderCount = 0
+  colliderCount = 0,
+  sliders = false
 ): string {
   return /* wgsl */ `
 const N = ${count}u;
@@ -42,6 +43,14 @@ fn inertia(i:u32,v:vec3f)->vec3f{
  let q=solved[i].rotation;
  return rotate(q,links[i].inertia.xyz*rotate(vec4f(-q.xyz,q.w),v));
 }
+fn linearColumn(j:i32,point:vec3f)->vec3f{
+ ${sliders ? 'if(links[j].childAnchor.w!=0.){return axis[j];}' : ''}
+ return cross(axis[j],point-pivot[j]);
+}
+fn angularColumn(j:i32)->vec3f{
+ ${sliders ? 'if(links[j].childAnchor.w!=0.){return vec3f(0);}' : ''}
+ return axis[j];
+}
 // Propagate pose, twist and bias acceleration (joint accelerations held at zero).
 fn kinematics(){
  for(var i=0u;i<N;i++){
@@ -52,6 +61,18 @@ fn kinematics(){
   let offset=rotate(previous.rotation,link.parentAnchor.xyz);
   pivot[i]=previous.position.xyz+offset;
   axis[i]=rotate(previous.rotation,link.axisMass.xyz);
+  ${
+    sliders
+      ? `if(link.childAnchor.w!=0.){
+   let rotation=normalize(product(previous.rotation,link.rest));
+   let travel=offset+axis[i]*angle[i]+rotate(rotation,-link.childAnchor.xyz);
+   let rate=axis[i]*speed[i];let spin=previous.spin.xyz;
+   solved[i]=Pose(vec4f(previous.position.xyz+travel,1),rotation,vec4f(previous.velocity.xyz+cross(spin,travel)+rate,0),previous.spin);
+   acceleration[i]=linearBias+cross(angularBias,travel)+cross(spin,cross(spin,travel))+2.*cross(spin,rate);
+   angularAcceleration[i]=angularBias;continue;
+  }`
+      : ''
+  }
   let halfAngle=0.5*angle[i];
   let rotation=normalize(product(product(previous.rotation,vec4f(link.axisMass.xyz*sin(halfAngle),cos(halfAngle))),link.rest));
   let radius=rotate(rotation,-link.childAnchor.xyz);
@@ -88,11 +109,11 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
   let load=links[body].axisMass.w*(settings.gravityStep.xyz-acceleration[body]);
   let moment= -inertia(body,angularAcceleration[body])-cross(spin,inertia(body,spin));
   for(var row=i32(body);row>=0;row=i32(links[row].parentAnchor.w)){
-   let linear=cross(axis[row],center-pivot[row]);
-   force[row]+=dot(linear,load)+dot(axis[row],moment);
-   let angularMass=inertia(body,axis[row]);
+   let linear=linearColumn(row,center);
+   force[row]+=dot(linear,load)+dot(angularColumn(row),moment);
+   let angularMass=inertia(body,angularColumn(row));
    for(var column=i32(body);column>=0;column=i32(links[column].parentAnchor.w)){
-    mass[row][column]+=links[body].axisMass.w*dot(linear,cross(axis[column],center-pivot[column]))+dot(angularMass,axis[column]);
+    mass[row][column]+=links[body].axisMass.w*dot(linear,linearColumn(column,center))+dot(angularMass,angularColumn(column));
    }
   }
  }
@@ -125,7 +146,7 @@ fn finite(v:vec4f)->bool{return all(abs(v)<=vec4f(3.4028234e38));}
  }
  var jacobian:array<f32,N>;var response:array<f32,N>;
  for(var joint=i32(body);joint>=0;joint=i32(links[joint].parentAnchor.w)){
-  jacobian[joint]=dot(normal,cross(axis[joint],center-pivot[joint]));
+  jacobian[joint]=dot(normal,linearColumn(joint,center));
  }
  var inverseContactMass=0.0;
  for(var row=0u;row<N;row++){

@@ -28,11 +28,13 @@ SOFTWARE.
 */
 import {SCIENTIFIC_FLOW_SAMPLING} from './scientific-flow-sampling-shaders';
 
-export const SCIENTIFIC_FLOW_RK45 = /* wgsl */ `
+/** Builds dense or stable-slot work-queue integration without changing RK stages. */
+export function makeScientificFlowRK45Shader(activeScheduling: boolean): string {
+  return /* wgsl */ `
 struct Parameters {
   domain: vec4<f32>,
   integration: vec4<f32>, // tolerance (physical distance), minimum dt, maximum dt, lifetime
-  counters: vec4<u32>, // particle count, flags (geographic=1, periodic longitude=2), attempts per dispatch, first dispatch
+  counters: vec4<u32>, // particle count, flags (geographic=1, periodic longitude=2), attempts per dispatch, lifecycle flags (reset=1, capture previous=2)
   temporal: vec4<f32> // start fraction, end fraction, requested duration, unused
 };
 @group(0) @binding(0) var<uniform> parameters: Parameters;
@@ -42,6 +44,8 @@ struct Parameters {
 @group(0) @binding(4) var nextVelocityField: texture_2d<f32>;
 @group(0) @binding(5) var<storage, read_write> diagnostics: array<vec4<f32>>;
 @group(0) @binding(6) var<storage, read_write> statistics: array<atomic<u32>>;
+
+${activeScheduling ? '@group(0) @binding(7) var<storage, read> activeIndices: array<u32>;' : ''}
 
 ${SCIENTIFIC_FLOW_SAMPLING}
 
@@ -114,12 +118,17 @@ fn physicalError(error: vec2<f32>, position: vec2<f32>) -> f32 {
 }
 @compute @workgroup_size(128)
 fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
-  let index = invocation.x;
-  if (index >= parameters.counters.x) {return;}
+  ${
+    activeScheduling
+      ? `if (invocation.x >= activeIndices[0]) {return;}
+  let index = activeIndices[invocation.x + 1u];`
+      : `let index = invocation.x;
+  if (index >= parameters.counters.x) {return;}`
+  }
   var particle = particles[index];
-  previous[index] = particle;
+  ${activeScheduling ? '' : 'if ((parameters.counters.w & 2u) != 0u) {previous[index] = particle;}'}
   var state = diagnostics[index]; // request elapsed, proposed dt, status, last accepted dt
-  if (parameters.counters.w != 0u) {state.x = 0.0;}
+  ${activeScheduling ? '' : 'if ((parameters.counters.w & 1u) != 0u) {state.x = 0.0;}'}
   let startingAge = particle.z;
   let startingElapsed = state.x;
   var accepted = 0u;
@@ -176,3 +185,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   atomicAdd(&statistics[8], rejected);
 }
 `;
+}
+
+/** Default dense RK45 kernel retained for existing consumers. */
+export const SCIENTIFIC_FLOW_RK45 = makeScientificFlowRK45Shader(false);

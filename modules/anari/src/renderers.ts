@@ -187,11 +187,14 @@ export {
 } from './engine/ray-tracing-quality-presets';
 export {
   exportRayTracingImage,
+  exportRayTracingRadiance,
+  encodeRayTracingRadiancePFM,
   iterateRayTracingImageTiles
 } from './engine/ray-tracing-image-export';
 export type {
   RayTracingImageExportOptions,
   RayTracingImageTile,
+  RayTracingRadianceTile,
   RayTracingImageTileRegion
 } from './engine/ray-tracing-image-export';
 
