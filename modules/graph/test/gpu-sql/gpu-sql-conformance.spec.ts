@@ -138,7 +138,11 @@ test.each(domainFunctions)('$name agrees on valid inputs and writes null for inv
   const result = output.getChild('result');
   expect(result?.type).toBeInstanceOf(arrow.Float32);
   for (const index of [0, 1]) {
-    expect(result?.get(index)).toBeCloseTo(reference.getChild('result')?.get(index), 5);
+    const actual = result?.get(index);
+    expect(typeof actual).toBe('number');
+    expect(Math.abs(actual - reference.getChild('result')?.get(index))).toBeLessThanOrEqual(
+      tolerance
+    );
   }
   expect(result?.get(2)).toBeNull();
   expect(result?.get(3)).toBeNull();
@@ -146,15 +150,19 @@ test.each(domainFunctions)('$name agrees on valid inputs and writes null for inv
   expect(result?.get(5)).toBeNull();
 });
 
+// WGSL allows 2^-11 absolute error for f32 sin/cos on [-pi, pi].
+const trigTolerance = 2 ** -11 + 2 ** -24;
 test.each([
-  {name: 'SIN', implementation: SIN},
-  {name: 'COS', implementation: COS},
-  {name: 'TAN', implementation: TAN},
-  {name: 'ATAN', implementation: ATAN},
-  {name: 'EXP', implementation: EXP}
+  {name: 'SIN', implementation: SIN, tolerance: trigTolerance},
+  {name: 'COS', implementation: COS, tolerance: trigTolerance},
+  // tan inherits error from sin(x) / cos(x), bounded here for |x| <= 0.75.
+  {name: 'TAN', implementation: TAN, tolerance: 0.0014},
+  {name: 'ATAN', implementation: ATAN, tolerance: 0.000005},
+  {name: 'EXP', implementation: EXP, tolerance: 0.000005}
 ])('$name matches math.gl Arrow on finite inputs and preserves nulls', async ({
   name,
-  implementation
+  implementation,
+  tolerance
 }) => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
@@ -166,7 +174,11 @@ test.each([
   const result = (await executeGPUQuery(device, input, sql)).getChild('result');
   expect(result?.type).toBeInstanceOf(arrow.Float32);
   for (const index of [0, 1, 2]) {
-    expect(result?.get(index)).toBeCloseTo(reference.getChild('result')?.get(index), 5);
+    const actual = result?.get(index);
+    expect(typeof actual).toBe('number');
+    expect(Math.abs(actual - reference.getChild('result')?.get(index))).toBeLessThanOrEqual(
+      tolerance
+    );
   }
   expect(Array.from(result ?? []).slice(3)).toEqual([null, null, null]);
 });
