@@ -84,7 +84,8 @@ it and create a new instance.
 
 ## GPU active scheduling
 
-Set `scheduling: 'active'` to build a compact queue of unfinished particle indices
+Use `scheduling: 'persistent'` to carry unfinished IDs between dispatches, or
+`scheduling: 'active'` to rebuild the queue every time. Active mode builds a compact queue of unfinished particle indices
 before each integration dispatch. The GPU writes the indirect workgroup count;
 an empty queue launches zero integration workgroups. Queue order is unspecified,
 but `output`, `previous`, `diagnostics` and trajectory-history slots never move.
@@ -111,6 +112,32 @@ counter reset and integration. The scan has explicit read/write dependencies;
 the integration node declares the queue as storage-read and the command as indirect.
 Graph/Trace expose both compute passes, while Diagnostics reports scheduled slots,
 workgroups and readback bytes. No CPU particle-state readback controls scheduling.
+
+### Persistent survivor queues
+
+`scheduling: 'persistent'` uses two bounded index queues. A full-slot scan initializes
+status totals and the first queue once per requested horizon. Each integration
+invocation appends its ID to the other queue only if it still has work. Subsequent
+dispatches and `continue()` calls consume survivors directly; they skip the full scan.
+Queues are rebuilt at every new `advance()`, including after snapshot rotation.
+Empty queues launch zero integration workgroups. This does not skip the fixed number
+of batch encodings or their counter snapshots.
+
+Status totals persist across dispatches and change only when a particle terminates.
+Work and pending counters reset each dispatch. `previous` is a full GPU buffer copy
+once per call, preserving completed and stopped slots as well as survivors. The graph
+shows `prepare-survivor-dispatch`, conditionally executed `initialize-survivor-queue`,
+and `trace-survivors-rk45`; skipped initialization is visible in inspection.
+
+Persistent queue/command storage is `8 * (particleCount + 1) + 36` bytes. Counter
+staging remains 44 bytes per dispatch. Timing includes initialization when it runs
+and integration, but GPU compute timings exclude copy passes; wall-time measurements
+include those copies and readback. Public particle slots remain stable and queue
+order remains unspecified. Treat borrowed output/diagnostic buffers as read-only
+while the tracer owns a request; external edits invalidate its survivor queue.
+[Matched-error measurements](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/advection-survivor-scheduling.md)
+show a 1.45× end-to-end speedup over dense scheduling in the batched sparse fixture;
+single-dispatch results are inconclusive.
 
 ## Graph inspection and tracing
 

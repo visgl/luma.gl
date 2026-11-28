@@ -24,7 +24,7 @@ export type ObservatorySettings = {
   integrator: 'rk2' | 'rk4' | 'rk45';
   tolerance: number;
   /** Dense or compacted RK45 integration work. */
-  scheduling: 'dense' | 'active';
+  scheduling: 'dense' | 'active' | 'persistent';
   /** Bounded number of RK45 dispatches per counter synchronization. */
   dispatchesPerReadback: number;
   coloring: 'speed' | 'step' | 'status';
@@ -91,9 +91,11 @@ export class ObservatoryControlPanel {
           this.settings.field = next.field;
         if (next.integrator === 'rk2' || next.integrator === 'rk4' || next.integrator === 'rk45')
           this.settings.integrator = next.integrator;
-        if (this.settings.field === 'spherical' && this.settings.integrator === 'rk45')
-          this.settings.integrator = 'rk4';
-        if (next.scheduling === 'dense' || next.scheduling === 'active')
+        if (
+          next.scheduling === 'dense' ||
+          next.scheduling === 'active' ||
+          next.scheduling === 'persistent'
+        )
           this.settings.scheduling = next.scheduling;
         if (next.coloring === 'speed' || next.coloring === 'step' || next.coloring === 'status')
           this.settings.coloring = next.coloring;
@@ -159,9 +161,9 @@ export class ObservatoryControlPanel {
               makeHtmlCustomPanel({
                 id: 'observatory-info',
                 title: 'Info',
-                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its bounded Cartesian history renders great-circle trails continuously through poles and the antimeridian, and reprojects while paused.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations. The C-grid gyre instead samples normal velocities on 32 × 32 cell faces, with a discrete streamfunction preserving cell flux balance and zero flow across the exterior faces.</p>
+                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>The pole-crossing globe uses Cartesian unit-sphere RK2/RK4 or adaptive RK45 transport, equal-area seeds and a smooth evolving rotation field. Particle identities persist through the poles. Its bounded Cartesian history renders great-circle trails continuously through poles and the antimeridian, and reprojects while paused.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations. The C-grid gyre instead samples normal velocities on 32 × 32 cell faces, with a discrete streamfunction preserving cell flux balance and zero flow across the exterior faces.</p>
               <p>The double gyre has a ten-second cycle with linearly interpolated snapshots every 0.25 seconds. Streaks connect GPU particle states; the clock reports simulated seconds.</p>
-              <p>RK2 and RK4 continuously respawn particles. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
+              <p>Cartesian RK2 and RK4 continuously respawn particles; the spherical solvers preserve their release. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
               <p>RK45 tolerance controls estimated local integration error in field units, not total trajectory or interpolation error. Its bounded work can lag behind wall time; Diagnostics shows pending particles and queued time.</p>
               <p>Stopped markers: gray = expired, orange = outside domain, purple = missing data, red = tolerance or numerical failure. Active status coloring is green; step coloring runs from magenta (short) to green (long).</p>`
               }),
@@ -229,7 +231,7 @@ export class ObservatoryControlPanel {
   private updateGraphNotice(notice: HTMLElement): void {
     notice.textContent =
       this.settings.integrator === 'rk45'
-        ? 'Live RK45 graph: reset counters, optionally compact active slots, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
+        ? 'Live RK45 graph: reset counters and integrate adaptively; Cartesian queue modes also show full scans or persistent survivor preparation. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
         : 'Live compiled advection graph. Timings are sampled every 60 encodings; trail rendering is submitted separately.';
   }
 
@@ -365,9 +367,7 @@ export class ObservatoryControlPanel {
               options: [
                 {label: 'Runge–Kutta 4', value: 'rk4'},
                 {label: 'Midpoint / RK2', value: 'rk2'},
-                ...(this.settings.field === 'spherical'
-                  ? []
-                  : [{label: 'Adaptive RK45', value: 'rk45'}])
+                {label: 'Adaptive RK45', value: 'rk45'}
               ]
             },
             ...(this.settings.integrator === 'rk45'
@@ -383,38 +383,47 @@ export class ObservatoryControlPanel {
                       {label: '1e-7 · demanding', value: 1e-7}
                     ]
                   },
-                  {
-                    name: 'scheduling',
-                    label: 'RK45 scheduling',
-                    type: 'select' as const,
-                    persist: 'none' as const,
-                    options: [
-                      {label: 'Dense · all slots', value: 'dense'},
-                      {label: 'Active · GPU queue', value: 'active'}
-                    ]
-                  },
-                  {
-                    name: 'dispatchesPerReadback',
-                    label: 'Dispatches per readback',
-                    type: 'select' as const,
-                    persist: 'none' as const,
-                    options: [
-                      {label: '1 · interactive', value: 1},
-                      {label: '4', value: 4},
-                      {label: '16 · throughput', value: 16}
-                    ]
-                  },
-                  {
-                    name: 'coloring',
-                    label: 'Color by',
-                    type: 'select' as const,
-                    persist: 'none' as const,
-                    options: [
-                      {label: 'Speed', value: 'speed'},
-                      {label: 'Accepted step size', value: 'step'},
-                      {label: 'Particle status', value: 'status'}
-                    ]
-                  }
+                  ...(this.settings.field === 'spherical'
+                    ? []
+                    : [
+                        {
+                          name: 'scheduling',
+                          label: 'RK45 scheduling',
+                          type: 'select' as const,
+                          persist: 'none' as const,
+                          options: [
+                            {label: 'Dense · all slots', value: 'dense'},
+                            {label: 'Active · GPU queue', value: 'active'},
+                            {label: 'Persistent · survivors', value: 'persistent'}
+                          ]
+                        },
+                        {
+                          name: 'dispatchesPerReadback',
+                          label: 'Dispatches per readback',
+                          type: 'select' as const,
+                          persist: 'none' as const,
+                          options: [
+                            {label: '1 · interactive', value: 1},
+                            {label: '4', value: 4},
+                            {label: '16 · throughput', value: 16}
+                          ]
+                        }
+                      ]),
+                  ...(this.settings.field === 'spherical'
+                    ? []
+                    : [
+                        {
+                          name: 'coloring',
+                          label: 'Color by',
+                          type: 'select' as const,
+                          persist: 'none' as const,
+                          options: [
+                            {label: 'Speed', value: 'speed'},
+                            {label: 'Accepted step size', value: 'step'},
+                            {label: 'Particle status', value: 'status'}
+                          ]
+                        }
+                      ])
                 ]
               : []),
             {

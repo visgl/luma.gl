@@ -67,5 +67,9 @@ export {
   MLSMPMFluidSimulation
 } from './simulation/index';
 
-export {SphericalFlowField, SphericalFlowGraph} from './simulation/index';
-export type {SphericalVectorFieldInput, SphericalFlowGraphProps} from './simulation/index';
+export {SphericalFlowField, SphericalFlowGraph, SphericalFlowTracer} from './simulation/index';
+export type {
+  SphericalVectorFieldInput,
+  SphericalFlowGraphProps,
+  SphericalFlowTracerProps
+} from './simulation/index';

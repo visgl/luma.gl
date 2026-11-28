@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Compact pending stable IDs and construct a GPU-only indirect dispatch record. */
-export const SCIENTIFIC_FLOW_SCHEDULING = /* wgsl */ `
+export function makeScientificFlowSchedulingShader(persistent: boolean): string {
+  return /* wgsl */ `
 struct Parameters {
   domain: vec4<f32>, integration: vec4<f32>, counters: vec4<u32>, temporal: vec4<f32>
 };
@@ -25,6 +26,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     state.x = 0.0;
     diagnostics[index] = state;
   }
+  ${persistent ? 'atomicAdd(&statistics[u32(state.z)], 1u);' : ''}
   if (state.z == 0.0 && state.x < parameters.temporal.z) {
     let slot = atomicAdd(&activeIndices[0], 1u);
     atomicStore(&activeIndices[slot + 1u], index);
@@ -32,7 +34,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   } else {
     // The integration kernel accounts only for queued slots. Include every other
     // status here so final counts always cover the complete particle allocation.
-    atomicAdd(&statistics[u32(state.z)], 1u);
+    ${persistent ? '' : 'atomicAdd(&statistics[u32(state.z)], 1u);'}
   }
 }
 `;
+}

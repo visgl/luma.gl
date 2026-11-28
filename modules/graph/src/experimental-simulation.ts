@@ -49,8 +49,13 @@ export type {
   MLSMPMParticle
 } from './experimental/simulation/index';
 
-export {SphericalFlowField, SphericalFlowGraph} from './experimental/simulation/index';
+export {
+  SphericalFlowField,
+  SphericalFlowGraph,
+  SphericalFlowTracer
+} from './experimental/simulation/index';
 export type {
   SphericalVectorFieldInput,
-  SphericalFlowGraphProps
+  SphericalFlowGraphProps,
+  SphericalFlowTracerProps
 } from './experimental/simulation/index';

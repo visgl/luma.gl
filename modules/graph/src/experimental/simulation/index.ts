@@ -62,3 +62,6 @@ export {SphericalFlowGraph} from './spherical-flow-graph';
 export type {SphericalFlowGraphProps} from './spherical-flow-graph';
 
 export type {StaggeredVectorFieldInput} from './staggered-flow-field';
+
+export {SphericalFlowTracer} from './spherical-flow-tracer';
+export type {SphericalFlowTracerProps} from './spherical-flow-tracer';
