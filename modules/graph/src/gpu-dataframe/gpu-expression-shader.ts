@@ -598,13 +598,20 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       if (format !== 'float32') {
         throw new Error('GPUDataFrame ATAN2 requires Float32 arguments');
       }
-      const y = left.value;
-      const x = right.value;
-      const valid = `(${left.valid} && ${right.valid} && (bitcast<u32>(${y}) & 0x7fffffffu) < 0x7f800000u && (bitcast<u32>(${x}) & 0x7fffffffu) < 0x7f800000u && (${y} != 0.0 || ${x} != 0.0))`;
-      const offAxes = `(${valid} && ${y} != 0.0 && ${x} != 0.0)`;
-      const angle = `atan2(select(1.0, ${y}, ${offAxes}), select(1.0, ${x}, ${offAxes}))`;
-      const axis = `select(1.5707963267948966, select(0.0, 3.141592653589793, ${x} < 0.0), ${y} == 0.0)`;
-      const negative = `(bitcast<u32>(${y}) & 0x80000000u) != 0u`;
+      /** WGSL expression for the first argument, y. */
+      const vertical = left.value;
+      /** WGSL expression for the second argument, x. */
+      const horizontal = right.value;
+      /** WGSL predicate for two finite arguments away from the origin. */
+      const valid = `(${left.valid} && ${right.valid} && (bitcast<u32>(${vertical}) & 0x7fffffffu) < 0x7f800000u && (bitcast<u32>(${horizontal}) & 0x7fffffffu) < 0x7f800000u && (${vertical} != 0.0 || ${horizontal} != 0.0))`;
+      /** WGSL predicate for angles that need the atan2 builtin. */
+      const offAxes = `(${valid} && ${vertical} != 0.0 && ${horizontal} != 0.0)`;
+      /** WGSL atan2 call with harmless inputs for rows handled outside the builtin. */
+      const angle = `atan2(select(1.0, ${vertical}, ${offAxes}), select(1.0, ${horizontal}, ${offAxes}))`;
+      /** Unsigned angle for points on either coordinate axis. */
+      const axis = `select(1.5707963267948966, select(0.0, 3.141592653589793, ${horizontal} < 0.0), ${vertical} == 0.0)`;
+      /** Sign of the first argument, including negative zero. */
+      const negative = `(bitcast<u32>(${vertical}) & 0x80000000u) != 0u`;
       return this.addValue(
         format,
         `select(select(${axis}, -${axis}, ${negative}), ${angle}, ${offAxes})`,
@@ -616,9 +623,11 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       if (format !== 'sint32' && format !== 'uint32') {
         throw new Error('GPUDataFrame MOD requires matching Int32 or Uint32 arguments');
       }
+      /** WGSL integer literal suffix for the shared argument format. */
       const suffix = format === 'uint32' ? 'u' : 'i';
+      /** WGSL predicate for a present, nonzero divisor. */
       const nonzero = `(${right.valid} && ${right.value} != 0${suffix})`;
-      // Replacing -1 with 1 preserves the remainder and avoids signed overflow.
+      /** WGSL predicate for a divisor safe to use directly. Replacing -1 with 1 preserves the remainder. */
       const safe = format === 'sint32' ? `(${nonzero} && ${right.value} != -1i)` : nonzero;
       return this.addValue(
         format,
