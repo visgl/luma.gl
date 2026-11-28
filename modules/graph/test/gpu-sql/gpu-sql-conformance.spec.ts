@@ -20,10 +20,13 @@ import {
   ASIN,
   ATAN,
   COS,
+  DEGREES,
   EXP,
   LN,
   LOG10,
+  RADIANS,
   ROUND,
+  SIGN,
   SIN,
   SQRT,
   TAN
@@ -187,6 +190,77 @@ test('EXP returns null when its Float32 result would overflow', async () => {
   const result = output.getChild('result');
   expect(result?.get(0) / Math.exp(88)).toBeCloseTo(1, 5);
   expect(Array.from(result ?? []).slice(1)).toEqual([null, null, 0]);
+});
+
+test('SIGN preserves each scalar format and nulls', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = makeSamples([0, 1, 2, 3], [-2.5, 0, 3.75, null]);
+  const sql = `SELECT SIGN(score) AS float_sign, SIGN(CAST(score AS INTEGER)) AS int_sign,
+                      SIGN(id) AS uint_sign FROM samples`;
+  const reference = queryArrowSQL(sql, new Map([['samples', input]]), {functions: [SIGN]});
+  const actual = await executeGPUQuery(device, input, sql);
+  expect(actual.schema.fields.map(field => String(field.type))).toEqual([
+    'Float32',
+    'Int32',
+    'Uint32'
+  ]);
+  for (const field of actual.schema.fields) {
+    expect(Array.from(actual.getChild(field.name) ?? [])).toEqual(
+      Array.from(reference.getChild(field.name) ?? [])
+    );
+  }
+  expect(Array.from(actual.getChild('uint_sign') ?? [])).toEqual([0, 1, 1, 1]);
+});
+
+test('angle conversions agree with Arrow SQL and reject invalid Float32 inputs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = makeSamples([1, 2, 3, 4, 5, 6, 7], [-0.75, 0, 0.75, null, Infinity, NaN, -6e36]);
+  const sql = 'SELECT DEGREES(score) AS degrees, RADIANS(score) AS radians FROM samples';
+  const reference = queryArrowSQL(sql + ' WHERE id <= 3', new Map([['samples', input]]), {
+    functions: [DEGREES, RADIANS]
+  });
+  const actual = await executeGPUQuery(device, input, sql);
+  for (const name of ['degrees', 'radians']) {
+    const values = actual.getChild(name);
+    expect(values?.type).toBeInstanceOf(arrow.Float32);
+    for (const index of [0, 1, 2]) {
+      expect(values?.get(index)).toBeCloseTo(reference.getChild(name)?.get(index), 5);
+    }
+    expect(Array.from(values ?? []).slice(3, 6)).toEqual([null, null, null]);
+  }
+  expect(actual.getChild('degrees')?.get(6)).toBeNull();
+  expect(actual.getChild('radians')?.get(6) / ((-6e36 * Math.PI) / 180)).toBeCloseTo(1, 5);
+});
+
+test.each([
+  {page: 'LIMIT 3 OFFSET 1', expected: [6, 5, 2]},
+  {page: 'OFFSET 4', expected: [3, 1]},
+  {page: 'LIMIT 2 OFFSET 6', expected: []}
+])('agrees with Arrow SQL on a computed multi-key sort with $page', async ({page, expected}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const sql = `SELECT id, SIGN(score) AS direction FROM samples
+               ORDER BY direction DESC NULLS LAST,
+                        RADIANS(score) + :threshold ASC NULLS LAST ${page}`;
+  const parameters = {threshold: -0.01};
+  // The Arrow executor binds sort keys by column name.
+  const referenceSql = `SELECT id, SIGN(score) AS direction,
+                               RADIANS(score) + :threshold AS angle
+                        FROM samples ORDER BY direction DESC NULLS LAST,
+                                              angle ASC NULLS LAST ${page}`;
+  const reference = queryArrowSQL(referenceSql, new Map([['samples', samples]]), {
+    functions: [SIGN, RADIANS],
+    parameters
+  });
+  expect(Array.from(reference.getChild('id') ?? [])).toEqual(expected);
+  const result = await executeGPUQuery(device, samples, sql, parameters);
+  expect(result.schema.fields.map(field => field.name)).toEqual(['id', 'direction']);
+  expect(Array.from(result.getChild('id') ?? [])).toEqual(expected);
+  expect(Array.from(result.getChild('direction') ?? [])).toEqual(
+    Array.from(reference.getChild('direction') ?? [])
+  );
 });
 
 test('binds quoted dotted columns separately from table-qualified columns', async () => {
