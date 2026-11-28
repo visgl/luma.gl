@@ -147,6 +147,25 @@ Preparation and draw hooks let the scene supply view-specific models and
 bindings. The capture outputs remain available to the existing shadow
 sampling and fullscreen resolve stages.
 
+## Produce visibility textures for lighting
+
+`ambientOcclusionVisibilityEffect` and `contactShadowVisibilityEffect` in
+`@luma.gl/engine/lighting` generate visibility for a later lighting pass.
+Each effect traces visibility and filters it in two directions using depth
+and normals. The final output is a visibility texture that can be sampled
+from its red channel.
+
+For scene lighting, use `AmbientOcclusionPass` or `ContactShadowPass` to
+size the renderer from the inputs, set the camera uniforms, and get a borrowed
+RGBA8 texture. Callers own the depth and normal textures. The pass owns its
+output and may overwrite it on the next render. Ambient occlusion requires
+WebGPU unless its mode is `none`, which returns a white texture.
+
+To run either definition directly, configure it in `EffectRenderer`, set
+`colorFormat: 'rgba8unorm'`, and call `renderToTexture` with camera uniforms,
+the normal texture as the source, and `depthTexture` and `normalTexture`
+bindings. Run visibility generation before the lighting pass that samples it.
+
 ## Resolve scene buffers
 
 ANARI exposes fullscreen definitions for deferred direct lighting, ambient

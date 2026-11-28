@@ -65,7 +65,7 @@ export type {
 export type {ContactShadowCompositeShaderPassOptions} from './contact-shadow-composite';
 export {contactShadows} from './contact-shadow-composite';
 
-export {ContactShadowPass} from './contact-shadow-pass';
+export {ContactShadowPass, contactShadowVisibilityEffect} from './contact-shadow-pass';
 export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
 
 export {
@@ -83,9 +83,10 @@ export type {
   ClusteredLightGridUniforms,
   ClusteredLightGridShaderPassUniforms
 } from './clustered-light-grid';
-export {AmbientOcclusionPass} from './ambient-occlusion-pass';
+export {AmbientOcclusionPass, ambientOcclusionVisibilityEffect} from './ambient-occlusion-pass';
 export type {
   AmbientOcclusionMode,
+  AmbientOcclusionVisibilityOptions,
   AmbientOcclusionPassProps,
   AmbientOcclusionRenderOptions
 } from './ambient-occlusion-pass';
