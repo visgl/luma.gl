@@ -34,4 +34,7 @@ export type {
   PhysicsUpdateResult
 } from './physics-controller';
 export {ScenegraphRagdoll} from './scenegraph-ragdoll';
-export {makePhysicsControllerScene} from './physics-controller-geometry';
+export {
+  makePhysicsControllerScene,
+  makeArticulationCollidersFromScenegraph
+} from './physics-controller-geometry';

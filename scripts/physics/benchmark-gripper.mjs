@@ -23,7 +23,7 @@ try {
     if (message.type() === 'error') console.error(message.text());
   });
   const report = await page.evaluate(
-    async ({root, bin}) => {
+    async ({root, bin, parts, reducedOnly}) => {
       const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {makeGripperTrial}] = await Promise.all([
         import(root + '/modules/core/src/index.ts'),
         import(root + '/modules/core/src/webgpu/index.ts'),
@@ -33,16 +33,21 @@ try {
       const device = await luma.createDevice({adapters: [webgpuAdapter], type: 'webgpu'});
       const rows = [];
       try {
-        for (const reduced of [true, false])
-          for (const scenario of bin
-            ? [
-                {target: 1},
-                {target: 0, offset: 0.035},
-                {target: 1, obstructed: true},
-                {target: 1, drop: true}
-              ]
-            : [undefined])
-            for (const friction of scenario?.obstructed || scenario?.offset || scenario?.drop
+        for (const reduced of parts === 256 || reducedOnly ? [true] : [true, false])
+          for (const scenario of parts
+            ? [{target: 1, parts}]
+            : bin
+              ? [
+                  {target: 1},
+                  {target: 0, offset: 0.035},
+                  {target: 1, obstructed: true},
+                  {target: 1, drop: true}
+                ]
+              : [undefined])
+            for (const friction of parts ||
+            scenario?.obstructed ||
+            scenario?.offset ||
+            scenario?.drop
               ? [0.9]
               : [0.9, 0]) {
               const trial = makeGripperTrial(reduced, friction, false, {bin: scenario});
@@ -55,6 +60,11 @@ try {
                   neighbors = [],
                   contactMasks = [];
                 let steps = 0;
+                let initialPositions;
+                let neighborDisplacement = 0;
+                let maximumCandidates = 0;
+                let maximumContacts = 0;
+                let maximumReused = 0;
                 let greatestSlip = 0,
                   deepestOverlap = 0,
                   gripOffset;
@@ -82,6 +92,26 @@ try {
                         states.push(...(await trial.binWorld.readState()).slice(1));
                       const bodyIndex = 4 + (scenario?.target ?? 0);
                       const positions = states.map(state => state.position);
+                      if (parts) {
+                        const stock = positions.slice(4, 4 + parts);
+                        initialPositions ??= stock;
+                        stock.forEach((position, index) => {
+                          if (index !== scenario.target)
+                            neighborDisplacement = Math.max(
+                              neighborDisplacement,
+                              Math.hypot(...position.map((v, i) => v - initialPositions[index][i]))
+                            );
+                        });
+                        if (reduced) {
+                          const diagnostics = await trial.world.readSimulationDiagnostics();
+                          maximumCandidates = Math.max(
+                            maximumCandidates,
+                            diagnostics.candidatePairs
+                          );
+                          maximumContacts = Math.max(maximumContacts, diagnostics.activeContacts);
+                          maximumReused = Math.max(maximumReused, diagnostics.reusedContacts);
+                        }
+                      }
                       const [left, right] = positions.slice(2);
                       const box = positions[bodyIndex];
                       const distance = Math.hypot(
@@ -120,6 +150,9 @@ try {
                 const counterpart = await trial.binWorld?.readSimulationDiagnostics();
                 rows.push({
                   scenario: scenario ?? 'reference',
+                  ...(parts
+                    ? {neighborDisplacement, maximumCandidates, maximumContacts, maximumReused}
+                    : {}),
                   counterpart,
                   neighbors,
                   contactMasks,
@@ -163,7 +196,15 @@ try {
         device.destroy();
       }
     },
-    {root: '/@fs' + process.cwd(), bin: process.argv.includes('--bin')}
+    {
+      root: '/@fs' + process.cwd(),
+      bin:
+        process.argv.includes('--bin') ||
+        process.argv.includes('--crowded') ||
+        process.argv.includes('--scale'),
+      reducedOnly: process.argv.includes('--reduced'),
+      parts: process.argv.includes('--scale') ? 256 : process.argv.includes('--crowded') ? 64 : 0
+    }
   );
   console.log(JSON.stringify({browser: browser.version(), ...report}, null, 2));
   if (report.rows.some(row => !row.qualified)) process.exitCode = 2;

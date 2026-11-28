@@ -11,7 +11,7 @@ import {expect, it} from 'vitest';
 import {makeArmContactTrial} from '../../../../examples/experimental/gpu-rigid-body-world/robot-arm-contact';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld} from '../../src/gpu-physics';
+import {GPURigidBodyWorld, GPUArticulationTree} from '../../src/gpu-physics';
 import {
   ARM_STIFFNESS,
   makeRobotArm,
@@ -214,12 +214,18 @@ it('keeps light and heavy grasp trials independent in one graph', async context 
 it.for([
   'center',
   'split',
+  'crowded',
   'drop'
 ] as const)('discovers box identities through pad contact in the %s bin', async (scenario, context) => {
   const device = await getWebGPUTestDevice('core');
   if (!device) return context.skip('WebGPU unavailable');
   const trial = makeGripperTrial(true, 0.9, true, {
-    bin: {target: 1, obstructed: scenario === 'split', drop: scenario === 'drop'}
+    bin: {
+      target: 1,
+      parts: scenario === 'crowded' ? 64 : undefined,
+      obstructed: scenario === 'split',
+      drop: scenario === 'drop'
+    }
   });
   const definition = new GPUCommandGraph(device);
   trial.addToGraph(definition);
@@ -241,6 +247,11 @@ it.for([
       const blocks = (await trial.positions()).slice(4, 7);
       if (phase === 1)
         expect(state).toMatchObject({padContactMasks: scenario === 'split' ? [2, 4] : [4, 4]});
+      if (phase === 3 && scenario === 'crowded') {
+        expect(state).toMatchObject({contactOverflow: false, activeContacts: 2, reusedContacts: 2});
+        expect('candidatePairs' in state && Number(state.candidatePairs)).toBeLessThan(40);
+        expect(trial.binWorld!.count).toBe(69);
+      }
       if (phase === 2 && scenario !== 'split') expect(blocks[1][2]).toBeGreaterThan(0.58);
       if (phase === 5) {
         expect(state).toMatchObject({padContactMasks: [0, 0]});
@@ -248,7 +259,7 @@ it.for([
           expect(blocks[1][2]).toBeGreaterThan(blocks[2][2] + 0.3);
           expect(blocks[1][2]).toBeLessThan(0.8);
         }
-        if (scenario === 'center') {
+        if (scenario === 'center' || scenario === 'crowded') {
           expect(
             Math.hypot(blocks[1][0] - REACH * Math.cos(1.65), blocks[1][1] - REACH * Math.sin(1.65))
           ).toBeLessThan(0.25);
@@ -272,5 +283,63 @@ it.for([
     graph.destroy();
     trial.world.destroy();
     trial.binWorld!.destroy();
+  }
+});
+
+it('latches link contact capacity before publishing partial impulses and clears it on reset', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const tree = new GPUArticulationTree({
+    base: [0, 0, 0],
+    links: [
+      {
+        id: 'tool',
+        parent: -1,
+        parentAnchor: [0, 0, 0],
+        childAnchor: [0, 0, 0],
+        axis: [0, 0, 1],
+        mass: 1,
+        inertia: [1, 1, 1]
+      }
+    ]
+  });
+  const world = new GPURigidBodyWorld({
+    timeStep: tree.timeStep,
+    bodies: Array.from({length: 25}, () => ({
+      position: [0, 0, 0],
+      mass: 0,
+      shape: {type: 'box', halfExtents: [1, 1, 1]}
+    }))
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition, {
+    tree,
+    colliders: [{link: 'tool', shape: {type: 'box', halfExtents: [0.1, 0.1, 0.1]}}],
+    friction: 0.5
+  });
+  const graph = await definition.compileAsync();
+  try {
+    const before = await tree.readState();
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect(await tree.readSimulationDiagnostics()).toMatchObject({
+      steps: 0,
+      complete: false,
+      contactOverflow: true,
+      activeContacts: 0
+    });
+    expect(await tree.readState()).toEqual(before);
+    tree.reset();
+    expect(await tree.readSimulationDiagnostics()).toMatchObject({
+      steps: 0,
+      complete: true,
+      contactOverflow: false,
+      reusedContacts: 0
+    });
+  } finally {
+    graph.destroy();
+    tree.destroy();
+    world.destroy();
   }
 });

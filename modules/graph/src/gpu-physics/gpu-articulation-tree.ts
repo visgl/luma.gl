@@ -14,6 +14,7 @@ import {
   createBoundKernelAsync,
   type BoundKernel
 } from '../gpu-core/utils/bound-kernel';
+import type {GPUArticulationCollider} from './articulation-world-contacts';
 import {getArticulationTreeShader} from './articulation-tree-shader';
 
 type Vector = readonly [number, number, number];
@@ -161,19 +162,51 @@ export class GPUArticulationTree {
     coupling?: {
       boxes: GraphBufferHandle;
       count: number;
-      pads: GPUArticulationPayload['pads'];
+      pads?: GPUArticulationPayload['pads'];
+      colliders?: readonly GPUArticulationCollider[];
       friction: number;
     }
   ) {
+    const colliders = coupling?.colliders;
+    const packedColliders = colliders?.flatMap(
+      ({link, shape, position = [0, 0, 0], orientation = [0, 0, 0, 1]}) => {
+        const dimensions =
+          shape.type === 'box'
+            ? [...shape.halfExtents]
+            : shape.type === 'capsule'
+              ? [shape.radiusTop, shape.height / 2, 0]
+              : [shape.radius, 0, 0];
+        if (
+          !this.indices.has(link) ||
+          (shape.type === 'capsule' && shape.radiusTop !== shape.radiusBottom) ||
+          ![...position, ...orientation, ...dimensions].every(Number.isFinite) ||
+          Math.abs(Math.hypot(...orientation) - 1) > 1e-5 ||
+          dimensions[0] <= 0 ||
+          dimensions[1] < 0 ||
+          (shape.type === 'box' && (dimensions[1] <= 0 || dimensions[2] <= 0))
+        )
+          throw new Error('Invalid link collider');
+        return [
+          ...position,
+          this.indices.get(link)!,
+          ...orientation,
+          ...dimensions,
+          shape.type === 'sphere' ? 0 : shape.type === 'capsule' ? 1 : 2
+        ];
+      }
+    );
     if (
       coupling &&
       (this.payload ||
         this.contact ||
-        coupling.pads.length !== 2 ||
-        coupling.pads[0].link === coupling.pads[1].link ||
+        (colliders
+          ? colliders.length === 0 || colliders.length > 16
+          : !coupling.pads ||
+            coupling.pads.length !== 2 ||
+            coupling.pads[0].link === coupling.pads[1].link) ||
         !Number.isFinite(coupling.friction) ||
         coupling.friction < 0 ||
-        coupling.pads.some(
+        coupling.pads?.some(
           pad => !this.indices.has(pad.link) || !Number.isFinite(pad.radius) || pad.radius <= 0
         ))
     )
@@ -201,7 +234,7 @@ export class GPUArticulationTree {
       new Float32Array(this.links.length * 4),
       new Float32Array(this.links.flatMap(link => [link.angle ?? 0, link.speed ?? 0, 0, 0])),
       poses,
-      new Uint32Array(4),
+      new Uint32Array(colliders ? 8 + 24 * 12 : 4),
       new Float32Array([
         ...this.base,
         0,
@@ -231,7 +264,8 @@ export class GPUArticulationTree {
                 coupling.friction,
                 0,
                 0,
-                ...coupling.pads.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0])
+                ...(packedColliders ??
+                  coupling.pads!.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0]))
               ]
             : [])
       ])
@@ -280,7 +314,8 @@ export class GPUArticulationTree {
           Boolean(this.contact),
           this.publishMatrices,
           Boolean(this.payload),
-          coupling?.count ?? 0
+          coupling?.count ?? 0,
+          colliders?.length ?? 0
         ),
         shaderLayout
       };
@@ -359,10 +394,22 @@ export class GPUArticulationTree {
   /** Numerical failure latches and preserves the last accepted state. */
   async readSimulationDiagnostics() {
     const bytes = await this.buffers[4].readAsync();
-    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
     return {
       steps: values[0],
       complete: values[1] === 0,
+      ...(values.length > 4
+        ? {
+            candidatePairs: values[4],
+            activeContacts: values[5],
+            contactPairs: Array.from({length: values[5]}, (_, index) => ({
+              body: values[8 + index * 12],
+              collider: values[9 + index * 12]
+            })),
+            contactOverflow: values[6] !== 0,
+            reusedContacts: values[7]
+          }
+        : {}),
       ...(this.worldContacts ? {padContactMasks: [values[2], values[3]]} : {}),
       ...(this.contact
         ? {normalForce: new DataView(bytes.buffer, bytes.byteOffset).getFloat32(8, true)}

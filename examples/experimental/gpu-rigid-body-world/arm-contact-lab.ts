@@ -37,13 +37,26 @@ if (slider && weight) {
 }
 const scenario = document.querySelector<HTMLSelectElement>('#grasp-scenario');
 const binChoice = query.get('bin');
-const targetChoice = ['left', 'center', 'right', 'obstructed', 'drop'].indexOf(binChoice ?? '');
+const targetChoice = [
+  'left',
+  'center',
+  'right',
+  'obstructed',
+  'drop',
+  'crowded',
+  'gate',
+  'scale',
+  'stack'
+].indexOf(binChoice ?? '');
 const bin =
   targetChoice >= 0
     ? {
         target: targetChoice >= 3 ? 1 : targetChoice,
         obstructed: targetChoice === 3,
-        drop: targetChoice === 4
+        parts:
+          targetChoice >= 5 ? (targetChoice === 7 ? (256 as const) : (64 as const)) : undefined,
+        gate: targetChoice === 6,
+        drop: targetChoice === 4 || targetChoice === 8
       }
     : undefined;
 if (scenario) {
@@ -219,6 +232,11 @@ try {
     if (now - lastReading > 250 && pick) {
       const positions = await pick.positions();
       output.value = `Payload ${mass} kg · Grip cap ${torque} N·m · height ${positions[4 + (bin?.target ?? 0)][2].toFixed(3)} m`;
+      if (bin?.parts && world instanceof GPUArticulationTree) {
+        const status = await world.readSimulationDiagnostics();
+        output.value += ` · ${bin.parts} parts · ${status.candidatePairs} candidate pairs · ${status.activeContacts} contacts · ${status.reusedContacts} reused`;
+        if (!status.complete) output.value += ' · Solver stopped';
+      }
       lastReading = now;
     } else if (now - lastReading > 250 && trial) {
       const [height, status] = await Promise.all([

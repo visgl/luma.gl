@@ -1029,3 +1029,7 @@ The [grasp parameter sweep](../benchmarks/robot-arm.md#grasp-parameter-sweep) ba
 ### G9 bin picking with independent rigid bodies
 
 A fixed-base articulated tree can now discover contacts between its two spherical pads and a small world of independently rotating boxes. The Bin Picking workcell shares authored scene geometry between the ordered reference and the coupled solver. Its regression cases cover contact identity, a split grip, release onto another block, and regrasp. Broader contact shapes, spatial candidate generation, coupling several trees, floating bases and loop closure remain open.
+
+### G9 indexed articulated contacts in a crowded workcell
+
+Named links accept local spheres, capsules and boxes, including shapes cooked from scenegraph paths. A GPU-refitted spatial index qualifies candidates against independently moving boxes. The compact contact solver warm-starts persistent pairs and exposes contact identities, reuse and overflow. The gripper lab includes a 64-part pickup, blocked forearm, stack delivery and 256-part scaling fixture. Remaining work includes multi-point link manifolds, additional counterpart shapes, several trees per world, floating bases, closed loops and qualification on additional adapters. See the [crowded-bin report](../benchmarks/robot-arm.md#crowded-bin).

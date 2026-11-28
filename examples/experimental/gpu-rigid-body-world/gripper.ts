@@ -7,13 +7,22 @@ import {
   GPURigidBodyWorld,
   getBodyInertia,
   type GPUArticulationLink,
+  type GPUArticulationCollider,
   type GPURigidBody,
   type GPURigidBodyJoint
 } from '@luma.gl/graph/gpu-physics';
 
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {BIN_ANGLES, BIN_DESTINATION, makeBinWorkcell, type BinScenario} from './bin-workcell';
+import {
+  STACK_RELEASE_ANGLE,
+  BIN_LIFT_ANGLE,
+  FINGER_LENGTH,
+  BIN_ANGLES,
+  BIN_DESTINATION,
+  makeBinWorkcell,
+  type BinScenario
+} from './bin-workcell';
 export const GRIPPER_PHASES = ['Open', 'Grip', 'Lift', 'Carry', 'Lower', 'Release'] as const;
 export const DESTINATION_ANGLE = 1;
 export const REACH = 1.4;
@@ -112,7 +121,7 @@ export function makeGripperTrial(
       sign < 0 ? 'left' : 'right',
       1,
       [REACH / 2, sign * 0.41, 0],
-      [0, 0, 0.74],
+      [0, 0, FINGER_LENGTH],
       0,
       [REACH, sign * 0.41, 0.24],
       0.3,
@@ -159,6 +168,32 @@ export function makeGripperTrial(
     {link: 'left', radius: padRadius},
     {link: 'right', radius: padRadius}
   ] as const;
+  const colliders: GPUArticulationCollider[] = [
+    ...pads.map(pad => ({link: pad.link, shape: {type: 'sphere' as const, radius: pad.radius}})),
+    {
+      link: 'boom',
+      shape: {type: 'capsule', radiusTop: 0.065, radiusBottom: 0.065, height: 1.28},
+      orientation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
+    },
+    {
+      link: 'boom',
+      position: [REACH / 2, 0, 0],
+      shape: {type: 'box', halfExtents: [0.1, 0.46, 0.075]}
+    }
+  ];
+  if (bin?.parts && !reduced) {
+    const {shape: unused, ...body} = bodies[3];
+    bodies[3] = {
+      ...body,
+      inertiaDiagonal: links[1].inertia,
+      centerOfMass: [0, 0, 0],
+      colliders: colliders.slice(2).map(({shape, orientation, position}) => ({
+        position,
+        orientation,
+        shape
+      }))
+    };
+  }
   const binWorld =
     bin && reduced
       ? new GPURigidBodyWorld({
@@ -167,6 +202,9 @@ export function makeGripperTrial(
           gravity: [0, 0, -9.81],
           timeStep: 1 / 120,
           iterations: 8,
+          ...(bin.parts
+            ? {broadPhase: 'hierarchical-grid' as const, solver: 'parallel' as const}
+            : {}),
           publishPoses: publish
         })
       : undefined;
@@ -190,6 +228,7 @@ export function makeGripperTrial(
       })
     : new GPURigidBodyWorld({
         bodies,
+        ...(bin?.parts ? {broadPhase: 'hierarchical-grid' as const} : {}),
         joints,
         solver: 'ordered',
         iterations: 64,
@@ -197,7 +236,7 @@ export function makeGripperTrial(
         gravity: [0, 0, -9.81],
         publishPoses: publish
       });
-  const liftAngle = bin ? -0.55 : -0.38;
+  const liftAngle = bin ? BIN_LIFT_ANGLE : -0.38;
   const travelSteps = (phase: number) =>
     phase === 3
       ? (options.carrySteps ??
@@ -208,16 +247,20 @@ export function makeGripperTrial(
       ? [...GRIPPER_PHASES, 'Regrip', 'Raise again']
       : [...GRIPPER_PHASES];
   if (bin?.drop) {
-    phaseNames[4] = 'Drop';
-    phaseNames[5] = 'Settle';
+    phaseNames[4] = bin.parts ? 'Lower to stack' : 'Drop';
+    phaseNames[5] = bin.parts ? 'Release' : 'Settle';
   }
   const phases = [
     [sourceAngle, -0.024, 0],
     [sourceAngle, -0.024, 0.36],
     [sourceAngle, liftAngle, 0.36],
     [destination, liftAngle, 0.36],
-    [destination, bin?.drop ? liftAngle : -0.024, bin?.drop ? 0 : 0.36],
-    [destination, bin?.drop ? liftAngle : -0.024, 0],
+    [
+      destination,
+      bin?.drop ? (bin.parts ? STACK_RELEASE_ANGLE : liftAngle) : -0.024,
+      bin?.drop && !bin.parts ? 0 : 0.36
+    ],
+    [destination, bin?.drop ? (bin.parts ? STACK_RELEASE_ANGLE : liftAngle) : -0.024, 0],
     [destination, -0.024, 0.36],
     [destination, liftAngle, 0.36]
   ];
@@ -230,7 +273,11 @@ export function makeGripperTrial(
     travelSteps,
     addToGraph<P>(graph: GPUCommandGraph<P>) {
       if (binWorld && world instanceof GPUArticulationTree)
-        binWorld.addToGraph(graph, {tree: world, pads, friction: friction ** 2});
+        binWorld.addToGraph(graph, {
+          tree: world,
+          ...(bin?.parts ? {colliders} : {pads}),
+          friction: friction ** 2
+        });
       else world.addToGraph(graph);
     },
     command(phase: number, step = 0) {

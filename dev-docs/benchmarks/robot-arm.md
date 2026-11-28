@@ -97,3 +97,24 @@ Run `node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5335/ --bin` ag
 | Drop onto another block | 3.8 ms | 26.6 ms | The reduced load settled at 0.671 m on its neighbor. The ordered load rolled out of the tray and off the bench. |
 
 All five reduced cases stayed within the 8.33 ms physics-step budget on this adapter. The rendered center scenario separately recorded a 16.7 ms median and 17.7 ms p95 browser animation-frame interval over 180 callbacks during a cycle. The single-workpiece reference rerun measured 2.2 ms and 14.7 ms p95 for reduced and ordered with rubber pads. The ordered drop remains an open quality gap. The benchmark exits with a failure code when a scenario misses its quality gates. [Raw bin-picking measurements](./bin-picking-apple.json).
+
+### Crowded bin
+
+A four-link arm picks, carries, places and regrasps a 1 kg box in a seeded workcell containing 64 dynamic parts. Both solvers use the same fixed 1/120 s step, link geometry, trajectories, inertias and torque caps. The reduced tree couples four authored colliders to an eight-iteration parallel world. The ordered reference solves contacts and articulated constraints together with 64 iterations. Both use world-space grid discovery for box/box contacts.
+
+| Apple WebGPU run | Full step p50 / p95 | Landing error | Max grip slip | Max neighbor displacement |
+| --- | ---: | ---: | ---: | ---: |
+| 64 parts, reduced | 2.0 / 4.3 ms | 2.0 cm | 3.4 mm | 2.8 mm |
+| 64 parts, ordered | 180.4 / 301.7 ms | 8.7 cm | 14.6 mm | 2.8 mm |
+| 256 parts, reduced | 8.1 / 14.8 ms | 2.0 cm | 3.4 mm | 14.6 mm |
+
+Each run completed 1,584 steps. Timing covers 1,044 steps from grip through release and includes drive updates, command encoding, submission and a GPU completion fence. Rendering and periodic diagnostic readbacks are excluded. After release both 64-part solvers grasped the same block again. The reduced lane tested at most 12 candidate pairs at the sampled points and reused both fingertip contacts during carry. Neighbor movement is sampled every 12 steps relative to the first sample.
+
+The matched 64-part run met the 8.33 ms p95 budget on this Apple Metal adapter. Two repeats on the shared host measured 12.4 and 10.2 ms p95 during concurrent work. Real-time headroom depends on system load. The 256-part fixture qualifies placement and is above budget at p95. [64-part measurements](./crowded-bin-64-apple.json) and [256-part measurements](./crowded-bin-256-apple.json).
+
+```sh
+node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5335/ --crowded
+node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5335/ --scale
+```
+
+In the forearm-stop control, both fingertip contacts persisted while the third link contact stopped the carry at approximately (1.55, 0.31) m. The open carry reached (−0.05, 1.58) m. For the earlier ordered drop discrepancy, the raised fingers release approximately 18 cm beyond the lowered pickup radius. Moving the receiving block beneath the release reduced the miss, but the ordered load still rolled off the block. The original free-drop fixture remains an open ordered quality regression. The crowded stack scenario separately uses a controlled approach before opening the fingers.

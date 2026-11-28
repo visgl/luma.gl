@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {getLinkContactShader} from './articulation-link-contact-shader';
+
 /** Project contact impulses between tree links, a free box and a horizontal support plane. */
-export function getPayloadDeclarations(boxCount: number) {
+export function getPayloadDeclarations(boxCount: number, colliderCount: number) {
   return /* wgsl */ `
 struct ContactRow {
  direction:vec3f, arm:vec3f, angularResponse:vec3f, effectiveInverseMass:f32,
@@ -11,7 +13,7 @@ struct ContactRow {
 }
 struct PayloadContact {rows:array<ContactRow,3>, targetSpeed:f32, enabled:bool}
 var<private> payload:Pose;
-var<private> contacts:array<PayloadContact,${boxCount ? boxCount * 2 : 10}>;
+var<private> contacts:array<PayloadContact,${colliderCount ? 24 : boxCount ? boxCount * 2 : 10}>;
 ${
   boxCount
     ? `var<private> currentBox:u32;
@@ -57,7 +59,10 @@ fn prepareContact(index:u32, link:i32, point:vec3f, normal:vec3f, gap:f32, dt:f3
   contacts[index].rows[component]=row;
  }
 }
-fn preparePayload(dt:f32,inverse:ptr<function,array<array<f32,N>,N>>){
+${
+  colliderCount
+    ? getLinkContactShader(boxCount, colliderCount)
+    : `fn preparePayload(dt:f32,inverse:ptr<function,array<array<f32,N>,N>>){
  ${
    boxCount
      ? `for(var index=0u;index<${boxCount}u;index++){
@@ -96,6 +101,8 @@ fn preparePayload(dt:f32,inverse:ptr<function,array<array<f32,N>,N>>){
  }`
  }
 }
+`
+}
 fn relativeSpeed(row:ContactRow)->f32{
  var result=dot(row.direction,payload.velocity.xyz+cross(payload.spin.xyz,row.arm));
  for(var j=0u;j<N;j++){result+=row.jacobian[j]*speed[j];}
@@ -112,11 +119,11 @@ fn applyRow(index:u32,component:u32,total:f32)->f32{
 }
 fn solvePayload()->f32{
  var change=0.0;
- for(var index=0u;index<${boxCount ? boxCount * 2 : 10}u;index++){
+ for(var index=0u;index<${colliderCount ? 'contactCount' : (boxCount ? boxCount * 2 : 10) + 'u'};index++){
   if(!contacts[index].enabled){continue;}
   ${
     boxCount
-      ? `currentBox=index/2u;let box=boxes[currentBox];
+      ? `currentBox=${colliderCount ? 'boxIds[index]' : 'index/2u'};let box=boxes[currentBox];
   payload=Pose(box.position,box.rotation,vec4f(velocities[currentBox],box.velocity.w),vec4f(spins[currentBox],0));`
       : ''
   }
