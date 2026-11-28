@@ -582,7 +582,10 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       operator === 'multiply' ||
       operator === 'divide';
     const format =
-      leftFormat ?? rightFormat ?? (expected !== 'boolean' ? expected : undefined) ?? 'float32';
+      leftFormat ??
+      rightFormat ??
+      (operator !== 'atan2' && expected !== 'boolean' ? expected : undefined) ??
+      'float32';
     if (
       format === 'boolean' &&
       (arithmetic || (operator !== 'equal' && operator !== 'not-equal'))
@@ -591,6 +594,39 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     }
     const left = this.emit(leftNode, format);
     const right = this.emit(rightNode, format);
+    if (operator === 'atan2') {
+      if (format !== 'float32') {
+        throw new Error('GPUDataFrame ATAN2 requires Float32 arguments');
+      }
+      const y = left.value;
+      const x = right.value;
+      const valid = `(${left.valid} && ${right.valid} && (bitcast<u32>(${y}) & 0x7fffffffu) < 0x7f800000u && (bitcast<u32>(${x}) & 0x7fffffffu) < 0x7f800000u && (${y} != 0.0 || ${x} != 0.0))`;
+      const offAxes = `(${valid} && ${y} != 0.0 && ${x} != 0.0)`;
+      const angle = `atan2(select(1.0, ${y}, ${offAxes}), select(1.0, ${x}, ${offAxes}))`;
+      const axis = `select(1.5707963267948966, select(0.0, 3.141592653589793, ${x} < 0.0), ${y} == 0.0)`;
+      const negative = `(bitcast<u32>(${y}) & 0x80000000u) != 0u`;
+      return this.addValue(
+        format,
+        `select(select(${axis}, -${axis}, ${negative}), ${angle}, ${offAxes})`,
+        valid,
+        true
+      );
+    }
+    if (operator === 'mod') {
+      if (format !== 'sint32' && format !== 'uint32') {
+        throw new Error('GPUDataFrame MOD requires matching Int32 or Uint32 arguments');
+      }
+      const suffix = format === 'uint32' ? 'u' : 'i';
+      const nonzero = `(${right.valid} && ${right.value} != 0${suffix})`;
+      // Replacing -1 with 1 preserves the remainder and avoids signed overflow.
+      const safe = format === 'sint32' ? `(${nonzero} && ${right.value} != -1i)` : nonzero;
+      return this.addValue(
+        format,
+        `(${left.value} % select(1${suffix}, ${right.value}, ${safe}))`,
+        `(${left.valid} && ${nonzero})`,
+        true
+      );
+    }
     if (operator === 'coalesce') {
       return this.addValue(
         format,
@@ -655,7 +691,9 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         }
         return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
       case 'binary':
+        if (node.operator === 'atan2') return 'float32';
         if (
+          node.operator === 'mod' ||
           node.operator === 'coalesce' ||
           node.operator === 'nullif' ||
           node.operator === 'add' ||

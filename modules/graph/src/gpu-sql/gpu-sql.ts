@@ -27,6 +27,7 @@ import type {GPUDataFrameNormalizedSortOptions} from '../gpu-dataframe/gpu-sort-
 import {
   GPUExpression,
   column,
+  isGPUBinaryScalarFunction,
   isGPUScalarFunction,
   parameter,
   type GPUExpressionNode
@@ -1150,6 +1151,7 @@ function lowerSQLExpression(
           name !== 'cast' &&
           functionName !== 'coalesce' &&
           functionName !== 'nullif' &&
+          !isGPUBinaryScalarFunction(functionName) &&
           !isGPUScalarFunction(functionName)
         ) {
           throw new Error(`GPUSQL does not support SQL expression "${name}"`);

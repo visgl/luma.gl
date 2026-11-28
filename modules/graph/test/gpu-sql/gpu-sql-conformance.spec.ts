@@ -19,11 +19,13 @@ import {
   ACOS,
   ASIN,
   ATAN,
+  ATAN2,
   COS,
   DEGREES,
   EXP,
   LN,
   LOG10,
+  MOD,
   RADIANS,
   ROUND,
   SIGN,
@@ -261,6 +263,66 @@ test.each([
   expect(Array.from(result.getChild('direction') ?? [])).toEqual(
     Array.from(reference.getChild('direction') ?? [])
   );
+});
+
+test('ATAN2 agrees with Arrow SQL on quadrants and axes across batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const rows = arrow.tableFromArrays({
+    id: new Uint32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
+    y: arrow.vectorFromArray([1, 1, -1, -1, 1, -1, 0, 0, 0, null, Infinity], new arrow.Float32()),
+    x: arrow.vectorFromArray([1, -1, -1, 1, 0, 0, -1, 1, 0, 1, 1], new arrow.Float32())
+  });
+  const input = new arrow.Table([...rows.slice(0, 4).batches, ...rows.slice(4).batches]);
+  const sql = 'SELECT ATAN2(y, x) AS result FROM samples';
+  const reference = queryArrowSQL(sql + ' WHERE id <= 8', new Map([['samples', input]]), {
+    functions: [ATAN2]
+  });
+  const output = await executeGPUQuery(device, input, sql);
+  const result = output.getChild('result');
+  expect(result?.type).toBeInstanceOf(arrow.Float32);
+  const referenceAngles = reference.getChild('result');
+  for (let index = 0; index < 4; index++) {
+    const angle = referenceAngles?.get(index);
+    // WGSL allows 4096 ULP for atan2 with normal inputs in this range.
+    const tolerance = 4097 * 2 ** (Math.floor(Math.log2(Math.abs(angle))) - 23);
+    expect(Math.abs(result?.get(index) - angle)).toBeLessThanOrEqual(tolerance);
+  }
+  expect(Array.from(result ?? []).slice(4, 8)).toEqual(Array.from(referenceAngles ?? []).slice(4));
+  expect(Array.from(result ?? []).slice(8)).toEqual([null, null, null]);
+  expect(output.batches.map(batch => batch.numRows)).toEqual([4, 7]);
+});
+
+test('integer MOD preserves sign and format and returns null for a zero divisor', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = arrow.tableFromArrays({
+    id: new Uint32Array([1, 2, 3, 4, 5, 6]),
+    dividend: arrow.vectorFromArray([-7, 7, -2147483648, 3, null, 7], new arrow.Int32()),
+    divisor: arrow.vectorFromArray([3, -3, -1, 0, 2, null], new arrow.Int32()),
+    unsigned_value: new Uint32Array([7, 1, 4294967295, 3, 3, 7]),
+    unsigned_divisor: new Uint32Array([3, 3, 2, 0, 2, 2])
+  });
+  for (const {operands, type, expected} of [
+    {operands: 'dividend, divisor', type: arrow.Int32, expected: [-1, 1, 0, null, null, null]},
+    {
+      operands: 'unsigned_value, unsigned_divisor',
+      type: arrow.Uint32,
+      expected: [1, 1, 1, null, 1, 1]
+    }
+  ]) {
+    const sql = `SELECT MOD(${operands}) AS result FROM samples`;
+    const reference = queryArrowSQL(sql + ' WHERE id <= 3', new Map([['samples', input]]), {
+      functions: [MOD]
+    });
+    const output = await executeGPUQuery(device, input, sql);
+    const values = output.getChild('result');
+    expect(values?.type).toBeInstanceOf(type);
+    expect(Array.from(values ?? []).slice(0, 3)).toEqual(
+      Array.from(reference.getChild('result') ?? [])
+    );
+    expect(Array.from(values ?? [])).toEqual(expected);
+  }
 });
 
 test('binds quoted dotted columns separately from table-qualified columns', async () => {

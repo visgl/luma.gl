@@ -67,6 +67,11 @@ Invalid domains and non-finite inputs produce null in GPU SQL. `SIN`, `COS`, `TA
 returns null when its result would overflow Float32. Trigonometric functions use radians.
 `RADIANS` and `DEGREES` convert Float32 angles. Both return null for non-finite inputs,
 and `DEGREES` also returns null if the converted magnitude would overflow.
+`ATAN2(y, x)` takes two Float32 values and returns the quadrant-aware angle in radians.
+A null or non-finite argument, or the origin where both arguments are zero, yields null.
+
+`MOD(dividend, divisor)` takes matching Int32 or Uint32 inputs. The remainder keeps the
+dividend's sign. A null argument or zero divisor yields null.
 
 
 `CAST` supports scalar Float32, Int32, and Uint32 results. Float-to-integer casts truncate toward zero
