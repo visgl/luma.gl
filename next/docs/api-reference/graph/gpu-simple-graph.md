@@ -336,3 +336,79 @@ CPU boundaries submit preceding GPU work before readback. These programs do not 
 `CPUProjectionOperation` from `@luma.gl/graph/gpu-project` accepts `{id, input, output, format, projection}`. Supply `float32x2` or `float32x3` and a prepared projection from `projectionEngine.createProjectionAsync()` in `@math.gl/geospatial/projection`. The operation preserves row counts and chunk boundaries, copies input arrays before projection, and lets the executor upload the results. Forward projection follows the prepared transform's axis and height conventions. Prepare a reversed CRS pair for inverse projection. Input and output storage use Float32 precision. Projection errors reject the run.
 
 `CPUData` and `CPUVector`, exported by `@luma.gl/graph/gpu-data`, provide borrowed CPU storage with the same memory format strings as GPUVector. CPUData accepts a buffer or view, format, length, and optional byte layout, flattened value count, list offsets, and validity bitmap. Byte offsets are relative to the supplied view; the stored byteOffset is absolute within its underlying buffer. CPUVector contains ordered CPUData chunks. Construction does not copy payloads or combine chunks; mutations of borrowed memory remain visible. CPU memory is garbage-collected and has no destroy method. These storage types do not yet integrate with graph bindings, automatic transfers, nested lists, or Arrow schemas.
+
+## Declarative render inputs[​](#declarative-render-inputs "Direct link to Declarative render inputs")
+
+`GPURenderInputs` connects graph resource references to shader names. It is shared by SimpleGraph render operations and render operations lowered from an authored `GPUGraph`. It is exported from `@luma.gl/graph` and `@luma.gl/graph/gpu-core`.
+
+```
+const operation = new GPURenderOperation({
+
+  id: 'draw',
+
+  createNodes: resources => {
+
+    const positions = resources.importBuffer(positionDescriptor, positionBuffer);
+
+    const positionView = resources.createDataView(positions, {
+
+      format: 'float32x3', length: vertexCount, byteOffset: 16, byteStride: 16
+
+    });
+
+    const image = resources.importTexture(imageDescriptor, imageTexture);
+
+    const inputs = new GPURenderInputs({
+
+      attributes: {position: {source: positionView, stepMode: 'vertex'}},
+
+      textures: {image: {source: resources.createTextureView(image)}}
+
+    });
+
+    return [{
+
+      type: 'render', id: 'draw-pass', inputs,
+
+      attachments: {colorAttachments: [outputView]},
+
+      compile: ({device}) => {
+
+        const model = new Model(device, {
+
+          ...modelProps, bufferLayout: inputs.bufferLayout
+
+        });
+
+        return {
+
+          encode: context => {
+
+            inputs.apply(model, context);
+
+            model.draw(context.renderPass);
+
+          },
+
+          destroy: () => model.destroy()
+
+        };
+
+      }
+
+    }];
+
+  }
+
+});
+```
+
+The node derives `vertex`, storage, and `sampled` resource accesses from `inputs`. Do not repeat those declarations in `resources`; that field remains available for additional accesses performed by custom encode code. Attachment writes continue to be inferred from `attachments`. Graph ownership, usage, aliasing, and texture-view validation apply as usual.
+
+* `attributes`: names match shader attributes. Each source is a fixed-format `GraphDataView`; its format, stride, and offset are preserved. Packed field offsets remain in the vertex layout so the buffer binding stays four-byte aligned. `stepMode` defaults to `vertex`; use `instance` explicitly for instance data. Supply `inputs.bufferLayout` when constructing the model. Separate views can reference interleaved fields of one buffer without repacking.
+* `storage`: names match shader storage bindings. Each entry has `source` and `access: 'read' | 'read-write'`. Optional `byteOffset` and `byteLength` select a range relative to the source view (or buffer). The default covers the view's byte footprint, including stride gaps. The selected range is also used for graph resource declarations and storage alias checks. This does not synthesize a shader struct layout. Shader access must match the declared access; device-specific alignment constraints still apply. Storage render inputs require WebGPU.
+* `textures`: names match sampled texture bindings; sources are graph textures or texture views. Use `samplers: {shaderSamplerName: sampler}` for separately named, caller-owned samplers. WebGL retains its existing full-resource sampled-view limit.
+
+Use logical references for composition. Import actual application buffers/textures once; resource IDs remain the keys for per-run import replacement and diagnostics. `apply()` resolves physical resources on every encoding, so replacing an imported resource does not require rebuilding this binding plan. Inputs own no GPU allocations and never destroy imported buffers, textures, or samplers.
+
+This first pass accepts explicit command-graph resource references. SimpleGraph expression outputs still connect through explicit output-target buffers; automatic semantic-value resolution and multi-chunk drawing are follow-ups. Uniform buffers, storage textures, and index/indirect draw inputs are not part of this initial API.

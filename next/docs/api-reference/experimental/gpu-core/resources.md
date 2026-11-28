@@ -136,3 +136,7 @@ For exact method contracts and examples, see [GPUCommandGraph](https://luma.gl/n
 `GPURenderOperation` packages a factory of ordinary render nodes for both WebGPU `GPUCommandGraph` / `GPUGraph` and WebGL-capable `GPUSimpleGraph`. Its `GPURenderOperationResources` interface exposes the same buffer imports, texture imports, transient textures, and texture views described above. Each compilation creates independent handles and executable state. Declare resource reads and writes on each node; the containing graph owns scheduling, framebuffers, and transient textures, while imported resources remain borrowed.
 
 See [SimpleGraph shared render operations](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#shared-render-operations) for the portable execution contract and an example.
+
+### Declarative render bindings[​](#declarative-render-bindings "Direct link to Declarative render bindings")
+
+Render nodes may declare `inputs: new GPURenderInputs(...)` to map typed graph data views to attributes, buffer ranges to storage bindings, and texture views to sampled bindings. The node derives dependency accesses from that same plan. Physical resources are resolved during encoding, preserving imported-resource replacement and transient allocation. See [declarative render inputs](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#declarative-render-inputs) for the shared SimpleGraph/GPUGraph API and ownership rules.
