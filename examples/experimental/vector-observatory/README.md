@@ -164,3 +164,12 @@ seconds; frame rate limits how densely it can sample. Long frame gaps therefore
 produce approximate short arcs, not reconstructed solver paths. Antipodal arcs
 are omitted. Pausing retains trails and permits camera rotation. Tests render
 pole/seam crossings after ring wrap and verify back-face occlusion.
+
+## Native C-grid fixture
+
+**C-grid gyre · face velocities** uses a 32 × 32 Cartesian cell grid with separate
+x/y face arrays. Vertex streamfunction differences manufacture a discrete
+divergence-free circulation; exterior faces are valid zeros, not missing data.
+RK2, RK4 and RK45 sample this layout directly. The existing Settings, Graph and
+Trace panels inspect the same simulation pipeline. This is a manufactured fixture,
+not ocean observations or curvilinear-grid support.

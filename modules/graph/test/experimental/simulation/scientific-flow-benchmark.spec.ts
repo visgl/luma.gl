@@ -106,3 +106,89 @@ it('scientific advection compares RK4 and RK45 at matched rotation accuracy', as
   console.info(JSON.stringify(report));
   await context.annotate(JSON.stringify(report), 'scientific-flow-benchmark');
 });
+
+it('scientific C-grid batching reports sparse and dense accuracy versus synchronization cost', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const particleCount = 4096;
+  const input = {
+    layout: 'c-grid' as const,
+    shape: [1, 1] as const,
+    eastward: new Float32Array([0.1, 0.1]),
+    northward: new Float32Array([0, 0]),
+    eastwardValid: new Uint8Array([1, 1]),
+    northwardValid: new Uint8Array([1, 1])
+  };
+  const samples: Record<string, number | string | undefined>[] = [];
+  for (const activeFraction of [1, 1 / 64]) {
+    const activeCount = particleCount * activeFraction;
+    const positions = new Float32Array(particleCount * 2);
+    for (let index = 0; index < particleCount; index++)
+      positions.set([index < activeCount ? 0.25 : -1, 0.5], index * 2);
+    for (let iteration = 0; iteration < 3; iteration++) {
+      for (const dispatchesPerReadback of iteration % 2 ? [16, 4, 1] : [1, 4, 16]) {
+        const tracer = new ScientificFlowTracer(device, {
+          input,
+          bounds: [0, 0, 1, 1],
+          positions,
+          tolerance: 1e-5,
+          maximumTimeStep: 0.01,
+          maximumAttempts: 1,
+          dispatchesPerReadback
+        });
+        try {
+          const started = performance.now();
+          let result = await tracer.advance(0.64);
+          let calls = 1;
+          let acceptedSteps = result.acceptedSteps;
+          let gpuMilliseconds = result.gpuMilliseconds;
+          while (!result.complete) {
+            result = await tracer.continue();
+            calls++;
+            acceptedSteps += result.acceptedSteps;
+            if (gpuMilliseconds !== undefined && result.gpuMilliseconds !== undefined)
+              gpuMilliseconds += result.gpuMilliseconds;
+          }
+          const wallMilliseconds = performance.now() - started;
+          const bytes = await tracer.output.readAsync();
+          const values = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+          const error = Math.abs(values[0] - 0.314);
+          expect(error).toBeLessThan(1e-5);
+          expect(result.active).toBe(activeCount);
+          expect(result.outsideDomain).toBe(particleCount - activeCount);
+          if (iteration > 0)
+            samples.push({
+              activeFraction,
+              dispatchesPerReadback,
+              calls,
+              dispatches: result.dispatchIndex,
+              counterReadbackBytes: calls * result.counterReadbackBytes,
+              acceptedSteps,
+              error,
+              gpuMilliseconds,
+              wallMilliseconds,
+              particleStateBytes: particleCount * 48,
+              batchUniformAndCounterBytes: dispatchesPerReadback * 100
+            });
+        } finally {
+          tracer.destroy();
+        }
+      }
+    }
+  }
+  const report = {
+    benchmark: 'SCIENTIFIC_CGRID_BATCH_COST',
+    device: device.info,
+    particleCount,
+    durationSeconds: 0.64,
+    gridCells: [1, 1],
+    tolerance: 1e-5,
+    maximumTimeStep: 0.01,
+    wallTimeIncludes:
+      'encoding, submission, counter synchronization and optional timing readback; excludes allocation, final particle readback and rendering',
+    memoryExcludes: 'shared field, kernel and timing snapshots',
+    samples
+  };
+  console.info(JSON.stringify(report));
+  await context.annotate(JSON.stringify(report), 'scientific-cgrid-batch-benchmark');
+});

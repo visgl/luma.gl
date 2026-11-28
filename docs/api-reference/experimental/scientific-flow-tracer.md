@@ -30,9 +30,10 @@ error**, not accumulated trajectory error or grid-interpolation error. Cartesian
 errors use bounds units. With `coordinates: 'lnglat'`, velocities and tolerance use
 metres per second and metres; longitude displacement accounts for latitude.
 
-Spatial sampling is bilinear and requires all four grid corners to be valid.
+Collocated sampling is bilinear and requires all four grid corners to be valid.
+Cartesian C-grid inputs use face-preserving interpolation; see [staggered fields](./staggered-flow-fields.md).
 Optional `nextInput` and `timeRange: [start, end]` enable linear interpolation in time
-at every RK stage. Both snapshots must share dimensions, bounds and coordinates.
+at every RK stage. Both snapshots must share layout, texture dimensions, bounds and coordinates.
 At an interval endpoint, `setNextSnapshot(input, endTime)` rotates the pair without
 resetting particles. No extrapolation is permitted.
 
@@ -49,14 +50,17 @@ advance the particle's age/request clock produces `NumericalFailure`. A final
 roundoff-sized request remainder is still integrated and checked against the
 tolerance, even when it is smaller than the age clock can represent. Very strict
 tolerances can reach float32 limits. This API supports forward tracing on regular
-collocated 2D grids; curvilinear/staggered grids, 3D fields, diffusion, boundary
+collocated or Cartesian C-grids; curvilinear grids, 3D fields, diffusion, boundary
 sliding and global trajectory-error guarantees are outside its current scope.
 
 ## Bounded work and clocks
 
-Each awaited `advance()` or `continue()` submits one dispatch, with at most
-`maximumAttempts` trials per particle (default 32, range 1–256). Rejected trials
-consume that budget. `complete: false` means work remains for the same requested
+Each awaited `advance()` or `continue()` submits `dispatchesPerReadback` dispatches
+(default 1, range 1–32), each with at most `maximumAttempts` trials per particle
+(default 32, range 1–256). Rejected trials consume that budget. A batch is submitted
+without waiting for CPU counters between dispatches. Completed particles skip later
+trials, but every dispatch still launches all particle slots; this is not active
+compaction. Use small batches for responsiveness and larger ones for long traces. `complete: false` means work remains for the same requested
 horizon. Resume with `continue()` before starting another request or rotating a
 snapshot. Calls must not overlap. Await the current call before destroying resources.
 
@@ -67,10 +71,14 @@ means every particle reached the horizon **or explicitly stopped**; inspect stat
 counts to distinguish these outcomes. `remainingTime` bounds the next request for
 a time-dependent field. Stationary fields have no interval bound.
 
-Each dispatch reads back nine counters (36 bytes), never particle positions.
-Results include `pending`, counts for each status, and per-dispatch `acceptedSteps`
-and `rejectedSteps`. If the device enables `timestamp-query`, `gpuMilliseconds`
-reports compute-pass duration; it excludes readback latency and rendering. A
+Each call reads one contiguous counter snapshot of `36 * dispatchesPerReadback`
+bytes, never particle positions. `counterReadbackBytes` reports that size.
+`pending` and status counts describe the last dispatch; `acceptedSteps` and
+`rejectedSteps` sum all work in the batch, including rejected trials. The fixed
+batch may contain idle tail dispatches after an early completion. `previous` retains
+the state before the whole call, so idle tails do not erase the rendered segment. It cannot commit
+the CPU horizon until readback finishes. If the device enables `timestamp-query`,
+`gpuMilliseconds` sums compute-pass durations across the batch; it excludes readback latency and rendering. A
 submission/readback failure disables further advancement of that tracer; destroy
 it and create a new instance.
 
@@ -84,9 +92,11 @@ dependency. Snapshot rotation rebinds both velocity textures on the next encodin
 Use `advance()` and `continue()` for execution; encoding `commandGraph` directly
 bypasses the tracer's request and readback lifecycle.
 
-The returned `encoding` is the actual submitted `GPUCommandGraphEncoding`. Register
-`tracer.commandGraph` with `GPUCommandGraphInspector` and record `result.encoding`
-to inspect it without executing another simulation step. `dispatchIndex` counts
+The returned `encodings` contains every submitted `GPUCommandGraphEncoding` in order;
+`encoding` remains the final one for compatibility. `dispatchCount` reports the batch
+size. Per-dispatch counter staging copies occur outside the integration graph. Register
+`tracer.commandGraph` with `GPUCommandGraphInspector` and record every entry in `result.encodings`
+to inspect a batch without executing another simulation step. `dispatchIndex` counts
 submitted dispatches from one; `isContinuation` distinguishes resumed work, and
 `targetTime` identifies the requested horizon even while `time` is uncommitted.
 

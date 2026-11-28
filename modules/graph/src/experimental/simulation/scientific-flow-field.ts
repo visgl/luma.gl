@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, Texture, type Device} from '@luma.gl/core';
+import {uploadStaggeredFlowField, type StaggeredVectorFieldInput} from './staggered-flow-field';
 import {validateFlowParticleDomain, type FlowParticleField} from './flow-particle-field';
 
 /**
@@ -10,6 +11,8 @@ import {validateFlowParticleDomain, type FlowParticleField} from './flow-particl
  * No runtime dependency on @loaders.gl/scientific is required.
  */
 export type ScientificVectorFieldInput = {
+  /** Collocated node samples; omitted for loaders.gl structural compatibility. */
+  layout?: 'collocated';
   dimensions: readonly [string, string];
   shape: readonly [number, number]; // [rows, columns]
   eastward: Float32Array;
@@ -22,6 +25,9 @@ export type ScientificVectorFieldInput = {
     latitudeStep: number;
   };
 };
+/** Supported native sampling layouts. */
+export type ScientificFlowInput = ScientificVectorFieldInput | StaggeredVectorFieldInput;
+
 export type ScientificFlowFieldProps = {
   id?: string;
   /** Required for grids lacking geographic coordinates. */
@@ -30,10 +36,12 @@ export type ScientificFlowFieldProps = {
   /** Wrap the horizontal coordinate; the first and last grid columns must represent the same meridian. */
   periodicLongitude?: boolean;
   /** Input row zero must represent the southern/lower edge. */
-  input: ScientificVectorFieldInput;
+  input: ScientificFlowInput;
 };
 /** Uploads normalized scientific vector components into a GPU-resident velocity texture. */
 export class ScientificFlowField {
+  /** Texture interpretation, retained across temporal snapshots. */
+  readonly layout: 'collocated' | 'c-grid';
   readonly texture: Texture;
   readonly maximumCellSpeed: number;
   readonly periodicLongitude: boolean;
@@ -41,6 +49,23 @@ export class ScientificFlowField {
   constructor(device: Device, props: ScientificFlowFieldProps) {
     const {input} = props;
     this.periodicLongitude = props.periodicLongitude ?? false;
+    this.layout = input.layout ?? 'collocated';
+    if (input.layout === 'c-grid') {
+      // C-grids require exterior bounds in Cartesian units; geographic metrics and basis rotation are unsupported.
+      assert(props.bounds && props.coordinates !== 'lnglat');
+      /** Owned packed faces and their conservative timestep speed bound. */
+      const uploaded = uploadStaggeredFlowField(
+        device,
+        input,
+        props.bounds,
+        this.periodicLongitude,
+        props.id
+      );
+      this.texture = uploaded.texture;
+      this.maximumCellSpeed = uploaded.maximumCellSpeed;
+      this.field = {texture: this.texture, bounds: props.bounds, coordinates: 'cartesian'};
+      return;
+    }
     const [height, width] = input.shape;
     assert(
       Number.isSafeInteger(width) &&

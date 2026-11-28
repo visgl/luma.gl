@@ -31,6 +31,8 @@ export type {
   FlowParticleStepResult,
   FlowFieldAtlasProps,
   ScientificVectorFieldInput,
+  ScientificFlowInput,
+  StaggeredVectorFieldInput,
   ScientificFlowFieldProps,
   ScientificFlowGraphProps,
   ScientificFlowTracerProps,
