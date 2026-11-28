@@ -32,7 +32,12 @@ const scalarFunctions = [
   'ln',
   'log10',
   'asin',
-  'acos'
+  'acos',
+  'sin',
+  'cos',
+  'tan',
+  'atan',
+  'exp'
 ] as const;
 
 /** Numeric functions supported by GPU DataFrame expressions. */

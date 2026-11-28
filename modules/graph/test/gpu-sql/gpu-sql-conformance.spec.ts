@@ -14,7 +14,20 @@ import {
   GPUDataFrame
 } from '@luma.gl/graph/gpu-dataframe';
 import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
-import {ABS, ACOS, ASIN, LN, LOG10, ROUND, SQRT} from '@math.gl/sql/math-functions';
+import {
+  ABS,
+  ACOS,
+  ASIN,
+  ATAN,
+  COS,
+  EXP,
+  LN,
+  LOG10,
+  ROUND,
+  SIN,
+  SQRT,
+  TAN
+} from '@math.gl/sql/math-functions';
 import {queryArrowSQL} from '@math.gl/sql/query';
 import * as arrow from 'apache-arrow';
 import {expect, test} from 'vitest';
@@ -131,6 +144,41 @@ test.each(domainFunctions)('$name agrees on valid inputs and writes null for inv
   expect(result?.get(3)).toBeNull();
   expect(result?.get(4)).toBeNull();
   expect(result?.get(5)).toBeNull();
+});
+
+test.each([
+  {name: 'SIN', implementation: SIN},
+  {name: 'COS', implementation: COS},
+  {name: 'TAN', implementation: TAN},
+  {name: 'ATAN', implementation: ATAN},
+  {name: 'EXP', implementation: EXP}
+])('$name matches math.gl Arrow on finite inputs and preserves nulls', async ({
+  name,
+  implementation
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = makeSamples([1, 2, 3, 4, 5, 6], [-0.75, 0, 0.75, null, Infinity, NaN]);
+  const sql = `SELECT ${name}(score) AS result FROM samples`;
+  const reference = queryArrowSQL(sql + ' WHERE id <= 3', new Map([['samples', input]]), {
+    functions: [implementation]
+  });
+  const result = (await executeGPUQuery(device, input, sql)).getChild('result');
+  expect(result?.type).toBeInstanceOf(arrow.Float32);
+  for (const index of [0, 1, 2]) {
+    expect(result?.get(index)).toBeCloseTo(reference.getChild('result')?.get(index), 5);
+  }
+  expect(Array.from(result ?? []).slice(3)).toEqual([null, null, null]);
+});
+
+test('EXP returns null when its Float32 result would overflow', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = makeSamples([1, 2, 3, 4], [88, 88.72283935546875, 100, -105]);
+  const output = await executeGPUQuery(device, input, 'SELECT EXP(score) AS result FROM samples');
+  const result = output.getChild('result');
+  expect(result?.get(0) / Math.exp(88)).toBeCloseTo(1, 5);
+  expect(Array.from(result ?? []).slice(1)).toEqual([null, null, 0]);
 });
 
 test('binds quoted dotted columns separately from table-qualified columns', async () => {
