@@ -25,8 +25,8 @@ export type SphericalFlowGraphProps = {
   radius: number;
   /** Fixed-step midpoint or classical RK4. */
   integrator?: 'rk2' | 'rk4';
-  /** Caller accuracy cap in seconds, additionally bounded by angular grid spacing and field speed. */
-  maximumTimeStep?: number;
+  /** Required physical accuracy cap in seconds, additionally bounded by angular grid spacing and speed. */
+  maximumTimeStep: number;
 };
 
 /** GPU-resident sphere transport without longitude state, pole clamps, respawn or implicit readback. */
@@ -39,16 +39,27 @@ export class SphericalFlowGraph {
   readonly integrator: 'rk2' | 'rk4';
   /** Actual command graph, available for inspection and profiling. */
   readonly commandGraph: CompiledGPUCommandGraph;
+  /** Device receiving owned allocations and submissions. */
   private readonly device: Device;
+  /** Alternating stable-particle buffers. */
   private readonly states: readonly [Buffer, Buffer];
+  /** Parameters for the next submitted batch. */
   private readonly uniforms: Buffer;
+  /** Spherical integration kernel. */
   private readonly kernel: Kernel;
+  /** Explicit physical timestep accuracy cap supplied by the caller. */
   private readonly stepLimit: number;
+  /** Start of the resident snapshot interval. */
   private currentField: SphericalFlowField;
+  /** End of the resident snapshot interval. */
   private nextField: SphericalFlowField;
+  /** Index of the current state buffer. */
   private current = 0;
+  /** Physical start and end times, omitted for steady fields. */
   private interval: readonly [number, number] | undefined;
+  /** Elapsed time within the resident interval. */
   private elapsed = 0;
+  /** Compensated summation residual for the clock. */
   private compensation = 0;
 
   /** Upload a stable release and own its state, snapshots and execution resources. */
@@ -63,7 +74,8 @@ export class SphericalFlowGraph {
     this.radius = props.radius;
     this.particleCount = props.positions.length / 3;
     this.integrator = props.integrator ?? 'rk4';
-    this.stepLimit = props.maximumTimeStep ?? 1 / 30;
+    this.stepLimit = props.maximumTimeStep;
+    // Require a physical timestep rather than silently using a rendering-frame duration.
     assert(Number.isFinite(this.stepLimit) && this.stepLimit > 0);
     assert(
       this.particleCount <= 1048576 &&
@@ -229,7 +241,12 @@ export class SphericalFlowGraph {
 
   /** Encode at most 4096 substeps into one dispatch. Submit before recording again or rotating snapshots. */
   record(encoder: CommandEncoder, deltaTime: number, substeps = 1): GPUCommandGraphEncoding {
-    assert(Number.isFinite(deltaTime) && deltaTime >= 0 && deltaTime <= this.maximumTimeStep);
+    // Dividing a horizon into equal steps can round one ulp above the requested cap.
+    assert(
+      Number.isFinite(deltaTime) &&
+        deltaTime >= 0 &&
+        deltaTime <= this.maximumTimeStep * (1 + 1e-12)
+    );
     assert(Number.isInteger(substeps) && substeps >= 1 && substeps <= 4096);
     const duration = deltaTime * substeps;
     assert(Number.isFinite(duration) && duration <= this.remainingTime * (1 + 1e-12));
@@ -266,12 +283,23 @@ export class SphericalFlowGraph {
     return encoding;
   }
 
-  /** Submit a bounded interval without any CPU counter or particle readback. */
+  /** Submit an interval in batches of at most 4096 substeps, without CPU readback. */
   advance(duration: number): Buffer {
+    // Validate the complete horizon before submitting any work.
+    assert(
+      Number.isFinite(duration) && duration >= 0 && duration <= this.remainingTime * (1 + 1e-12)
+    );
     const substeps = Math.max(1, Math.ceil(duration / this.maximumTimeStep));
-    const encoder = this.device.createCommandEncoder();
-    this.record(encoder, duration / substeps, substeps);
-    this.device.submit(encoder.finish());
+    // A safe integer keeps the bounded-dispatch loop progressing exactly.
+    assert(Number.isSafeInteger(substeps));
+    const deltaTime = duration / substeps;
+    for (let completed = 0; completed < substeps; ) {
+      const batchSteps = Math.min(4096, substeps - completed);
+      const encoder = this.device.createCommandEncoder();
+      this.record(encoder, deltaTime, batchSteps);
+      this.device.submit(encoder.finish());
+      completed += batchSteps;
+    }
     return this.output;
   }
 

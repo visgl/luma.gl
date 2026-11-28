@@ -261,6 +261,7 @@ struct View {size: vec4f, options: vec4f};
         nextInput: makeSphericalField(snapshotEnd),
         timeRange: [0, snapshotEnd],
         positions: makeSphericalPositions(activeCount),
+        maximumTimeStep: 1 / 30,
         radius: 1,
         integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
       });

@@ -48,13 +48,16 @@ snapshot interpolation. Advance only within the resident interval. At its endpoi
 `setNextSnapshot(input, endSeconds)` retains the endpoint field, installs the next
 one and preserves particle states and identities. Steady fields omit both options.
 
-`maximumTimeStep` is the smaller of the caller cap (default 1/30 second) and an
+`maximumTimeStep` is the smaller of the required caller cap and an
 angular-grid travel cap based on the maximum snapshot speed. This is not an error
 tolerance or a guarantee of resolving every longitudinal cell near the poles.
 Qualify both spatial resolution and timestep for each field.
 
-`advance(duration)` submits at most 4096 substeps in one dispatch and performs no
-CPU readback. For caller-owned submission, use
+`advance(duration)` splits the requested duration across dispatches of at most 4096
+substeps and performs no CPU readback. Choose a physical timestep appropriate to
+the field and radius: very small angular increments can accumulate float32
+rounding error, so smaller steps do not always improve accuracy. There is no
+frame-rate-based default. For caller-owned submission, use
 `record(encoder, deltaTime, substeps)`, then submit before recording again or
 rotating snapshots. `commandGraph` exposes the actual compute pass for graph
 inspection and profiling. The graph owns its two particle buffers, snapshots,
