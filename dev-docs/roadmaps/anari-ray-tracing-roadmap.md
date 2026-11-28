@@ -126,6 +126,9 @@ scene on an integrated GPU and a discrete GPU before choosing numeric targets.
 | P4 · Improve hierarchy quality | Use P1 counters to identify poor Morton trees or refit degradation. Try quality-triggered rebuilds and a higher-quality static BLAS builder before changing traversal format. Evaluate a compact wide hierarchy if node traffic still dominates on large assets. | Report build, refit, and trace cost separately and find the number of reused frames needed to repay a more expensive build. [Parallel high-quality BVH construction](https://research.nvidia.com/publication/2013-07_fast-parallel-construction-high-quality-bounding-volume-hierarchies) |
 | P5 · Prototype a staged tracer | The current trace dispatch mixes primary traversal, shading, shadow visibility, and continuation loops. If P1–P4 still leave a material divergence cost, prototype a bounded shadow or continuation queue as GPU Command Graph passes. Retain the existing path as the benchmark control. | Include compaction, queue memory traffic, and pass overhead in time-to-quality comparisons. Adopt the staged path only for workloads where it improves end-to-end results. [Mapping path tracing to the GPU](https://pbr-book.org/4ed/Wavefront_Rendering_on_GPUs/Mapping_Path_Tracing_to_the_GPU) |
 
+P1 now exposes per-pass timing reports and opt-in sampled traversal counters through
+the capture harness. The multi-device baseline and numeric targets remain open.
+
 The submission budget controller manages latency by pacing ray batches. Compare
 it at matched sample counts before attributing any throughput gain to it.
 

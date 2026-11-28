@@ -348,6 +348,35 @@ node scripts/playwright/chart-baseline-capture.mjs --compare-motion \
   --hardware "GPU and driver" --output /tmp/motion-reconstruction
 ```
 
+Captures with `--gpu-timing` include `graphTimings` in each checkpoint's metadata.
+The reports keep GPU Graph node IDs and separate topology, acceleration build,
+acceleration refit, and trace graph costs. The trace graph contains history carry,
+ray tracing, and presentation. Pass times are available on timestamp-capable
+devices and exclude queue latency, startup, and readback.
+
+Run the traversal capture separately to avoid measuring the instrumented shader:
+
+```sh
+node scripts/playwright/chart-baseline-capture.mjs --sample-traversal \
+  --frames 4 --width 640 --height 480
+```
+
+The capture reports raw counts from the final encoded frame. Each 8×8 dispatch
+tile samples its top-left lane when that lane maps to a valid pixel. The report
+includes sampled pixels, primary and guide rays, shadow queries, continuation
+rays, TLAS and BLAS nodes visited by the nearest-hit and any-hit walkers, and
+triangle intersection tests. Counts describe the selected lanes and active
+interleave phase. Spatial correlation can bias them, so use matched scenes,
+resolutions, and phase settings when comparing results.
+
+Applications can enable `sampleTraversal` on the ray-tracing renderer and call
+`statistics.rayTracing?.readTraversalCounters?.()` after submitting the frame
+and before encoding the next one. The diagnostic is disabled by default.
+When an application wraps frame encoding in an encoder timestamp-query scope,
+`statistics.rayTracing?.readGraphTimings?.()` reads the per-stage reports after
+submission.
+
+
 The benchmark runs Chart Motion and a glossy variant that animates emissive
 marks above the reflective Chart Materials floor. For each scene it starts a
 fresh reference directly at the target pose, disables reprojection and spatial

@@ -130,3 +130,62 @@ it('preserves stationary HDR and confidence with split histories through sparse 
     device.destroy();
   }
 });
+
+it('reports sampled traversal counts from the submitted frame', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const device = await webgpuAdapter.create({featureLevel: 'core'});
+  const framebuffer = device.createFramebuffer({
+    width: 16,
+    height: 16,
+    colorAttachments: ['rgba8unorm']
+  });
+  const renderer = new RayTracingSceneRenderer(device);
+  try {
+    const scene: RayTracingSceneRenderOptions = {
+      id: 'traversal-counters',
+      framebuffer,
+      width: 16,
+      height: 16,
+      camera: {
+        position: [0, 0, 4],
+        projectionMatrix: new Matrix4().perspective({
+          fovy: Math.PI / 3,
+          aspect: 1,
+          near: 0.1,
+          far: 20
+        }),
+        viewMatrix: new Matrix4().lookAt({eye: [0, 0, 4], center: [0, 0, 0], up: [0, 1, 0]})
+      },
+      primitives: {sphere: {type: 'sphere', radius: 1}},
+      surfaces: [
+        {
+          id: 'sphere',
+          geometry: new Geometry({
+            attributes: {POSITION: {size: 3, value: new Float32Array([0, 0, 0])}}
+          }),
+          material: {id: 'matte', uniforms: {baseColorFactor: [0.5, 0.5, 0.5, 1]}},
+          transforms: [new Matrix4()]
+        }
+      ],
+      lights: [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 2}],
+      resolutionScale: 1,
+      adaptiveResolution: false,
+      samplesPerPixel: 1,
+      maxBounces: 1,
+      sampleTraversal: true
+    };
+    const measured = renderer.render(scene);
+    device.submit();
+    const counters = await measured.rayTracing?.readTraversalCounters?.();
+    expect(counters).toMatchObject({sampledPixels: 4, primaryRays: 4, guideRays: 4});
+    expect(counters?.tlasNodes).toBeGreaterThan(0);
+    expect(counters?.shadowRays).toBeGreaterThan(0);
+    expect(counters?.continuationRays).toBeGreaterThan(0);
+    renderer.destroyFrame(scene.id);
+    expect(await measured.rayTracing?.readTraversalCounters?.()).toBeNull();
+  } finally {
+    renderer.destroy();
+    framebuffer.destroy();
+    device.destroy();
+  }
+});

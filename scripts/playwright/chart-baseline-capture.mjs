@@ -16,6 +16,7 @@ const {values} = parseArgs({options: {
   reference: {type: 'string'},
   'linear-hdr': {type: 'boolean'},
   'gpu-timing': {type: 'boolean'},
+  'sample-traversal': {type: 'boolean'},
   'compare-emitters': {type: 'boolean'},
   'compare-reconstruction': {type: 'boolean'},
   'compare-motion': {type: 'boolean'},
@@ -91,6 +92,9 @@ if (values['linear-hdr'] && (values.renderer !== 'raytrace' || values.view !== '
 const compareEmitters = values['compare-emitters'];
 const compareReconstruction = values['compare-reconstruction'];
 const gpuTiming = compareMotion || compareEmitters || compareReconstruction || values['gpu-timing'];
+if (values['sample-traversal'] && (gpuTiming || values.renderer !== 'raytrace')) {
+  throw new Error('Traversal sampling requires raytrace and a separate capture from GPU timing');
+}
 if (gpuTiming && values.renderer !== 'raytrace') throw new Error('GPU timing requires raytrace');
 if (compareEmitters && (!values['linear-hdr'] || !values['frame-sweep'] ||
   values['emitter-selection'] !== undefined || values.emitters === 'off' || values.motion)) {
@@ -120,6 +124,7 @@ if (compareMotion && (
 const linearHdr = compareMotion || values['linear-hdr'];
 const url = new URL(values.url);
 if (gpuTiming) url.searchParams.set('captureGpuTiming', '1');
+if (values['sample-traversal']) url.searchParams.set('sampleTraversal', '1');
 if (linearHdr) {
   url.searchParams.set('captureRadiance', '1');
   url.searchParams.set('captureWidth', String(width));
@@ -309,6 +314,11 @@ async function captureFrameCount(browser, output, frames, poseReference) {
     if (!clip) throw new Error('The capture canvas is hidden');
     const capture = await page.screenshot({clip, path: `${output}/chart.png`, timeout: 60000});
     const frameGpuTimes = gpuTiming ? await canvas.evaluate(element => element.readCaptureGpuTimes()) : undefined;
+    const graphTimings = gpuTiming ? await canvas.evaluate(element => element.readCaptureGraphTimings()) : undefined;
+    const traversalCounters = values['sample-traversal']
+      ? await canvas.evaluate(element => element.readCaptureTraversal())
+      : undefined;
+    if (values['sample-traversal'] && !traversalCounters) throw new Error('No sampled traversal data was available');
     const frameGpuTiming = summarizeFrameGpuTimes(frameGpuTimes, frames);
     const gpuTimeMilliseconds = frameGpuTiming?.totalMilliseconds ?? null;
     const motionTimeSeconds = compareMotion || values.motion ? Number(metadata.animationTimeSeconds) : undefined;
@@ -345,7 +355,7 @@ async function captureFrameCount(browser, output, frames, poseReference) {
     }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
     await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed: captureSeed, frames, viewport: [width, height],
-      gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, motionTimeSeconds,
+      gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, graphTimings, traversalCounters, motionTimeSeconds,
       comparisonSpace: linearHdr ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
       note: 'Elapsed time includes startup and output readback; GPU pass timestamps exclude browser startup, screenshots and readback. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));

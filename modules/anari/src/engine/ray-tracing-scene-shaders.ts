@@ -392,7 +392,15 @@ fn intersectSphere(ray: Ray, radius: f32, minimumDistance: f32, maximumDistance:
   return select(RAY_INFINITY, distance, distance > minimumDistance && distance < maximumDistance);
 }
 
+// Counters are private to a sampled invocation. Each sampled lane owns its output texels.
+const SAMPLE_TRAVERSAL = /* SAMPLE_TRAVERSAL */ false;
+var<private> traversalSampled: bool;
+var<private> rayCounts: vec4<u32>;
+var<private> traversalCounts: vec3<u32>;
+/* TRAVERSAL_COUNTER_BINDING */
+
 fn intersectTriangle(ray: Ray, triangle: RayTriangle, maximumDistance: f32) -> vec3<f32> {
+  if (SAMPLE_TRAVERSAL && traversalSampled) { traversalCounts.z++; }
   let firstEdge = triangle.secondPosition.xyz - triangle.firstPosition.xyz;
   let secondEdge = triangle.thirdPosition.xyz - triangle.firstPosition.xyz;
   let perpendicular = cross(ray.direction, secondEdge);
@@ -557,6 +565,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
   var pendingBlasCount = 1u;
   pendingBlasNodes[0] = PendingRayNode(0u, rootBlasDistance);
   while (pendingBlasCount > 0u) {
+    if (SAMPLE_TRAVERSAL && traversalSampled) { traversalCounts.y++; }
     pendingBlasCount--;
     let pendingBlasNode = pendingBlasNodes[pendingBlasCount];
     if (pendingBlasNode.entryDistance >= closestHit.distance) {
@@ -673,6 +682,7 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
   var pendingBlasCount = 1u;
   pendingBlasNodes[0] = PendingRayNode(0u, rootBlasDistance);
   while (pendingBlasCount > 0u) {
+    if (SAMPLE_TRAVERSAL && traversalSampled) { traversalCounts.y++; }
     pendingBlasCount--;
     let pendingBlasNode = pendingBlasNodes[pendingBlasCount];
     if (pendingBlasNode.entryDistance >= maximumDistance) {
@@ -744,6 +754,7 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
   pendingNodes[0] = PendingRayNode(0u, rootDistance);
 
   while (pendingCount > 0u) {
+    if (SAMPLE_TRAVERSAL && traversalSampled) { traversalCounts.x++; }
     pendingCount--;
     let pendingNode = pendingNodes[pendingCount];
     if (pendingNode.entryDistance >= closestHit.distance) {
@@ -786,6 +797,7 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
 }
 
 fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
+  if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.z++; }
   if (uniforms.dimensions.z == 0u || maximumDistance <= RAY_EPSILON) {
     return false;
   }
@@ -801,6 +813,7 @@ fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
   pendingNodes[0] = PendingRayNode(0u, rootDistance);
 
   while (pendingCount > 0u) {
+    if (SAMPLE_TRAVERSAL && traversalSampled) { traversalCounts.x++; }
     pendingCount--;
     let pendingNode = pendingNodes[pendingCount];
     if (pendingNode.entryDistance >= maximumDistance) {
@@ -1252,6 +1265,7 @@ fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
   var mediumStart = 0.0;
   for (var interfaceIndex = 0u; interfaceIndex <= 8u; interfaceIndex++) {
     let remaining = maximumDistance - traveled;
+    if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.z++; }
     let blocker = intersectScene(segment, remaining);
     if (blocker.distance >= remaining) {
       if (medium == 0xffffffffu) { return transmission; }
@@ -2417,6 +2431,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     }
     ray = makeSurfaceRay(ray, receiverDistance,
       position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
+    if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.w++; }
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through dielectric paths without
@@ -2517,6 +2532,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     let surfaceNormal = getFaceNormal(hit, ray);
     if (dot(surfaceNormal, direction) <= 0.0) { break; }
     ray = makeSurfaceRay(ray, receiverDistance, position + surfaceNormal * 0.002, normalize(direction));
+    if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.w++; }
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       if (ENVIRONMENT_LIGHTING_ENABLED) {
@@ -2567,11 +2583,14 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let phaseCount = max(uniforms.displayPhase.w, 1u);
   let phaseOffset = (uniforms.displayPhase.z + invocation.y) % phaseCount;
   let pixel = vec2<u32>(invocation.x * phaseCount + phaseOffset, invocation.y);
+  /* TRAVERSAL_SAMPLE */
   if (pixel.x >= uniforms.dimensions.x || pixel.y >= uniforms.dimensions.y) {
+    /* TRAVERSAL_EMPTY */
     return;
   }
 
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
+  if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.y++; }
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
   var accumulatedColor = vec3<f32>(0.0);
@@ -2580,6 +2599,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
     let sampleOffset = makeRadianceSampleOffset(pixel, sampleIndex);
     let ray = makeCameraRay(pixel, sampleIndex);
+    if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.x++; }
     var hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     var specular = vec3<f32>(0.0);
@@ -2636,8 +2656,38 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
   textureStore(outputMetadata, vec2<i32>(pixel), metadata);
   /* MOMENT_STORE */
+  /* TRAVERSAL_STORE */
 }
 `;
+
+/** Adds one pair of counter texels per 8×8 dispatch tile, without a storage buffer binding. */
+export function getSampledRayTraversalShader(source: string): string {
+  return source
+    .replace('/* SAMPLE_TRAVERSAL */ false', 'true')
+    .replace(
+      '/* TRAVERSAL_COUNTER_BINDING */',
+      '@group(0) @binding(15) var traversalOutput: texture_storage_2d<rgba32uint, write>;'
+    )
+    .replace(
+      '/* TRAVERSAL_SAMPLE */',
+      `traversalSampled = all(invocation.xy % 8u == vec2<u32>(0u));
+  let counterPixel = vec2<i32>(invocation.xy / 8u) * vec2<i32>(2, 1);`
+    )
+    .replace(
+      '/* TRAVERSAL_EMPTY */',
+      `if (traversalSampled) {
+      textureStore(traversalOutput, counterPixel, vec4<u32>(0u));
+      textureStore(traversalOutput, counterPixel + vec2<i32>(1, 0), vec4<u32>(0u));
+    }`
+    )
+    .replace(
+      '/* TRAVERSAL_STORE */',
+      `if (traversalSampled) {
+    textureStore(traversalOutput, counterPixel, rayCounts);
+    textureStore(traversalOutput, counterPixel + vec2<i32>(1, 0), vec4<u32>(traversalCounts, 1u));
+  }`
+    );
+}
 
 /** Packs diffuse, specular, and composed radiance into one sampled/storage binding. */
 export function getSplitRayTracingHistoryShader(source: string): string {

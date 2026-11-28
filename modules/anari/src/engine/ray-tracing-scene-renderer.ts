@@ -39,6 +39,7 @@ import {GPUBVH} from '@luma.gl/graph/gpu-core';
 import {
   type CompiledGPUCommandGraph,
   GPUCommandGraph,
+  type GPUCommandGraphEncoding,
   type GPUCommandGraphEncodingStats,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
@@ -54,12 +55,14 @@ import {
   RAY_OPAQUE_ALPHA_MODE,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   getRayTracingMomentShader,
+  getSampledRayTraversalShader,
   getSplitRayTracingHistoryShader,
   RAY_TRACING_SCENE_SHADER,
   RAY_TRACING_IRRADIANCE_SHADER,
   RAY_TRACING_PICK_SHADER,
   RAY_TRACING_CHANNEL_SHADER
 } from './ray-tracing-scene-shaders';
+import type {ANARIRayTraversalCounters} from '../anari-types';
 import type {
   RayTracingGraphStageStatistics,
   RayTracingGraphStatistics,
@@ -508,6 +511,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   varianceGuidance?: boolean;
   /** Track first-interface diffuse and specular radiance independently in PBR transport. */
   separateLobeHistories?: boolean;
+  /** Collect raw ray and node counts from one lane per 8×8 trace dispatch tile. */
+  sampleTraversal?: boolean;
   /** Presentation diagnostics; defaults to color. */
   debugView?: RayTracingDebugView;
   /** Diffuse legacy transport or opt-in opaque metallic/roughness transport. */
@@ -663,6 +668,7 @@ type RayTracingShaderOptions = {
   /** Whether the trace graph retains luminance moments. */
   trackMoments: boolean;
   separateLobeHistories: boolean;
+  sampleTraversal: boolean;
   /** Whether the color pipeline computes alpha-mask footprints. */
   filteredCutouts: boolean;
   /** Whether analytic shadow rays support thin transmission. */
@@ -709,6 +715,7 @@ type RayTracingFrameResources = {
   metadataHistory: GPUTextureHistory;
   /** Optional retained first and second log-luminance moments. */
   momentHistory?: GPUTextureHistory;
+  traversalTexture?: Texture;
   topologyGraph: CompiledGPUCommandGraph;
   /** Lazily compiled mesh bounds update that reads the retained triangle order. */
   meshRefitGraph?: CompiledGPUCommandGraph;
@@ -780,6 +787,8 @@ type RayTracingStatistics = {
   frameTimeMilliseconds: number;
   accumulatedSamples: number;
   graph: RayTracingGraphStatistics;
+  readGraphTimings?: NonNullable<SceneRenderStatistics['rayTracing']>['readGraphTimings'];
+  readTraversalCounters?: NonNullable<SceneRenderStatistics['rayTracing']>['readTraversalCounters'];
   memory: NonNullable<NonNullable<SceneRenderStatistics['rayTracing']>['memory']>;
 };
 
@@ -856,6 +865,7 @@ export class RayTracingSceneRenderer {
     const shaderOptions: RayTracingShaderOptions = {
       separateLobeHistories:
         options.transportMode === 'pbr' && options.separateLobeHistories === true,
+      sampleTraversal: options.sampleTraversal === true,
       trackMoments: options.varianceGuidance === true || options.debugView === 'variance',
       filteredCutouts: options.filteredCutouts === true,
       transmissiveShadows: options.transmissiveShadows === true,
@@ -1220,6 +1230,7 @@ export class RayTracingSceneRenderer {
     );
     if (
       resources.shaderOptions.trackMoments !== shaderOptions.trackMoments ||
+      resources.shaderOptions.sampleTraversal !== shaderOptions.sampleTraversal ||
       resources.shaderOptions.separateLobeHistories !== shaderOptions.separateLobeHistories ||
       resources.displayWidth !== displayWidth ||
       resources.displayHeight !== displayHeight ||
@@ -1314,13 +1325,15 @@ export class RayTracingSceneRenderer {
       })
     );
 
-    let topologyEncodingStats: GPUCommandGraphEncodingStats | undefined;
-    let accelerationEncodingStats: GPUCommandGraphEncodingStats | undefined;
-    let refitEncodingStats: GPUCommandGraphEncodingStats | undefined;
+    let topologyEncoding: GPUCommandGraphEncoding | undefined;
+    let topologyUpdate: 'build' | 'refit' | undefined;
+    let accelerationEncoding: GPUCommandGraphEncoding | undefined;
+    let refitEncoding: GPUCommandGraphEncoding | undefined;
     if (resources.topologyNeedsUpdate) {
-      topologyEncodingStats = resources.topologyGraph.encode(this.device.commandEncoder, {
+      topologyUpdate = 'build';
+      topologyEncoding = resources.topologyGraph.encode(this.device.commandEncoder, {
         parameters: undefined
-      }).stats;
+      });
       resources.topologyNeedsUpdate = false;
       resources.meshRefitsSinceRebuild = 0;
       resources.pendingMeshRefit = undefined;
@@ -1333,25 +1346,26 @@ export class RayTracingSceneRenderer {
         blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
         reuseTriangleOrder: true
       });
-      topologyEncodingStats = resources.meshRefitGraph.encode(this.device.commandEncoder, {
+      topologyUpdate = 'refit';
+      topologyEncoding = resources.meshRefitGraph.encode(this.device.commandEncoder, {
         parameters: undefined
-      }).stats;
+      });
       resources.pendingMeshRefit = undefined;
       resources.meshRefitsSinceRebuild++;
     }
     if (resources.accelerationUpdateMode === 'rebuild') {
-      accelerationEncodingStats = resources.accelerationGraph.encode(this.device.commandEncoder, {
+      accelerationEncoding = resources.accelerationGraph.encode(this.device.commandEncoder, {
         parameters: undefined
-      }).stats;
+      });
       resources.refitsSinceMortonRebuild = 0;
     } else if (resources.accelerationUpdateMode === 'refit') {
-      refitEncodingStats = resources.refitGraph.encode(this.device.commandEncoder, {
+      refitEncoding = resources.refitGraph.encode(this.device.commandEncoder, {
         parameters: undefined
-      }).stats;
+      });
       resources.refitsSinceMortonRebuild++;
     }
     resources.accelerationUpdateMode = 'none';
-    const traceEncodingStats = resources.traceGraph.encode(this.device.commandEncoder, {
+    const traceEncoding = resources.traceGraph.encode(this.device.commandEncoder, {
       parameters: {
         dispatchWidth: Math.ceil(resources.internalWidth / activePhaseCount),
         carryWidth:
@@ -1365,7 +1379,7 @@ export class RayTracingSceneRenderer {
         ...resources.metadataHistory.getBindings('history-metadata', 'output-metadata'),
         ...resources.momentHistory?.getBindings('history-moments', 'output-moments')
       }
-    }).stats;
+    });
     resources.colorHistory.advance();
     resources.metadataHistory.advance();
     resources.momentHistory?.advance();
@@ -1383,6 +1397,9 @@ export class RayTracingSceneRenderer {
       );
     }
 
+    const traversalTexture = resources.traversalTexture;
+    const traversalWidth = 2 * Math.ceil(Math.ceil(resources.internalWidth / activePhaseCount) / 8);
+    const encodedFrameIndex = resources.frameIndex;
     const statistics = {
       surfaceCount: options.surfaces.length,
       instanceCount: resources.primitiveCount,
@@ -1405,10 +1422,30 @@ export class RayTracingSceneRenderer {
           : samplesPerPixel,
         memory: getRayTracingMemoryStatistics(resources),
         graph: makeRayTracingGraphStatistics({
-          topology: topologyEncodingStats,
-          acceleration: accelerationEncodingStats,
-          refit: refitEncodingStats,
-          trace: traceEncodingStats
+          topology: topologyEncoding?.stats,
+          acceleration: accelerationEncoding?.stats,
+          refit: refitEncoding?.stats,
+          trace: traceEncoding.stats
+        }),
+        ...((traceEncoding.canReadGPUTimings ||
+          topologyEncoding?.canReadGPUTimings ||
+          accelerationEncoding?.canReadGPUTimings ||
+          refitEncoding?.canReadGPUTimings) && {
+          readGraphTimings: async () => ({
+            topology: await topologyEncoding?.readTimings(),
+            topologyUpdate,
+            acceleration: await accelerationEncoding?.readTimings(),
+            refit: await refitEncoding?.readTimings(),
+            trace: await traceEncoding.readTimings()
+          })
+        }),
+        ...(traversalTexture && {
+          readTraversalCounters: async () =>
+            this.frames.get(options.id) === resources &&
+            resources.frameIndex === encodedFrameIndex &&
+            resources.traversalTexture === traversalTexture
+              ? readSampledTraversalCounters(traversalTexture, traversalWidth)
+              : null
         })
       } satisfies RayTracingStatistics
     };
@@ -1834,6 +1871,7 @@ export class RayTracingSceneRenderer {
     resources.colorHistory.destroy();
     resources.metadataHistory.destroy();
     resources.momentHistory?.destroy();
+    resources.traversalTexture?.destroy();
     this.frames.delete(frameIdentifier);
   }
 
@@ -1978,6 +2016,9 @@ export class RayTracingSceneRenderer {
           'rg32float'
         )
       : undefined;
+    const traversalTexture = props.shaderOptions.sampleTraversal
+      ? this.createTraversalTexture(internalDimensions.width, internalDimensions.height)
+      : undefined;
     const topologyGraph = this.createTopologyGraph({
       frameIdentifier,
       topology: props.topology,
@@ -2033,7 +2074,8 @@ export class RayTracingSceneRenderer {
       blasTriangleIdsBuffer,
       colorHistory,
       metadataHistory,
-      momentHistory
+      momentHistory,
+      traversalTexture
     });
 
     return {
@@ -2068,6 +2110,7 @@ export class RayTracingSceneRenderer {
       colorHistory,
       metadataHistory,
       momentHistory,
+      traversalTexture,
       topologyGraph,
       accelerationGraph,
       refitGraph,
@@ -2126,6 +2169,7 @@ export class RayTracingSceneRenderer {
     resources.colorHistory.destroy();
     resources.metadataHistory.destroy();
     resources.momentHistory?.destroy();
+    resources.traversalTexture?.destroy();
     resources.colorHistory = this.createTextureHistory(
       frameIdentifier,
       'history',
@@ -2149,6 +2193,9 @@ export class RayTracingSceneRenderer {
           'rg32float'
         )
       : undefined;
+    resources.traversalTexture = shaderOptions.sampleTraversal
+      ? this.createTraversalTexture(internalWidth, internalHeight)
+      : undefined;
     resources.traceGraph = this.createTraceGraph({
       surfaces: resources.retainedSurfaces,
       shaderOptions,
@@ -2167,6 +2214,7 @@ export class RayTracingSceneRenderer {
       blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
       colorHistory: resources.colorHistory,
       metadataHistory: resources.metadataHistory,
+      traversalTexture: resources.traversalTexture,
       momentHistory: resources.momentHistory
     });
     resources.displayWidth = displayWidth;
@@ -2203,12 +2251,23 @@ export class RayTracingSceneRenderer {
       blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
       colorHistory: resources.colorHistory,
       metadataHistory: resources.metadataHistory,
+      traversalTexture: resources.traversalTexture,
       momentHistory: resources.momentHistory
     });
     resources.traceGraph.destroy();
     resources.traceGraph = traceGraph;
     resources.shaderOptions = shaderOptions;
     resources.presentation = presentation;
+  }
+
+  private createTraversalTexture(width: number, height: number): Texture {
+    return this.device.createTexture({
+      id: 'anari-sampled-ray-traversal',
+      width: 2 * Math.ceil(width / 8),
+      height: Math.ceil(height / 8),
+      format: 'rgba32uint',
+      usage: Texture.STORAGE | Texture.COPY_SRC
+    });
   }
 
   private createTextureHistory(
@@ -3357,6 +3416,7 @@ export class RayTracingSceneRenderer {
     metadataHistory: GPUTextureHistory;
     /** Optional retained moments shared by carry, trace, and presentation. */
     momentHistory?: GPUTextureHistory;
+    traversalTexture?: Texture;
   }): CompiledGPUCommandGraph<RayTracingTraceGraphParameters> {
     const graph = new GPUCommandGraph<RayTracingTraceGraphParameters>(this.device, {
       id: `scene-${props.frameIdentifier}-ray-tracing-trace`
@@ -3646,6 +3706,23 @@ export class RayTracingSceneRenderer {
       }
     });
 
+    const traversalView =
+      props.traversalTexture &&
+      graph.createTextureView(
+        graph.importTexture(
+          {
+            id: 'sampled-traversal',
+            format: 'rgba32uint',
+            width: props.traversalTexture.width,
+            height: props.traversalTexture.height,
+            usage: Texture.STORAGE
+          },
+          props.traversalTexture
+        )
+      );
+    const traceSource = momentViews
+      ? getRayTracingMomentShader(RAY_TRACING_SCENE_SHADER)
+      : RAY_TRACING_SCENE_SHADER;
     graph.addComputePass({
       id: `${props.frameIdentifier}-trace-rays`,
       resources: [
@@ -3663,7 +3740,8 @@ export class RayTracingSceneRenderer {
         {texture: historyMetadataView, usage: 'sampled'},
         {texture: outputView, usage: 'storage-write'},
         {texture: outputMetadataView, usage: 'storage-write'},
-        ...momentResources
+        ...momentResources,
+        ...(traversalView ? [{texture: traversalView, usage: 'storage-write' as const}] : [])
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
@@ -3671,9 +3749,7 @@ export class RayTracingSceneRenderer {
           // Avoid compiling the transport and sampling paths the frame cannot use.
           source: getRayMaterialTextureShader(
             specializeHistory(
-              momentViews
-                ? getRayTracingMomentShader(RAY_TRACING_SCENE_SHADER)
-                : RAY_TRACING_SCENE_SHADER
+              traversalView ? getSampledRayTraversalShader(traceSource) : traceSource
             )
               .replace(
                 '/* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u',
@@ -3749,7 +3825,19 @@ export class RayTracingSceneRenderer {
                 access: 'write-only',
                 format: 'rgba16float'
               },
-              ...momentLayout(13)
+              ...momentLayout(13),
+              ...(traversalView
+                ? [
+                    {
+                      name: 'traversalOutput',
+                      type: 'storage' as const,
+                      group: 0,
+                      location: 15,
+                      access: 'write-only' as const,
+                      format: 'rgba32uint' as const
+                    }
+                  ]
+                : [])
             ]
           }
         });
@@ -3775,6 +3863,7 @@ export class RayTracingSceneRenderer {
               historyMetadata: getTextureView(historyMetadataView),
               outputImage: getTextureView(outputView),
               outputMetadata: getTextureView(outputMetadataView),
+              ...(traversalView && {traversalOutput: getTextureView(traversalView)}),
               ...(momentViews && {
                 historyMoments: getTextureView(momentViews.history),
                 outputMoments: getTextureView(momentViews.output)
@@ -3947,6 +4036,53 @@ function makeRayTracingGraphStageStatistics(
     coalescedComputeNodeCount: statistics.coalescedComputeNodeCount,
     cpuEncodeTimeMilliseconds: statistics.cpuEncodeTimeMilliseconds
   };
+}
+
+async function readSampledTraversalCounters(
+  texture: Texture,
+  width: number
+): Promise<ANARIRayTraversalCounters> {
+  const options = {width};
+  const {byteLength, bytesPerRow} = texture.computeMemoryLayout(options);
+  const buffer = texture.device.createBuffer({
+    byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    texture.readBuffer(options, buffer);
+    const bytes = await buffer.readAsync();
+    const values = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const totals = Array<number>(8).fill(0);
+    for (let row = 0; row < texture.height; row++) {
+      for (let offset = 0; offset < width * 16; offset += 32) {
+        for (let counter = 0; counter < totals.length; counter++) {
+          totals[counter] += values.getUint32(row * bytesPerRow + offset + counter * 4, true);
+        }
+      }
+    }
+    const [
+      primaryRays,
+      guideRays,
+      shadowRays,
+      continuationRays,
+      tlasNodes,
+      blasNodes,
+      triangleTests,
+      sampledPixels
+    ] = totals;
+    return {
+      sampledPixels,
+      primaryRays,
+      guideRays,
+      shadowRays,
+      continuationRays,
+      tlasNodes,
+      blasNodes,
+      triangleTests
+    };
+  } finally {
+    buffer.destroy();
+  }
 }
 
 function makeRayTracingGraphStatistics(props: {
@@ -5074,10 +5210,14 @@ function getRayTracingMemoryStatistics(
     resources.refitGraph,
     resources.traceGraph
   ].reduce((total, graph) => total + (graph?.stats.physicalTransientResourceBytes ?? 0), 0);
+  const traversalCounterBytes = resources.traversalTexture
+    ? resources.traversalTexture.width * resources.traversalTexture.height * 16
+    : 0;
   return {
     sceneBufferBytes,
     historyTextureBytes,
+    ...(traversalCounterBytes ? {traversalCounterBytes} : {}),
     graphTransientBytes,
-    totalBytes: sceneBufferBytes + historyTextureBytes + graphTransientBytes
+    totalBytes: sceneBufferBytes + historyTextureBytes + graphTransientBytes + traversalCounterBytes
   };
 }

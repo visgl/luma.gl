@@ -349,6 +349,7 @@ const raytraceRendererProperties = {
   denoiseRadius: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
   varianceGuidance: z.boolean().optional(),
   separateLobeHistories: z.boolean().optional(),
+  sampleTraversal: z.boolean().optional(),
   debugView: z
     .enum(['color', 'normal', 'cameraDistance', 'identity', 'history', 'variance'])
     .optional(),
