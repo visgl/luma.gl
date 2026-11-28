@@ -325,6 +325,66 @@ test('integer MOD preserves sign and format and returns null for a zero divisor'
   }
 });
 
+test('Float32 MOD agrees with Arrow SQL across batches and exponent ranges', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const smallestSubnormal = 2 ** -149;
+  const smallestNormal = 2 ** -126;
+  const largestFinite = (2 - 2 ** -23) * 2 ** 127;
+  const rows = arrow.tableFromArrays({
+    dividend: new Float32Array([
+      7.75,
+      -7.75,
+      -1,
+      -8,
+      -0,
+      largestFinite,
+      -largestFinite,
+      7 * smallestSubnormal,
+      smallestNormal,
+      smallestSubnormal,
+      1
+    ]),
+    divisor: new Float32Array([
+      2.5,
+      -2.5,
+      4,
+      2,
+      1,
+      0.375,
+      3 * smallestSubnormal,
+      3 * smallestSubnormal,
+      3 * smallestSubnormal,
+      smallestNormal,
+      largestFinite
+    ])
+  });
+  const input = new arrow.Table([...rows.slice(0, 5).batches, ...rows.slice(5).batches]);
+  const sql = 'SELECT MOD(dividend, divisor) AS result FROM samples';
+  const reference = queryArrowSQL(sql, new Map([['samples', input]]), {functions: [MOD]});
+  const actual = await executeGPUQuery(device, input, sql);
+  expect(actual.getChild('result')?.type).toBeInstanceOf(arrow.Float32);
+  expect(Array.from(actual.getChild('result') ?? [])).toEqual(
+    Array.from(reference.getChild('result') ?? [])
+  );
+  expect(actual.batches.map(batch => batch.numRows)).toEqual([5, 6]);
+});
+
+test('Float32 MOD returns null for both signed zeros, nulls, and nonfinite inputs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = arrow.tableFromArrays({
+    dividend: arrow.vectorFromArray([1, 1, 1, null, Infinity, 1, NaN, 1], new arrow.Float32()),
+    divisor: arrow.vectorFromArray([0, -0, null, 1, 1, Infinity, 1, NaN], new arrow.Float32())
+  });
+  const actual = await executeGPUQuery(
+    device,
+    input,
+    'SELECT MOD(dividend, divisor) AS result FROM samples'
+  );
+  expect(Array.from(actual.getChild('result') ?? [])).toEqual(Array(8).fill(null));
+});
+
 test('binds quoted dotted columns separately from table-qualified columns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

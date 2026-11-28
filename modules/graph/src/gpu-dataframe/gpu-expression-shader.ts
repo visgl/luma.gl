@@ -620,8 +620,24 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       );
     }
     if (operator === 'mod') {
+      if (format === 'float32') {
+        if (!this.helpers.includes(GPU_EXPRESSION_FLOAT_MOD_WGSL))
+          this.helpers.push(GPU_EXPRESSION_FLOAT_MOD_WGSL);
+        /** Bit pattern of the dividend, preserving its sign and subnormal values. */
+        const dividend = `bitcast<u32>(${left.value})`;
+        /** Absolute divisor bit pattern for the nonzero and finite checks. */
+        const divisor = `(bitcast<u32>(${right.value}) & 0x7fffffffu)`;
+        /** Null, nonfinite, and zero-divisor rows use a harmless substitute divisor. */
+        const valid = `(${left.valid} && ${right.valid} && (${dividend} & 0x7fffffffu) < 0x7f800000u && ${divisor} != 0u && ${divisor} < 0x7f800000u)`;
+        return this.addValue(
+          format,
+          `gpuDataFrameFloatMod(select(0u, ${dividend}, ${valid}), select(0x3f800000u, ${divisor}, ${valid}))`,
+          valid,
+          true
+        );
+      }
       if (format !== 'sint32' && format !== 'uint32') {
-        throw new Error('GPUDataFrame MOD requires matching Int32 or Uint32 arguments');
+        throw new Error('GPUDataFrame MOD requires matching Float32, Int32, or Uint32 arguments');
       }
       /** WGSL integer literal suffix for the shared argument format. */
       const suffix = format === 'uint32' ? 'u' : 'i';
@@ -809,6 +825,43 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     }
   }
 }
+
+/** Computes a Float32 remainder with integer significands, including subnormals. */
+const GPU_EXPRESSION_FLOAT_MOD_WGSL = /* wgsl */ `
+fn gpuDataFrameFloatMod(dividendBits: u32, divisor: u32) -> f32 {
+  let signBit = dividendBits & 0x80000000u;
+  let dividend = dividendBits & 0x7fffffffu;
+  if (dividend < divisor) {
+    return bitcast<f32>(dividendBits);
+  }
+
+  let dividendExponent = dividend >> 23u;
+  let divisorExponent = divisor >> 23u;
+  let dividendSignificand =
+    (dividend & 0x7fffffu) | select(0u, 0x800000u, dividendExponent != 0u);
+  let divisorSignificand =
+    (divisor & 0x7fffffu) | select(0u, 0x800000u, divisorExponent != 0u);
+  let exponent = max(1u, divisorExponent);
+  let exponentDifference = max(1u, dividendExponent) - exponent;
+
+  // Align the significands one binary digit at a time, without forming a float quotient.
+  var remainder = dividendSignificand % divisorSignificand;
+  for (var step = 0u; step < exponentDifference && remainder != 0u; step++) {
+    remainder <<= 1u;
+    remainder = select(remainder, remainder - divisorSignificand, remainder >= divisorSignificand);
+  }
+  if (remainder == 0u) {
+    return bitcast<f32>(signBit);
+  }
+
+  // Normalize the remainder as far as its exponent permits. At exponent 1,
+  // an unnormalized significand is already the bit representation of a subnormal.
+  let shift = min(countLeadingZeros(remainder) - 8u, exponent - 1u);
+  let significand = remainder << shift;
+  let exponentBits = select(0u, (exponent - shift) << 23u, significand >= 0x800000u);
+  return bitcast<f32>(signBit | exponentBits | (significand & 0x7fffffu));
+}
+`;
 
 /** Converts a closed scalar format to the corresponding native WGSL scalar type. @internal */
 export function getGPUQueryShaderType(format: GPUQueryValueFormat): string {

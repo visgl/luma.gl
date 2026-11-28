@@ -70,8 +70,9 @@ and `DEGREES` also returns null if the converted magnitude would overflow.
 `ATAN2(y, x)` takes two Float32 values and returns the quadrant-aware angle in radians.
 A null or non-finite argument, or the origin where both arguments are zero, yields null.
 
-`MOD(dividend, divisor)` takes matching Int32 or Uint32 inputs. The remainder keeps the
-dividend's sign. A null argument or zero divisor yields null.
+`MOD(dividend, divisor)` takes matching Float32, Int32, or Uint32 inputs. The remainder keeps
+the dividend's sign. Null arguments, non-finite inputs, and zero divisors yield null. Float32
+remainder is computed without materializing a floating-point quotient.
 
 
 `CAST` supports scalar Float32, Int32, and Uint32 results. Float-to-integer casts truncate toward zero
