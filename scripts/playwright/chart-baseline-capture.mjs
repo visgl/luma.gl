@@ -19,6 +19,7 @@ const {values} = parseArgs({options: {
   'compare-emitters': {type: 'boolean'},
   'compare-reconstruction': {type: 'boolean'},
   'compare-motion': {type: 'boolean'},
+  'separate-lobe-histories': {type: 'boolean'},
   'maximum-glossy-rmse-ratio': {type: 'string'},
   'pose-frame': {type: 'string', default: '16'},
   'reference-frames': {type: 'string', default: '64'},
@@ -133,6 +134,7 @@ url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
 if (values.temporal !== undefined) url.searchParams.set('temporal', values.temporal);
 if (values['variance-guidance']) url.searchParams.set('varianceGuidance', '1');
+if (values['separate-lobe-histories']) url.searchParams.set('separateLobeHistories', '1');
 if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
 if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitters);
 if (values['emitter-selection'] !== undefined) url.searchParams.set('emitterSelection', values['emitter-selection']);
@@ -235,6 +237,7 @@ async function captureMotionBenchmark() {
     : temporalError <= maximumGlossyRatio * controlError;
   await writeFile(resolve(root, 'motion-reconstruction.json'), JSON.stringify({
     comparisonSpace: 'linear-hdr',
+    separateLobeHistories: Boolean(values['separate-lobe-histories']),
     poseFrame,
     poseTimeSeconds: poseFrame / 60,
     referenceFrames,

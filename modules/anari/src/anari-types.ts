@@ -290,6 +290,8 @@ export type ANARIRendererParameters = {
   denoiseRadius?: 0 | 1 | 2;
   /** Retains log-luminance moments for variance-guided ray tracing. */
   varianceGuidance?: boolean;
+  /** Opt into independent diffuse and specular PBR accumulation histories. */
+  separateLobeHistories?: boolean;
   /** Presentation diagnostics for ray tracing. */
   debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history' | 'variance';
   /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */

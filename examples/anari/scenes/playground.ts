@@ -227,6 +227,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         maxBounces <= 8
       )
         sceneDescription.renderer.maxBounces = maxBounces;
+      const separateLobeHistories = parameters.get('separateLobeHistories');
+      if (separateLobeHistories === '1') sceneDescription.renderer.separateLobeHistories = true;
       const varianceGuidance = parameters.get('varianceGuidance');
       if (varianceGuidance === '0' || varianceGuidance === '1')
         sceneDescription.renderer.varianceGuidance = varianceGuidance === '1';

@@ -569,7 +569,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
     expect(RAY_TRACING_SCENE_SHADER).toContain(
-      'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color)'
+      'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color, 0)'
     );
 
     const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtFullCoordinates(');

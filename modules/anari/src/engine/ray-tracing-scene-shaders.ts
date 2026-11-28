@@ -1107,7 +1107,7 @@ fn getClearcoatFresnel(strength: f32, cosine: f32) -> f32 {
 
 // Charlie distribution with a compact visibility and base attenuation approximation.
 fn applySheen(baseResponse: vec3<f32>, sheen: vec4<f32>, normalHalf: f32,
-    normalView: f32, normalLight: f32) -> vec3<f32> {
+    normalView: f32, normalLight: f32, includeReflection: bool) -> vec3<f32> {
   let color = clamp(sheen.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
   let strength = max(color.r, max(color.g, color.b));
   if (strength <= 0.0 || normalLight <= 0.0) { return baseResponse; }
@@ -1118,13 +1118,14 @@ fn applySheen(baseResponse: vec3<f32>, sheen: vec4<f32>, normalHalf: f32,
   let visibility = 0.25 / max(normalLight + normalView - normalLight * normalView, 0.000001);
   let enteringCosine = min(normalLight, normalView);
   let baseWeight = getSheenBaseWeight(strength, roughness, enteringCosine);
-  return baseResponse * baseWeight + color * (distribution * visibility * normalLight);
+  return baseResponse * baseWeight + select(vec3<f32>(0.0),
+    color * (distribution * visibility * normalLight), includeReflection);
 }
 
 // Apply the coat's Fresnel attenuation and reflection using its own normal.
 fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, hit: RayHit,
     viewDirection: vec3<f32>, lightDirection: vec3<f32>,
-    halfDirection: vec3<f32>, viewHalf: f32) -> vec3<f32> {
+    halfDirection: vec3<f32>, viewHalf: f32, includeReflection: bool) -> vec3<f32> {
   let strength = clamp(clearcoat.x, 0.0, 1.0);
   if (strength == 0.0) { return baseResponse; }
   let mappedNormal = getClearcoatNormal(hit);
@@ -1145,10 +1146,11 @@ fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, hit: RayHit,
     (1.0 - alphaSquared) * normalView * normalView));
   let fresnel = getClearcoatFresnel(strength, viewHalf);
   let coatResponse = fresnel * distribution * lightVisibility * viewVisibility / (4.0 * normalView);
-  return baseResponse * (1.0 - fresnel) + vec3<f32>(coatResponse);
+  return baseResponse * (1.0 - fresnel) + vec3<f32>(select(0.0, coatResponse, includeReflection));
 }
 
 const MATERIAL_HAS_DIFFUSE_TRANSMISSION = /* MATERIAL_HAS_DIFFUSE_TRANSMISSION */ false;
+const SPLIT_HISTORY = /* SPLIT_HISTORY */ false;
 const PATH_BOUNCES_ENABLED = /* PATH_BOUNCES_ENABLED */ true;
 
 fn usePBRTransport() -> bool {
@@ -1357,7 +1359,7 @@ fn evaluateRoughDielectricLight(ray: Ray, hit: RayHit, primitive: RayPrimitive,
       max(refractionJacobian * refractionJacobian, 1e-12));
 }
 
-fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool, exterior: bool) -> vec3<f32> {
+fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool, exterior: bool, split: bool, specularRadiance: ptr<function, vec3<f32>>) -> vec3<f32> {
   let primitive = getShadedPrimitive(hit);
   let hitPosition = ray.origin + ray.direction * hit.distance;
   let normal = getShadingNormal(hit);
@@ -1442,7 +1444,9 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool, exterior
       if (any(dielectricResponse > vec3<f32>(0.0))) {
         let connectionOrigin = hitPosition + transmissionNormal * select(-0.002, 0.002, faceLight > 0.0);
         let visibility = evaluateAnalyticLightVisibility(ray, hit, connectionOrigin, lightDirection, light, lightType);
-        result += dielectricResponse * lightColor * visibility * attenuation * lightSampleWeight;
+        let dielectricLight = dielectricResponse * lightColor * visibility * attenuation * lightSampleWeight;
+        result += dielectricLight;
+        if (SPLIT_HISTORY && split) { *specularRadiance += dielectricLight; }
       }
     }
     if (diffuseTransmission > 0.0 && faceLight < 0.0 && attenuation > 0.0) {
@@ -1485,16 +1489,24 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool, exterior
     let specular = fresnel * baseVisibility * baseDistribution /
       (4.0 * max(normalLight, 0.000001) * normalView);
     let layeredResponse = applySheen((diffuseContribution + specular) * normalLight,
-      primitive.sheen, normalHalf, normalView, normalLight);
+      primitive.sheen, normalHalf, normalView, normalLight, true);
     let response = applyClearcoat(layeredResponse,
-      primitive.clearcoatOcclusion.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf);
-    result += response * lightColor * shadowTransmission *
-      attenuation * lightSampleWeight * opaqueWeight;
+      primitive.clearcoatOcclusion.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf, true);
+    let lightWeight = lightColor * shadowTransmission * attenuation * lightSampleWeight * opaqueWeight;
+    result += response * lightWeight;
+    if (SPLIT_HISTORY && split) {
+      let layeredDiffuse = applySheen(diffuseContribution * normalLight, primitive.sheen,
+        normalHalf, normalView, normalLight, false);
+      let diffuseResponse = applyClearcoat(layeredDiffuse, primitive.clearcoatOcclusion.xy, hit,
+        viewDirection, lightDirection, halfDirection, viewHalf, false);
+      *specularRadiance += (response - diffuseResponse) * lightWeight;
+    }
   }
 
   if (uniforms.fog.w > 0.0) {
     let visibility = exp(-uniforms.fog.w * hit.distance);
     result = mix(uniforms.fog.rgb, result, visibility);
+    if (SPLIT_HISTORY && split) { *specularRadiance *= visibility; }
   }
   return result;
 }
@@ -1569,12 +1581,17 @@ fn isHistoricalRayMetadataValid(
   return relativeDepthDifference <= MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE;
 }
 
+fn loadHistoryColor(pixel: vec2<i32>, layer: i32) -> vec4<f32> {
+  return textureLoad(historyImage, pixel, 0);
+}
+
 fn clampHistoricalRayColor(
   historyPixel: vec2<i32>,
   historicalColor: vec3<f32>,
   currentColor: vec3<f32>,
   hit: RayHit,
-  previousDistance: f32
+  previousDistance: f32,
+  layer: i32
 ) -> vec3<f32> {
   let maximumPixel = vec2<i32>(uniforms.dimensions.xy) - vec2<i32>(1);
   var minimumColor = currentColor;
@@ -1588,7 +1605,7 @@ fn clampHistoricalRayColor(
       );
       let neighborhoodMetadata = textureLoad(historyMetadata, neighborhoodPixel, 0);
       if (!isHistoricalRayMetadataValid(neighborhoodMetadata, hit, previousDistance)) { continue; }
-      let neighborhoodColor = textureLoad(historyImage, neighborhoodPixel, 0);
+      let neighborhoodColor = loadHistoryColor(neighborhoodPixel, layer);
       if (neighborhoodColor.a > 0.0) {
         minimumColor = min(minimumColor, neighborhoodColor.rgb);
         maximumColor = max(maximumColor, neighborhoodColor.rgb);
@@ -1602,14 +1619,15 @@ fn clampHistoricalRayColor(
 fn loadHistoricalRaySample(
   historyPixel: vec2<i32>,
   hit: RayHit,
-  previousDistance: f32
+  previousDistance: f32,
+  layer: i32
 ) -> HistoricalRaySample {
   let historicalMetadata = textureLoad(historyMetadata, historyPixel, 0);
   if (!isHistoricalRayMetadataValid(historicalMetadata, hit, previousDistance)) {
     return rejectHistoricalRaySample();
   }
 
-  let historicalColor = textureLoad(historyImage, historyPixel, 0);
+  let historicalColor = loadHistoryColor(historyPixel, layer);
   if (historicalColor.a <= 0.0) {
     return rejectHistoricalRaySample();
   }
@@ -1625,7 +1643,8 @@ fn getHistoricalRaySample(
   pixel: vec2<u32>,
   ray: Ray,
   hit: RayHit,
-  currentColor: vec3<f32>
+  currentColor: vec3<f32>,
+  layer: i32
 ) -> HistoricalRaySample {
   if (uniforms.settings.y <= 0.0) {
     return rejectHistoricalRaySample();
@@ -1634,10 +1653,13 @@ fn getHistoricalRaySample(
   // A stationary PBR path traces the same integral each frame. Clipping it
   // around the latest noisy sample biases bright glossy paths even after motion stops.
   let pbrPaths = usePBRTransport() && uniforms.sampling.y > 0u;
-  if (uniforms.temporal.w <= 0.5 || (pbrPaths && uniforms.visibility.w != 0u)) {
-    let previous = textureLoad(historyImage, vec2<i32>(pixel), 0);
+  if (uniforms.temporal.w <= 0.5 || ((pbrPaths || SPLIT_HISTORY) && uniforms.visibility.w != 0u)) {
+    let previous = loadHistoryColor(vec2<i32>(pixel), layer);
     return HistoricalRaySample(previous.rgb, previous.a, previous.a > 0.0, loadHistoryMoments(vec2<i32>(pixel)));
   }
+
+  // Primary hit metadata cannot validate view-dependent secondary paths.
+  if (SPLIT_HISTORY && layer == 1) { return rejectHistoricalRaySample(); }
 
   var historySamplePosition = vec2<f32>(pixel);
   var previousDistance = distance(
@@ -1648,7 +1670,7 @@ fn getHistoricalRaySample(
     let primitive = primitives[hit.primitiveIndex];
     // Primary identity does not identify the reflected or refracted surface.
     // Reject history for shiny guides during camera motion.
-    if (pbrPaths) {
+    if (pbrPaths && !SPLIT_HISTORY) {
       let material = getShadedPrimitive(hit);
       if (material.material.y > 0.0 ||
           (material.emissive.w >= 0.5 && material.properties.x < 0.4) ||
@@ -1698,7 +1720,7 @@ fn getHistoricalRaySample(
   var historicalSampleCount = 0.0;
   var totalWeight = 0.0;
   if (topLeftWeight > 0.0) {
-    let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance);
+    let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance, layer);
     if (topLeftSample.valid) {
       historicalColor += topLeftSample.color * topLeftWeight;
       historicalMoments += topLeftSample.moments * topLeftWeight;
@@ -1710,7 +1732,8 @@ fn getHistoricalRaySample(
     let topRightSample = loadHistoricalRaySample(
       vec2<i32>(secondHistoryPixel.x, firstHistoryPixel.y),
       hit,
-      previousDistance
+      previousDistance,
+      layer
     );
     if (topRightSample.valid) {
       historicalColor += topRightSample.color * topRightWeight;
@@ -1723,7 +1746,8 @@ fn getHistoricalRaySample(
     let bottomLeftSample = loadHistoricalRaySample(
       vec2<i32>(firstHistoryPixel.x, secondHistoryPixel.y),
       hit,
-      previousDistance
+      previousDistance,
+      layer
     );
     if (bottomLeftSample.valid) {
       historicalColor += bottomLeftSample.color * bottomLeftWeight;
@@ -1733,7 +1757,7 @@ fn getHistoricalRaySample(
     }
   }
   if (bottomRightWeight > 0.0) {
-    let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance);
+    let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance, layer);
     if (bottomRightSample.valid) {
       historicalColor += bottomRightSample.color * bottomRightWeight;
       historicalMoments += bottomRightSample.moments * bottomRightWeight;
@@ -1752,7 +1776,7 @@ fn getHistoricalRaySample(
   );
   return HistoricalRaySample(
     clampHistoricalRayColor(nearestHistoryPixel, historicalColor / totalWeight, currentColor,
-      hit, previousDistance),
+      hit, previousDistance, layer),
     // Normalize radiance, but discount confidence when part of the footprint was occluded.
     min(historicalSampleCount, getHistorySampleLimit()),
     true,
@@ -1772,6 +1796,7 @@ struct RayMaterialSample {
   eventKind: u32,
   crossesInterface: bool,
   density: f32,
+  specularWeight: vec3<f32>,
 };
 
 // Sample the projected GGX distribution about the unperturbed shading normal.
@@ -1811,7 +1836,7 @@ fn isAbsorbingPathMedium(primitiveIndex: u32) -> bool {
 // Sample a cosine/GGX-NDF mixture, then evaluate both lobes with the combined PDF.
 // Specular half-vector density D(N.H)*(N.H) becomes direction density / (4*V.H).
 fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32,
-    spectralChannel: ptr<function, u32>, incidentMedium: u32, transmittedMedium: u32) -> RayMaterialSample {
+    spectralChannel: ptr<function, u32>, incidentMedium: u32, transmittedMedium: u32, split: bool) -> RayMaterialSample {
   let primitive = getShadedPrimitive(hit);
   let baseColor = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
@@ -1840,7 +1865,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32,
     }
     let cosineIncident = clamp(dot(-ray.direction, facet), 0.0, 1.0);
     if (useRoughInterface && cosineIncident <= 0.0) {
-      return RayMaterialSample(ray.direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0);
+      return RayMaterialSample(ray.direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0, vec3<f32>(0.0));
     }
     let sineTransmittedSquared = ratio * ratio * (1.0 - cosineIncident * cosineIncident);
     var reflected = sineTransmittedSquared >= 1.0;
@@ -1866,7 +1891,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32,
       let geometricCosine = dot(getFaceNormal(hit, ray), direction);
       if (select(-outgoingCosine, outgoingCosine, reflected) <= 0.0 ||
           select(-geometricCosine, geometricCosine, reflected) <= 0.0) {
-        return RayMaterialSample(direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0);
+        return RayMaterialSample(direction, vec3<f32>(0.0), ROUGH_DIELECTRIC_EVENT, false, 0.0, vec3<f32>(0.0));
       }
       let incomingCosine = dot(normal, -ray.direction);
       // Fresnel, GGX D, and the direction Jacobian cancel against the proposal.
@@ -1875,7 +1900,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32,
         smithDielectricMask(abs(outgoingCosine), alphaSquared);
       weight *= masking * cosineIncident / max(incomingCosine * dot(normal, facet), 0.000001);
     }
-    return RayMaterialSample(direction, weight, select(SMOOTH_DIELECTRIC_EVENT, ROUGH_DIELECTRIC_EVENT, useRoughInterface), !reflected, 0.0);
+    return RayMaterialSample(direction, weight, select(SMOOTH_DIELECTRIC_EVENT, ROUGH_DIELECTRIC_EVENT, useRoughInterface), !reflected, 0.0, weight);
   }
 
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
@@ -1921,21 +1946,28 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32,
       let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(face, viewDirection)), -dot(face, transmittedDirection));
       let density = (1.0 - transmission) * (1.0 - specularProbability) *
         diffuseTransmission * max(-dot(face, transmittedDirection), 0.0) / PI;
-      return RayMaterialSample(transmittedDirection, tint / (1.0 - specularProbability), CONTINUOUS_MATERIAL_EVENT, false, density);
+      return RayMaterialSample(transmittedDirection, tint / (1.0 - specularProbability), CONTINUOUS_MATERIAL_EVENT, false, density, vec3<f32>(0.0));
     }
     direction = normalize(tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
       normal * sqrt(max(1.0 - radialSample, 0.0)));
   }
   let normalLight = dot(normal, direction);
   if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0);
+    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0, vec3<f32>(0.0));
   }
   let sampleDensity = getPBRReflectionDensity(direction, normal, viewDirection,
     anisotropic, alphaSquared, specularProbability, diffuseTransmission);
   if (sampleDensity <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0);
+    return RayMaterialSample(direction, vec3<f32>(0.0), CONTINUOUS_MATERIAL_EVENT, false, 0.0, vec3<f32>(0.0));
   }
-  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction, primitive, normal) / sampleDensity, CONTINUOUS_MATERIAL_EVENT, false, (1.0 - transmission) * sampleDensity);
+  let response = evaluatePBRResponse(ray, hit, direction, primitive, normal, true);
+  var specularWeight = vec3<f32>(0.0);
+  if (SPLIT_HISTORY && split) {
+    let diffuse = evaluatePBRResponse(ray, hit, direction, primitive, normal, false);
+    specularWeight = (response - diffuse) / sampleDensity;
+  }
+  return RayMaterialSample(direction, response / sampleDensity, CONTINUOUS_MATERIAL_EVENT, false,
+    (1.0 - transmission) * sampleDensity, specularWeight);
 }
 
 // Conditional on selecting a continuous material event.
@@ -1974,7 +2006,7 @@ fn getPBRDirectionDensity(ray: Ray, hit: RayHit, primitive: RayPrimitive,
 }
 
 fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>,
-    primitive: RayPrimitive, normal: vec3<f32>) -> vec3<f32> {
+    primitive: RayPrimitive, normal: vec3<f32>, includeReflection: bool) -> vec3<f32> {
   let baseColor = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
@@ -2005,8 +2037,9 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>,
   let baseVisibility = getGGXVisibility(anisotropic, direction, normalLight, lightVisibility) *
     getGGXVisibility(anisotropic, viewDirection, normalView, viewVisibility);
   let specular = fresnel * baseVisibility * baseDistribution / (4.0 * normalView);
-  let layeredResponse = applySheen(diffuse + specular, primitive.sheen, normalHalf, normalView, normalLight);
-  return applyClearcoat(layeredResponse, primitive.clearcoatOcclusion.xy, hit, viewDirection, direction, halfDirection, viewHalf);
+  let layeredResponse = applySheen(diffuse + select(vec3<f32>(0.0), specular, includeReflection),
+    primitive.sheen, normalHalf, normalView, normalLight, includeReflection);
+  return applyClearcoat(layeredResponse, primitive.clearcoatOcclusion.xy, hit, viewDirection, direction, halfDirection, viewHalf, includeReflection);
 }
 
 const EMITTER_SAMPLING_ENABLED = /* EMITTER_SAMPLING_ENABLED */ true;
@@ -2014,7 +2047,8 @@ const EMITTER_MIS_ENABLED = /* EMITTER_MIS_ENABLED */ true;
 
 // CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
 // The sphere Jacobian supports nonuniform scales and general affine instance transforms.
-fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContinuation: bool) -> vec3<f32> {
+fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContinuation: bool, split: bool,
+    specularRadiance: ptr<function, vec3<f32>>) -> vec3<f32> {
   let emitterCount = uniforms.emitters.x;
   if (!EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
   let emitterSample = makeRandom(randomSeed ^ 701u);
@@ -2108,6 +2142,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let shadowDistance = length(shadowOffset);
   let shadowRay = makeSurfaceRay(ray, hit.distance, shadowOrigin, shadowOffset / max(shadowDistance, RAY_EPSILON));
   if (uniforms.settings.w > 0.5 && intersectsScene(shadowRay, shadowDistance - 0.002)) { return vec3<f32>(0.0); }
+  var specularResponse = vec3<f32>(0.0);
   var response = clamp(receiver.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 0.96 *
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
   if (usePBRTransport()) {
@@ -2115,11 +2150,16 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
       response = getDiffuseTransmissionTint(receiver, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
         (-faceLight / PI) * diffuseTransmission;
     } else {
-      response = evaluatePBRResponse(ray, hit, direction, receiver, normal);
+      response = evaluatePBRResponse(ray, hit, direction, receiver, normal, true);
+      if (SPLIT_HISTORY && split) {
+        specularResponse = response - evaluatePBRResponse(ray, hit, direction, receiver, normal, false);
+      }
     }
-    response *= select(1.0,
+    let opaqueWeight = select(1.0,
       1.0 - clamp(receiver.material.y, 0.0, 1.0) * (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)),
       uniforms.sampling.y > 0u);
+    response *= opaqueWeight;
+    specularResponse *= opaqueWeight;
   }
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   var emitterHit = RayHit(shadowDistance, lightNormal, primitiveIndex, true,
@@ -2147,7 +2187,10 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     }
     weight = getMISWeight(lightDensity, materialDensity);
   }
-  return response * getMaterialEmission(emitterHit) * (emitterCoverage * weight / lightDensity) * visibility;
+  let emission = getMaterialEmission(emitterHit);
+  let lightWeight = (emitterCoverage * weight / lightDensity) * visibility;
+  if (SPLIT_HISTORY && split) { *specularRadiance += specularResponse * emission * lightWeight; }
+  return response * emission * lightWeight;
 }
 
 // Scale before squaring to keep the power heuristic finite for grazing connections.
@@ -2245,7 +2288,8 @@ fn sampleEnvironmentDirection(seed: u32) -> vec3<f32> {
   return vec3<f32>(radius * cos(azimuth), height, radius * sin(azimuth));
 }
 
-fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinuation: bool) -> vec3<f32> {
+fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinuation: bool, split: bool,
+    specularRadiance: ptr<function, vec3<f32>>) -> vec3<f32> {
   if (!ENVIRONMENT_LIGHTING_ENABLED) { return vec3<f32>(0.0); }
   let direction = sampleEnvironmentDirection(seed);
   let face = getFaceNormal(hit, ray);
@@ -2259,6 +2303,7 @@ fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinua
   let position = ray.origin + ray.direction * hit.distance;
   let origin = position + face * select(-0.002, 0.002, faceLight > 0.0);
   if (intersectsScene(makeSurfaceRay(ray, hit.distance, origin, direction), RAY_INFINITY)) { return vec3<f32>(0.0); }
+  var specularResponse = vec3<f32>(0.0);
   var response = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
     0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0)) * normalLight / PI;
   var materialDensity = normalLight / PI;
@@ -2267,10 +2312,15 @@ fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinua
       response = getDiffuseTransmissionTint(primitive, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
         (-faceLight / PI) * diffuseTransmission;
     } else {
-      response = evaluatePBRResponse(ray, hit, direction, primitive, normal);
+      response = evaluatePBRResponse(ray, hit, direction, primitive, normal, true);
+      if (SPLIT_HISTORY && split) {
+        specularResponse = response - evaluatePBRResponse(ray, hit, direction, primitive, normal, false);
+      }
     }
     if (PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u) {
-      response *= 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+      let opaqueWeight = 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+      response *= opaqueWeight;
+      specularResponse *= opaqueWeight;
     }
     if (compareContinuation) {
       materialDensity = getPBRDirectionDensity(ray, hit, primitive, normal, direction, faceLight);
@@ -2278,7 +2328,9 @@ fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinua
   }
   let environment = evaluateEnvironmentRadiance(direction, hit.distance);
   let weight = getMISWeight(environment.w, select(0.0, materialDensity, compareContinuation));
-  return response * environment.rgb * (weight / environment.w);
+  let lightWeight = weight / environment.w;
+  if (SPLIT_HISTORY && split) { *specularRadiance += specularResponse * environment.rgb * lightWeight; }
+  return response * environment.rgb * lightWeight;
 }
 
 // The fourth component is the solid-angle density used by both estimators.
@@ -2300,7 +2352,8 @@ fn getUnlitRadiance(hit: RayHit) -> vec3<f32> {
   return mix(uniforms.fog.rgb, color, visibility);
 }
 
-fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32,
+    specularRadiance: ptr<function, vec3<f32>>) -> vec3<f32> {
   if (primitives[primaryHit.primitiveIndex].materialFlags.x > 0.0) {
     return getUnlitRadiance(primaryHit);
   }
@@ -2314,7 +2367,9 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       coneSpread = coneWidth / max(hit.distance, RAY_EPSILON);
     }
   }
-  var radiance = evaluateDirectLighting(ray, hit, true, true);
+  var radiance = evaluateDirectLighting(ray, hit, true, true, true, specularRadiance);
+  var specularThroughput = vec3<f32>(0.0);
+  var unusedSpecular = vec3<f32>(0.0);
   var throughput = vec3<f32>(1.0);
   var dielectricOnly = true;
   var spectralChannel = 3u;
@@ -2327,8 +2382,8 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   // An unshadowed connection and an occlusion-tested continuation estimate different integrals.
   let allowEmitterMIS = EMITTER_MIS_ENABLED && uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
-  radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
-  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
+  radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u, true, specularRadiance);
+  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u, true, specularRadiance);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     var incidentMedium = medium;
     var transmittedMedium = hit.primitiveIndex;
@@ -2339,10 +2394,13 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       if (mediumCount > 1u) { transmittedMedium = mediumStack[mediumCount - 2u]; }
     }
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u),
-      &spectralChannel, incidentMedium, transmittedMedium);
+      &spectralChannel, incidentMedium, transmittedMedium, bounceIndex == 0u);
     let dielectric = sample.eventKind != CONTINUOUS_MATERIAL_EVENT;
     dielectricOnly = dielectricOnly && dielectric;
     throughput *= sample.weight;
+    if (SPLIT_HISTORY) {
+      specularThroughput = select(specularThroughput * sample.weight, sample.specularWeight, bounceIndex == 0u);
+    }
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
     let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.eventKind == SMOOTH_DIELECTRIC_EVENT);
     let receiverDistance = hit.distance;
@@ -2368,8 +2426,10 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
           let environment = evaluateEnvironmentRadiance(ray.direction, receiverDistance);
           let weight = select(getMISWeight(sample.density, environment.w), 1.0, dielectric);
           radiance += throughput * weight * environment.rgb;
+      if (SPLIT_HISTORY) { *specularRadiance += specularThroughput * weight * environment.rgb; }
         } else if (dielectricOnly) {
           radiance += throughput * uniforms.background.rgb;
+      if (SPLIT_HISTORY) { *specularRadiance += specularThroughput * uniforms.background.rgb; }
         }
       }
       break;
@@ -2377,7 +2437,9 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     if (isAbsorbingPathMedium(medium)) {
       let attenuation = primitives[medium].attenuation;
       let segmentLength = length(ray.origin + ray.direction * hit.distance - position);
-      throughput *= getVolumeTransmission(attenuation, segmentLength);
+      let transmission = getVolumeTransmission(attenuation, segmentLength);
+      throughput *= transmission;
+      if (SPLIT_HISTORY) { specularThroughput *= transmission; }
     }
     if (MATERIAL_HAS_MIPMAPS) {
       coneWidth += coneSpread * hit.distance;
@@ -2385,9 +2447,10 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     }
     if (primitives[hit.primitiveIndex].materialFlags.x > 0.0) {
       radiance += throughput * getUnlitRadiance(hit);
+      if (SPLIT_HISTORY) { *specularRadiance += specularThroughput * getUnlitRadiance(hit); }
       break;
     }
-    var illumination = evaluateDirectLighting(ray, hit, dielectric || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u, mediumCount == 0u);
+    var illumination = evaluateDirectLighting(ray, hit, dielectric || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u, mediumCount == 0u, false, &unusedSpecular);
     if (pairEmission && any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
       let emitterDensity = getEmitterHitDensity(ray, hit, position);
       let weight = getMISWeight(sample.density, emitterDensity);
@@ -2398,12 +2461,13 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       illumination += emission * (weight * exp(-max(uniforms.fog.w, 0.0) * fogDistance));
     }
     illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
-      allowEmitterMIS && !isAbsorbingPathMedium(medium) && bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+      allowEmitterMIS && !isAbsorbingPathMedium(medium) && bounceIndex + 1u < min(uniforms.sampling.y, 8u), false, &unusedSpecular);
     if (ENVIRONMENT_LIGHTING_ENABLED && !isAbsorbingPathMedium(medium)) {
       illumination += evaluateEnvironmentLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
-        bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+        bounceIndex + 1u < min(uniforms.sampling.y, 8u), false, &unusedSpecular);
     }
     radiance += throughput * illumination;
+      if (SPLIT_HISTORY) { *specularRadiance += specularThroughput * illumination; }
   }
   return radiance;
 }
@@ -2423,13 +2487,14 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       coneSpread = coneWidth / max(hit.distance, RAY_EPSILON);
     }
   }
-  var radiance = evaluateDirectLighting(ray, hit, true, false);
+  var unusedSpecular = vec3<f32>(0.0);
+  var radiance = evaluateDirectLighting(ray, hit, true, false, false, &unusedSpecular);
   var throughput = vec3<f32>(1.0);
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
-  radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u);
-  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
+  radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u, false, &unusedSpecular);
+  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u, false, &unusedSpecular);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let primitive = getShadedPrimitive(hit);
     throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
@@ -2470,7 +2535,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       radiance += throughput * getUnlitRadiance(hit);
       break;
     }
-    var illumination = evaluateDirectLighting(ray, hit, true, false);
+    var illumination = evaluateDirectLighting(ray, hit, true, false, false, &unusedSpecular);
     if (EMITTER_SAMPLING_ENABLED && uniforms.emitters.y != 0u && uniforms.emitters.x > 0u) {
       if (EMITTER_MIS_ENABLED && any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
         let density = max(dot(normal, ray.direction), 0.0) / PI;
@@ -2488,10 +2553,10 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
         }
       }
       illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
-        bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+        bounceIndex + 1u < min(uniforms.sampling.y, 8u), false, &unusedSpecular);
     }
     illumination += evaluateEnvironmentLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
-      bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+      bounceIndex + 1u < min(uniforms.sampling.y, 8u), false, &unusedSpecular);
     radiance += throughput * illumination;
   }
   return radiance;
@@ -2510,28 +2575,37 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
   var accumulatedColor = vec3<f32>(0.0);
+  var accumulatedSpecular = vec3<f32>(0.0);
   /* MOMENT_INITIALIZE */
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
     let sampleOffset = makeRadianceSampleOffset(pixel, sampleIndex);
     let ray = makeCameraRay(pixel, sampleIndex);
     var hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
+    var specular = vec3<f32>(0.0);
     if (hit.distance < RAY_INFINITY) {
       if (hit.triangleIndex != 0xffffffffu) {
         /* MATERIAL_PRIMARY_FOOTPRINT */
       }
       if (usePBRTransport()) {
-        color = evaluatePBRTransport(ray, hit, pixel, sampleIndex);
+        color = evaluatePBRTransport(ray, hit, pixel, sampleIndex, &specular);
       } else {
         color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);
       }
     }
     accumulatedColor += color;
+    if (SPLIT_HISTORY) { accumulatedSpecular += specular; }
     /* MOMENT_SAMPLE */
   }
 
   var color = accumulatedColor / f32(sampleCount) * uniforms.settings.x;
-  let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color);
+  var specular = accumulatedSpecular / f32(sampleCount) * uniforms.settings.x;
+  if (SPLIT_HISTORY) { color -= specular; }
+  let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color, 0);
+  var specularHistory = rejectHistoricalRaySample();
+  if (SPLIT_HISTORY) {
+    specularHistory = getHistoricalRaySample(pixel, guideRay, guideHit, specular, 1);
+  }
   /* MOMENT_AVERAGE */
   var totalSampleCount = min(f32(sampleCount), getHistorySampleLimit());
   if (historicalSample.valid) {
@@ -2542,6 +2616,11 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let currentWeight = min(f32(sampleCount) / totalSampleCount, 1.0);
     color = mix(historicalSample.color, color, currentWeight);
     /* MOMENT_BLEND */
+  }
+  var specularSampleCount = min(f32(sampleCount), getHistorySampleLimit());
+  if (SPLIT_HISTORY && specularHistory.valid) {
+    specularSampleCount = min(specularHistory.sampleCount + f32(sampleCount), getHistorySampleLimit());
+    specular = mix(specularHistory.color, specular, min(f32(sampleCount) / specularSampleCount, 1.0));
   }
   let guideHitPosition = guideRay.origin +
     guideRay.direction * min(guideHit.distance, 65504.0);
@@ -2559,6 +2638,31 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   /* MOMENT_STORE */
 }
 `;
+
+/** Packs diffuse, specular, and composed radiance into one sampled/storage binding. */
+export function getSplitRayTracingHistoryShader(source: string): string {
+  return source
+    .replace('/* SPLIT_HISTORY */ false', 'true')
+    .replace('var historyImage: texture_2d<f32>', 'var historyImage: texture_2d_array<f32>')
+    .replace('var outputImage: texture_storage_2d<', 'var outputImage: texture_storage_2d_array<')
+    .replace(
+      'return textureLoad(historyImage, pixel, 0);',
+      'return textureLoad(historyImage, pixel, layer, 0);'
+    )
+    .replace(
+      'textureStore(outputImage, pixel, textureLoad(historyImage, pixel, 0));',
+      `for (var layer = 0; layer < 3; layer++) {
+    textureStore(outputImage, pixel, layer, textureLoad(historyImage, pixel, layer, 0));
+  }`
+    )
+    .replace(
+      'textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));',
+      `textureStore(outputImage, vec2<i32>(pixel), 0, vec4<f32>(color, totalSampleCount));
+  textureStore(outputImage, vec2<i32>(pixel), 1, vec4<f32>(specular, specularSampleCount));
+  textureStore(outputImage, vec2<i32>(pixel), 2,
+    vec4<f32>(color + specular, min(totalSampleCount, specularSampleCount)));`
+    );
+}
 
 /** Adds moment history to the trace or sparse carry shader when requested. */
 export function getRayTracingMomentShader(source: string, carry = false): string {
@@ -2587,7 +2691,15 @@ export function getRayTracingMomentShader(source: string, carry = false): string
     .replace('/* MOMENT_AVERAGE */', 'moments /= f32(sampleCount);')
     .replace(
       '/* MOMENT_BLEND */',
-      'moments = mix(historicalSample.moments, moments, currentWeight);'
+      `if (SPLIT_HISTORY) {
+      // Moments describe the composite, so use the smaller retained confidence.
+      if (specularHistory.valid) {
+        let confidence = min(totalSampleCount, specularHistory.sampleCount + f32(sampleCount));
+        moments = mix(historicalSample.moments, moments, min(f32(sampleCount) / confidence, 1.0));
+      }
+    } else {
+      moments = mix(historicalSample.moments, moments, currentWeight);
+    }`
     )
     .replace(
       '/* MOMENT_STORE */',
