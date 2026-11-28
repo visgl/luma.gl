@@ -227,11 +227,12 @@ function buildEffectNodes(
     subPass: copyPass.passes[0]
   };
   let previous = source;
-  // A normalized seed is needed if flipping or resampling the source. Every later
-  // occurrence then receives a color texture with the output's extent and format.
+  // WebGPU uses the same seed draw and coordinate convention as EffectRenderer.
+  // WebGL can use the input directly when its orientation, size and format already match.
   if (
     plans.length &&
-    (flipY ||
+    (graph.device.type === 'webgpu' ||
+      flipY ||
       source.view.width !== output.view.width ||
       source.view.height !== output.view.height ||
       source.view.format !== output.view.format)

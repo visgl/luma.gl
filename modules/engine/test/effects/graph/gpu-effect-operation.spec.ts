@@ -17,9 +17,13 @@ import {
 } from '@luma.gl/engine/effects';
 
 it.each([
-  'auto',
-  'render'
-] as const)('matches EffectRenderer for sepia and bloom with %s downsampling', async (downsample, context) => {
+  {downsample: 'auto', flipY: true},
+  {downsample: 'render', flipY: true},
+  {downsample: 'auto', flipY: false}
+] as const)('matches EffectRenderer for $downsample downsampling and flipY=$flipY', async ({
+  downsample,
+  flipY
+}, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip();
   const width = 9;
@@ -48,7 +52,7 @@ it.each([
     reuseRenderTargets: true
   } as const;
   const effects = [sepiaEffect, {effect: hdrBloom, options: bloomOptions}] as const;
-  const renderer = new EffectRenderer(device, {effects, colorFormat: 'rgba8unorm'});
+  const renderer = new EffectRenderer(device, {effects, colorFormat: 'rgba8unorm', flipY});
   renderer.resize([width, height]);
 
   const program = new GPUGraph();
@@ -58,7 +62,8 @@ it.each([
       input: 'image',
       output: 'result',
       outputDescriptor: gpuGraph.texture({format: 'rgba8unorm', extent: {like: 'image'}}),
-      effects
+      effects,
+      flipY
     })
   );
   const compiled = program.compile<{result: Texture}>(device, {
