@@ -19,6 +19,8 @@ export type GPUProjectionTableProps = {
   positions: string;
   /** Optional packed uint32 mask, with zero meaning invalid and nonzero meaning valid. */
   inputValidity?: string;
+  /** Give projected position and validity buffers vertex usage for direct drawing. */
+  renderable?: boolean;
 };
 
 export type ProjectedGPUTableColumns = {
@@ -39,7 +41,8 @@ export class GPUProjectionTable {
     positions: GPUData<'float32x2' | 'float32x4'>;
     validity: GPUData<'uint32'>;
   }[] = [];
-  private registered = false;
+  private readonly registeredBatches = new Set<number>();
+  private registeredAll = false;
   private destroyed = false;
 
   constructor(
@@ -82,7 +85,7 @@ export class GPUProjectionTable {
         buffer: device.createBuffer({
           id: `${props.id}-${name}`,
           byteLength: Math.max(1, length) * width,
-          usage: Buffer.STORAGE | Buffer.COPY_SRC
+          usage: Buffer.STORAGE | Buffer.COPY_SRC | (props.renderable ? Buffer.VERTEX : 0)
         }),
         format,
         length,
@@ -128,14 +131,32 @@ export class GPUProjectionTable {
     }
   }
 
-  /** Register once on a caller-owned graph; output is usable only after caller submission. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    if (this.destroyed || this.registered || graph.device !== this.device) {
+  /** Register all batches, or a disjoint subset, on a caller-owned graph. */
+  addToGraph<Parameters>(
+    graph: GPUCommandGraph<Parameters>,
+    batchIndices?: readonly number[]
+  ): void {
+    if (this.destroyed || this.registeredAll || graph.device !== this.device) {
       throw new Error('projection table requires a live, unregistered contributor on its device');
     }
-    // A graph is not transactional. If registration fails, discard that graph and this contributor.
-    this.registered = true;
-    for (const [index, source] of this.sources.entries()) {
+    const indices = batchIndices ?? this.sources.map((_, index) => index);
+    if (
+      new Set(indices).size !== indices.length ||
+      indices.some(
+        index =>
+          !Number.isSafeInteger(index) ||
+          index < 0 ||
+          index >= this.sources.length ||
+          this.registeredBatches.has(index)
+      )
+    ) {
+      throw new Error('projection table requires distinct unregistered batch indices');
+    }
+    // A graph is not transactional. If registration fails, discard the contributor.
+    this.registeredAll = batchIndices === undefined;
+    for (const index of indices) this.registeredBatches.add(index);
+    for (const index of indices) {
+      const source = this.sources[index];
       if (!source.positions.length) continue;
       const id = `${this.props.id}-batch-${index}`;
       const output = this.outputs[index];

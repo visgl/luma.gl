@@ -233,3 +233,45 @@ deduplication remain common infrastructure rather than being reimplemented in th
 ## Visual effects
 
 The Deck visual effects and Wind Atlas are maintained in the [deck.gl-community examples gallery](https://visgl.github.io/deck.gl-community/examples).
+
+### Resident XY tables and paths
+
+Use `GPUTableMapPointSource` when a resident table already contains XY coordinates. The
+column holds two little-endian binary64 coordinates in each packed `uint32x4` row.
+An optional `uint32` input validity column masks invalid source rows. Supply bounds
+and a stable local origin in the source CRS, using its XY convention. Use one bounded,
+non-wrapping Web Mercator region per source.
+
+```ts
+const frame = {
+  from: 'EPSG:32610',
+  bounds: [551500, 4183500, 553000, 4184600] as const,
+  sourceOrigin: [552000, 4183900] as const,
+  tolerance: 0.05
+};
+const start = new GPUTableMapPointSource(device, {
+  ...frame, id: 'start', table, positions: 'startXY'
+});
+const end = new GPUTableMapPointSource(device, {
+  ...frame, id: 'end', table, positions: 'endXY'
+});
+start.updateChunks();
+end.updateChunks();
+
+const points = new GPUMaterializedMapPointLayer({id: 'points', source: start, pickable: true});
+const paths = new GPUMaterializedMapLineLayer({id: 'paths', start, end, pickable: true});
+```
+
+Each path row describes one straight segment. A segment disappears from drawing and
+picking when either endpoint is invalid. Picks report the original table row, physical
+batch index, and row within that batch. Pre-segment longer paths and supply `getFeatureIndex(segmentRow)` to attach the original
+feature index to a pick.
+
+The table and H3 adapters share a fixed map frame and expose retained, chunk-aligned
+position and validity vectors. They borrow input buffers and own projected outputs and
+compute resources. Run `updateChunks()` before attaching the layers. After an in-place
+GPU write, call `updateChunks([batchIndex])` on each changed endpoint or point source.
+Build a new source if you replace the input buffers or change the table topology or map
+frame. Detach the layers and finish queued work before destroying the source. Camera
+changes and picks reuse the output. Table projection submits one dispatch per selected
+batch. H3 pairing remains opt-in on supported adapters. Inline projection stays deferred.
