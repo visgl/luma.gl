@@ -27,7 +27,7 @@ const friction = numericSetting('friction', 0.9, 0, 1);
 const torque = numericSetting('torque', 32, 1, 64);
 // Keep explicit trial links reproducible, including loads outside the usual practice range.
 let mass = numericSetting('mass', torque < 16 ? 0.5 : 1, 0.25, 4);
-const maximumBlockMass = Math.max(torque < 16 ? 0.75 : 2, mass);
+const maximumBlockMass = Math.max(torque < 16 ? 0.75 : 3, mass);
 const slider = document.querySelector<HTMLInputElement>('#block-mass');
 const weight = document.querySelector<HTMLOutputElement>('#block-weight');
 if (slider && weight) {
