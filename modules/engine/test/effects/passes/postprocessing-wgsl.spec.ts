@@ -84,15 +84,15 @@ const ADVANCED_SHADER_PASSES = [
   resolveEffect(gtao.configure()),
   resolveEffect(gtao.configure({composition: 'ambient-only'})),
   resolveEffect(hdrAutoExposure.configure()),
-  resolveEffect(ssgi.configure()),
-  resolveEffect(clusteredVolumetricLighting.configure()),
+  resolveEffect(resolveEffectOptions(ssgi)),
+  resolveEffect(resolveEffectOptions(clusteredVolumetricLighting)),
   resolveEffect(outlines.configure({normalSource: 'normal-texture'})),
   resolveEffect(cameraReprojectionTaaDefinition),
   resolveEffect(taaDefinition),
   resolveEffect(motionBlur),
   resolveEffect(ssr.configure()),
-  resolveEffect(volumetricFog.configure()),
-  resolveEffect(volumetricFog.configure({mode: 'height'}))
+  resolveEffect(resolveEffectOptions(volumetricFog)),
+  resolveEffect(resolveEffectOptions(volumetricFog, {mode: 'height'}))
 ].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
 
 const SHADER_PASSES = [

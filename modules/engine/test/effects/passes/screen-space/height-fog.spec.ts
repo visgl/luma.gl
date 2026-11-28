@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {resolveEffect} from '../../../../src/passes/effect-renderer';
+import {resolveEffect, resolveEffectOptions} from '../../../../src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
@@ -13,10 +13,10 @@ import {getTestDevice} from '@luma.gl/core/test-utils';
 import {makeShaderModuleRenderer} from '../../../../../shaders/test/modules/render-shader-module';
 
 it('height fog preserves the existing fog graph and matches both uniform layouts', () => {
-  expect(resolveEffect(volumetricFog.configure()).renderTargets?.fogHistory.lifetime).toBe(
-    'history'
-  );
-  const analytic = resolveEffect(volumetricFog.configure({mode: 'height'}));
+  expect(
+    resolveEffect(resolveEffectOptions(volumetricFog)).renderTargets?.fogHistory.lifetime
+  ).toBe('history');
+  const analytic = resolveEffect(resolveEffectOptions(volumetricFog, {mode: 'height'}));
   expect(analytic.renderTargets).toEqual({});
   expect(analytic.steps).toHaveLength(1);
   expect(analytic.steps[0].shaderPass).toBe(heightFogPass);
@@ -52,7 +52,7 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       depthStencilAttachment: depth
     });
     const renderer = new ShaderPassRenderer(device, {
-      shaderPasses: [resolveEffect(volumetricFog.configure({mode: 'height'}))],
+      shaderPasses: [resolveEffect(resolveEffectOptions(volumetricFog, {mode: 'height'}))],
       colorFormat: 'rgba32float'
     });
     renderer.resize([2, 2]);
