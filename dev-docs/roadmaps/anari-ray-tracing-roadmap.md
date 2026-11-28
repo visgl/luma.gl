@@ -148,6 +148,8 @@ presentation at fixed seeds and shared measured GPU costs. Motion captures can
 toggle reprojection against an independently sampled, stationary reference at
 the exact target pose. The Chart Motion and glossy motion workflows measure
 linear HDR recovery error versus new samples and GPU time after the pose stops.
+The report compares both modes at shared GPU budgets and records HDR error
+tails to expose localized failures that whole-frame RMSE can hide.
 Stationary PBR paths now accumulate without reprojection clipping, while glossy
 guides reject stale history during movement. The glossy benchmark can gate the
 final HDR error relative to a pose-matched temporal-off control. Broader
