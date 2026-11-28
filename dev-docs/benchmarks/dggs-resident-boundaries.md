@@ -26,14 +26,18 @@ timed GPU path. The CPU path generates polygons from ready cell IDs and uploads 
 Float32 coordinates. Six measured iterations follow one warm-up for each size.
 A readback before timing checked for unsupported rows and verified the location.
 
-| Cells | Resident GPU boundary median | CPU boundary plus upload median |
-| ---: | ---: | ---: |
-| 16,384 | 58.3 ms | 39.4 ms |
-| 131,072 | 331.6 ms | 320.6 ms |
+| Capture | Cells | Resident GPU boundary median | CPU boundary plus upload median |
+| --- | ---: | ---: | ---: |
+| Initial | 16,384 | 58.3 ms | 39.4 ms |
+| Initial | 131,072 | 331.6 ms | 320.6 ms |
+| Repeat | 16,384 | 93.2 ms | 40.6 ms |
+| Repeat | 131,072 | 639.1 ms | 274.0 ms |
 
-The current helper was about 1.48 times as slow at 16K cells and within 4% at 131K.
-These timings cover boundary creation on one device and include no draw, picking,
-or cross-vendor qualification.
+The current helper was slower in both captures, with near parity in the initial
+131K run. The repeat showed substantial variation on a shared development machine.
+These results establish that the resident path works for the sample. A dedicated run
+is needed for a stable throughput comparison. The capture covers boundary creation.
+Draws, picking, and other vendors remain unmeasured.
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true yarn exec vitest run --project headless --reporter=verbose h3-boundary-resident-benchmark
