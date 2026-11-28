@@ -161,7 +161,7 @@ export async function* convertArrowRecordBatchesToGPUColumns(
 
 /** GPU formats for a column and its optional companion vectors. */
 type ArrowColumnFormats = {
-  value: string;
+  value: string | undefined;
   residual?: string;
   validity?: string;
 };
