@@ -43,6 +43,40 @@ destroying the source. The layer owns its draw model and leaves the position and
 vectors with their owner. Pairing is opt-in via `groupChunks: true` and requires at least nine
 storage bindings. A one-chunk update always uses a single projection dispatch.
 
+## Materialized H3 points on a map
+
+Use `GPUH3MapPointSource` with `GPUMaterializedMapPointLayer` in a Deck `MapView`:
+
+```ts
+import {GPUH3MapPointSource, GPUMaterializedMapPointLayer} from '@deck.gl-community/gpu-layers';
+
+const source = new GPUH3MapPointSource(device, {
+  cells, // resident little-endian H3 IDs in GPUVector<'uint32x2'>
+  bounds: [-122.42, 37.78, -122.38, 37.82]
+});
+source.updateChunks();
+
+const layer = new GPUMaterializedMapPointLayer({
+  id: 'h3-map-centers',
+  source,
+  getSourcePosition, // Optional longitude/latitude lookup for the picked row.
+  pickable: true
+});
+```
+
+Supply an ordered longitude/latitude region within one Web Mercator world. H3 centers outside
+the region are masked. A region spanning the antimeridian needs separate sources. The source
+projects to EPSG:3857 and stores offsets from the region midpoint in Deck common units. Deck
+applies its viewport rebasing during drawing and picking, so zoom, bearing, and pan reuse the
+buffers. The map layer draws points at ground level in a Web Mercator viewport. The H3 producer
+uses float32 longitude/latitude centers, which limit high-zoom positional precision.
+
+Pick information includes global row and physical chunk identity. Deck's `coordinate` is the
+picked geographic screen location. If supplied, `getSourcePosition` adds reference longitude/latitude,
+EPSG:3857 coordinates and the origin-relative common position for the selected row. The source
+uses the same explicit dirty-chunk updates and ownership rules as materialized Cartesian points.
+Pairing requires an explicit `groupChunks: true` on the source.
+
 ## Inline CRS-projected points
 
 `GPUProjectedPointLayer` renders raw binary64 coordinate pairs (`GPUVector<'uint32x4'>`) through a

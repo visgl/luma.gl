@@ -210,7 +210,7 @@ export class GPUMaterializedPointLayer extends Layer<GPUMaterializedPointLayerPr
   }
 
   /** Ensures the supplied local positions can be used directly as Cartesian coordinates. */
-  private validateFrame(): void {
+  protected validateFrame(): void {
     const {coordinateSystem, coordinateOrigin, modelMatrix} = this.props;
     if (
       this.context.device.type !== 'webgpu' ||

@@ -42,3 +42,12 @@ export {
   GPUH3ProjectedPointSource,
   type GPUH3ProjectedPointSourceProps
 } from './projection/gpu-h3-projected-point-source';
+
+export {
+  GPUMaterializedMapPointLayer,
+  type GPUMaterializedMapPointLayerProps
+} from './layers/gpu-materialized-map-point-layer';
+export {
+  GPUH3MapPointSource,
+  type GPUH3MapPointSourceProps
+} from './projection/gpu-h3-map-point-source';
