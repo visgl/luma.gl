@@ -9,6 +9,7 @@ import {
   RayTracingSceneRenderer,
   type RayTracingImageExportOptions,
   type RayTracingImageTile,
+  type RayTracingScenePrimitive,
   type RayTracingSceneRenderOptions
 } from './renderers';
 import type {ANARIFrame} from './anari-objects';
@@ -75,9 +76,11 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       return null;
     }
 
+    const primitives: Readonly<Record<string, RayTracingScenePrimitive>> =
+      adapter.getAnalyticPrimitives(world);
     return {
       ...options,
-      primitives: adapter.getAnalyticPrimitives(world),
+      primitives,
       cameraProjection: camera.subtype,
       samplesPerPixel: renderer.getParameter('samplesPerPixel'),
       samplingSeed: renderer.getParameter('samplingSeed'),
