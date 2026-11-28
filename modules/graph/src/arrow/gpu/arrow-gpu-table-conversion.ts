@@ -5,6 +5,7 @@
 import {type Device} from '@luma.gl/core';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/graph/gpu-tables';
+import {iterateSource} from './arrow-conversion-stream';
 import {RecordBatch, Table} from 'apache-arrow';
 import {getArrowFieldByPath} from '@luma.gl/graph/_internal/arrow';
 import {getArrowVectorByPath} from '@luma.gl/graph/arrow';
@@ -261,7 +262,7 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   const formats = new Map<string, string | undefined>();
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
-  for await (const recordBatch of iterateRecordBatches(source, signal)) {
+  for await (const recordBatch of iterateSource(source, signal)) {
     let rowOffset = 0;
     do {
       signal?.throwIfAborted();
@@ -449,67 +450,4 @@ function sumConversionCosts(costs: readonly ArrowGPUConversionCost[]): ArrowGPUC
       allocatesGPUStorage: false
     }
   );
-}
-
-/** Pulls one batch at a time, allowing abort to interrupt a stalled next(). */
-async function* iterateRecordBatches(
-  source: ArrowRecordBatchConversionSource,
-  signal?: AbortSignal
-): AsyncGenerator<RecordBatch> {
-  signal?.throwIfAborted();
-  const iterator =
-    Symbol.asyncIterator in source
-      ? source[Symbol.asyncIterator]()
-      : Symbol.iterator in source
-        ? source[Symbol.iterator]()
-        : source;
-  let completed = false;
-  try {
-    for (;;) {
-      const result = await readRecordBatch(iterator, signal);
-      signal?.throwIfAborted();
-      if (result.done) {
-        completed = true;
-        return;
-      }
-      yield result.value;
-    }
-  } finally {
-    if (!completed) {
-      // Async generators may queue return() behind a stalled next(); do not delay abort.
-      const cleanup = Promise.resolve().then(() => iterator.return?.());
-      if (signal?.aborted) void cleanup.catch(() => {});
-      else await cleanup;
-    }
-  }
-}
-
-function readRecordBatch(
-  iterator: Iterator<RecordBatch> | AsyncIterator<RecordBatch>,
-  signal?: AbortSignal
-): Promise<IteratorResult<RecordBatch>> {
-  signal?.throwIfAborted();
-  if (!signal) return Promise.resolve(iterator.next());
-  return new Promise((resolve, reject) => {
-    const abort = () => {
-      signal.removeEventListener('abort', abort);
-      reject(signal.reason);
-    };
-    signal.addEventListener('abort', abort, {once: true});
-    Promise.resolve()
-      .then(() => {
-        signal.throwIfAborted();
-        return iterator.next();
-      })
-      .then(
-        result => {
-          signal.removeEventListener('abort', abort);
-          resolve(result);
-        },
-        error => {
-          signal.removeEventListener('abort', abort);
-          reject(error);
-        }
-      );
-  });
 }
