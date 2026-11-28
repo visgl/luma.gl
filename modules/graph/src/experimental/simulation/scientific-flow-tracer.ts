@@ -137,6 +137,7 @@ export class ScientificFlowTracer {
     this.lifetime = props.lifetime ?? 1e30;
     this.maximumAttempts = props.maximumAttempts ?? 32;
     this.dispatchesPerReadback = props.dispatchesPerReadback ?? 1;
+    // Bound per-call dispatch work and uniform/counter allocations to 1–32 batches.
     assert(
       Number.isInteger(this.dispatchesPerReadback) &&
         this.dispatchesPerReadback >= 1 &&
@@ -469,7 +470,9 @@ export class ScientificFlowTracer {
         0
       ].forEach((value, index) => view.setFloat32(48 + index * 4, value, true));
       const encoder = this.device.createCommandEncoder({timeProfilingQuerySet: this.queries});
+      /** Actual graph encodings retained in submission order for inspection. */
       const encodings: GPUCommandGraphEncoding[] = [];
+      /** Dispatch cursor within the fixed per-readback batch. */
       for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
         // Later dispatches resume progress rather than restarting the request clock.
         view.setUint32(44, (first && batchIndex === 0 ? 1 : 0) | (batchIndex === 0 ? 2 : 0), true);
@@ -496,22 +499,30 @@ export class ScientificFlowTracer {
       this.device.submit(encoder.finish());
       this.dispatchIndex += this.dispatchesPerReadback;
       const result = await this.batchStatistics.readAsync();
+      /** Contiguous status/work snapshots copied before each graph counter reset. */
       const batchCounts = new Uint32Array(
         result.buffer,
         result.byteOffset,
         9 * this.dispatchesPerReadback
       );
+      /** Final statuses only; earlier statuses would double-count particle slots. */
       const counts = batchCounts.subarray(batchCounts.length - 9);
+      /** Accepted steps summed over the complete batch, including idle tails. */
       let acceptedSteps = 0;
+      /** Rejected trials summed over the complete batch. */
       let rejectedSteps = 0;
+      /** Dispatch cursor within the fixed per-readback batch. */
       for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
         acceptedSteps += batchCounts[batchIndex * 9 + 7];
         rejectedSteps += batchCounts[batchIndex * 9 + 8];
       }
+      /** Per-encoding timestamp reports, read only after batch submission. */
       const timings = await Promise.all(encodings.map(encoding => encoding.readTimings()));
+      /** Aggregate compute duration when all dispatch timings are available. */
       const gpuMilliseconds = timings.every(timing => timing.gpuTimeMilliseconds !== undefined)
         ? timings.reduce((sum, timing) => sum + timing.gpuTimeMilliseconds!, 0)
         : undefined;
+      /** Final encoding retained as the backwards-compatible inspection handle. */
       const encoding = encodings[encodings.length - 1];
       const targetTime = this.time + duration;
       const complete = counts[6] === 0;

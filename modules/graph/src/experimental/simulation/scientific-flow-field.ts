@@ -51,8 +51,9 @@ export class ScientificFlowField {
     this.periodicLongitude = props.periodicLongitude ?? false;
     this.layout = input.layout ?? 'collocated';
     if (input.layout === 'c-grid') {
-      // Geographic metrics and curvilinear vector-basis rotation are separate contracts.
+      // C-grids require exterior bounds in Cartesian units; geographic metrics and basis rotation are unsupported.
       assert(props.bounds && props.coordinates !== 'lnglat');
+      /** Owned packed faces and their conservative timestep speed bound. */
       const uploaded = uploadStaggeredFlowField(
         device,
         input,

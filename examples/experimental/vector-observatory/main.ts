@@ -400,7 +400,9 @@ struct View {size: vec4f, options: vec4f};
               canvas.width,
               canvas.height,
               controls.settings.streakWidth,
-              (controls.settings.exposure * 1.2 * 65536) / activeCount,
+              // Dense closed-cell circulation needs less additive exposure than the weather atlas.
+              (controls.settings.exposure * 1.2 * 65536 * (activeField === 'c-grid' ? 0.08 : 1)) /
+                activeCount,
               controls.settings.coloring === 'step'
                 ? 1
                 : controls.settings.coloring === 'status'
