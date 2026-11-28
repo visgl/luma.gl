@@ -710,6 +710,7 @@ fn clusteredVolumetricComposite_sampleColor(
   ClusteredVolumetricCompositeUniforms
 >;
 
+/** Use full-resolution evaluation and history textures by default. */
 const clusteredVolumetricLightingOptionDefaults: Required<ClusteredVolumetricLightingCompositeShaderPassOptions> =
   {
     resolutionScale: 1

@@ -21,6 +21,7 @@ type FogUniforms = {
   time: number;
 };
 
+/** Selects temporally accumulated screen-space fog or analytic height fog. */
 export const volumetricFogPass = {
   name: 'volumetricFog',
   source: /* wgsl */ `\
@@ -79,10 +80,12 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
+/** Default to the screen-space fog pass with temporal history. */
 const volumetricFogOptionDefaults: Required<VolumetricFogCompositeShaderPassOptions> = {
   mode: 'screen-space'
 };
 
+/** Selects temporally accumulated screen-space fog or analytic height fog. */
 export const volumetricFog = {
   optionDefaults: volumetricFogOptionDefaults,
   variants: {option: 'mode', values: {height: heightFog}},

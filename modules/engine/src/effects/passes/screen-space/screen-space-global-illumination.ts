@@ -523,6 +523,7 @@ fn ssgiComposite_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<Partial<SSGICompositeUniforms>, SSGICompositeUniforms>;
 
+/** Use full-resolution intermediate textures by default. */
 const ssgiOptionDefaults: Required<SSGICompositeShaderPassOptions> = {resolutionScale: 1};
 
 /** Creates a hemisphere-traced, temporally stabilized screen-space diffuse GI pipeline. */
