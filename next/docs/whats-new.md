@@ -2,6 +2,8 @@
 
 ## Version 10.0[​](#version-100 "Direct link to Version 10.0")
 
+* **Persistent and spherical advection.** [RK45 survivor queues](https://luma.gl/next/docs/api-reference/experimental/scientific-flow-tracer.md#persistent-survivor-queues) avoid repeated full-slot scans. [Adaptive spherical tracing](https://luma.gl/next/docs/api-reference/experimental/spherical-flow-tracer.md) adds physical error control, continuation and graph inspection across poles and the seam.
+
 * **Active advection scheduling.** [RK45 tracing](https://luma.gl/next/docs/api-reference/experimental/scientific-flow-tracer.md#gpu-active-scheduling) adds opt-in GPU compaction and indirect dispatch, scheduling counters, and sparse/dense cost qualification. Vector Observatory exposes scheduling and batch controls.
 
 * **Staggered advection and batching.** [Cartesian C-grid fields](https://luma.gl/next/docs/api-reference/experimental/staggered-flow-fields.md) retain face velocities and masks. RK45 supports bounded dispatch batches with one counter synchronization per batch.
