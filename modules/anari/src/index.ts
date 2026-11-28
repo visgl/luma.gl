@@ -220,9 +220,12 @@ export {
   type RayTracingQualityPreset,
   type RayTracingQualitySettings,
   exportRayTracingImage,
+  exportRayTracingRadiance,
+  encodeRayTracingRadiancePFM,
   iterateRayTracingImageTiles,
   type RayTracingImageExportOptions,
   type RayTracingImageTile,
+  type RayTracingRadianceTile,
   type RayTracingImageTileRegion
 } from './renderers';
 

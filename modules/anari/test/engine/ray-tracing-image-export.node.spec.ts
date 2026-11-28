@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {iterateRayTracingImageTiles} from '@luma.gl/anari';
+import {encodeRayTracingRadiancePFM, iterateRayTracingImageTiles} from '@luma.gl/anari';
 import {expect, it} from 'vitest';
 
 it('export interiors cover an odd image exactly once and halos stay within image bounds', () => {
@@ -65,4 +65,27 @@ it('export planning stays lazy and rejects unsafe dimensions before yielding', (
       Array.from(iterateRayTracingImageTiles(values[0], values[1], values[2], values[3]))
     ).toThrow();
   }
+});
+
+it('PFM writes bottom-up linear RGB, preserving HDR values and dropping history confidence', async () => {
+  const tiles = Array.from(iterateRayTracingImageTiles(2, 2, 1), tile => {
+    const data = new Uint8Array(8);
+    const samples = new DataView(data.buffer);
+    samples.setUint16(0, [0x3c00, 0x4000, 0x4400, 0x4800][tile.y * 2 + tile.x], true);
+    samples.setUint16(2, 0x3800, true);
+    samples.setUint16(4, 0x0001, true);
+    samples.setUint16(6, 0x7bff, true);
+    return {...tile, data};
+  });
+  const file = await encodeRayTracingRadiancePFM(2, 2, tiles);
+  const header = 'PF\n2 2\n-1.0\n';
+  expect(new TextDecoder().decode(file.subarray(0, header.length))).toBe(header);
+  const raster = new DataView(file.buffer, header.length);
+  expect(Array.from({length: 12}, (_, index) => raster.getFloat32(index * 4, true))).toEqual(
+    [4, 8, 1, 2].flatMap(red => [red, 0.5, 2 ** -24])
+  );
+  await expect(encodeRayTracingRadiancePFM(2, 2, tiles.slice(0, -1))).rejects.toThrow();
+  await expect(encodeRayTracingRadiancePFM(2, 2, [...tiles].reverse())).rejects.toThrow();
+  const firstTile = {...tiles[0], data: new Uint8Array(4)};
+  await expect(encodeRayTracingRadiancePFM(2, 2, [firstTile, ...tiles.slice(1)])).rejects.toThrow();
 });
