@@ -516,6 +516,12 @@
         text-align: right;
       }
 
+      #scene-preview-fps {
+        min-width: 3ch;
+        color: #fff;
+        font-weight: 700;
+      }
+
       .statistic-value {
         margin-top: 6px;
         color: rgba(242, 245, 255, 0.92);
@@ -782,6 +788,10 @@
           </div>
           <div class="preview-footer">
             <div class="preview-statistics">
+              <div title="Rendered preview frames per second, including pauses between ray batches">
+                <div class="statistic-label">FPS</div>
+                <div id="scene-preview-fps" class="statistic-value">—</div>
+              </div>
               <div>
                 <div class="statistic-label">INSTANCES</div>
                 <div id="scene-instance-count" class="statistic-value">—</div>

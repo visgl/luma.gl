@@ -1,3 +1,4 @@
+import {PreviewFrameRate} from './preview-frame-rate';
 import {RayBatchBudget} from './ray-batch-budget';
 import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
 import {submitPacedRayFrame} from './ray-submission-pacing';
@@ -52,6 +53,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private rendererSubtype: ANARIRendererSubtype = 'default';
   private temporalAntialiasingEnabled = true;
   private rayRendererSettings: ANARIRendererParameters = {};
+  private readonly previewFrameRate = new PreviewFrameRate(
+    document.getElementById('scene-preview-fps')
+  );
   private lastStatisticsUpdate = 0;
   private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
@@ -330,6 +334,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   }
 
   override onRender({device, width, height, time}: AnimationProps): void {
+    this.previewFrameRate.tick(time);
     const scene = this.scene;
     if (this.captureSceneLoading) return;
     if (this.captureFrameLimit && this.renderedFrameCount >= this.captureFrameLimit) return;
@@ -431,6 +436,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         : undefined;
     if (timedFrame && this.captureGpuTiming) this.captureGpuTimes.push(timedFrame.gpuTime);
     const statistics = timedFrame?.result ?? scene.frame.render();
+    if (statistics.drawCount > 0) this.previewFrameRate.recordFrame();
     if (this.captureGpuTiming) {
       const graphTimings = statistics.rayTracing?.readGraphTimings?.();
       this.captureGraphTimings.push(

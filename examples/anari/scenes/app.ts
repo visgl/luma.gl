@@ -1,3 +1,4 @@
+import {PreviewFrameRate} from './preview-frame-rate';
 import {timeCaptureFrame} from './ray-capture-timing';
 import {RayBatchBudget} from './ray-batch-budget';
 import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
@@ -92,6 +93,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private readonly raySubmissionPacer = new GPUCommandGraphSubmissionPacer();
   /** Calibrates the ray trace dispatch independently of queue pacing. */
   private readonly rayBatchBudget = new RayBatchBudget();
+  private readonly previewFrameRate = new PreviewFrameRate(document.getElementById('preview-fps'));
   private lastStatisticsUpdate = 0;
   private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
@@ -156,6 +158,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   }
 
   override onRender({device, width, height, time}: AnimationProps): void {
+    this.previewFrameRate.tick(time);
     const elapsedSeconds = time * 0.001;
     const activeScene = this.scenes[this.activeSceneIndex];
     for (const animation of activeScene.animations) {
@@ -205,6 +208,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         ? timeCaptureFrame(device, () => this.frame.render())
         : undefined;
     const statistics = timedFrame?.result ?? this.frame.render();
+    if (statistics.drawCount > 0) this.previewFrameRate.recordFrame();
     if (timedFrame) this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
     if (paceRayFrame) {
       void submitPacedRayFrame(device, this.raySubmissionPacer).catch(() => {
