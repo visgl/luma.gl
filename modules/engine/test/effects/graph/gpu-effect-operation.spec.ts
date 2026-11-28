@@ -1,0 +1,112 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {expect, it} from 'vitest';
+import {Buffer, Texture} from '@luma.gl/core';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {GPUGraph, gpuGraph} from '@luma.gl/graph';
+import {EffectRenderer} from '@luma.gl/engine';
+import {
+  GPUEffectOperation,
+  effectOperationLowering,
+  hdrBloom,
+  sepiaEffect
+} from '@luma.gl/engine/effects';
+
+it.each([
+  'auto',
+  'render'
+] as const)('matches EffectRenderer for sepia and bloom with %s downsampling', async (downsample, context) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const width = 9;
+  const height = 7;
+  const data = new Uint8Array(width * height * 4);
+  for (let index = 0; index < width * height; index++) {
+    data[index * 4] = index % 7 === 0 ? 255 : 0;
+    data[index * 4 + 1] = Math.floor(index / width) * 25;
+    data[index * 4 + 3] = 255;
+  }
+  const source = device.createTexture({
+    format: 'rgba8unorm',
+    width,
+    height,
+    data,
+    usage: Texture.SAMPLE | Texture.COPY_DST
+  });
+  const bloomOptions = {
+    colorFormat: 'rgba8unorm',
+    quality: 'low',
+    radius: 1,
+    downsample,
+    reuseRenderTargets: true
+  } as const;
+  const effects = [sepiaEffect, {effect: hdrBloom, options: bloomOptions}] as const;
+  const renderer = new EffectRenderer(device, {effects, colorFormat: 'rgba8unorm'});
+  renderer.resize([width, height]);
+
+  const program = new GPUGraph();
+  program.addInput('image', gpuGraph.texture({format: 'rgba8unorm'}));
+  program.add(
+    new GPUEffectOperation({
+      input: 'image',
+      output: 'result',
+      outputDescriptor: gpuGraph.texture({format: 'rgba8unorm', extent: {like: 'image'}}),
+      effects
+    })
+  );
+  const compiled = program.compile<{result: Texture}>(device, {
+    lowerings: [effectOperationLowering]
+  });
+  const execution = compiled.prepare({inputs: {image: source}});
+  const encoder = device.createCommandEncoder();
+  const layout = execution.outputs.result.computeMemoryLayout();
+  const expected = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  const actual = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    const rendererOutput = renderer.render({sourceTexture: source, commandEncoder: encoder})!;
+    execution.encode(encoder);
+    for (const [texture, buffer] of [
+      [rendererOutput, expected],
+      [execution.outputs.result, actual]
+    ] as const) {
+      encoder.copyTextureToBuffer({
+        sourceTexture: texture,
+        destinationBuffer: buffer,
+        bytesPerRow: layout.bytesPerRow,
+        width,
+        height
+      });
+    }
+    device.submit(encoder.finish());
+    const [expectedBytes, actualBytes] = await Promise.all([
+      expected.readAsync(),
+      actual.readAsync()
+    ]);
+    for (let row = 0; row < height; row++) {
+      for (let columnByte = 0; columnByte < width * 4; columnByte++) {
+        const offset = row * layout.bytesPerRow + columnByte;
+        expect(
+          Math.abs(actualBytes[offset] - expectedBytes[offset]),
+          'pixel byte ' + offset
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+  } finally {
+    execution.destroy();
+    execution.outputs.result.destroy();
+    compiled.destroy();
+    encoder.destroy();
+    renderer.destroy();
+    source.destroy();
+    expected.destroy();
+    actual.destroy();
+  }
+});

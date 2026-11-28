@@ -343,3 +343,37 @@ HDR auto exposure uses fixed scale factors for the luminance reduction levels.
 Its history descriptor seeds the exposure value from `initialExposure` after
 creation, resize, or history reset. Per-frame uniforms still control adaptation
 and override construction-time uniform defaults.
+
+## Run effects in a GPU graph
+
+Use the same effect entries in the WebGPU graph. Declare a graph texture input,
+give the effect operation named shader bindings and an output, and install the
+engine lowering in the graph compiler.
+
+```ts
+import {GPUGraph, gpuGraph} from '@luma.gl/graph';
+import {GPUEffectOperation, effectOperationLowering, sepiaEffect} from '@luma.gl/engine/effects';
+
+const graph = new GPUGraph();
+graph.addInput('sceneColor', gpuGraph.texture({format: 'rgba8unorm'}));
+graph.add(new GPUEffectOperation({
+  input: 'sceneColor',
+  output: 'filteredColor',
+  outputDescriptor: gpuGraph.texture({
+    format: 'rgba8unorm',
+    extent: {like: 'sceneColor'}
+  }),
+  effects: [sepiaEffect],
+  uniforms: {sepia: {amount: 0.6}}
+}));
+
+const compiled = graph.compile(device, {lowerings: [effectOperationLowering]});
+```
+
+Call `run` for submission or `prepare` to bind logical textures for a
+caller-owned command encoder. Other graph operations can consume the named
+result. Effect options, pass ordering, and compute fallback selection use the
+same plan as `EffectRenderer`. The graph tracks each draw and dispatch with its
+texture uses, so effect-local scratch textures can be reused across passes
+when lifetimes allow. Effects with retained frame history still use
+`EffectRenderer`.
