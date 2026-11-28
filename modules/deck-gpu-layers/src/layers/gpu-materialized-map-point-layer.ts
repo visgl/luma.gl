@@ -30,8 +30,12 @@ export class GPUMaterializedMapPointLayer extends GPUMaterializedPointLayer {
   static override layerName = 'GPUMaterializedMapPointLayer';
 
   /** Derives all coordinate props from the source's fixed map frame. */
-  constructor(props: GPUMaterializedMapPointLayerProps) {
+  constructor(...propObjects: Partial<GPUMaterializedMapPointLayerProps>[]) {
+    const props: Partial<GPUMaterializedMapPointLayerProps> = Object.assign({}, ...propObjects);
     const {source} = props;
+    if (!source) {
+      throw new Error('GPUMaterializedMapPointLayer requires a source');
+    }
     super({
       ...props,
       positions: source.positions,

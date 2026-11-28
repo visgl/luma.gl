@@ -71,14 +71,16 @@ it('picks resident H3 points across Mercator zoom modes and updates only the dir
     );
   let frames = 0;
   const errors: string[] = [];
-  const layer = new GPUMaterializedMapPointLayer({
-    id: 'h3-map-points',
-    source,
-    getSourcePosition: index => (rowCells[index] ? sourcePosition(rowCells[index]) : null),
-    pointSize: 8,
-    getColor: [255, 0, 0],
-    pickable: true
-  });
+  const layer = new GPUMaterializedMapPointLayer(
+    {id: 'h3-map-points'},
+    {
+      source,
+      getSourcePosition: index => (rowCells[index] ? sourcePosition(rowCells[index]) : null),
+      pointSize: 8,
+      getColor: [255, 0, 0],
+      pickable: true
+    }
+  );
   const deck = new Deck({
     parent,
     device,
@@ -127,11 +129,16 @@ it('picks resident H3 points across Mercator zoom modes and updates only the dir
     const model = layer.getModels()[0];
     expect(getEncodedNodes()).toEqual([]);
 
-    deck.setProps({viewState: {longitude: -122.401, latitude: 37.801, zoom: 14, bearing: 17}});
+    const clonedLayer = layer.clone({pointSize: 10});
+    expect(clonedLayer.props.pointSize).toBe(10);
+    deck.setProps({
+      layers: [clonedLayer],
+      viewState: {longitude: -122.401, latitude: 37.801, zoom: 14, bearing: 17}
+    });
     await redraw();
     expect((await pick(first))?.index).toBe(0);
     expect((await pick(second))?.index).toBe(2);
-    expect(layer.getModels()[0]).toBe(model);
+    expect(clonedLayer.getModels()[0]).toBe(model);
     expect(getEncodedNodes()).toEqual([]);
 
     const encoder = device.createCommandEncoder();
