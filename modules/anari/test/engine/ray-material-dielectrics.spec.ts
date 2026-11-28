@@ -133,6 +133,63 @@ it('ray dielectrics refract and absorb light and sample remaining material maps'
     };
     options.surfaces[0].material.bindings = {pbr_metallicRoughnessSampler: replacement};
     expect(await readPixel()).toEqual(scalarMaterial);
+    // In nested, index-matched shells the outer absorber must resume after exit
+    // from the inner one. The inner segment uses only the inner medium.
+    const outer = {
+      ...glass,
+      id: 'outer-volume',
+      material: {
+        id: 'outer',
+        uniforms: {
+          transmissionFactor: 1,
+          ior: 1,
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          attenuationColor: [0.25, 1, 1] as [number, number, number],
+          attenuationDistance: 1
+        }
+      }
+    };
+    const inner = {
+      ...outer,
+      id: 'inner-volume',
+      material: {
+        id: 'inner',
+        uniforms: {
+          ...outer.material.uniforms,
+          attenuationColor: [1, 0.25, 1] as [number, number, number]
+        }
+      }
+    };
+    options.surfaces = [outer, inner];
+    options.primitives = {
+      'outer-volume': {type: 'sphere', radius: 1},
+      'inner-volume': {type: 'sphere', radius: 0.5}
+    };
+    options.background = [1, 1, 1, 1];
+    options.lights = [];
+    options.maxBounces = 4;
+    const camera = options.camera;
+    options.cameraProjection = 'orthographic';
+    options.camera = {
+      ...camera,
+      projectionMatrix: new Matrix4().ortho({
+        left: -1,
+        right: 1,
+        bottom: -1,
+        top: 1,
+        near: 0.1,
+        far: 20
+      })
+    };
+    const [outerAbsorption, innerAbsorption, unabsorbed] = await readPixel();
+    expect(outerAbsorption).toBeGreaterThan(45);
+    expect(outerAbsorption).toBeLessThan(90);
+    expect(innerAbsorption).toBeGreaterThan(45);
+    expect(innerAbsorption).toBeLessThan(105);
+    expect(unabsorbed).toBe(255);
+    options.camera = camera;
+    options.cameraProjection = 'perspective';
+
     // A diffuse receiver inside glass must not turn a camera backdrop into a light.
     options.surfaces = [surface, glass];
     options.surfaces[0].material.bindings = {};

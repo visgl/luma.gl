@@ -71,7 +71,7 @@ require a compatible raster renderer.
 | Vertex color | Interpolated glTF `COLOR_0` RGB multiplies the base color. RGBA vertex alpha participates in `MASK` visibility. |
 | Visibility | Alpha masks and stochastic alpha blending for rendering and shadows |
 | Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
-| Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
+| Smooth glass | Transmission map, IOR, and distance-based absorption for closed, properly nested meshes |
 | Rough glass | Opt-in GGX dielectric reflection and refraction using scalar or textured roughness |
 | Dispersion | glTF `KHR_materials_dispersion` uses channel-dependent IOR for PBR continuation |
 | Face sidedness | Explicitly single-sided triangles cull back faces in rendering and visibility queries. Transmissive meshes keep both interfaces. |
@@ -107,9 +107,9 @@ also filters blend coverage for mipmapped triangle textures.
 Set `roughDielectricTransmission: true` on the ray-tracing renderer with
 `transportMode: 'pbr'` and a positive `maxBounces`. Glass roughness above
 0.04 broadens reflection and refraction using GGX facet sampling. Smooth and
-index-matched interfaces use the existing continuation. Rough dielectric
-events are sampled by path continuation. Direct-light shadow transport retains
-its existing controls. The implementation follows the microfacet transport
+index-matched interfaces use the existing continuation. Rough dielectric events use path continuation. Directional, point, and spot
+lights can also connect to nondispersive exterior rough interfaces using the
+existing shadow controls. The implementation follows the microfacet transport
 model described in [PBRT’s dielectric BSDF](https://pbr-book.org/4ed/Reflection_Models/Dielectric_BSDF).
 
 Dispersion uses the glTF Abbe-number parameterization with three RGB bands.
@@ -165,7 +165,9 @@ throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metalli
 remaining after traveling `attenuationDistance` world units. The path applies Beer–Lambert
 absorption along each segment inside the object, including segments after internal reflection.
 The camera path must enter the medium through a refracted hit. Nonpositive or infinite distance
-disables absorption. Nested media remain unsupported. Misses contribute no indirect radiance: `background` is a display color, not an
+disables absorption. Nested dielectric continuation tracks the active medium at each interface.
+Use closed, consistently wound, non-overlapping shells that enter and exit in
+order. Each segment uses the innermost medium’s attenuation. Misses contribute no indirect radiance: `background` is a display color, not an
 environment light. Ambient lights and fog retain the existing per-hit approximations.
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
@@ -178,7 +180,7 @@ reprojection and camera-cut rejection.
 Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
 and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering.
 Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available;
-Light-sampled rough dielectric connections, advanced temporal denoising, and participating media remain open.
+Area and environment light sampling for rough dielectrics, advanced temporal denoising, and participating media remain open.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
