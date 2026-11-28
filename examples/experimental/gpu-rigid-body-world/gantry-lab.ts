@@ -19,24 +19,39 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from './info-box';
 import {makeGantry, gantryTargets, GANTRY_STEP} from './gantry';
 
+/** Presentation surface shared by the scene renderer and orbit controls. */
 const canvas = document.querySelector<HTMLCanvasElement>('canvas')!;
+/** Starts the next stage or resets the finished cycle. */
 const cycle = document.querySelector<HTMLButtonElement>('#cycle')!;
+/** Withdraws the left support while holding the beam. */
 const release = document.querySelector<HTMLButtonElement>('#release')!;
+/** Selects the lateral center of mass for the next trial. */
 const ballast = document.querySelector<HTMLInputElement>('#ballast')!;
+/** Selects the size of the dynamic stock inventory. */
 const parts = document.querySelector<HTMLSelectElement>('#parts')!;
+/** Displays the selected ballast offset in meters. */
 const offset = document.querySelector<HTMLOutputElement>('#offset')!;
+/** Reports contact reuse and spatial candidates. */
 const reading = document.querySelector<HTMLOutputElement>('#reading')!;
+/** Always-visible support forces in newtons. */
 const loads = document.querySelector<HTMLOutputElement>('#loads')!;
+/** Records the physics graph for the shared inspector and timeline. */
 const diagnostics = new GPUGraphDiagnostics({});
+/** Dockable controls and diagnostics for the gantry. */
 const panel = createRigidBodyPanel(diagnostics, 'Two-arm gantry', 'Shared beam · 120 Hz');
+/** Orbit camera using the same vertical axis as the simulation. */
 const camera = new PerspectiveCamera(38, 1, 0.1, 80);
 camera.up.set(0, 0, 1);
 camera.position.set(4.3, 6.1, 4.2);
+/** Trackpad and mouse navigation around the workcell. */
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0, 0.43);
 controls.update();
+/** Maps the camera projection into WebGPU clip depth. */
 const depth = new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]);
+/** Shared unit cube for instanced workcell geometry. */
 const cube = new CubeGeometry();
+/** Create a shared metallic-roughness material. */
 const finish = (
   id: string,
   color: [number, number, number, number],
@@ -45,11 +60,13 @@ const finish = (
   id,
   uniforms: {baseColorFactor: color, metallicRoughnessValues: [metallic, 0.36]}
 });
+/** Workcell finishes shared by meshes of the same material. */
 const deck = finish('slate', [0.2, 0.24, 0.26, 1], 0.14),
   silver = finish('aluminum', [0.75, 0.8, 0.82, 1], 0.48),
   graphite = finish('iron', [0.19, 0.21, 0.24, 1], 0.4),
   gold = finish('brass', [0.78, 0.46, 0.16, 1], 0.46),
   blue = finish('blue-enamel', [0.08, 0.26, 0.37, 1], 0.2);
+/** Build the workcell and bind moving meshes to GPU pose matrices. */
 function makeScene(trial: ReturnType<typeof makeGantry>, displacement: number) {
   const root = new GroupNode({id: 'gantry'}),
     partsNode = new GroupNode({id: 'parts'}),
@@ -57,6 +74,7 @@ function makeScene(trial: ReturnType<typeof makeGantry>, displacement: number) {
   root.add(partsNode, toolNode);
   const worldBindings = new Map<ScenegraphNode, ScenegraphTransformBinding>(),
     tools = new Map<ScenegraphNode, ScenegraphTransformBinding>();
+  /** Attach a scaled box to the scene and optionally bind it to a body or link. */
   function mesh(
     group: GroupNode,
     id: string,
@@ -74,25 +92,59 @@ function makeScene(trial: ReturnType<typeof makeGantry>, displacement: number) {
         localMatrix: matrix
       });
   }
-  for (const [i, body] of trial.bodies.entries())
+  for (const [bodyIndex, body] of trial.bodies.entries())
     if (body.shape?.type === 'box')
       mesh(
         partsNode,
-        'body-' + i,
+        'body-' + bodyIndex,
         [0, 0, 0],
         body.shape.halfExtents,
-        i === 0 ? silver : i === 1 ? deck : i < trial.stockStart ? blue : graphite,
-        i
+        bodyIndex === 0
+          ? silver
+          : bodyIndex === 1
+            ? deck
+            : bodyIndex < trial.stockStart
+              ? blue
+              : graphite,
+        bodyIndex
       );
   mesh(partsNode, 'ballast', [displacement * 2, 0, 0.115], [0.16, 0.154, 0.035], gold, 0);
-  trial.roots.forEach((arm, i) => {
-    const [x, y] = arm.base;
-    mesh(root, 'mast-' + i, [x, y, 0.62], [0.066, 0.08, 0.62], graphite);
-    mesh(root, 'base-' + i, [x, y, 0.045], [0.21, 0.19, 0.045], silver);
-    mesh(toolNode, 'carriage-' + i, [0, 0, 0], [0.12, 0.13, 0.13], blue, i * 2);
-    mesh(toolNode, 'rail-' + i, [0, 0.53, -0.092], [0.067, 0.57, 0.046], blue, i * 2);
-    mesh(toolNode, 'extension-' + i, [0, -0.3, -0.06], [0.044, 0.34, 0.035], silver, i * 2 + 1);
-    mesh(toolNode, 'fork-' + i, [0, 0, 0], [0.095, 0.21, 0.045], gold, i * 2 + 1);
+  trial.roots.forEach((arm, stationIndex) => {
+    const [baseX, baseY] = arm.base;
+    mesh(root, 'mast-' + stationIndex, [baseX, baseY, 0.62], [0.066, 0.08, 0.62], graphite);
+    mesh(root, 'base-' + stationIndex, [baseX, baseY, 0.045], [0.21, 0.19, 0.045], silver);
+    mesh(
+      toolNode,
+      'carriage-' + stationIndex,
+      [0, 0, 0],
+      [0.12, 0.13, 0.13],
+      blue,
+      stationIndex * 2
+    );
+    mesh(
+      toolNode,
+      'rail-' + stationIndex,
+      [0, 0.53, -0.092],
+      [0.067, 0.57, 0.046],
+      blue,
+      stationIndex * 2
+    );
+    mesh(
+      toolNode,
+      'extension-' + stationIndex,
+      [0, -0.3, -0.06],
+      [0.044, 0.34, 0.035],
+      silver,
+      stationIndex * 2 + 1
+    );
+    mesh(
+      toolNode,
+      'fork-' + stationIndex,
+      [0, 0, 0],
+      [0.095, 0.21, 0.045],
+      gold,
+      stationIndex * 2 + 1
+    );
   });
   partsNode.transformSource = {
     getFrame: () => ({
@@ -113,6 +165,7 @@ function makeScene(trial: ReturnType<typeof makeGantry>, displacement: number) {
   return root;
 }
 
+/** Create the WebGPU device and run the interactive gantry. */
 async function run() {
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
@@ -120,6 +173,7 @@ async function run() {
     createCanvasContext: {canvas, autoResize: true}
   });
   const renderer = new SceneRenderer(device);
+  /** Compile a fresh trial from the current ballast and inventory controls. */
   async function create() {
     const displacement = ballast.valueAsNumber;
     const trial = makeGantry({
@@ -141,6 +195,7 @@ async function run() {
     previous = performance.now(),
     lastReading = 0;
   let pending: Promise<void> | undefined;
+  /** Queue a new trial at the next frame boundary. */
   function reset() {
     rebuild = true;
     cycle.disabled = true;
@@ -176,6 +231,7 @@ async function run() {
     innerConeAngle: 0.45,
     outerConeAngle: 0.85
   } as const;
+  /** Advance fixed physics ticks, render their published poses and sample support forces. */
   async function frame(now: number) {
     if (rebuild) {
       rebuild = false;
@@ -253,8 +309,9 @@ async function run() {
         .tree!.readSimulationDiagnostics()
         .then(state => {
           const force = [0, 0];
-          state.contactPairs?.forEach((pair, i) => {
-            if (pair.body === 0) force[pair.collider] += state.contactImpulses![i][2] / GANTRY_STEP;
+          state.contactPairs?.forEach((pair, contactIndex) => {
+            if (pair.body === 0)
+              force[pair.collider] += state.contactImpulses![contactIndex][2] / GANTRY_STEP;
           });
           loads.value = 'L ' + force[0].toFixed(1) + ' N · R ' + force[1].toFixed(1) + ' N';
           reading.value = state.complete
@@ -274,9 +331,11 @@ async function run() {
     }
     requestAnimationFrame(tick);
   }
+  /** Schedule the next frame and surface renderer or simulation errors. */
   const tick = (now: number) => void frame(now).catch(showError);
   requestAnimationFrame(tick);
 }
+/** Display startup and frame errors in the lab. */
 function showError(error: unknown) {
   document.querySelector<HTMLOutputElement>('#error')!.value = String(error);
 }

@@ -102,10 +102,17 @@ export class GPUArticulationTree {
       for (const [index, link] of root.links.entries()) {
         if (!Number.isInteger(link.parent) || link.parent < -1 || link.parent >= index)
           throw new Error('Invalid local parent');
-        const [x, y, z] = link.parentAnchor;
+        const [anchorX, anchorY, anchorZ] = link.parentAnchor;
         links.push(
           link.parent === -1
-            ? {...link, parentAnchor: [root.base[0] + x, root.base[1] + y, root.base[2] + z]}
+            ? {
+                ...link,
+                parentAnchor: [
+                  root.base[0] + anchorX,
+                  root.base[1] + anchorY,
+                  root.base[2] + anchorZ
+                ]
+              }
             : {...link, parent: start + link.parent}
         );
       }

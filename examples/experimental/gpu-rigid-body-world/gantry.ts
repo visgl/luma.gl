@@ -12,16 +12,27 @@ import {
 } from '@luma.gl/graph/gpu-physics';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
+/** Cartesian coordinates in meters. */
 type Vector = [number, number, number];
+/** Fixed step duration in seconds. */
 export const GANTRY_STEP = 1 / 120;
+/** Fork collision half extents in meters. */
 const forkSize: Vector = [0.095, 0.21, 0.045];
+/** Lift carriage collision half extents in meters. */
 const carriageSize: Vector = [0.11, 0.09, 0.12];
+/** Shared payload collision half extents in meters. */
 const beamSize: Vector = [1.3, 0.15, 0.11];
+/** Lateral positions of the two fixed bases in meters. */
 const stations = [-1, 1] as const;
+/** Linear drive spring rate in newtons per meter. */
 const stiffness = 6000;
+/** Expected stationary beam support force in newtons. */
 export const GANTRY_WEIGHT = 4 * 9.81;
+/** Vertical carriage stroke in meters. */
 export const LIFT = 0.52;
+/** Horizontal travel between stands in meters. */
 export const TRAVEL = 0.85;
+/** Create a non-bouncing box with the workcell surface friction. */
 function box(position: Vector, size: Vector, mass: number): GPURigidBody {
   return {position, shape: {type: 'box', halfExtents: size}, mass, friction: 0.9, restitution: 0};
 }
@@ -40,23 +51,26 @@ export function makeGantry(options: {
     {...box([0, -0.45, 0.47], beamSize, 4), centerOfMass: [ballast, 0, 0]},
     box([0, 0, -0.12], [3, 2, 0.12], 0)
   ];
-  for (const y of [-0.45, 0.4])
-    for (const x of [-0.55, 0.55]) bodies.push(box([x, y, 0.18], [0.12, 0.22, 0.18], 0));
+  for (const longitudinalPosition of [-0.45, 0.4])
+    for (const lateralPosition of [-0.55, 0.55])
+      bodies.push(box([lateralPosition, longitudinalPosition, 0.18], [0.12, 0.22, 0.18], 0));
   const stockStart = bodies.length;
-  for (let i = 0; i < options.parts - 1; i++) {
+  for (let stockIndex = 0; stockIndex < options.parts - 1; stockIndex++) {
     const columns = Math.ceil(Math.sqrt(options.parts / 2));
-    const row = Math.floor(i / (2 * columns)),
-      column = i % columns;
-    const x = (i % (2 * columns) < columns ? -1 : 1) * (1.6 + ((column + 0.5) * 1.15) / columns);
-    const y = -1.75 + ((row + 0.5) * 3.5) / Math.ceil((options.parts - 1) / (2 * columns));
-    bodies.push(box([x, y, 0.055], [0.034, 0.055, 0.055], 0.12));
+    const row = Math.floor(stockIndex / (2 * columns)),
+      column = stockIndex % columns;
+    const lateralPosition =
+      (stockIndex % (2 * columns) < columns ? -1 : 1) * (1.6 + ((column + 0.5) * 1.15) / columns);
+    const longitudinalPosition =
+      -1.75 + ((row + 0.5) * 3.5) / Math.ceil((options.parts - 1) / (2 * columns));
+    bodies.push(box([lateralPosition, longitudinalPosition, 0.055], [0.034, 0.055, 0.055], 0.12));
   }
   const armStart = bodies.length;
   const joints: GPURigidBodyJoint[] = [];
   const order = options.reverse ? [1, 0] : [0, 1];
   const roots = order.map(station => {
-    const x = stations[station],
-      prefix = x < 0 ? 'left' : 'right';
+    const lateralPosition = stations[station],
+      prefix = lateralPosition < 0 ? 'left' : 'right';
     const links: GPUArticulationLink[] = [
       {
         id: prefix + '-lift',
@@ -79,7 +93,7 @@ export function makeGantry(options: {
         inertia: getBodyInertia(0.5, {type: 'box', halfExtents: forkSize})
       }
     ];
-    return {base: [x, -0.95, 0.29] as Vector, links};
+    return {base: [lateralPosition, -0.95, 0.29] as Vector, links};
   });
   const drives: number[] = [];
   if (options.ordered)
@@ -142,9 +156,11 @@ export function makeGantry(options: {
     armStart,
     stockStart,
     order,
+    /** Register both arms and their shared world in one simulation graph. */
     addToGraph(graph: GPUCommandGraph) {
       world.addToGraph(graph, tree ? {tree, colliders, friction: 0.9} : undefined);
     },
+    /** Set lift and extension on both stations, optionally withdrawing the left support. */
     command(height: number, travel: number, release = false) {
       roots.forEach((root, index) =>
         root.links.forEach((link, part) => {
@@ -168,6 +184,7 @@ export function makeGantry(options: {
         })
       );
     },
+    /** Read beam pose, support reactions and contact completeness. Supply a stationary lift target for ordered force estimates. */
     async read(liftTarget?: number) {
       const [states, contacts, worldStatus] = await Promise.all([
         world.readState(),
@@ -197,6 +214,7 @@ export function makeGantry(options: {
         complete: worldStatus.complete && (contacts?.complete ?? true)
       };
     },
+    /** Release the world and articulated solver resources owned by this trial. */
     destroy() {
       world.destroy();
       tree?.destroy();
@@ -204,10 +222,12 @@ export function makeGantry(options: {
   };
 }
 
+/** Return lift and travel targets in meters for a zero-based step of the 120 Hz cycle. */
 export function gantryTargets(step: number) {
+  /** Ease each commanded stroke smoothly over its allotted steps. */
   const ramp = (start: number, duration: number) => {
-    const t = Math.min(1, Math.max(0, (step - start) / duration));
-    return t * t * (3 - 2 * t);
+    const fraction = Math.min(1, Math.max(0, (step - start) / duration));
+    return fraction * fraction * (3 - 2 * fraction);
   };
   return {height: LIFT * (ramp(20, 100) - ramp(370, 100)), travel: TRAVEL * ramp(195, 140)};
 }
