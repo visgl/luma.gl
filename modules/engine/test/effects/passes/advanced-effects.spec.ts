@@ -31,6 +31,7 @@ import {
   createTAACompositeShaderPass,
   createVolumetricFogCompositeShaderPass,
   depthAwareBlurCompositeShaderPass,
+  depthAwareBlurEffect,
   dofCompositeShaderPass,
   gtaoAmbientComposite,
   gtaoEvaluate,
@@ -852,6 +853,7 @@ it('advanced effects compose in order with existing effects', async () => {
       effects: [
         {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
         cameraReprojectionTaa,
+        depthAwareBlurEffect,
         bloomLow,
         gaussianBlurEffect,
         sepiaEffect

@@ -74,7 +74,13 @@ export type {
   DofProps,
   DofUniforms
 } from './passes/screen-space/dof';
-export {dof, bokehDof, depthOfField, dofCompositeShaderPass} from './passes/screen-space/dof';
+export {
+  dof,
+  bokehDof,
+  bokehDofEffect,
+  depthOfField,
+  dofCompositeShaderPass
+} from './passes/screen-space/dof';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms
@@ -151,7 +157,8 @@ export {
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,
-  depthAwareBlurCompositeShaderPass
+  depthAwareBlurCompositeShaderPass,
+  depthAwareBlurEffect
 } from './passes/screen-space/depth-aware-blur';
 export type {HDRAutoExposureCompositeShaderPassOptions} from './passes/screen-space/hdr-auto-exposure';
 export {

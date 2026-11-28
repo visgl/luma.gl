@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
@@ -82,21 +83,30 @@ export const depthAwareBlur = {
   DepthAwareBlurBindings
 >;
 
-export const depthAwareBlurCompositeShaderPass = {
+export const depthAwareBlurEffect = {
   name: 'depthAwareBlurCompositeShaderPass',
-  renderTargets: {depthAwareBlurScratch: {}},
-  steps: [
+  resources: {depthAwareBlurScratch: {}},
+  passes: [
     {
+      kind: 'fullscreen',
       shaderPass: depthAwareBlur,
       inputs: {sourceTexture: 'previous'},
       output: 'depthAwareBlurScratch',
       uniforms: {direction: [1, 0]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: depthAwareBlur,
       inputs: {sourceTexture: 'depthAwareBlurScratch'},
       output: 'previous',
       uniforms: {direction: [0, 1]}
     }
   ]
+} as const satisfies EffectDefinition<'depthAwareBlurScratch'>;
+
+/** Compatibility view of the separable depth-aware blur effect. */
+export const depthAwareBlurCompositeShaderPass = {
+  name: depthAwareBlurEffect.name,
+  renderTargets: depthAwareBlurEffect.resources,
+  steps: depthAwareBlurEffect.passes
 } satisfies CompositeShaderPass<'depthAwareBlurScratch'>;
