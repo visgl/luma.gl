@@ -155,9 +155,7 @@ export class GPURenderInputs {
   ): Bindings {
     const bindings: Bindings = {...this.samplers};
     for (const [name, input] of Object.entries(this.storage)) {
-      const declaration = shaderLayout.bindings?.find(
-        binding => binding.name === name
-      );
+      const declaration = shaderLayout.bindings?.find(binding => binding.name === name);
       // Shader access must agree with the graph dependency declaration.
       assert(declaration?.type === (input.access === 'read' ? 'read-only-storage' : 'storage'));
       const range = this.storageViews[name];

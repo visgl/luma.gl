@@ -77,8 +77,9 @@ it('derives access and binds current resources while preserving attribute and st
       const [storageUse, textureUse] = inputs.getResourceUses().slice(1);
       expect(getBuffer).toHaveBeenCalledWith('buffer' in storageUse && storageUse.buffer);
       expect(getTextureView).toHaveBeenCalledWith('texture' in textureUse && textureUse.texture);
-      expect(inputs.resolveBindings(model.pipeline.shaderLayout, {getBuffer, getTextureView}))
-        .toEqual(model.setBindings.mock.lastCall?.[0]);
+      expect(
+        inputs.resolveBindings(model.pipeline.shaderLayout, {getBuffer, getTextureView})
+      ).toEqual(model.setBindings.mock.lastCall?.[0]);
     }
     const incompatibleModel = {
       ...model,
