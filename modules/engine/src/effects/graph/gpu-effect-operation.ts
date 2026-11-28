@@ -217,7 +217,7 @@ function buildEffectNodes(
   const plans = props.effects.map(effect => ({
     effect,
     ...planFullscreenPasses(graph.device, effect, {
-      allowCompute: props.allowCompute === true && flipY,
+      allowCompute: props.allowCompute === true,
       colorFormat
     })
   }));

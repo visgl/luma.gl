@@ -354,9 +354,7 @@ class PassRenderer {
     if (isCompositeShaderPass(passDefinition)) {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
-      const {compute, passes} = planFullscreenPasses(device, passDefinition, {
-        allowCompute: flipY
-      });
+      const {compute, passes} = planFullscreenPasses(device, passDefinition);
       if (compute) {
         this.computeRenderer = new FullscreenComputePass(
           device,
