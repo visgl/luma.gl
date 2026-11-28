@@ -34,6 +34,8 @@ struct taaResolveUniforms {
 fn taaResolve_sampleColor(
   sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f
 ) -> vec4f {
+  let current = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  if (taaResolve.historyWeight <= 0.0) { return current; }
   let dimensions = vec2f(textureDimensions(sourceTexture));
   let texel = 1.0 / dimensions;
   let sceneCoord = texCoord;
@@ -41,7 +43,6 @@ fn taaResolve_sampleColor(
   let previousUv = temporal_reprojectMotion(texCoord - taaResolve.currentJitter, velocity) + taaResolve.previousJitter;
   let currentDepth = textureSample(depthTexture, depthTextureSampler, sceneCoord);
   let previousDepth = textureSample(previousDepthTexture, previousDepthTextureSampler, clamp(previousUv, vec2f(0.0), vec2f(1.0))).r;
-  let current = textureSample(sourceTexture, sourceTextureSampler, texCoord);
   var minimumColor = current.rgb;
   var maximumColor = current.rgb;
   for (var y: i32 = -1; y <= 1; y++) {

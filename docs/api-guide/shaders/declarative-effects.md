@@ -375,8 +375,8 @@ caller-owned command encoder. Other graph operations can consume the named
 result. Effect options, pass ordering, and compute fallback selection use the
 same plan as `EffectRenderer`. The graph tracks each draw and dispatch with its
 texture uses, so effect-local scratch textures can be reused across passes
-when lifetimes allow. Effects with retained frame history still use
-`EffectRenderer`.
+when lifetimes allow. Use the command graph integration below for velocity TAA.
+Other history-backed effects use `EffectRenderer`.
 
 For WebGL, use `createEffectRenderOperation` from `@luma.gl/engine/effects`
 with the device-bound `GPUSimpleGraph`. Give it caller-owned input and
@@ -396,3 +396,102 @@ destination through `prepare({outputTargets})` when recording the frame.
 The portable operation also accepts per-occurrence overrides. Its bindings
 refer to caller-owned textures, while named graph operations refer to graph
 texture names.
+
+### Retain temporal history in a WebGPU command graph
+
+Use `addGraphTAA` when the scene already records color, hardware depth, and
+velocity in a WebGPU `GPUCommandGraph`. It lowers the same velocity TAA
+definition used by `EffectRenderer`. The graph tracks the previous history
+as a sampled input and the current history as a render attachment. Within the
+same encoding, later passes see the written current color.
+
+Create two `GPUTextureHistory` pairs at the render resolution. Use the
+resolved output format for color and `rgba16float` for packed hardware depth.
+Both pairs need `Texture.SAMPLE | Texture.RENDER`. Import them once and bind
+their current physical roles for each encoding.
+
+```ts
+import {
+  addGraphTAA,
+  importTemporalGraphHistory,
+  type TemporalFrame
+} from '@luma.gl/engine/effects';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
+import {Texture} from '@luma.gl/core';
+
+const graph = new GPUCommandGraph<TemporalFrame>(device);
+const usage = Texture.SAMPLE | Texture.RENDER;
+const colorHistory = new GPUTextureHistory(device, {width, height, format: 'rgba16float', usage});
+const depthHistory = new GPUTextureHistory(device, {width, height, format: 'rgba16float', usage});
+const colorRoles = importTemporalGraphHistory(graph, 'taa-color', colorHistory);
+const depthRoles = importTemporalGraphHistory(graph, 'taa-depth', depthHistory);
+
+// These views come from the scene and output operations in the same graph.
+addGraphTAA(graph, {
+  id: 'taa',
+  input: sceneColor,
+  depth: sceneDepth,
+  velocity: sceneVelocity,
+  output: resolvedColor,
+  colorHistory: colorRoles,
+  depthHistory: depthRoles
+});
+const compiled = graph.compile();
+
+function renderFrame(frame: TemporalFrame) {
+  const encoder = device.createCommandEncoder();
+  try {
+    compiled.encode(encoder, {
+      parameters: frame,
+      textures: {...colorRoles.getBindings(), ...depthRoles.getBindings()}
+    });
+    device.submit(encoder.finish());
+    colorHistory.advance();
+    depthHistory.advance();
+  } finally {
+    encoder.destroy();
+  }
+}
+```
+
+Pass jitter in top-left UV units relative to the render resolution. Motion XY
+is unjittered current UV minus previous UV. Set `resetHistory: true` on the
+first frame and after a camera cut. TAA still writes both current histories
+on a reset frame, so the next frame can reuse them. If an encoding is
+discarded, leave both roles unchanged. Rebuild the graph and its history
+pairs on resize, and destroy the compiled graph before releasing the pairs.
+
+#### How the WebGPU upscaler fits
+
+The upscaler can use the same role bindings and `TemporalFrame` values
+with two output-resolution pairs, one for accumulated color and one for
+auxiliary data. Its accumulation pass samples both previous views and writes
+both current views as MRT attachments. A following sharpening pass samples
+the current color and writes the presentation target. The upscaler would use
+ordinary graph render nodes for its two existing kernels:
+
+```ts
+// Sketch of the upscaler graph adapter. The compile callbacks would reuse its existing kernels.
+graph.addRenderPass({
+  id: 'upscale-accumulate',
+  resources: [
+    ...[sceneColor, sceneDepth, sceneVelocity, upscaleColor.previous, upscaleAuxiliary.previous]
+      .map(texture => ({texture, usage: 'sampled' as const}))
+  ],
+  attachments: {colorAttachments: [upscaleColor.current, upscaleAuxiliary.current]},
+  compile: compileUpscaleAccumulation
+});
+graph.addRenderPass({
+  id: 'upscale-sharpen',
+  resources: [{texture: upscaleColor.current, usage: 'sampled'}],
+  attachments: {colorAttachments: [presentationColor]},
+  compile: compileUpscaleSharpening
+});
+```
+
+Bind and advance both pairs together using the same submission lifecycle as
+TAA. The accumulation callback would convert `currentJitter` from render UV
+to render pixels for the existing kernel and use `resetHistory` to seed
+accumulation. The velocity texture keeps the common XY convention and still
+supplies the upscaler's Z/W depth and validity channels. The current
+`TemporalUpscaler` continues to record its two passes directly.

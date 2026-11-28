@@ -25,3 +25,9 @@ fn temporal_reprojectMotion(currentUv: vec2f, motion: vec2f) -> vec2f {
   return currentUv - motion;
 }
 `;
+
+/** Per-frame jitter and reset controls shared by temporal resolves. */
+export type TemporalFrame = TemporalFrameJitter & {
+  /** Ignore retained data for the first frame, a camera cut, or a resize. */
+  resetHistory?: boolean;
+};
