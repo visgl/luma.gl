@@ -4,6 +4,8 @@
 import {expect, test} from 'vitest';
 import {
   compareEmitterGpuCosts,
+  compareMotionGpuCosts,
+  compareRadianceCaptures,
   compareReconstructionGpuCosts,
   summarizeFrameGpuTimes,
   summarizeHistoryConfidence,
@@ -64,5 +66,57 @@ test('reads fractional history confidence independently of linear RGB', () => {
     maximum: 4.5,
     mean: 2,
     pixelsWithoutHistory: 1
+  });
+});
+
+test('matches motion modes separately for recovery GPU time and end-to-end GPU time', () => {
+  const off = [
+    {...checkpoint(10, 8), gpuTimeAtPoseMilliseconds: 1},
+    {...checkpoint(20, 4), gpuTimeAtPoseMilliseconds: 5}
+  ];
+  const on = [
+    {...checkpoint(15, 6), gpuTimeAtPoseMilliseconds: 2},
+    {...checkpoint(25, 2), gpuTimeAtPoseMilliseconds: 6}
+  ];
+  expect(compareMotionGpuCosts(off, on)).toEqual({
+    atPose: {
+      status: 'interpolated',
+      budgets: [
+        {gpuTimeMilliseconds: 2, rootMeanSquaredError: {off: 7, on: 6}},
+        {gpuTimeMilliseconds: 5, rootMeanSquaredError: {off: 4, on: 3}}
+      ]
+    },
+    includingMotionPrefix: {
+      status: 'interpolated',
+      budgets: [
+        {gpuTimeMilliseconds: 15, rootMeanSquaredError: {off: 6, on: 6}},
+        {gpuTimeMilliseconds: 20, rootMeanSquaredError: {off: 4, on: 4}}
+      ]
+    }
+  });
+  expect(
+    compareMotionGpuCosts(off, [{...on[0], gpuTimeAtPoseMilliseconds: null}]).atPose.status
+  ).toBe('unavailable');
+});
+
+test('keeps sparse HDR errors visible in the pixel error tails', () => {
+  const reference = new Uint8Array(8 + 100 * 8);
+  const header = new DataView(reference.buffer);
+  header.setUint32(0, 10, true);
+  header.setUint32(4, 10, true);
+  const actual = reference.slice();
+  const pixels = new DataView(actual.buffer);
+  pixels.setUint16(8, 0x4200, true); // 3 in one red channel.
+  pixels.setUint16(14, 0x7c00, true); // Confidence is excluded from RGB error.
+  const result = compareRadianceCaptures(
+    decodeRadianceCapture(actual),
+    decodeRadianceCapture(reference),
+    {includeErrorTails: true}
+  );
+  expect(result.rootMeanSquaredError).toBeCloseTo(Math.sqrt(0.03));
+  expect(result.errorTails).toEqual({
+    p95PixelRmse: 0,
+    p99PixelRmse: 0,
+    worstOnePercentRmse: Math.sqrt(3)
   });
 });

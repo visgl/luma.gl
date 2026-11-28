@@ -6,7 +6,7 @@ import {resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
-import {compareEmitterGpuCosts, compareChartImages, compareRadianceCaptures, decodeRadianceCapture, compareReconstructionGpuCosts, summarizeFrameGpuTimes, summarizeHistoryConfidence} from './chart-image-metrics.mjs';
+import {compareMotionGpuCosts, compareEmitterGpuCosts, compareChartImages, compareRadianceCaptures, decodeRadianceCapture, compareReconstructionGpuCosts, summarizeFrameGpuTimes, summarizeHistoryConfidence} from './chart-image-metrics.mjs';
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 const {values} = parseArgs({options: {
@@ -220,7 +220,11 @@ async function captureMotionBenchmark() {
         ));
       }
     }
-    scenes[preset] = {reference, measurements};
+    scenes[preset] = {
+      reference,
+      measurements,
+      matchedGpuCost: compareMotionGpuCosts(measurements.off, measurements.on)
+    };
   }
   /** Compare temporal modes at equal new sample counts, even when GPU timing is unavailable. */
   const glossyMeasurements = scenes['chart-glossy-motion'].measurements;
@@ -332,7 +336,7 @@ async function captureFrameCount(browser, output, frames, poseReference) {
       radianceSize = [linearImage.width, linearImage.height];
       historyConfidence = summarizeHistoryConfidence(linearImage);
       await writeFile(`${output}/radiance.rgba16f`, bytes);
-      if (comparisonImage) comparison = {reference: resolve(comparisonPath), ...compareRadianceCaptures(linearImage, comparisonImage)};
+      if (comparisonImage) comparison = {reference: resolve(comparisonPath), ...compareRadianceCaptures(linearImage, comparisonImage, {includeErrorTails: compareMotion})};
     } else if (referenceImage) {
       comparison = {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)};
     }

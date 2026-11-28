@@ -44,7 +44,7 @@ export function decodeRadianceCapture(bytes) {
 }
 
 /** Compare unnormalized linear RGB values. Alpha stores history metadata. */
-export function compareRadianceCaptures(actual, reference) {
+export function compareRadianceCaptures(actual, reference, {includeErrorTails = false} = {}) {
   if (actual.width !== reference.width || actual.height !== reference.height) {
     throw new Error('Linear HDR reference and capture must have equal dimensions');
   }
@@ -52,22 +52,44 @@ export function compareRadianceCaptures(actual, reference) {
   let squaredError = 0;
   let maximumError = 0;
   const pixelCount = actual.width * actual.height;
+  /** Squared RGB RMS error per pixel, independent of history confidence in alpha. */
+  const pixelSquaredErrors = includeErrorTails ? new Float64Array(pixelCount) : null;
   for (let pixel = 0; pixel < pixelCount; pixel++) {
+    let pixelSquaredError = 0;
     for (let channel = 0; channel < 3; channel++) {
       const offset = 8 + pixel * 8 + channel * 2;
       const error = Math.abs(decodeHalf(actual.view.getUint16(offset, true)) -
         decodeHalf(reference.view.getUint16(offset, true)));
       if (!Number.isFinite(error)) throw new Error('Linear HDR captures must contain finite RGB values');
       absoluteError += error;
-      squaredError += error * error;
+      pixelSquaredError += error * error;
       maximumError = Math.max(maximumError, error);
     }
+    squaredError += pixelSquaredError;
+    if (pixelSquaredErrors) pixelSquaredErrors[pixel] = pixelSquaredError / 3;
   }
   return {
     pixelCount,
     meanAbsoluteError: absoluteError / (pixelCount * 3),
     rootMeanSquaredError: Math.sqrt(squaredError / (pixelCount * 3)),
-    maximumError
+    maximumError,
+    ...(pixelSquaredErrors && {errorTails: summarizePixelErrorTails(pixelSquaredErrors)})
+  };
+}
+
+/** Report nearest-rank percentiles and the mean energy in the worst 1% of pixels. */
+function summarizePixelErrorTails(pixelSquaredErrors) {
+  pixelSquaredErrors.sort();
+  const pixelCount = pixelSquaredErrors.length;
+  const tailCount = Math.ceil(pixelCount / 100);
+  let tailEnergy = 0;
+  for (let pixel = pixelCount - tailCount; pixel < pixelCount; pixel++) {
+    tailEnergy += pixelSquaredErrors[pixel];
+  }
+  return {
+    p95PixelRmse: Math.sqrt(pixelSquaredErrors[Math.ceil(pixelCount * 0.95) - 1]),
+    p99PixelRmse: Math.sqrt(pixelSquaredErrors[Math.ceil(pixelCount * 0.99) - 1]),
+    worstOnePercentRmse: Math.sqrt(tailEnergy / tailCount)
   };
 }
 
@@ -120,6 +142,15 @@ export function compareReconstructionGpuCosts(unfiltered, spatial, variance) {
   return compareGpuCostCurves({unfiltered, spatial, variance});
 }
 
+/** Compare temporal modes over their common measured GPU cost intervals. */
+export function compareMotionGpuCosts(off, on) {
+  const measurements = {off, on};
+  return {
+    atPose: compareGpuCostCurves(measurements, 'gpuTimeAtPoseMilliseconds'),
+    includingMotionPrefix: compareGpuCostCurves(measurements)
+  };
+}
+
 /** Summarize complete per-frame GPU timings using nearest-rank percentiles. */
 export function summarizeFrameGpuTimes(frameTimes, expectedFrames) {
   if (!expectedFrames || frameTimes?.length !== expectedFrames ||
@@ -133,9 +164,9 @@ export function summarizeFrameGpuTimes(frameTimes, expectedFrames) {
 }
 
 /** Compare measured curves without extrapolating any mode outside its observed costs. */
-function compareGpuCostCurves(measurementsByMode) {
+function compareGpuCostCurves(measurementsByMode, costField = 'gpuTimeMilliseconds') {
   const curves = Object.entries(measurementsByMode).map(([mode, measurements]) =>
-    [mode, makeGpuCostCurve(measurements)]);
+    [mode, makeGpuCostCurve(measurements, costField)]);
   if (curves.some(([, curve]) => curve.length < 2)) {
     return {status: 'unavailable', reason: 'Each mode needs two distinct GPU timing checkpoints'};
   }
@@ -158,14 +189,15 @@ function compareGpuCostCurves(measurementsByMode) {
 }
 
 /** Sort valid timing checkpoints and retain the largest sample count for duplicate costs. */
-function makeGpuCostCurve(measurements) {
+function makeGpuCostCurve(measurements, costField) {
   const points = new Map();
   for (const measurement of measurements) {
-    const cost = measurement.gpuTimeMilliseconds;
+    const cost = measurement[costField];
     const error = measurement.comparison?.rootMeanSquaredError;
     if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(error)) continue;
-    if (!points.has(cost) || points.get(cost).accumulatedSamples < measurement.accumulatedSamples) {
-      points.set(cost, measurement);
+    if (!points.has(cost) || (points.get(cost).samplesAtPose ?? points.get(cost).accumulatedSamples) <
+        (measurement.samplesAtPose ?? measurement.accumulatedSamples)) {
+      points.set(cost, {...measurement, gpuTimeMilliseconds: cost});
     }
   }
   return [...points.values()].sort((first, second) => first.gpuTimeMilliseconds - second.gpuTimeMilliseconds);
