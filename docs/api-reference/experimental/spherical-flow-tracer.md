@@ -46,8 +46,9 @@ physical-time interpolation. At a completed resident endpoint, call
 
 ## Bounded execution and ownership
 
-`advance(duration)` and `continue()` each submit one dense bounded dispatch and
-explicitly read 36 bytes of counters. They return `ScientificFlowTraceResult`,
+`advance(duration)` and `continue()` each submit a bounded batch of dense dispatches and read
+all counters together (36 bytes per dispatch). Set `dispatchesPerReadback` to an
+integer from 1 to 32. It defaults to 1. Idle dispatches in the batch preserve state. They return `ScientificFlowTraceResult`,
 including statuses, accepted/rejected work, pending slots, committed/target clocks,
 the actual graph encoding and optional GPU compute duration. No particle-state
 readback occurs implicitly. `complete` means each slot reached the horizon or
@@ -65,8 +66,8 @@ to 1e30 seconds and clips the final accepted step to the expiration age.
 | `previous` | State before the latest advance/continue call |
 | `diagnostics` | Request elapsed seconds, proposed timestep, `ScientificParticleStatus`, last accepted timestep |
 
-The spherical tracer currently uses dense scheduling and one dispatch per call.
-Cartesian batching and survivor queues are not implicitly applied to this solver.
+The spherical tracer uses dense scheduling. Larger batches reduce synchronization
+frequency at the cost of more dense dispatches after a horizon completes.
 
 ## Inspection and qualification
 

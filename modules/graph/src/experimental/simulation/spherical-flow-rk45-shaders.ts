@@ -66,7 +66,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let index = invocation.x;
   if (index >= parameters.counters.x) {return;}
   var particle = particles[index];
-  previous[index] = particle;
+  if (parameters.counters.w != 0u) {previous[index] = particle;}
   var state = diagnostics[index];
   if (parameters.counters.z != 0u) {state.x = 0.0;}
   let startingAge = particle.w;

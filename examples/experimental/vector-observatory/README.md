@@ -189,5 +189,4 @@ Cartesian RK45 offers **Persistent · survivors**, which initializes a queue onc
 per requested horizon and carries unfinished stable IDs through bounded continuation.
 Graph/Trace show the skipped initialization pass on later dispatches.
 The spherical preset now also offers RK45 with a physical local-error tolerance,
-Diagnostics and Graph/Trace while retaining great-circle trails. It currently uses
-one dense dispatch per call; Cartesian scheduling/batch/coloring controls are hidden.
+Diagnostics and Graph/Trace while retaining great-circle trails. The batch control applies to spherical RK45 as well. Spherical scheduling is dense.

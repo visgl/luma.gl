@@ -396,19 +396,19 @@ export class ObservatoryControlPanel {
                             {label: 'Active · GPU queue', value: 'active'},
                             {label: 'Persistent · survivors', value: 'persistent'}
                           ]
-                        },
-                        {
-                          name: 'dispatchesPerReadback',
-                          label: 'Dispatches per readback',
-                          type: 'select' as const,
-                          persist: 'none' as const,
-                          options: [
-                            {label: '1 · interactive', value: 1},
-                            {label: '4', value: 4},
-                            {label: '16 · throughput', value: 16}
-                          ]
                         }
                       ]),
+                  {
+                    name: 'dispatchesPerReadback',
+                    label: 'Dispatches per readback',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: '1 · interactive', value: 1},
+                      {label: '4', value: 4},
+                      {label: '16 · throughput', value: 16}
+                    ]
+                  },
                   ...(this.settings.field === 'spherical'
                     ? []
                     : [

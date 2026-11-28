@@ -21,6 +21,8 @@ export type SphericalFlowTracerProps = Omit<SphericalFlowGraphProps, 'integrator
   maximumAttempts?: number;
   /** Physical lifetime in seconds; default 1e30. */
   lifetime?: number;
+  /** Dense dispatches per counter readback, from 1 to 32. Defaults to 1. */
+  dispatchesPerReadback?: number;
 };
 
 /** Adaptive unit-sphere RKF45 with explicit counter readback and inspectable execution. */
@@ -73,6 +75,10 @@ export class SphericalFlowTracer {
   private dispatchIndex = 0;
   /** Immutable for the lifetime of an awaited dispatch. */
   private readonly uniforms: Buffer;
+  /** Immutable parameter storage for each dispatch within a batch. */
+  private readonly batchUniforms: Buffer[];
+  /** Counter snapshots copied before the next dispatch resets the counters. */
+  private readonly batchStatistics: Buffer;
   /** Nine status/progress/work counters. */
   private readonly statistics: Buffer;
   /** Zero counter reset source. */
@@ -87,6 +93,13 @@ export class SphericalFlowTracer {
     // Adaptive transport requires WebGPU and positive finite f32 physical parameters.
     assert(device.type === 'webgpu');
     this.device = device;
+    /** Validate the bounded dispatch budget before making allocations. */
+    const dispatchesPerReadback = props.dispatchesPerReadback ?? 1;
+    assert(
+      Number.isInteger(dispatchesPerReadback) &&
+        dispatchesPerReadback >= 1 &&
+        dispatchesPerReadback <= 32
+    );
     this.options = {
       tolerance: props.tolerance,
       maximumTimeStep: props.maximumTimeStep,
@@ -180,11 +193,21 @@ export class SphericalFlowTracer {
       this.diagnostics = makeBuffer('spherical-tracer-diagnostics', diagnostics);
       this.statistics = makeBuffer('spherical-tracer-statistics', new Uint32Array(9));
       this.emptyStatistics = makeBuffer('spherical-tracer-empty-statistics', new Uint32Array(9));
-      this.uniforms = own(
+      this.batchUniforms = Array.from({length: dispatchesPerReadback}, (_, index) =>
+        own(
+          device.createBuffer({
+            id: `spherical-tracer-parameters-${index}`,
+            byteLength: 64,
+            usage: Buffer.UNIFORM | Buffer.COPY_DST
+          })
+        )
+      );
+      this.uniforms = this.batchUniforms[0];
+      this.batchStatistics = own(
         device.createBuffer({
-          id: 'spherical-tracer-parameters',
-          byteLength: 64,
-          usage: Buffer.UNIFORM | Buffer.COPY_DST
+          id: 'spherical-tracer-batch-statistics',
+          byteLength: 36 * dispatchesPerReadback,
+          usage: Buffer.COPY_DST | Buffer.COPY_SRC
         })
       );
       this.kernel = own(
@@ -218,7 +241,9 @@ export class SphericalFlowTracer {
       );
       this.commandGraph = own(this.makeCommandGraph());
       if (device.features.has('timestamp-query'))
-        this.queries = own(device.createQuerySet({type: 'timestamp', count: 2}));
+        this.queries = own(
+          device.createQuerySet({type: 'timestamp', count: 2 * dispatchesPerReadback})
+        );
     } catch (error) {
       /** Release each successfully allocated resource in reverse ownership order. */
       for (const resource of owned.reverse()) resource.destroy();
@@ -238,7 +263,7 @@ export class SphericalFlowTracer {
   get hasPendingWork(): boolean {
     return this.pendingDuration !== undefined;
   }
-  /** Start a physical horizon and submit one bounded adaptive dispatch. */
+  /** Start a physical horizon and submit a bounded adaptive batch. */
   async advance(duration: number): Promise<ScientificFlowTraceResult> {
     assert(!this.unavailable && !this.busy && !this.hasPendingWork); // Finish pending requests before starting another.
     assert(
@@ -297,7 +322,8 @@ export class SphericalFlowTracer {
       this.output,
       this.previous,
       this.diagnostics,
-      this.uniforms,
+      ...this.batchUniforms,
+      this.batchStatistics,
       this.statistics,
       this.emptyStatistics
     ])
@@ -400,7 +426,7 @@ export class SphericalFlowTracer {
     });
     return graph.compile();
   }
-  /** Encode and await one trial budget without reading particle state. */
+  /** Encode and await a bounded dispatch batch without reading particle state. */
   private async dispatch(first: boolean): Promise<ScientificFlowTraceResult> {
     this.busy = true;
     try {
@@ -437,28 +463,55 @@ export class SphericalFlowTracer {
         duration,
         0
       ].forEach((value, index) => view.setFloat32(index * 4, value, true));
-      [this.particleCount, this.options.maximumAttempts!, first ? 1 : 0, 0].forEach(
-        (value, index) => view.setUint32(48 + index * 4, value, true)
-      );
-      this.uniforms.write(new Uint8Array(bytes));
-      /** Command encoder with optional immutable per-encoding timing snapshots. */
+      view.setUint32(48, this.particleCount, true);
+      view.setUint32(52, this.options.maximumAttempts!, true);
+      /** Command encoder shared by the bounded dispatch batch. */
       const encoder = this.device.createCommandEncoder({timeProfilingQuerySet: this.queries});
-      /** Inspected execution encoding returned to the caller. */
-      const encoding = this.commandGraph.encode(encoder, {
-        parameters: undefined,
-        textures: {
-          'spherical-tracer-field': this.currentField.texture,
-          'spherical-tracer-next-field': this.nextField.texture
-        }
+      /** Graph encodings retained for inspection and per-dispatch timings. */
+      const encodings = this.batchUniforms.map((uniforms, index) => {
+        view.setUint32(56, first && index === 0 ? 1 : 0, true);
+        view.setUint32(60, index === 0 ? 1 : 0, true);
+        uniforms.write(new Uint8Array(bytes));
+        /** This dispatch's graph encoding. */
+        const encoding = this.commandGraph.encode(encoder, {
+          parameters: undefined,
+          buffers: {[this.uniforms.id]: uniforms},
+          textures: {
+            'spherical-tracer-field': this.currentField.texture,
+            'spherical-tracer-next-field': this.nextField.texture
+          }
+        });
+        encoder.copyBufferToBuffer({
+          sourceBuffer: this.statistics,
+          destinationBuffer: this.batchStatistics,
+          destinationOffset: index * 36,
+          size: 36
+        });
+        return encoding;
       });
       this.device.submit(encoder.finish());
-      this.dispatchIndex++;
-      /** Explicit 36-byte status/work synchronization. */
-      const result = await this.statistics.readAsync();
-      /** Fixed status/progress/work layout shared with Cartesian RK45 results. */
-      const counts = new Uint32Array(result.buffer, result.byteOffset, 9);
-      /** Optional complete compute-pass timing. */
-      const timings = await encoding.readTimings();
+      this.dispatchIndex += encodings.length;
+      /** Read all counter snapshots together after submission. */
+      const result = await this.batchStatistics.readAsync();
+      /** Final status and cumulative work across the dispatches. */
+      const snapshots = new Uint32Array(result.buffer, result.byteOffset, encodings.length * 9);
+      /** The final dispatch determines completion and status counts. */
+      const counts = snapshots.subarray(snapshots.length - 9);
+      /** Accepted work across the complete batch. */
+      let acceptedSteps = 0;
+      /** Rejected work across the complete batch. */
+      let rejectedSteps = 0;
+      /** Counter snapshot offset in units of u32. */
+      for (let offset = 0; offset < snapshots.length; offset += 9) {
+        acceptedSteps += snapshots[offset + 7];
+        rejectedSteps += snapshots[offset + 8];
+      }
+      /** Optional timings are available only if every dispatch has a timestamp snapshot. */
+      const timings = await Promise.all(encodings.map(encoding => encoding.readTimings()));
+      /** Aggregate compute duration without counter copy or synchronization costs. */
+      const gpuMilliseconds = timings.every(timing => timing.gpuTimeMilliseconds !== undefined)
+        ? timings.reduce((sum, timing) => sum + timing.gpuTimeMilliseconds!, 0)
+        : undefined;
       /** Requested absolute endpoint, even while slots are catching up. */
       const targetTime = this.time + duration;
       /** A horizon completes when every slot reaches it or terminates explicitly. */
@@ -477,13 +530,13 @@ export class SphericalFlowTracer {
         this.pendingDuration = undefined;
       }
       return {
-        encoding,
-        encodings: [encoding],
-        dispatchCount: 1,
+        encoding: encodings[encodings.length - 1],
+        encodings,
+        dispatchCount: encodings.length,
         dispatchIndex: this.dispatchIndex,
-        counterReadbackBytes: 36,
-        scheduledParticles: this.particleCount,
-        integrationWorkgroups: Math.ceil(this.particleCount / 128),
+        counterReadbackBytes: this.batchStatistics.byteLength,
+        scheduledParticles: this.particleCount * encodings.length,
+        integrationWorkgroups: Math.ceil(this.particleCount / 128) * encodings.length,
         isContinuation: !first,
         targetTime,
         complete,
@@ -495,11 +548,9 @@ export class SphericalFlowTracer {
         toleranceFailure: counts[4],
         numericalFailure: counts[5],
         pending: counts[6],
-        acceptedSteps: counts[7],
-        rejectedSteps: counts[8],
-        ...(timings.gpuTimeMilliseconds === undefined
-          ? {}
-          : {gpuMilliseconds: timings.gpuTimeMilliseconds})
+        acceptedSteps,
+        rejectedSteps,
+        ...(gpuMilliseconds === undefined ? {} : {gpuMilliseconds})
       };
     } catch (error) {
       this.unavailable = true;
