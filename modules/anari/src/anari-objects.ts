@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {
+  RayTracingImageExportOptions,
+  RayTracingImageTile
+} from './engine/ray-tracing-image-export';
 import type {ANARIDevice} from './anari-device';
 import type {
   ANARIArrayData,
@@ -231,6 +235,17 @@ export class ANARIFrame extends ANARIObject<ANARIFrameParameters> {
   /** Reads the latest submitted ray-tracing history at internal resolution. */
   readRadiance(): Promise<ANARIFrameRadiance | null> {
     return this.device.readFrameRadiance(this);
+  }
+
+  /**
+   * Exports a tiled still from the current ray-traced scene without changing this frame's history.
+   * Keep the frame and its scene inputs alive and unchanged until iteration ends.
+   */
+  exportTiles(
+    options: RayTracingImageExportOptions,
+    format: 'rgba8' | 'rgba16float' = 'rgba8'
+  ): AsyncGenerator<RayTracingImageTile> {
+    return this.device.exportFrameTiles(this, options, format);
   }
 
   /** Picks a top-left-origin display pixel after rendering and submitting the frame. */

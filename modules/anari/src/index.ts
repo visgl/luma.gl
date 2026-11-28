@@ -216,6 +216,7 @@ export {
   exportRayTracingImage,
   exportRayTracingRadiance,
   encodeRayTracingRadiancePFM,
+  encodeRayTracingImagePNG,
   iterateRayTracingImageTiles,
   type RayTracingImageExportOptions,
   type RayTracingImageTile,
