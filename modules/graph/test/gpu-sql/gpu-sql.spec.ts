@@ -727,6 +727,62 @@ it('GPUSQL evaluates joined expressions and runtime parameters across Arrow batc
   }
 });
 
+it.each([
+  'LEFT',
+  'INNER'
+] as const)('GPUSQL returns empty projected results for %s joins without left record batches', async joinType => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const emptyBatchTable = createGPUSQLArrowTable(false, true);
+  const rightArrow = arrow.tableFromArrays({
+    identifier: Uint32Array.of(20),
+    score: arrow.vectorFromArray([2.5], new arrow.Float32())
+  });
+  const right = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, rightArrow),
+    ownership: 'owned'
+  });
+  try {
+    for (const leftArrow of [new arrow.Table(emptyBatchTable.schema), emptyBatchTable]) {
+      const left = new GPUDataFrame({
+        ...makeGPUAnalyticsTableFromArrowTable(device, leftArrow),
+        ownership: 'owned'
+      });
+      try {
+        const result = new GPUSQLContext({trips: left, accounts: right})
+          .query(
+            `SELECT COALESCE(a.score, 0) AS adjusted, t.fare + a.score AS total
+               FROM trips AS t ${joinType} JOIN accounts AS a ON t.identifier = a.identifier`
+          )
+          .compile(new GPUCommandGraph(device));
+        try {
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder);
+          device.submit(encoder.finish());
+          const output = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            dictionaries: result.dictionaries,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          expect(output.batches.map(batch => batch.numRows)).toEqual(
+            leftArrow.batches.map(batch => batch.numRows)
+          );
+          expect(output.schema.fields.map(field => field.name)).toEqual(['adjusted', 'total']);
+          expect(output.numRows).toBe(0);
+        } finally {
+          result.destroy();
+        }
+      } finally {
+        left.destroy();
+      }
+    }
+  } finally {
+    right.destroy();
+  }
+});
+
 it('GPU SQL and typed joins project nullable packed right vectors with and without staging', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
