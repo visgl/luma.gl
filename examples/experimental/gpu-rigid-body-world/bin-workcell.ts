@@ -4,7 +4,7 @@
 
 import {CubeGeometry, GroupNode, type ScenegraphTransformBinding} from '@luma.gl/engine';
 import {makePhysicsControllerScene, type PhysicsBodyOptions} from '@luma.gl/engine/physics';
-import {SceneMeshNode} from '@luma.gl/anari';
+import {SceneMeshNode, type SceneMaterial} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core/matrix';
 import type {Buffer} from '@luma.gl/core';
 
@@ -15,6 +15,7 @@ export const FINGER_LENGTH = 0.74;
 export const BIN_DESTINATION = 1.65;
 export type BinScenario = {
   target: number;
+  ring?: boolean;
   parts?: 64 | 256;
   gate?: boolean;
   obstructed?: boolean;
@@ -22,6 +23,27 @@ export type BinScenario = {
   drop?: boolean;
 };
 type Vector = [number, number, number];
+
+function finish(id: string, color: Vector): SceneMaterial {
+  return {id, uniforms: {baseColorFactor: [...color, 1], metallicRoughnessValues: [0.15, 0.4]}};
+}
+const graphite = finish('graphite', [0.27, 0.32, 0.34]);
+const steel = finish('steel', [0.12, 0.18, 0.2]);
+const stock = [
+  finish('teal', [0.035, 0.55, 0.5]),
+  finish('copper', [0.92, 0.29, 0.045]),
+  finish('cobalt', [0.42, 0.56, 0.84])
+];
+export const RING_PIECES: {name: string; size: Vector; mass: number}[] = [
+  {name: 'Shim', size: [0.15, 0.18, 0.16], mass: 0.35},
+  {name: 'Spacer', size: [0.18, 0.17, 0.22], mass: 0.55},
+  {name: 'Billet', size: [0.22, 0.2, 0.19], mass: 0.8},
+  {name: 'Die', size: [0.18, 0.21, 0.25], mass: 1},
+  {name: 'Gauge block', size: [0.23, 0.19, 0.21], mass: 1.2},
+  {name: 'Counterweight', size: [0.21, 0.22, 0.27], mass: 1.4}
+];
+export const ringAngle = (index: number) =>
+  ((index - (RING_PIECES.length - 1) / 2) * 2 * Math.PI) / RING_PIECES.length;
 
 /** Cook and render the same registered scene nodes. Selection only sets the actuator trajectory. */
 export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
@@ -35,19 +57,11 @@ export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
     yaw: number,
     size: Vector,
     weight: number,
-    color: Vector
+    material: SceneMaterial
   ) {
     const local = new Matrix4().scale(size);
     const matrix = new Matrix4().translate(position).rotateZ(yaw).multiplyRight(local);
-    const node = new SceneMeshNode({
-      id,
-      geometry,
-      matrix,
-      material: {
-        id: id + '-finish',
-        uniforms: {baseColorFactor: [...color, 1], metallicRoughnessValues: [0.15, 0.4]}
-      }
-    });
+    const node = new SceneMeshNode({id, geometry, matrix, material});
     root.add(node);
     localScales.set(node, local);
     definitions.set(node, {
@@ -57,34 +71,43 @@ export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
       restitution: 0
     });
   }
-  box('bench', [0, 0, -0.12], 0, [2.4, 2.4, 0.12], 0, [0.27, 0.32, 0.34]);
-  const colors: Vector[] = [
-    [0.035, 0.55, 0.5],
-    [0.92, 0.29, 0.045],
-    [0.42, 0.56, 0.84]
-  ];
-  for (const [index, angle] of BIN_ANGLES.entries()) {
-    const split = bin.obstructed && index < 2;
-    const yaw = bin.drop && index === 2 ? BIN_DESTINATION : split ? BIN_ANGLES[bin.target] : angle;
-    const lateral = split ? (index === 0 ? -0.23 : 0.23) : 0;
-    // Raising the boom moves the tip forward because the fingers hang below its axis.
-    const radial =
-      bin.parts && bin.drop && index === 2
-        ? reach * Math.cos(STACK_RELEASE_ANGLE) - FINGER_LENGTH * Math.sin(STACK_RELEASE_ANGLE)
-        : reach + (index === bin.target ? (bin.offset ?? 0) : 0);
-    box(
-      'workpiece-' + index,
-      [
-        radial * Math.cos(yaw) - lateral * Math.sin(yaw),
-        radial * Math.sin(yaw) + lateral * Math.cos(yaw),
-        0.24
-      ],
-      yaw,
-      [0.19, split ? 0.105 : 0.2, 0.24],
-      mass,
-      colors[index]
-    );
-  }
+  box('bench', [0, 0, -0.12], 0, [2.4, 2.4, 0.12], 0, graphite);
+  if (bin.ring) {
+    for (const [index, piece] of RING_PIECES.entries()) {
+      const yaw = ringAngle(index);
+      box(
+        piece.name,
+        [reach * Math.cos(yaw), reach * Math.sin(yaw), piece.size[2]],
+        yaw,
+        piece.size,
+        mass * piece.mass,
+        stock[index % stock.length]
+      );
+    }
+  } else
+    for (const [index, angle] of BIN_ANGLES.entries()) {
+      const split = bin.obstructed && index < 2;
+      const yaw =
+        bin.drop && index === 2 ? BIN_DESTINATION : split ? BIN_ANGLES[bin.target] : angle;
+      const lateral = split ? (index === 0 ? -0.23 : 0.23) : 0;
+      // Raising the boom moves the tip forward because the fingers hang below its axis.
+      const radial =
+        bin.parts && bin.drop && index === 2
+          ? reach * Math.cos(STACK_RELEASE_ANGLE) - FINGER_LENGTH * Math.sin(STACK_RELEASE_ANGLE)
+          : reach + (index === bin.target ? (bin.offset ?? 0) : 0);
+      box(
+        'workpiece-' + index,
+        [
+          radial * Math.cos(yaw) - lateral * Math.sin(yaw),
+          radial * Math.sin(yaw) + lateral * Math.cos(yaw),
+          0.24
+        ],
+        yaw,
+        [0.19, split ? 0.105 : 0.2, 0.24],
+        mass,
+        stock[index]
+      );
+    }
   if (bin.parts) {
     let seed = 139;
     const random = () => {
@@ -118,33 +141,27 @@ export function makeBinWorkcell(bin: BinScenario, reach: number, mass: number) {
           random() * Math.PI,
           size,
           0.15 + random() * 0.2,
-          colors[added % 3]
+          stock[added % stock.length]
         );
         added++;
       }
     if (bin.gate)
-      box('forearm-stop', [0.73, 0.34, 0.78], 0, [0.08, 0.09, 0.78], 0, [0.88, 0.56, 0.06]);
+      box(
+        'forearm-stop',
+        [0.73, 0.34, 0.78],
+        0,
+        [0.08, 0.09, 0.78],
+        0,
+        finish('ochre', [0.88, 0.56, 0.06])
+      );
   }
   const x = reach * Math.cos(BIN_DESTINATION),
     y = reach * Math.sin(BIN_DESTINATION);
-  for (const sign of [-1, 1]) {
-    box(
-      'tray-x-' + sign,
-      [x + sign * 0.47, y, 0.045],
-      0,
-      [0.025, 0.49, 0.045],
-      0,
-      [0.12, 0.18, 0.2]
-    );
-    box(
-      'tray-y-' + sign,
-      [x, y + sign * 0.47, 0.045],
-      0,
-      [0.445, 0.025, 0.045],
-      0,
-      [0.12, 0.18, 0.2]
-    );
-  }
+  if (!bin.ring)
+    for (const sign of [-1, 1]) {
+      box('tray-x-' + sign, [x + sign * 0.47, y, 0.045], 0, [0.025, 0.49, 0.045], 0, steel);
+      box('tray-y-' + sign, [x, y + sign * 0.47, 0.045], 0, [0.445, 0.025, 0.045], 0, steel);
+    }
   const {definition} = makePhysicsControllerScene(root, definitions, {});
   return {
     root,

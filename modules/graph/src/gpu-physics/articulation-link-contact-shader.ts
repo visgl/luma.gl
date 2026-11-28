@@ -67,7 +67,7 @@ fn preparePayload(dt:f32,inverse:ptr<function,array<array<f32,N>,N>>){
     if(shape.w==2.){hit=intersectBoxes(center,rotation,shape.xyz,b,q,box.shape.xyz);}
     else{hit=intersectRound(center,rotation,shape,b,q,box.shape.xyz);}
     if(hit[1].w>0.001){continue;}
-    if(contactCount==CAPACITY){counters[1]=1u;counters[6]=1u;return;}
+    if(contactCount==CAPACITY){counters[1]=1u;counters[2]=0u;counters[3]=0u;counters[5]=0u;counters[6]=1u;return;}
     currentBox=i;payload=Pose(box.position,box.rotation,box.velocity,box.spin);
     velocities[i]=box.velocity.xyz;spins[i]=box.spin.xyz;
     boxIds[contactCount]=i;colliderIds[contactCount]=collider;

@@ -15,6 +15,8 @@ import {
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 import {
+  RING_PIECES,
+  ringAngle,
   STACK_RELEASE_ANGLE,
   BIN_LIFT_ANGLE,
   FINGER_LENGTH,
@@ -138,7 +140,7 @@ export function makeGripperTrial(
     restitution: 0
   });
   const bin = options.bin;
-  const sourceAngle = bin ? BIN_ANGLES[bin.target] : 0;
+  const sourceAngle = bin?.ring ? ringAngle(0) : bin ? BIN_ANGLES[bin.target] : 0;
   const destination = bin ? BIN_DESTINATION : DESTINATION_ANGLE;
   if (bin) {
     if (sourceAngle === undefined) throw new RangeError('Invalid bin target');
@@ -181,7 +183,7 @@ export function makeGripperTrial(
       shape: {type: 'box', halfExtents: [0.1, 0.46, 0.075]}
     }
   ];
-  if (bin?.parts && !reduced) {
+  if ((bin?.parts || bin?.ring) && !reduced) {
     const {shape: unused, ...body} = bodies[3];
     bodies[3] = {
       ...body,
@@ -238,10 +240,14 @@ export function makeGripperTrial(
       });
   const liftAngle = bin ? BIN_LIFT_ANGLE : -0.38;
   const travelSteps = (phase: number) =>
-    phase === 3
-      ? (options.carrySteps ??
-        (bin ? 4 * Math.ceil(40 * Math.abs(destination - sourceAngle)) : 120))
-      : 120;
+    bin?.ring
+      ? phase % 7 === 0
+        ? 144
+        : 72
+      : phase === 3
+        ? (options.carrySteps ??
+          (bin ? 4 * Math.ceil(40 * Math.abs(destination - sourceAngle)) : 120))
+        : 120;
   const phaseNames =
     bin && !bin.drop && !bin.obstructed
       ? [...GRIPPER_PHASES, 'Regrip', 'Raise again']
@@ -264,6 +270,25 @@ export function makeGripperTrial(
     [destination, -0.024, 0.36],
     [destination, liftAngle, 0.36]
   ];
+  const ringStages = ['Approach', 'Lower', 'Grip', 'Lift', 'Set down', 'Release', 'Clear'];
+  if (bin?.ring) {
+    phaseNames.length = 0;
+    phases.length = 0;
+    for (const [index, piece] of RING_PIECES.entries()) {
+      const yaw = ringAngle(index);
+      for (const stage of ringStages)
+        phaseNames.push(`${index + 1}/${RING_PIECES.length} · ${piece.name} · ${stage}`);
+      phases.push(
+        [yaw, liftAngle, 0],
+        [yaw, -0.024, 0],
+        [yaw, -0.024, 0.36],
+        [yaw, liftAngle, 0.36],
+        [yaw, -0.024, 0.36],
+        [yaw, -0.024, 0],
+        [yaw, liftAngle, 0]
+      );
+    }
+  }
   return {
     world,
     bodies,
@@ -271,11 +296,13 @@ export function makeGripperTrial(
     workcell,
     phaseNames,
     travelSteps,
+    targetIndex: (phase: number) =>
+      bin?.ring ? Math.floor(phase / ringStages.length) : (bin?.target ?? 0),
     addToGraph<P>(graph: GPUCommandGraph<P>) {
       if (binWorld && world instanceof GPUArticulationTree)
         binWorld.addToGraph(graph, {
           tree: world,
-          ...(bin?.parts ? {colliders} : {pads}),
+          ...(bin?.parts || bin?.ring ? {colliders} : {pads}),
           friction: friction ** 2
         });
       else world.addToGraph(graph);

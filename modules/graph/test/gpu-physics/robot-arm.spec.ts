@@ -319,15 +319,23 @@ it('latches link contact capacity before publishing partial impulses and clears 
   });
   const graph = await definition.compileAsync();
   try {
+    world.setColliderTransform(24, [5, 0, 0], [0, 0, 0, 1]);
+    const accepted = device.createCommandEncoder();
+    graph.encode(accepted, {parameters: undefined});
+    device.submit(accepted.finish());
+    expect(await tree.readSimulationDiagnostics()).toMatchObject({steps: 1, activeContacts: 24});
     const before = await tree.readState();
+    world.setColliderTransform(24, [0, 0, 0], [0, 0, 0, 1]);
     const encoder = device.createCommandEncoder();
     graph.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
     expect(await tree.readSimulationDiagnostics()).toMatchObject({
-      steps: 0,
+      steps: 1,
       complete: false,
       contactOverflow: true,
-      activeContacts: 0
+      activeContacts: 0,
+      contactPairs: [],
+      padContactMasks: [0, 0]
     });
     expect(await tree.readState()).toEqual(before);
     tree.reset();

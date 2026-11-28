@@ -179,3 +179,9 @@ Direct authoring uses the rigid-body shape types. Give the capsule equal cap rad
 Use `tree.readSimulationDiagnostics()` to inspect candidate pairs, active contacts, reused contacts and the world body and link collider indices for each active pair. The 25th simultaneous contact sets `contactOverflow` and stops the tree before applying its impulses. The standalone world continues stepping. Restore the world and reset the tree together to restart a coupled simulation. Box contacts currently use one representative point per pair. The discrete solver covers fixed-base mechanisms.
 
 In the gripper workcell selector, **Crowded bin** picks and regrasps a block, **Forearm stop** obstructs the carry, **Stack delivery** releases onto a second block and **Scale** increases the load to 256 parts.
+
+### Rendering a ring of independent workpieces
+
+The gripper lab authors each workpiece as a scenegraph node with its own dimensions, transform and rigid-body mass. Several nodes reference the same cube geometry and the same named finish, much as several glTF nodes can reference one mesh. The scene renderer groups compatible opaque instances for drawing and reads a separate physics pose matrix for each one. A teal shim can be lighter, smaller and moving independently of a teal die.
+
+Give a piece its own material when its finish needs to change independently. Its physics body, joint targets and pickup sequence work the same way. The crowded-bin scenario uses the same scenegraph and materials for all 64 bodies.
