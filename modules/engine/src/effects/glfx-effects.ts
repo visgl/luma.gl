@@ -26,15 +26,15 @@ import {magnify} from './passes/postprocessing/image-fun-filters/magnify';
 import {bulgePinch} from './passes/postprocessing/image-warp-filters/bulgepinch';
 import {swirl} from './passes/postprocessing/image-warp-filters/swirl';
 
-export const brightnessContrastEffect: EffectDefinition<never> = {
+export const brightnessContrastEffect = {
   name: brightnessContrast.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: brightnessContrast, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
 const denoiseSample = {...denoise, passes: [{sampler: true}]};
 
-export const denoiseEffect: EffectDefinition<never> = {
+export const denoiseEffect = {
   name: denoise.name,
   resources: {},
   passes: [
@@ -45,22 +45,22 @@ export const denoiseEffect: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const hueSaturationEffect: EffectDefinition<never> = {
+export const hueSaturationEffect = {
   name: hueSaturation.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: hueSaturation, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const noiseEffect: EffectDefinition<never> = {
+export const noiseEffect = {
   name: noise.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: noise, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
 /** Accumulates fading trails in a history texture owned by this effect. */
-export const persistence: EffectDefinition<'accumulation'> = {
+export const persistence = {
   name: persistenceEffect.name,
   resources: {
     accumulation: {lifetime: 'history', initialize: {clearColor: [0, 0, 0, 0]}}
@@ -79,35 +79,35 @@ export const persistence: EffectDefinition<'accumulation'> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<'accumulation'>;
 
-export const sepiaEffect: EffectDefinition<never> = {
+export const sepiaEffect = {
   name: sepia.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: sepia, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const vibranceEffect: EffectDefinition<never> = {
+export const vibranceEffect = {
   name: vibrance.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: vibrance, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const vignetteEffect: EffectDefinition<never> = {
+export const vignetteEffect = {
   name: vignette.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: vignette, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const bloomEffect: EffectDefinition<never> = {
+export const bloomEffect = {
   name: bloom.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: bloom, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
 const gaussianBlurSample = {...gaussianBlur, passes: [{sampler: true}]};
 
-export const gaussianBlurEffect: EffectDefinition<never> = {
+export const gaussianBlurEffect = {
   name: gaussianBlur.name,
   resources: {},
   passes: [
@@ -124,11 +124,11 @@ export const gaussianBlurEffect: EffectDefinition<never> = {
       uniforms: {delta: [0, 1]}
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 const tiltShiftSample = {...tiltShift, passes: [{sampler: true}]};
 
-export const tiltShiftEffect: EffectDefinition<never> = {
+export const tiltShiftEffect = {
   name: tiltShift.name,
   resources: {},
   passes: [
@@ -140,11 +140,11 @@ export const tiltShiftEffect: EffectDefinition<never> = {
       uniforms: {invert: 1}
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 const triangleBlurSample = {...triangleBlur, passes: [{sampler: true}]};
 
-export const triangleBlurEffect: EffectDefinition<never> = {
+export const triangleBlurEffect = {
   name: triangleBlur.name,
   resources: {},
   passes: [
@@ -161,29 +161,29 @@ export const triangleBlurEffect: EffectDefinition<never> = {
       uniforms: {delta: [0, 1]}
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const zoomBlurEffect: EffectDefinition<never> = {
+export const zoomBlurEffect = {
   name: zoomBlur.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: zoomBlur, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const colorHalftoneEffect: EffectDefinition<never> = {
+export const colorHalftoneEffect = {
   name: colorHalftone.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: colorHalftone, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const dotScreenEffect: EffectDefinition<never> = {
+export const dotScreenEffect = {
   name: dotScreen.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: dotScreen, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
 const edgeWorkSample = {...edgeWork, passes: [{sampler: true}]};
 
-export const edgeWorkEffect: EffectDefinition<never> = {
+export const edgeWorkEffect = {
   name: edgeWork.name,
   resources: {},
   passes: [
@@ -195,34 +195,34 @@ export const edgeWorkEffect: EffectDefinition<never> = {
       uniforms: {mode: 1}
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const hexagonalPixelateEffect: EffectDefinition<never> = {
+export const hexagonalPixelateEffect = {
   name: hexagonalPixelate.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: hexagonalPixelate, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const inkEffect: EffectDefinition<never> = {
+export const inkEffect = {
   name: ink.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: ink, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const magnifyEffect: EffectDefinition<never> = {
+export const magnifyEffect = {
   name: magnify.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: magnify, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const bulgePinchEffect: EffectDefinition<never> = {
+export const bulgePinchEffect = {
   name: bulgePinch.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: bulgePinch, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
-export const swirlEffect: EffectDefinition<never> = {
+export const swirlEffect = {
   name: swirl.name,
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: swirl, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;

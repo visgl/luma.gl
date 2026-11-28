@@ -293,7 +293,7 @@ fn deferredLighting_sampleColor(
 
 /** Creates a fullscreen deferred-lighting step that composes into the previous color chain. */
 /** Resolves the scene buffers with the deferredLighting shader. */
-export const deferredLightingEffect: EffectDefinition<never> = {
+export const deferredLightingEffect = {
   name: 'deferredLightingCompositeShaderPass',
   resources: {},
   passes: [
@@ -304,7 +304,7 @@ export const deferredLightingEffect: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 export function createDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {

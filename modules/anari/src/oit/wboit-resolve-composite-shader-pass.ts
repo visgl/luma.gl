@@ -65,7 +65,7 @@ vec4 wboitResolve_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
 
 /** Creates the fullscreen weighted-blended OIT resolve pipeline. */
 /** Resolves the scene buffers with the wboitResolve shader. */
-export const wboitResolveEffect: EffectDefinition<never> = {
+export const wboitResolveEffect = {
   name: 'wboitResolveCompositeShaderPass',
   resources: {},
   passes: [
@@ -76,7 +76,7 @@ export const wboitResolveEffect: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 export function createWBOITResolveCompositeShaderPass(): CompositeShaderPass {
   return {name: wboitResolveEffect.name, steps: wboitResolveEffect.passes.map(pass => ({...pass}))};

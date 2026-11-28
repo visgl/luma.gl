@@ -336,7 +336,7 @@ fn clusteredDeferredLighting_sampleColor(
 
 /** Creates a fullscreen clustered deferred-lighting step for the previous color chain. */
 /** Resolves the scene buffers with the clusteredDeferredLighting shader. */
-export const clusteredDeferredLightingEffect: EffectDefinition<never> = {
+export const clusteredDeferredLightingEffect = {
   name: 'clusteredDeferredLightingCompositeShaderPass',
   resources: {},
   passes: [
@@ -347,7 +347,7 @@ export const clusteredDeferredLightingEffect: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 export function createClusteredDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {

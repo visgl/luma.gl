@@ -92,7 +92,7 @@ fn depthHistoryCopy_sampleColor(
 } as const satisfies ShaderPass;
 
 /** Temporal antialiasing with scene velocity and separate color and depth history. */
-export const taa: EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'> = {
+export const taa = {
   name: 'taaCompositeShaderPass',
   resources: {
     taaHistoryColor: {lifetime: 'history', initialize: 'original'},
@@ -126,7 +126,7 @@ export const taa: EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'> = {
       output: 'taaHistoryDepth'
     }
   ]
-};
+} as const satisfies EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'>;
 
 export function createTAACompositeShaderPass() {
   return resolveEffect(taa);

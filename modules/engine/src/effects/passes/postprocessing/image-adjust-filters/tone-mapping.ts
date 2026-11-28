@@ -90,8 +90,8 @@ export const toneMapping = {
 } as const satisfies ShaderPass<ToneMappingProps, ToneMappingUniforms>;
 
 /** HDR tone mapping for the fullscreen effect chain. */
-export const toneMappingEffect: EffectDefinition<never> = {
+export const toneMappingEffect = {
   name: 'toneMapping',
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: toneMapping, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;

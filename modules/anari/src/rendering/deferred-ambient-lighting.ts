@@ -82,7 +82,7 @@ fn deferredAmbientLighting_sampleColor(
 
 /** Creates a reusable fullscreen ambient-light extraction pass over deferred G-buffer material. */
 /** Resolves the scene buffers with the deferredAmbientLighting shader. */
-export const deferredAmbientLightingEffect: EffectDefinition<never> = {
+export const deferredAmbientLightingEffect = {
   name: 'deferredAmbientLightingCompositeShaderPass',
   resources: {},
   passes: [
@@ -93,7 +93,7 @@ export const deferredAmbientLightingEffect: EffectDefinition<never> = {
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 export function createDeferredAmbientLightingCompositeShaderPass(): CompositeShaderPass {
   return {

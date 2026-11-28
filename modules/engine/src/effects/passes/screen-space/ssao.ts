@@ -106,13 +106,13 @@ export const ssaoEvaluate = {
 } as const satisfies ShaderPass;
 
 /** Screen-space ambient occlusion with configurable normal input and target size. */
-export const ssaoEffect: ConfigurableEffectDefinition<
-  SSAOCompositeShaderPassOptions,
-  'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
-> = {
+export const ssaoEffect = {
   name: 'ssaoCompositeShaderPass',
   configure: configureSSAO
-};
+} as const satisfies ConfigurableEffectDefinition<
+  SSAOCompositeShaderPassOptions,
+  'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
+>;
 
 export function createSSAOCompositeShaderPass(options: SSAOCompositeShaderPassOptions = {}) {
   return resolveEffect(ssaoEffect.configure(options));
@@ -167,7 +167,7 @@ fn ssaoComposite_sampleColor(
 } as const satisfies ShaderPass;
 
 /** SSAO with normals reconstructed from the scene depth input. */
-export const ssao: EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> = {
+export const ssao = {
   name: 'ssaoCompositeShaderPass',
   resources: {
     ssaoRaw: {scale: [1, 1], format: 'rgba8unorm'},
@@ -203,4 +203,4 @@ export const ssao: EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> =
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'>;

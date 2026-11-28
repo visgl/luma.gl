@@ -162,10 +162,7 @@ fn aBufferResolve_sampleColor(
 export const DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL = 12;
 
 /** Resolves captured A-buffer fragments using a configured per-pixel sort limit. */
-export const aBufferResolveEffect: ConfigurableEffectDefinition<
-  ABufferResolveCompositeShaderPassOptions,
-  never
-> = {
+export const aBufferResolveEffect = {
   name: 'aBufferResolveCompositeShaderPass',
   configure(options = {maxFragmentsPerPixel: DEFAULT_ABUFFER_MAX_FRAGMENTS_PER_PIXEL}) {
     const maxFragmentsPerPixel = Math.floor(options.maxFragmentsPerPixel);
@@ -186,7 +183,7 @@ export const aBufferResolveEffect: ConfigurableEffectDefinition<
       ]
     };
   }
-};
+} as const satisfies ConfigurableEffectDefinition<ABufferResolveCompositeShaderPassOptions, never>;
 
 export function createABufferResolveCompositeShaderPass(
   options: ABufferResolveCompositeShaderPassOptions

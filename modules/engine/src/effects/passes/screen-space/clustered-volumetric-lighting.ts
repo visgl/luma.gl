@@ -715,17 +715,17 @@ fn clusteredVolumetricComposite_sampleColor(
 >;
 
 /** Creates clustered participating-media integration, temporal stabilization, and composition. */
-export const clusteredVolumetricLighting: ConfigurableEffectDefinition<
+export const clusteredVolumetricLighting = {
+  name: 'clusteredVolumetricLightingCompositeShaderPass',
+  configure: configureClusteredVolumetricLighting
+} as const satisfies ConfigurableEffectDefinition<
   ClusteredVolumetricLightingCompositeShaderPassOptions,
   | 'clusteredVolumeRaw'
   | 'clusteredVolumeHistory'
   | 'clusteredVolumeDepthHistory'
   | 'clusteredVolumeScratch'
   | 'clusteredVolumeScattering'
-> = {
-  name: 'clusteredVolumetricLightingCompositeShaderPass',
-  configure: configureClusteredVolumetricLighting
-};
+>;
 
 function configureClusteredVolumetricLighting(
   options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}

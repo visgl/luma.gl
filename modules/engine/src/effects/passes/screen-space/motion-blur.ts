@@ -55,12 +55,12 @@ fn motionBlur_sampleColor(
 } as const satisfies ShaderPass;
 
 /** Velocity-based motion blur using the scene's depth and velocity textures. */
-export const motionBlur: EffectDefinition<never> = {
+export const motionBlur = {
   name: 'motionBlurCompositeShaderPass',
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: motionBlurPass, output: 'previous'}]
-};
+} as const satisfies EffectDefinition<never>;
 
 export function createMotionBlurCompositeShaderPass() {
-  return resolveEffect(motionBlur);
+  return resolveEffect<never>(motionBlur);
 }

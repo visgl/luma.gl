@@ -528,13 +528,13 @@ fn ssgiComposite_sampleColor(
 } as const satisfies ShaderPass<Partial<SSGICompositeUniforms>, SSGICompositeUniforms>;
 
 /** Creates a hemisphere-traced, temporally stabilized screen-space diffuse GI pipeline. */
-export const ssgi: ConfigurableEffectDefinition<
-  SSGICompositeShaderPassOptions,
-  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
-> = {
+export const ssgi = {
   name: 'ssgiCompositeShaderPass',
   configure: configureSSGI
-};
+} as const satisfies ConfigurableEffectDefinition<
+  SSGICompositeShaderPassOptions,
+  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
+>;
 
 function configureSSGI(
   options: SSGICompositeShaderPassOptions = {}

@@ -195,9 +195,7 @@ fn cameraReprojectionTaaDepthHistoryCopy_sampleColor(
  * The caller must bind current depth and update both matrices/jitter every frame. Reset the
  * renderer history after resize, camera cuts, or moving-object topology changes.
  */
-export const cameraReprojectionTaa: EffectDefinition<
-  'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
-> = {
+export const cameraReprojectionTaa = {
   name: 'cameraReprojectionTaaCompositeShaderPass',
   resources: {
     cameraReprojectionTaaHistoryColor: {
@@ -235,7 +233,9 @@ export const cameraReprojectionTaa: EffectDefinition<
       output: 'cameraReprojectionTaaHistoryDepth'
     }
   ]
-};
+} as const satisfies EffectDefinition<
+  'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
+>;
 
 export function createCameraReprojectionTAACompositeShaderPass() {
   return resolveEffect(cameraReprojectionTaa);
