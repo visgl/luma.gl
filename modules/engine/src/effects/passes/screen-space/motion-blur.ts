@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 type MotionBlurUniforms = {strength: number; sampleCount: number};
 type MotionBlurBindings = {depthTexture?: Texture; velocityTexture?: Texture};
@@ -53,9 +54,13 @@ fn motionBlur_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createMotionBlurCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: 'motionBlurCompositeShaderPass',
-    steps: [{shaderPass: motionBlurPass, output: 'previous'}]
-  };
+/** Velocity-based motion blur using the scene's depth and velocity textures. */
+export const motionBlur: EffectDefinition<never> = {
+  name: 'motionBlurCompositeShaderPass',
+  resources: {},
+  passes: [{kind: 'fullscreen', shaderPass: motionBlurPass, output: 'previous'}]
+};
+
+export function createMotionBlurCompositeShaderPass() {
+  return resolveEffect(motionBlur);
 }

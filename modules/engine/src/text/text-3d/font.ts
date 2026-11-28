@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js FontLoader (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Vector2} from '@math.gl/core';
+import {Vector2} from '@math.gl/core/matrix';
 import type {TypefaceFontData, TypefaceGlyph} from '../fonts/typeface-font-data';
 import {ShapePath} from './paths/shape-path';
 import {Shape} from './paths/path';

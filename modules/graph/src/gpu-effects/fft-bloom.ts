@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {encodeComputePipeline, type ComputePipelineDefinition} from './compute-pipeline';
+
 import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
 
 import {
@@ -156,6 +158,133 @@ type GPUConvolutionBloomResources = {
   composite: BoundKernel;
 };
 
+type FFTBloomResources = Pick<
+  GPUConvolutionBloomResources,
+  'parameters' | 'spatialChannels' | 'spectralChannels' | 'kernelSpectrum'
+> & {
+  sourceTexture: Texture['view'];
+  outputTexture: Texture['view'];
+  exposureTexture: Texture['view'];
+  lensDirtTexture: Texture['view'];
+  historyTexture?: Texture['view'];
+  historyOutput?: Texture['view'];
+};
+
+type FFTBloomFrame = {
+  stats: GPUConvolutionBloomStats;
+  transform: GPUConvolutionBloomResources['transform'];
+  kernelNeedsTransform: boolean;
+  markKernelTransformed: () => void;
+};
+
+/** Extracts highlights, convolves them in the frequency domain, and composites in HDR. */
+export const fftBloomPipeline = {
+  name: 'gpu-convolution-bloom',
+  passes: [
+    {
+      kind: 'operation',
+      name: 'cache-kernel-spectrum',
+      when: frame => frame.kernelNeedsTransform,
+      encode(commandEncoder, resources, frame) {
+        frame.transform.forward.encode(commandEncoder, {
+          parameters: undefined,
+          buffers: {input: resources.spatialChannels, output: resources.kernelSpectrum}
+        });
+        frame.markKernelTransformed();
+      }
+    },
+    {
+      kind: 'compute',
+      name: 'extract',
+      dispatches: [
+        {
+          kernel: 'extract',
+          bindings: {
+            parameters: 'parameters',
+            sourceTexture: 'sourceTexture',
+            exposureTexture: 'exposureTexture',
+            spatialChannels: 'spatialChannels'
+          },
+          workgroups: ({stats}) => [
+            Math.ceil(stats.transformWidth / FFT_BLOOM_WORKGROUP_DIMENSION),
+            Math.ceil(stats.transformHeight / FFT_BLOOM_WORKGROUP_DIMENSION)
+          ]
+        }
+      ]
+    },
+    {
+      kind: 'operation',
+      name: 'transform-highlights',
+      encode(commandEncoder, resources, frame) {
+        frame.transform.forward.encode(commandEncoder, {
+          parameters: undefined,
+          buffers: {input: resources.spatialChannels, output: resources.spectralChannels}
+        });
+      }
+    },
+    {
+      kind: 'compute',
+      name: 'multiply',
+      dispatches: [
+        {
+          kernel: 'multiply',
+          bindings: {
+            sourceSpectrum: 'spectralChannels',
+            kernelSpectrum: 'kernelSpectrum',
+            filteredChannels: 'spatialChannels'
+          },
+          workgroups: ({stats}) => {
+            const workgroupCount = Math.ceil(
+              (stats.elementCount * stats.batchCount) / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE
+            );
+            return [
+              Math.min(workgroupCount, FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW),
+              Math.ceil(workgroupCount / FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW)
+            ];
+          }
+        }
+      ]
+    },
+    {
+      kind: 'operation',
+      name: 'inverse-transform',
+      encode(commandEncoder, resources, frame) {
+        frame.transform.inverse.encode(commandEncoder, {
+          parameters: undefined,
+          buffers: {input: resources.spatialChannels, output: resources.spectralChannels}
+        });
+      }
+    },
+    {
+      kind: 'compute',
+      name: 'composite',
+      dispatches: [
+        {
+          kernel: 'composite',
+          bindings: {
+            parameters: 'parameters',
+            sourceTexture: 'sourceTexture',
+            convolvedChannels: 'spectralChannels',
+            outputTexture: 'outputTexture',
+            lensDirtTexture: 'lensDirtTexture',
+            exposureTexture: 'exposureTexture',
+            historyTexture: 'historyTexture',
+            historyOutput: 'historyOutput'
+          },
+          workgroups: ({stats}) => [
+            Math.ceil(stats.width / FFT_BLOOM_WORKGROUP_DIMENSION),
+            Math.ceil(stats.height / FFT_BLOOM_WORKGROUP_DIMENSION)
+          ]
+        }
+      ]
+    }
+  ]
+} as const satisfies ComputePipelineDefinition<
+  FFTBloomResources,
+  'extract' | 'multiply' | 'composite',
+  FFTBloomFrame
+>;
+
 /**
  * Computes physically motivated optical convolution using three complex 2D RGB transforms.
  *
@@ -271,75 +400,35 @@ export class GPUConvolutionBloom {
       })
     );
 
-    if (this.kernelNeedsTransform) {
-      this.resources.transform.forward.encode(commandEncoder, {
-        parameters: undefined,
-        buffers: {input: this.resources.spatialChannels, output: this.resources.kernelSpectrum}
-      });
-      this.kernelNeedsTransform = false;
-    }
-
-    Object.assign(this.resources.extract.bindings, {
-      parameters: this.resources.parameters,
-      sourceTexture: options.sourceTexture.view,
-      exposureTexture: (options.exposureTexture || options.sourceTexture).view,
-      spatialChannels: this.resources.spatialChannels
-    });
-    dispatchConvolutionComputation(
+    const resources = this.resources;
+    const historyTextures = resources.historyTextures;
+    encodeComputePipeline(fftBloomPipeline, {
       commandEncoder,
-      this.resources.extract,
-      `${this.id}-extract`,
-      Math.ceil(this.stats.transformWidth / FFT_BLOOM_WORKGROUP_DIMENSION),
-      Math.ceil(this.stats.transformHeight / FFT_BLOOM_WORKGROUP_DIMENSION)
-    );
-
-    this.resources.transform.forward.encode(commandEncoder, {
-      parameters: undefined,
-      buffers: {input: this.resources.spatialChannels, output: this.resources.spectralChannels}
+      id: this.id,
+      resources: {
+        parameters: resources.parameters,
+        spatialChannels: resources.spatialChannels,
+        spectralChannels: resources.spectralChannels,
+        kernelSpectrum: resources.kernelSpectrum,
+        sourceTexture: options.sourceTexture.view,
+        outputTexture: options.outputTexture.view,
+        lensDirtTexture: (options.lensDirtTexture || options.sourceTexture).view,
+        exposureTexture: (options.exposureTexture || options.sourceTexture).view,
+        historyTexture: historyTextures?.[this.historyIndex].view,
+        historyOutput: historyTextures?.[1 - this.historyIndex].view
+      },
+      frame: {
+        stats: this.stats,
+        transform: resources.transform,
+        kernelNeedsTransform: this.kernelNeedsTransform,
+        markKernelTransformed: () => {
+          this.kernelNeedsTransform = false;
+        }
+      },
+      dispatch: (kernel, computePass, bindings, [x, y = 1, z = 1]) => {
+        resources[kernel].kernel.dispatch(computePass, {bindings, x, y, z});
+      }
     });
-
-    Object.assign(this.resources.multiply.bindings, {
-      sourceSpectrum: this.resources.spectralChannels,
-      kernelSpectrum: this.resources.kernelSpectrum,
-      filteredChannels: this.resources.spatialChannels
-    });
-    const multiplyWorkgroupCount = Math.ceil(
-      (this.stats.elementCount * this.stats.batchCount) / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE
-    );
-    dispatchConvolutionComputation(
-      commandEncoder,
-      this.resources.multiply,
-      `${this.id}-multiply`,
-      Math.min(multiplyWorkgroupCount, FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW),
-      Math.ceil(multiplyWorkgroupCount / FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW)
-    );
-
-    this.resources.transform.inverse.encode(commandEncoder, {
-      parameters: undefined,
-      buffers: {input: this.resources.spatialChannels, output: this.resources.spectralChannels}
-    });
-
-    const compositeBindings: Record<string, Buffer | Texture['view']> = {
-      parameters: this.resources.parameters,
-      sourceTexture: options.sourceTexture.view,
-      convolvedChannels: this.resources.spectralChannels,
-      outputTexture: options.outputTexture.view,
-      lensDirtTexture: (options.lensDirtTexture || options.sourceTexture).view,
-      exposureTexture: (options.exposureTexture || options.sourceTexture).view
-    };
-    if (this.resources.historyTextures) {
-      compositeBindings['historyTexture'] = this.resources.historyTextures[this.historyIndex].view;
-      compositeBindings['historyOutput'] =
-        this.resources.historyTextures[1 - this.historyIndex].view;
-    }
-    Object.assign(this.resources.composite.bindings, compositeBindings);
-    dispatchConvolutionComputation(
-      commandEncoder,
-      this.resources.composite,
-      `${this.id}-composite`,
-      Math.ceil(this.width / FFT_BLOOM_WORKGROUP_DIMENSION),
-      Math.ceil(this.height / FFT_BLOOM_WORKGROUP_DIMENSION)
-    );
     if (this.resources.historyTextures) {
       this.historyIndex = 1 - this.historyIndex;
       this.historyValid = true;
@@ -744,23 +833,6 @@ function makeConvolutionComputation(
   bindings: BindingDeclaration[]
 ): BoundKernel {
   return createBoundKernel(device, {id, source, shaderLayout: {bindings}});
-}
-
-function dispatchConvolutionComputation(
-  commandEncoder: CommandEncoder,
-  computation: BoundKernel,
-  id: string,
-  workgroupCountX: number,
-  workgroupCountY: number
-): void {
-  const computePass = commandEncoder.beginComputePass({id});
-  computation.kernel.dispatch(computePass, {
-    bindings: computation.bindings,
-    x: workgroupCountX,
-    y: workgroupCountY,
-    z: 1
-  });
-  computePass.end();
 }
 
 function makeComplexPointSpreadFunction(

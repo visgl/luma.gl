@@ -16,6 +16,7 @@ import {
   type CompiledGPUDataFrameLookup
 } from './gpu-join-compiler';
 import type {GPUDataFrameQueryParameters} from './gpu-query-compiler';
+import type {GPUJoinRightColumn} from './gpu-join-projection';
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const MAXIMUM_HASH_CAPACITY = 0x80000000;
@@ -39,6 +40,15 @@ export type GPUDataFrameJoinOptions<
   /** Optional bounded linear-probe count for index construction and left lookups. */
   maxProbeCount?: number;
 }>;
+
+/** Maps output aliases to right source columns and bounds optional staging during compilation. */
+export type GPUDataFrameJoinProjectionOptions<Columns extends Readonly<Record<string, string>>> =
+  Readonly<{
+    /** Output names and their corresponding right dataframe columns, in result order. */
+    rightColumns: Columns;
+    /** Maximum combined bytes for staged right values and validity. Zero disables staging. */
+    maxJoinProjectionScratchBytes?: number;
+  }>;
 
 /** Source-aligned unique-right lookup columns and bounded GPU hash-index controls. */
 export type GPUDataFrameLookupOptions<
@@ -113,6 +123,70 @@ export class GPUDataFrameJoinQuery<
       this.joinType,
       graph
     );
+  }
+
+  /**
+   * Compiles an inner or left join with aliased right values appended after the left selection.
+   * Each right output has an explicit validity mask, including for unmatched left rows.
+   *
+   * @example
+   * ```ts
+   * const result = trips.leftJoin(accounts, {leftOn: 'accountId', rightOn: 'id'})
+   *   .compileWithRightColumns(graph, {
+   *     rightColumns: {accountPosition: 'position'},
+   *     maxJoinProjectionScratchBytes: 1_048_576
+   *   });
+   * ```
+   */
+  compileWithRightColumns<const Columns extends Readonly<Record<string, keyof Right & string>>>(
+    graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+    options: GPUDataFrameJoinProjectionOptions<Columns>
+  ): CompiledGPUDataFrameJoin<
+    Pick<Logical, SelectedColumns> & {[Name in keyof Columns & string]: Right[Columns[Name]]},
+    Right
+  > {
+    type Selection = Pick<Logical, SelectedColumns>;
+    type Result = Selection & {[Name in keyof Columns & string]: Right[Columns[Name]]};
+    if (this.joinType !== 'inner' && this.joinType !== 'left') {
+      throw new Error('GPUDataFrame right projections require an inner or left join');
+    }
+    const {maxJoinProjectionScratchBytes} = options;
+    if (
+      maxJoinProjectionScratchBytes !== undefined &&
+      (!Number.isSafeInteger(maxJoinProjectionScratchBytes) || maxJoinProjectionScratchBytes < 0)
+    ) {
+      throw new Error(
+        'GPUDataFrame join projection scratch budget must be a nonnegative safe integer'
+      );
+    }
+    const rightColumns: GPUJoinRightColumn[] = [];
+    const columns: string[] = [...this.query.selectedColumns];
+    for (const [name, source] of Object.entries(options.rightColumns)) {
+      if (name.length === 0 || Object.hasOwn(Object.prototype, name) || columns.includes(name)) {
+        throw new Error(
+          `GPUDataFrame right projection output "${name}" is invalid or already selected`
+        );
+      }
+      if (!this.right.columnNames.includes(source)) {
+        throw new Error(`GPUDataFrame right projection column "${source}" does not exist`);
+      }
+      columns.push(name);
+      rightColumns.push({name, source});
+    }
+    // The graph compiler installs the validated right aliases alongside the original left fields.
+    return compileGPUDataFrameJoin<Source, Selection, Right>(
+      this.query.source,
+      this.query.predicates,
+      this.query.selectedColumns,
+      this.query.derivedColumns,
+      this.right,
+      this.options,
+      this.joinType,
+      graph,
+      columns as (keyof Selection & string)[],
+      rightColumns,
+      maxJoinProjectionScratchBytes
+    ) as unknown as CompiledGPUDataFrameJoin<Result, Right>;
   }
 }
 

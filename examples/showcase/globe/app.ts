@@ -23,7 +23,7 @@ import {
   type LightingProps,
   waterMaterial
 } from '@luma.gl/shaders';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {
   ColumnPanel,
   type Panel,

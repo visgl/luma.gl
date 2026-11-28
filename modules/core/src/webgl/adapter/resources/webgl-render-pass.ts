@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core';
+import {writesStencil} from '../../../api/adapter/types/stencil-state';
+import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core/types';
 import type {
   Bindings,
   BindingsByGroup,
@@ -60,6 +61,10 @@ export class WEBGLRenderPass extends RenderPass {
   vertexArray: VertexArray | null = null;
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
+    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
+      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
+      throw new Error('clip-control-webgl');
+    }
     super(device, props);
     this.device = device;
     const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
@@ -115,6 +120,25 @@ export class WEBGLRenderPass extends RenderPass {
       const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
       webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
     }
+    if (this.props.stencilStoreOp === 'discard' && !this.props.stencilReadOnly) {
+      const {gl} = this.device;
+      const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+      const view = framebuffer?.depthStencilAttachment;
+      if (framebuffer?.handle) {
+        const format = framebuffer.multisampleHandle
+          ? framebuffer.props.depthStencilAttachment
+          : (view?.props.format ?? view?.texture.format);
+        if (
+          framebuffer.hasStencilRenderbuffer ||
+          (typeof format === 'string' && format.includes('stencil'))
+        ) {
+          gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL_ATTACHMENT]);
+        }
+      } else if (gl.getContextAttributes()?.stencil) {
+        gl.invalidateFramebuffer(GL.FRAMEBUFFER, [GL.STENCIL]);
+      }
+    }
+    (this.props.framebuffer as WEBGLFramebuffer | null)?.resolveMultisampleColors();
     this.device.popState();
     // should add commands to CommandEncoder.
     this.destroy();
@@ -139,15 +163,25 @@ export class WEBGLRenderPass extends RenderPass {
     const glParameters: GLParameters = {...this.glParameters};
 
     // Framebuffers are specified using parameters in WebGL
-    glParameters.framebuffer = this.props.framebuffer || null;
+    const framebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+    glParameters.framebuffer = framebuffer?.multisampleHandle ?? framebuffer;
 
     if (this.props.depthReadOnly) {
       glParameters.depthMask = !this.props.depthReadOnly;
     }
 
-    glParameters.stencilMask = this.props.stencilReadOnly ? 0 : 1;
+    if (this.props.stencilReadOnly) {
+      glParameters.stencilMask = 0;
+    }
 
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
+
+    if (this.props.clipDepthMode) {
+      glParameters[GL.CLIP_DEPTH_MODE_EXT] =
+        this.props.clipDepthMode === 'zero-to-one'
+          ? GL.ZERO_TO_ONE_EXT
+          : GL.NEGATIVE_ONE_TO_ONE_EXT;
+    }
 
     // Map the four renderpass parameters to WebGL parameters
     if (parameters.viewport) {
@@ -229,6 +263,10 @@ export class WEBGLRenderPass extends RenderPass {
       transformFeedback,
       uniforms = pipeline.uniforms
     } = options;
+
+    if (this.props.stencilReadOnly && writesStencil(parameters)) {
+      throw new Error('A stencil-writing pipeline cannot draw in a stencil read-only pass.');
+    }
 
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed = Boolean(vertexArray?.indexBuffer);
@@ -338,10 +376,6 @@ export class WEBGLRenderPass extends RenderPass {
       clearMask |= GL.DEPTH_BUFFER_BIT;
       glParameters.clearDepth = this.props.clearDepth;
     }
-    if (this.props.clearStencil !== false) {
-      clearMask |= GL.STENCIL_BUFFER_BIT;
-      glParameters.clearStencil = this.props.clearStencil;
-    }
 
     if (clearMask !== 0) {
       // Temporarily set any clear "colors" and call clear
@@ -349,13 +383,25 @@ export class WEBGLRenderPass extends RenderPass {
         this.device.gl.clear(clearMask);
       });
     }
+    if (!this.props.stencilReadOnly && this.props.clearStencil !== false) {
+      withGLParameters(
+        this.device.gl,
+        {
+          ...glParameters,
+          clearStencil: this.props.clearStencil,
+          stencilMask: 0xffffffff,
+          scissorTest: false
+        },
+        () => this.device.gl.clear(GL.STENCIL_BUFFER_BIT)
+      );
+    }
   }
 
   /**
    * WebGL2 - clear a specific color buffer
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
-    withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
+    withGLParameters(this.device.gl, {framebuffer: this.glParameters.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int8Array:

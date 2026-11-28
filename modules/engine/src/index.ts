@@ -193,6 +193,15 @@ export type {
   ShaderPassSourceTexture
 } from './passes/shader-pass-renderer';
 export {ShaderPassRenderer} from './passes/shader-pass-renderer';
+export type {
+  ConfigurableEffectDefinition,
+  EffectDefinition,
+  EffectPass,
+  EffectRendererProps
+} from './passes/effect-renderer';
+export {configureEffect, EffectRenderer} from './passes/effect-renderer';
+export type {SceneCapturePassDefinition} from './passes/scene-capture-pass';
+export {encodeSceneCapturePass} from './passes/scene-capture-pass';
 
 export {Swap} from './compute/swap';
 export {SwapBuffers} from './compute/swap';
@@ -373,3 +382,5 @@ export {deformPositions} from './animation/deform-positions';
 export {createAreaLightLTCTextures} from './lighting/ltc-textures';
 
 export {makeGPUVectorGeometry} from './geometry/gpu-vector-geometry-adapter';
+
+export {makeDepthIntervalPlugin} from './shader-plugins/depth-interval';

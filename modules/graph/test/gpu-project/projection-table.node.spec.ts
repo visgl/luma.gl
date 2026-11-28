@@ -13,7 +13,7 @@ import {
   ProjectionTableError,
   ProjectionTableTransform,
   prepareCRSProjection
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {
   makeSourceBatches,
   makeTableTransform,

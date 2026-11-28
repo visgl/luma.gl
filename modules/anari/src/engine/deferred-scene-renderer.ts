@@ -3,11 +3,19 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Texture, type TextureFormatColor} from '@luma.gl/core';
-import {type ModelProps, type ScenegraphNode, ShaderPassRenderer} from '@luma.gl/engine';
-import type {Light} from '@luma.gl/shaders';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import type {RenderPass} from '@luma.gl/core';
 import {
-  createDeferredLightingCompositeShaderPass,
+  type ModelProps,
+  type ScenegraphNode,
+  EffectRenderer,
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '@luma.gl/engine';
+import type {Light} from '@luma.gl/shaders';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
+import {
+  deferredLightingEffect,
   type DeferredPointLight,
   MAX_DEFERRED_POINT_LIGHTS,
   makeDeferredPointLightBufferData
@@ -29,6 +37,27 @@ const COLOR_ATTACHMENT_FORMATS = [
   'rgba8unorm',
   'rgba16float'
 ] satisfies (TextureFormatColor | null)[];
+
+type DeferredGBufferCaptureFrame = {
+  background: readonly number[];
+  drawGeometry: (renderPass: RenderPass) => number;
+};
+
+/** Captures deferred scene color, normal/roughness, material, emissive, and depth attachments. */
+export const deferredGBufferCapturePass = {
+  name: 'deferred-gbuffer',
+  target: 'gBuffer',
+  pass: {clearDepth: 1},
+  getPassProps: ({background}) => ({
+    clearColors: [
+      new Float32Array([background[0], background[1], background[2], background[3] ?? 1]),
+      new Float32Array([0.5, 0.5, 1, 1]),
+      new Float32Array([0, 0, 0, 0]),
+      new Float32Array([0, 0, 0, 0])
+    ]
+  }),
+  draw: (renderPass, {drawGeometry}) => drawGeometry(renderPass)
+} as const satisfies SceneCapturePassDefinition<DeferredGBufferCaptureFrame, 'gBuffer', number>;
 
 /** Returns whether a scene can be represented by the shared metallic-roughness G-buffer. */
 export function supportsDeferredScene(options: SceneRenderOptions): boolean {
@@ -105,7 +134,7 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
 export class DeferredSceneRenderer extends SceneRenderer {
   private readonly buffers = new Map<string, GBuffer>();
   private readonly pointLightBuffer: Buffer;
-  private readonly lightingRenderer: ShaderPassRenderer;
+  private readonly lightingRenderer: EffectRenderer;
   private forwardRenderer: SceneRenderer | null = null;
   private readonly lastDeferredFrameIdentifiers = new Set<string>();
 
@@ -119,8 +148,8 @@ export class DeferredSceneRenderer extends SceneRenderer {
       data: makeDeferredPointLightBufferData([], MAX_DEFERRED_POINT_LIGHTS),
       usage: Buffer.STORAGE | Buffer.COPY_DST
     });
-    this.lightingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [createDeferredLightingCompositeShaderPass()],
+    this.lightingRenderer = new EffectRenderer(device, {
+      effects: [deferredLightingEffect],
       colorFormat: 'rgba16float',
       flipY: true
     });
@@ -147,20 +176,15 @@ export class DeferredSceneRenderer extends SceneRenderer {
     const gBuffer = this.getGBuffer(options.id, width, height);
     this.lastDeferredFrameIdentifiers.add(options.id);
     const scene = this.prepareScene(options);
-    const background = options.background || [0, 0, 0, 1];
-    const renderPass = this.device.beginRenderPass({
-      id: `scene-${options.id}-deferred-gbuffer`,
-      framebuffer: gBuffer.framebuffer,
-      clearColors: [
-        new Float32Array([background[0], background[1], background[2], background[3] ?? 1]),
-        new Float32Array([0.5, 0.5, 1, 1]),
-        new Float32Array([0, 0, 0, 0]),
-        new Float32Array([0, 0, 0, 0])
-      ],
-      clearDepth: 1
+    scene.statistics.drawCount = encodeSceneCapturePass(deferredGBufferCapturePass, {
+      commandEncoder: this.device.commandEncoder,
+      id: 'scene-' + options.id + '-deferred-gbuffer',
+      framebuffers: {gBuffer: gBuffer.framebuffer},
+      frame: {
+        background: options.background || [0, 0, 0, 1],
+        drawGeometry: renderPass => this.drawPreparedScene(scene, renderPass)
+      }
     });
-    scene.statistics.drawCount = this.drawPreparedScene(scene, renderPass);
-    renderPass.end();
 
     const lights = getDeferredSceneLights(
       options.lights || [],

@@ -17,7 +17,7 @@ import {
   type ANARIWorld
 } from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test} from 'vitest';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';
 

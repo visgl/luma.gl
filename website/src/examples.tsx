@@ -78,6 +78,11 @@ const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/ap
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
 const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
+/** Loads the captured-scene default for the standalone website showcase. */
+const loadGaussianSplatsShowcaseApp = async () => ({
+  default: (await loadGaussianSplatsApp()).GaussianSplatsShowcase
+});
+
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
 const loadArrowText2DApp = () => import('../../examples/arrow/arrow-text-2d/app');
@@ -1070,10 +1075,10 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
     <LumaExample
       id="gaussian-splats"
       title="Gaussian Splats"
-      subtitle="Progressive HDR Gaussian splat rendering"
+      subtitle="Moving glass and Gaussian splat compositing"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
-      loadTemplate={loadGaussianSplatsApp}
+      loadTemplate={props.embedded ? loadGaussianSplatsApp : loadGaussianSplatsShowcaseApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       showStats
@@ -3000,6 +3005,15 @@ export const PhysicsStressExample: React.FC = () => {
 export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample id="authored-scene-stress" title="Authored Scene Stress Lab" directory="gltf"
     loadTemplate={() => import('../../examples/gltf/authored-scene-stress/app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);
+
+/** A composed glTF 2.1 scene with independent GPU ragdoll puppets. */
+export const MarionetteTheaterExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="marionette-theater" title="Marionette Theater" directory="gltf"
+    sourcePath="examples/gltf/authored-scene-stress/ragdoll-app.ts"
+    infoBoxAppearance="cinematic"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/ragdoll-app')}
     config={exampleConfig} devices={['webgpu']} {...props} />
 );
 

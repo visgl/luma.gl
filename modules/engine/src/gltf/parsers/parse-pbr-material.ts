@@ -15,7 +15,7 @@ export type {
   CompressedImageMipmapArray,
   CompressedMipLevel
 } from '../types/gltf-types';
-import {Matrix3} from '@math.gl/core';
+import {Matrix3} from '@math.gl/core/matrix';
 import type {Device, ExternalImage, SamplerProps, TextureFormat} from '@luma.gl/core';
 import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shaders';

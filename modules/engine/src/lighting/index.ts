@@ -35,6 +35,7 @@ export type {CreatePBRModelOptions, PBRModelShaderHooks} from './pbr-model';
 
 export {
   ShadowMapRenderer,
+  shadowMapCapturePass,
   getDirectionalCascadeViews,
   getPointShadowViews,
   getPracticalCascadeSplits,
@@ -61,13 +62,15 @@ export type {
   PBRSurfaceRenderView
 } from './pbr-surface-pass';
 
-export {createContactShadowCompositeShaderPass} from './contact-shadow-composite';
+export type {ContactShadowCompositeShaderPassOptions} from './contact-shadow-composite';
+export {contactShadows, createContactShadowCompositeShaderPass} from './contact-shadow-composite';
 
 export {ContactShadowPass} from './contact-shadow-pass';
 export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
 
 export {
   ClusteredLightGrid,
+  clusteredLightGridPipeline,
   CLUSTERED_POINT_LIGHT_LAYOUT,
   MAX_CLUSTERED_POINT_LIGHTS,
   DEFAULT_CLUSTER_DIMENSIONS,
@@ -123,3 +126,8 @@ export type {
   LightmapAtlasOptions,
   LightmapAtlasChart
 } from './lightmap-atlas';
+
+export {CORTAOPass} from './cortao/cortao-pass';
+export type {CORTAOPassProps, CORTAORenderOptions} from './cortao/cortao-pass';
+export type {CORTAOCamera} from './cortao/cortao-parameters';
+export type {CORTAORayCount} from './cortao/cortao-occluder-lookup-table';

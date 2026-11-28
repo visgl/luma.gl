@@ -25,7 +25,7 @@ export {
   resolvePathStorageInputs,
   type PathStorageBatchInputs,
   type PathStorageInputs
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;

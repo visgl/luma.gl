@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray, NumberArray4} from '@math.gl/core';
+import type {TypedArray, NumberArray4} from '@math.gl/core/types';
 import type {
   RenderBundle,
   RenderPassProps,
@@ -54,6 +54,10 @@ export class WebGPURenderPass extends RenderPass {
     props: RenderPassProps = {},
     commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
   ) {
+    if (props.clipDepthMode === 'negative-one-to-one') {
+      // WebGPU clip-space depth is always 'zero-to-one'.
+      throw new Error('clipDepthMode');
+    }
     super(device, props);
     this.device = device;
     const {props: renderPassProps} = this;
@@ -349,9 +353,10 @@ export class WebGPURenderPass extends RenderPass {
         storeOp: this.props.discard ? 'discard' : 'store',
         resolveTarget: this.props.resolveTargets?.[index]
           ? (this.props.resolveTargets[index] as WebGPUTextureView).handle
-          : undefined,
-        // ...colorAttachment,
-        view: colorAttachment.handle
+          : framebuffer.multisampledColors?.[index]
+            ? colorAttachment.handle
+            : undefined,
+        view: framebuffer.multisampledColors?.[index]?.handle ?? colorAttachment.handle
       })
     );
 
@@ -389,7 +394,7 @@ export class WebGPURenderPass extends RenderPass {
           }
           depthStencilAttachment.stencilLoadOp =
             this.props.clearStencil !== false ? 'clear' : 'load';
-          depthStencilAttachment.stencilStoreOp = 'store';
+          depthStencilAttachment.stencilStoreOp = this.props.stencilStoreOp;
         }
       }
     }

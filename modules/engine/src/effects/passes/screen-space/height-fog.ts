@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 import {
-  heightFog,
+  heightFog as heightFogModule,
   heightFogFunctions,
   type HeightFogUniforms,
   type ShaderPass
@@ -35,7 +36,7 @@ export const heightFogPass = {
     {name: 'depthTexture', group: 0}
   ],
   uniformTypes: {
-    ...heightFog.uniformTypes,
+    ...heightFogModule.uniformTypes,
     inverseViewProjectionMatrix: 'mat4x4<f32>',
     cameraPosition: 'vec3<f32>',
     backgroundDistance: 'f32',
@@ -44,7 +45,7 @@ export const heightFogPass = {
     clipDepthRange: 'vec2<f32>'
   },
   defaultUniforms: {
-    ...heightFog.defaultUniforms,
+    ...heightFogModule.defaultUniforms,
     inverseViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     cameraPosition: [0, 0, 0],
     backgroundDistance: 0,
@@ -142,3 +143,17 @@ vec4 heightFogPass_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCo
   HeightFogPassUniforms,
   {depthTexture?: Texture}
 >;
+
+/** Analytic height fog; set the height and scattering parameters through frame uniforms. */
+export const heightFog: EffectDefinition<never> = {
+  name: 'heightFogCompositeShaderPass',
+  resources: {},
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: heightFogPass,
+      inputs: {sourceTexture: 'previous'},
+      output: 'previous'
+    }
+  ]
+};

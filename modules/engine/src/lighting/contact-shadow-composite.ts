@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../passes/effect-renderer';
 import type {CompositeShaderPass} from '@luma.gl/shaders';
 import {
   contactShadowTrace,
@@ -11,9 +16,19 @@ import {
 import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 
 /** Builds the quality-scaled trace, bilateral cleanup, and direct-light composite pipeline. */
-export function createContactShadowCompositeShaderPass(
-  options: {quality?: 'low' | 'balanced' | 'cinematic'} = {}
-): CompositeShaderPass<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {
+export type ContactShadowCompositeShaderPassOptions = {quality?: 'low' | 'balanced' | 'cinematic'};
+
+export const contactShadows: ConfigurableEffectDefinition<
+  ContactShadowCompositeShaderPassOptions,
+  'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'
+> = {
+  name: 'contactShadowCompositeShaderPass',
+  configure: configureContactShadow
+};
+
+function configureContactShadow(
+  options: ContactShadowCompositeShaderPassOptions = {}
+): EffectDefinition<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {
   const quality = options.quality || 'balanced';
   const settings = SHADOW_QUALITY_SETTINGS[quality];
   if (!settings) {
@@ -21,7 +36,7 @@ export function createContactShadowCompositeShaderPass(
   }
   return {
     name: 'contactShadowCompositeShaderPass',
-    renderTargets: {
+    resources: {
       contactShadowRaw: {
         scale: [settings.contactScale, settings.contactScale],
         format: 'rgba8unorm'
@@ -35,26 +50,30 @@ export function createContactShadowCompositeShaderPass(
         format: 'rgba8unorm'
       }
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: contactShadowTrace,
         inputs: {sourceTexture: 'previous'},
         output: 'contactShadowRaw',
         uniforms: {stepCount: settings.contactStepCount}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: contactShadowBilateralBlur,
         inputs: {sourceTexture: 'contactShadowRaw'},
         output: 'contactShadowScratch',
         uniforms: {direction: [1, 0]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: contactShadowBilateralBlur,
         inputs: {sourceTexture: 'contactShadowScratch'},
         output: 'contactShadowFiltered',
         uniforms: {direction: [0, 1]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: contactShadowComposite,
         inputs: {
           sourceTexture: 'previous',
@@ -64,4 +83,10 @@ export function createContactShadowCompositeShaderPass(
       }
     ]
   };
+}
+
+export function createContactShadowCompositeShaderPass(
+  options: ContactShadowCompositeShaderPassOptions = {}
+): CompositeShaderPass<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {
+  return resolveEffect(contactShadows.configure(options));
 }

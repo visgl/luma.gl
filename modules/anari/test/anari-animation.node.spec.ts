@@ -13,7 +13,7 @@ import type {
   GLTFScenegraphs
 } from '@luma.gl/engine/gltf';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {
   type ANARIJSONScene,

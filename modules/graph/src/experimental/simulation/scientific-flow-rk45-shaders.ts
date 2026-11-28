@@ -49,6 +49,46 @@ fn fraction(elapsed: f32) -> f32 {
   return mix(parameters.temporal.x, parameters.temporal.y,
     clamp(elapsed / max(parameters.temporal.z, 1e-30), 0.0, 1.0));
 }
+// Visit the interpolation cells crossed by the accepted chord. Simultaneous
+// crossings advance both axes, avoiding false collisions beside diagonal corners.
+// This still does not reconstruct the curved trajectory between RK stages.
+fn sweptMask(field: texture_2d<f32>, start: vec2<f32>, end: vec2<f32>) -> f32 {
+  let gridScale = vec2<f32>(textureDimensions(field) - vec2<u32>(1));
+  let gridStart = start * gridScale;
+  let displacement = (end - start) * gridScale;
+  // Keep traversal bounded even if a future integrator changes the travel cap.
+  if (any(abs(displacement) > vec2<f32>(4.0))) {return 0.0;}
+  var crossing = vec2<f32>(1e30);
+  var stride = vec2<f32>(1e30);
+  for (var axis = 0u; axis < 2u; axis++) {
+    if (displacement[axis] != 0.0) {
+      let boundary = floor(gridStart[axis]) + select(0.0, 1.0, displacement[axis] > 0.0);
+      crossing[axis] = max(0.0, (boundary - gridStart[axis]) / displacement[axis]);
+      stride[axis] = 1.0 / abs(displacement[axis]);
+    }
+  }
+  var previousFraction = 0.0;
+  for (var cell = 0u; cell < 12u; cell++) {
+    let nextFraction = min(1.0, min(crossing.x, crossing.y));
+    if (nextFraction > previousFraction) {
+      let position = mix(start, end, (previousFraction + nextFraction) * 0.5);
+      let validity = sampleField(field, position).z;
+      if (validity < 0.5) {return validity;}
+    }
+    if (nextFraction >= 1.0) {return 1.0;}
+    if (crossing.x <= nextFraction) {crossing.x += stride.x;}
+    if (crossing.y <= nextFraction) {crossing.y += stride.y;}
+    previousFraction = nextFraction;
+  }
+  return 0.0;
+}
+fn segmentValidity(start: vec2<f32>, end: vec2<f32>, startFraction: f32, endFraction: f32) -> f32 {
+  if ((parameters.counters.y & 4u) == 0u) {return 1.0;}
+  var valid = 1.0;
+  if (startFraction < 1.0) {valid = min(valid, sweptMask(velocityField, start, end));}
+  if (endFraction > 0.0) {valid = min(valid, sweptMask(nextVelocityField, start, end));}
+  return valid;
+}
 struct Trial {displacement: vec2<f32>, error: vec2<f32>, validity: f32};
 fn trial(position: vec2<f32>, elapsed: f32, deltaTime: f32) -> Trial {
   let first = velocity(position, fraction(elapsed));
@@ -60,14 +100,15 @@ fn trial(position: vec2<f32>, elapsed: f32, deltaTime: f32) -> Trial {
   let lower = deltaTime * (25.0/216.0 * first.xy + 1408.0/2565.0 * third.xy + 2197.0/4104.0 * fourth.xy - fifth.xy / 5.0);
   let higher = deltaTime * (16.0/135.0 * first.xy + 6656.0/12825.0 * third.xy + 28561.0/56430.0 * fourth.xy - 9.0/50.0 * fifth.xy + 2.0/55.0 * sixth.xy);
   let last = velocity(position + higher, fraction(elapsed + deltaTime));
+  let sweptValidity = segmentValidity(position, position + higher, fraction(elapsed), fraction(elapsed + deltaTime));
   return Trial(higher, higher - lower,
-    min(min(min(first.z, second.z), min(third.z, fourth.z)), min(min(fifth.z, sixth.z), last.z)));
+    min(sweptValidity, min(min(min(first.z, second.z), min(third.z, fourth.z)), min(min(fifth.z, sixth.z), last.z))));
 }
 fn physicalError(error: vec2<f32>, position: vec2<f32>) -> f32 {
   var scale = parameters.domain.zw;
   if ((parameters.counters.y & 1u) != 0u) {
     let latitude = parameters.domain.y + parameters.domain.w * position.y;
-    scale *= 111195.08 * vec2<f32>(cos(radians(latitude)), 1.0);
+    scale *= 111195.08 * vec2<f32>(latitudeCosine(latitude), 1.0);
   }
   return length(error * scale);
 }

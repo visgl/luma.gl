@@ -84,7 +84,6 @@ export function compileGPUDataFrameHistogram<
     GPUHistogramResult,
     CompiledGPUDataFrameHistogram
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context => addGPUHistogramToGraph(context, column, options)
   });
 }

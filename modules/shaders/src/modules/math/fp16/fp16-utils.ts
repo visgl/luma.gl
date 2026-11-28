@@ -6,7 +6,7 @@
 // Forked from THREE.js under MIT license
 // Fast Half Float Conversions, http://www.fox-toolkit.org/ftp/fasthalffloatconversion.pdf
 
-import {clamp} from '@math.gl/core';
+import {clamp} from '@math.gl/core/matrix';
 
 /** Pre-calculated tables for float16 conversion */
 type Float16Tables = {

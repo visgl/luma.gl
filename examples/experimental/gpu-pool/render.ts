@@ -11,7 +11,7 @@ import {
   type Geometry
 } from '@luma.gl/engine';
 import {SceneMeshNode, SceneRenderer, type SceneMaterial} from '@luma.gl/anari';
-import {Matrix4, Quaternion} from '@math.gl/core';
+import {Matrix4, Quaternion} from '@math.gl/core/matrix';
 import type {GPUSphereBodyState} from '@luma.gl/graph/gpu-physics';
 import {BALL_RADIUS, POCKETS, TABLE_PLANES} from './table';
 

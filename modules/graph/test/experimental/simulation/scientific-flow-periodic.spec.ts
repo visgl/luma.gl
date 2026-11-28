@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {ScientificFlowGraph, ScientificFlowTracer} from '@luma.gl/graph/experimental/simulation';
+import {ScientificFlowGraph, ScientificFlowTracer} from '@luma.gl/graph/experimental-simulation';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 function makeUniformField(speed: number) {
@@ -33,6 +33,7 @@ for (const integrator of ['rk2', 'rk4', 'rk45'] as const) {
         integrator === 'rk45'
           ? new ScientificFlowTracer(device, {
               ...props,
+              conservativeMask: true,
               positions: new Float32Array([initialLongitude, 0.5]),
               tolerance: 1e-5,
               maximumTimeStep: 0.1,

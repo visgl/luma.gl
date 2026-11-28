@@ -45,15 +45,29 @@ export type {GPUDataFrameSortOptions} from './gpu-sort-query';
 export {GPUDataFrameJoinQuery, GPUDataFrameLookupQuery} from './gpu-join-query';
 export type {
   GPUDataFrameJoinOptions,
+  GPUDataFrameJoinProjectionOptions,
   GPUDataFrameJoinType,
   GPUDataFrameLookupOptions
 } from './gpu-join-query';
-export {and, column, literal, GPUExpression, not, or, parameter} from './gpu-expression';
+export {
+  and,
+  caseWhen,
+  coalesce,
+  column,
+  literal,
+  GPUExpression,
+  not,
+  nullIf,
+  or,
+  parameter,
+  scalarFunction
+} from './gpu-expression';
 export type {
   GPUExpressionBinaryOperator,
   GPUExpressionNode,
   GPUExpressionUnaryOperator,
-  GPUExpressionValue
+  GPUExpressionValue,
+  GPUScalarFunction
 } from './gpu-expression';
 export {CompiledGPUDataFrameQuery} from './gpu-query-compiler';
 export type {GPUDataFrameQueryParameters} from './gpu-query-compiler';
@@ -64,7 +78,7 @@ export {CompiledGPUDataFrameSort} from './gpu-sort-compiler';
 export {CompiledGPUDataFrameGlobalSort} from './gpu-global-sort-compiler';
 export {CompiledGPUDataFrameJoin, CompiledGPUDataFrameLookup} from './gpu-join-compiler';
 
-export {vector, cast} from './gpu-expression';
+export {vector, vectorColumn, cast} from './gpu-expression';
 export type {GPUExpressionNumericValue} from './gpu-expression';
 export type {
   GPUVectorWGSLFormat as GPUExpressionNumericFormat,

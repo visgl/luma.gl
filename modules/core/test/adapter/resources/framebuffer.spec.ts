@@ -7,6 +7,7 @@ import {expect, it} from 'vitest';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/core/webgl-constants';
+import {WEBGLFramebuffer} from '@luma.gl/core/webgl';
 
 const TEST_CASES = [
   {
@@ -390,3 +391,36 @@ test('WebGL2#Framebuffer texture attach and read', t => {
   t.end();
 });
 */
+
+it('creates and clones a color framebuffer with stencil-only storage', async () => {
+  for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    const framebuffer = device.createFramebuffer({
+      width: 2,
+      height: 2,
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'stencil8'
+    });
+    try {
+      framebuffer.resize({width: 4, height: 4});
+      const resized = framebuffer.clone();
+      try {
+        expect(resized.width).toBe(4);
+        expect(
+          resized.depthStencilAttachment?.texture.format ?? resized.props.depthStencilAttachment
+        ).toBe('stencil8');
+        const renderPass = device.beginRenderPass({framebuffer: resized, clearStencil: 128});
+        if (resized instanceof WEBGLFramebuffer) {
+          expect(resized.gl.getParameter(GL.STENCIL_BITS)).toBe(8);
+          expect(resized.gl.getParameter(GL.DEPTH_BITS)).toBe(0);
+          expect(resized.depthStencilAttachment).toBeNull();
+        }
+        renderPass.end();
+        device.submit();
+      } finally {
+        resized.destroy();
+      }
+    } finally {
+      framebuffer.destroy();
+    }
+  }
+});

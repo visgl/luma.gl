@@ -4,7 +4,7 @@
 
 import type {ShaderLayout} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shaders';
-import type {Matrix4} from '@math.gl/core';
+import type {Matrix4} from '@math.gl/core/matrix';
 
 export const MESH_FACE_COUNT = 6;
 

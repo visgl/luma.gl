@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {EffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
@@ -252,23 +253,32 @@ export const dof = {
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
 
 /** Separable depth-of-field pipeline with horizontal and vertical blur passes. */
-export const dofCompositeShaderPass = {
+export const depthOfField = {
   name: 'dofCompositeShaderPass',
-  renderTargets: {blurScratch: {}},
-  steps: [
+  resources: {blurScratch: {}},
+  passes: [
     {
+      kind: 'fullscreen',
       shaderPass: dof,
       inputs: {sourceTexture: 'previous'},
       output: 'blurScratch',
       uniforms: {texelOffset: [1, 0]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: dof,
       inputs: {sourceTexture: 'blurScratch'},
       output: 'previous',
       uniforms: {texelOffset: [0, 1]}
     }
   ]
+} as const satisfies EffectDefinition<'blurScratch'>;
+
+/** Compatibility view of the separable depth-of-field effect. */
+export const dofCompositeShaderPass = {
+  name: depthOfField.name,
+  renderTargets: depthOfField.resources,
+  steps: depthOfField.passes
 } as const satisfies CompositeShaderPass<'blurScratch'>;
 
 /**
@@ -283,3 +293,10 @@ export const bokehDof = {
   fs: fs.replaceAll('dof', 'bokehDof'),
   propTypes: {...dof.propTypes, circularAperture: {value: 1, private: true}}
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
+
+/** Circular-aperture depth of field using the frame's scene depth and camera uniforms. */
+export const bokehDofEffect = {
+  name: bokehDof.name,
+  resources: {},
+  passes: [{kind: 'fullscreen', shaderPass: bokehDof, output: 'previous'}]
+} as const satisfies EffectDefinition<never>;

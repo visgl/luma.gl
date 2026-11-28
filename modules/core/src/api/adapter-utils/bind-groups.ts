@@ -13,15 +13,23 @@ import {log} from '../utils/log';
 
 type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
+const UNIFORMS_SUFFIX = 'uniforms';
+
 export function getShaderLayoutBinding(
   shaderLayout: AnyShaderLayout,
   bindingName: string,
   options?: {ignoreWarnings?: boolean}
 ): BindingDeclaration | null {
+  const lowerCaseName = bindingName.toLowerCase();
+  const aliasName = lowerCaseName.endsWith(UNIFORMS_SUFFIX)
+    ? lowerCaseName.slice(0, -UNIFORMS_SUFFIX.length)
+    : undefined;
+
+  // Check both forms in layout order: an earlier alias can win over a later exact name.
   const bindingLayout = shaderLayout.bindings.find(
     binding =>
       binding.name === bindingName ||
-      `${binding.name.toLocaleLowerCase()}uniforms` === bindingName.toLocaleLowerCase()
+      (aliasName !== undefined && binding.name.toLowerCase() === aliasName)
   );
 
   if (!bindingLayout && !options?.ignoreWarnings) {

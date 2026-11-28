@@ -179,3 +179,56 @@ clamping agree at tile seams. The API keeps readback bounded to one tile,
 preserves the authored exposure, and cleans up on completion or cancellation.
 Applications provide full-image camera matrices and their own image encoder.
 This export API is separate from JSON playground scene-file export.
+
+### Measure small-emitter convergence
+
+With the playground server running, capture a reference at a higher frame count and use a
+different seed for the sweep. Keep dimensions, lighting and transport settings the same.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 17 --frames 256 --history 256 --output /tmp/ray-reference
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 31 --frame-sweep 1,8,32,128 --history 256 --reference /tmp/ray-reference/chart.png --output /tmp/ray-sweep
+```
+
+Each checkpoint starts a fresh page and records accumulated samples, display RGB error,
+and wall time to capture readiness in `convergence.json`. Wall time includes page startup
+and presentation. A high-sample reference is an estimate whose noise contributes to the
+measured error.
+
+Use `--antique-camera` in place of `--small-emitter` in both commands to capture the textured
+Antique Camera glTF study. The capture waits for the model to load before counting frames.
+
+Use `--linear-hdr` on both commands and pass `radiance.rgba16f` as the reference to
+measure error before tone mapping, display conversion, denoising, and upscaling. The
+binary file starts with two little-endian uint32 dimensions followed by tightly packed
+RGBA16F rows at the internal ray-tracing resolution. RGB contains the authored exposure.
+The comparison ignores alpha and reports unnormalized linear RGB errors. Keep exposure
+and internal resolution fixed across the sweep.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 17 --frames 128 --history 256 --output /tmp/ray-hdr-reference
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-hdr-reference/radiance.rgba16f --output /tmp/ray-hdr-sweep
+```
+
+### Compare emitter selection at matched GPU cost
+
+Add `--gpu-timing` to request optional WebGPU timestamps. Each checkpoint reports
+the sum of the scene's recorded compute and render pass durations over its frames.
+Profiling records passes separately and can change their scheduling. A missing timing
+is reported as `null`. Browser startup, readback, and screenshots are outside the GPU
+measurements.
+
+Use `--compare-emitters` with a static linear HDR sweep to run both emitter selection
+modes with the same seed and rendering settings. Use a separate high-sample reference
+from the same scene with explicit emitter sampling enabled. The mixed-emitter fixture
+adds a large dim source alongside a small bright source.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --emitters on --seed 17 --frames 128 --history 256 --output /tmp/ray-emitter-reference
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --compare-emitters --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-emitter-reference/radiance.rgba16f --output /tmp/ray-emitter-sweep
+```
+
+The output contains each mode's measured checkpoints and `emitter-comparison.json`.
+The comparison interpolates linear RGB RMSE within the overlapping measured GPU-cost
+ranges. It reports unavailable when timing support or overlap is missing. It does not
+extrapolate beyond either measured curve.

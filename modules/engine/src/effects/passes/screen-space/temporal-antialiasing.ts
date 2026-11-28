@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+import type {ShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
 
 type TAAUniforms = {
@@ -90,31 +91,43 @@ fn depthHistoryCopy_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createTAACompositeShaderPass(): CompositeShaderPass<
-  'taaHistoryColor' | 'taaHistoryDepth'
-> {
-  return {
-    name: 'taaCompositeShaderPass',
-    renderTargets: {
-      taaHistoryColor: {lifetime: 'history', initialize: 'original'},
-      taaHistoryDepth: {
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [1, 0, 0, 1]}
-      }
-    },
-    steps: [
-      {
-        shaderPass: taaResolve,
-        inputs: {
-          sourceTexture: 'previous',
-          historyTexture: 'taaHistoryColor',
-          previousDepthTexture: 'taaHistoryDepth'
-        },
-        output: 'taaHistoryColor'
+/** Temporal antialiasing with scene velocity and separate color and depth history. */
+export const taa: EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'> = {
+  name: 'taaCompositeShaderPass',
+  resources: {
+    taaHistoryColor: {lifetime: 'history', initialize: 'original'},
+    taaHistoryDepth: {
+      format: 'rgba16float',
+      lifetime: 'history',
+      initialize: {clearColor: [1, 0, 0, 1]}
+    }
+  },
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: taaResolve,
+      inputs: {
+        sourceTexture: 'previous',
+        historyTexture: 'taaHistoryColor',
+        previousDepthTexture: 'taaHistoryDepth'
       },
-      {shaderPass: copyPass, inputs: {sourceTexture: 'taaHistoryColor'}, output: 'previous'},
-      {shaderPass: depthHistoryCopy, inputs: {sourceTexture: 'previous'}, output: 'taaHistoryDepth'}
-    ]
-  };
+      output: 'taaHistoryColor'
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'taaHistoryColor'},
+      output: 'previous'
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: depthHistoryCopy,
+      inputs: {sourceTexture: 'previous'},
+      output: 'taaHistoryDepth'
+    }
+  ]
+};
+
+export function createTAACompositeShaderPass() {
+  return resolveEffect(taa);
 }

@@ -1,4 +1,5 @@
 import {cpSync, mkdirSync, readdirSync, rmSync, statSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -122,3 +123,13 @@ function getWebsiteAssetPath(relativePath) {
 }
 
 syncExampleAssets();
+
+// The MapLibre module worker imports this sibling at runtime. The website
+// bundler emits the worker itself as a URL asset.
+const require = createRequire(import.meta.url);
+const maplibreAssetDirectory = path.resolve(outputDirectory, '..', 'assets', 'maplibre');
+mkdirSync(maplibreAssetDirectory, {recursive: true});
+cpSync(
+  require.resolve('maplibre-gl/dist/maplibre-gl-shared.mjs'),
+  path.join(maplibreAssetDirectory, 'maplibre-gl-shared.mjs')
+);

@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Timeline} from '@luma.gl/engine';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {
   ArrowInstancedMeshRenderer,
   DEFAULT_INSTANCES_PER_SIDE,

@@ -28,6 +28,7 @@ export {
   type ArrowTableFromGPUAnalyticsTableProps
 } from './gpu/arrow-gpu-analytics-readback';
 export {
+  consumeArrowGPURecordBatches,
   convertArrowRecordBatchToGPURecordBatch,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,

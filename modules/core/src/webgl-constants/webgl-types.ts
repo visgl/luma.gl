@@ -256,6 +256,7 @@ export type GLValueParameters = {
   [GL.CULL_FACE]?: boolean;
   [GL.CULL_FACE_MODE]?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
   [GL.DEPTH_TEST]?: boolean;
+  [GL.DEPTH_CLAMP_EXT]?: boolean;
   [GL.DEPTH_CLEAR_VALUE]?: number;
   [GL.DEPTH_FUNC]?: GLFunction;
   [GL.DEPTH_RANGE]?: [number, number] | TypedArray;
@@ -280,6 +281,7 @@ export type GLValueParameters = {
   [GL.GENERATE_MIPMAP_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
   [GL.LINE_WIDTH]?: number;
   [GL.POLYGON_OFFSET_FILL]?: boolean;
+  [GL.POLYGON_OFFSET_CLAMP_EXT]?: number;
   [GL.POLYGON_OFFSET_FACTOR]?: number;
   [GL.POLYGON_OFFSET_UNITS]?: number;
   [GL.SAMPLE_ALPHA_TO_COVERAGE]?: boolean;
@@ -323,6 +325,11 @@ export type GLValueParameters = {
   [GL.UNPACK_SKIP_PIXELS]?: number;
   [GL.UNPACK_SKIP_ROWS]?: number;
   [GL.UNPACK_SKIP_IMAGES]?: number;
+
+  /** EXT_clip_control: clip-space origin. */
+  [GL.CLIP_ORIGIN_EXT]?: GL.LOWER_LEFT_EXT | GL.UPPER_LEFT_EXT;
+  /** EXT_clip_control: clip-space depth range. */
+  [GL.CLIP_DEPTH_MODE_EXT]?: GL.NEGATIVE_ONE_TO_ONE_EXT | GL.ZERO_TO_ONE_EXT;
 };
 
 export type GLPackParameters = {
@@ -350,7 +357,7 @@ export type GLUnpackParameters = {
  */
 export type GLFunctionParameters = {
   // Function-style setters
-  framebuffer?: Framebuffer | null;
+  framebuffer?: Framebuffer | WebGLFramebuffer | null;
   blend?: boolean;
   blendColor?: [number, number, number, number] | TypedArray;
   blendEquation?: GLBlendEquation | [GLBlendEquation, GLBlendEquation];

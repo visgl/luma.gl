@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import {RGBADecoder, TEXTURE_FORMAT_PIXEL_DECODERS} from '@luma.gl/engine/experimental/textures';
+import {RGBADecoder, TEXTURE_FORMAT_PIXEL_DECODERS} from '@luma.gl/engine/experimental-textures';
 
 const rgbaDecoder = new RGBADecoder({tables: [TEXTURE_FORMAT_PIXEL_DECODERS]});
 

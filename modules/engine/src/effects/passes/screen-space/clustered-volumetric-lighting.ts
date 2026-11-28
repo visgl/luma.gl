@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {Buffer, Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for clustered participating-media integration. */
@@ -710,9 +715,21 @@ fn clusteredVolumetricComposite_sampleColor(
 >;
 
 /** Creates clustered participating-media integration, temporal stabilization, and composition. */
-export function createClusteredVolumetricLightingCompositeShaderPass(
+export const clusteredVolumetricLighting: ConfigurableEffectDefinition<
+  ClusteredVolumetricLightingCompositeShaderPassOptions,
+  | 'clusteredVolumeRaw'
+  | 'clusteredVolumeHistory'
+  | 'clusteredVolumeDepthHistory'
+  | 'clusteredVolumeScratch'
+  | 'clusteredVolumeScattering'
+> = {
+  name: 'clusteredVolumetricLightingCompositeShaderPass',
+  configure: configureClusteredVolumetricLighting
+};
+
+function configureClusteredVolumetricLighting(
   options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
-): CompositeShaderPass<
+): EffectDefinition<
   | 'clusteredVolumeRaw'
   | 'clusteredVolumeHistory'
   | 'clusteredVolumeDepthHistory'
@@ -722,7 +739,7 @@ export function createClusteredVolumetricLightingCompositeShaderPass(
   const scale = options.resolutionScale ?? 1;
   return {
     name: 'clusteredVolumetricLightingCompositeShaderPass',
-    renderTargets: {
+    resources: {
       clusteredVolumeRaw: {scale: [scale, scale], format: 'rgba16float'},
       clusteredVolumeHistory: {
         scale: [scale, scale],
@@ -742,13 +759,15 @@ export function createClusteredVolumetricLightingCompositeShaderPass(
       clusteredVolumeScratch: {scale: [scale, scale], format: 'rgba16float'},
       clusteredVolumeScattering: {scale: [scale, scale], format: 'rgba16float'}
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: clusteredVolumetricTrace,
         inputs: {sourceTexture: 'previous'},
         output: 'clusteredVolumeRaw'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: clusteredVolumetricTemporal,
         inputs: {
           sourceTexture: 'clusteredVolumeRaw',
@@ -758,27 +777,43 @@ export function createClusteredVolumetricLightingCompositeShaderPass(
         output: 'clusteredVolumeHistory'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: clusteredVolumetricDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'clusteredVolumeDepthHistory'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: depthAwareBlur,
         inputs: {sourceTexture: 'clusteredVolumeHistory'},
         output: 'clusteredVolumeScratch',
         uniforms: {direction: [1, 0], radius: 3, spatialSigma: 2.2, depthSigma: 0.018}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: depthAwareBlur,
         inputs: {sourceTexture: 'clusteredVolumeScratch'},
         output: 'clusteredVolumeScattering',
         uniforms: {direction: [0, 1], radius: 3, spatialSigma: 2.2, depthSigma: 0.018}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: clusteredVolumetricComposite,
         inputs: {sourceTexture: 'previous', scatteringTexture: 'clusteredVolumeScattering'},
         output: 'previous'
       }
     ]
   };
+}
+
+export function createClusteredVolumetricLightingCompositeShaderPass(
+  options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
+): CompositeShaderPass<
+  | 'clusteredVolumeRaw'
+  | 'clusteredVolumeHistory'
+  | 'clusteredVolumeDepthHistory'
+  | 'clusteredVolumeScratch'
+  | 'clusteredVolumeScattering'
+> {
+  return resolveEffect(clusteredVolumetricLighting.configure(options));
 }

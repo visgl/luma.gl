@@ -9,8 +9,8 @@ import {
   type ReadonlyCRSDefinition
 } from '@math.gl/geospatial/crs';
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import type {Projection} from '@math.gl/geospatial/projection/types';
-import type {TypeScriptCRSInput} from '@math.gl/geospatial/projection/core';
+import type {Projection} from '@math.gl/geospatial/projection-types';
+import type {TypeScriptCRSInput} from '@math.gl/geospatial/projection-core';
 import {prepareCRSProjection} from './projection-engine';
 import {prepareProjectionReferences} from './projection-crs-input';
 export {prepareCRSProjection, prepareCRSProjectionAsync} from './projection-engine';
@@ -18,6 +18,8 @@ export type {PrepareCRSProjectionOptions, PreparedCRSProjectionResult} from './p
 export {createCRSProjectionCPUBenchmarks} from './projection-crs-benchmark';
 export {ProjectionTableTransform, ProjectionTableError} from './projection-table-transform';
 export type {ProjectionTableBatch, ProjectedTableBatch} from './projection-table-transform';
+export {ProjectionRenderTransform} from './projection-render-transform';
+export type {ProjectionRenderFrame, ProjectedRenderPosition} from './projection-render-transform';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram,

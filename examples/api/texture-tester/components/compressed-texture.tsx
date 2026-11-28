@@ -5,11 +5,12 @@
 import * as React from 'react';
 
 import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
-import {BasisLoader, CompressedTextureLoader, CrunchLoader} from '@loaders.gl/images';
-import {BASIS_EXTERNAL_LIBRARIES} from '@loaders.gl/images/basis';
-import {CRUNCH_EXTERNAL_LIBRARIES} from '@loaders.gl/images/crunch';
+import {BasisLoader} from '@loaders.gl/images/basis/bundled';
+import {CrunchLoader} from '@loaders.gl/images/crunch/bundled';
+import {CompressedTextureLoader} from '@loaders.gl/images/texture/bundled';
 import type {GPUTextureFormat} from '@loaders.gl/core/schema';
-import {ImageLoader, type ImageType} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images/image/bundled';
+import type {ImageType} from '@loaders.gl/images/api';
 
 import {
   type Device,
@@ -276,11 +277,11 @@ export class CompressedTexture extends React.PureComponent<
         'basis_transcoder.mjs': BASIS_TRANSCODER_MODULE_URL,
         'basis_encoder.mjs': BASIS_ENCODER_MODULE_URL,
         'crunch.mjs': CRUNCH_MODULE_URL,
-        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER]: BASIS_TRANSCODER_JS_URL,
-        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM]: BASIS_TRANSCODER_WASM_URL,
-        [BASIS_EXTERNAL_LIBRARIES.ENCODER]: BASIS_ENCODER_JS_URL,
-        [BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM]: BASIS_ENCODER_WASM_URL,
-        [CRUNCH_EXTERNAL_LIBRARIES.DECODER]: CRUNCH_JS_URL
+        'basis_transcoder.js': BASIS_TRANSCODER_JS_URL,
+        'basis_transcoder.wasm': BASIS_TRANSCODER_WASM_URL,
+        'basis_encoder.js': BASIS_ENCODER_JS_URL,
+        'basis_encoder.wasm': BASIS_ENCODER_WASM_URL,
+        'crunch.js': CRUNCH_JS_URL
       },
       supportedTextureFormats: getSupportedGPUTextureFormatFamilies(device),
       basis: {

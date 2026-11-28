@@ -11,12 +11,13 @@ import {
   Texture,
   type TextureFormatColor
 } from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
 import {
-  createWBOITResolveCompositeShaderPass,
-  type WBOITResolveBindings
-} from './wboit-resolve-composite-shader-pass';
+  EffectRenderer,
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '@luma.gl/engine';
+import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
+import {wboitResolveEffect, type WBOITResolveBindings} from './wboit-resolve-composite-shader-pass';
 
 const WBOIT_COLOR_FORMAT = 'rgba16float';
 let nextWBOITResourceId = 0;
@@ -82,6 +83,51 @@ type WBOITRenderTargets = {
   height: number;
 };
 
+/** Opaque depth, weighted accumulation, and revealage captures in execution order. */
+export const wboitCapturePasses = [
+  {
+    name: 'opaque-depth',
+    target: 'accumulation',
+    pass: {clearColor: [0, 0, 0, 0], clearDepth: 1},
+    prepare: (commandEncoder, options) => options.prepareOpaqueDepth?.(commandEncoder),
+    draw: (renderPass, options) => options.drawOpaqueDepth(renderPass)
+  },
+  {
+    name: 'accumulation',
+    target: 'accumulation',
+    pass: {clearColor: [0, 0, 0, 0], clearDepth: false, depthReadOnly: true},
+    prepare: (commandEncoder, options) =>
+      prepareWBOITCapture(commandEncoder, options, 'accumulation'),
+    draw: (renderPass, options) => options.drawTranslucent(renderPass)
+  },
+  {
+    name: 'revealage',
+    target: 'revealage',
+    pass: {clearColor: [1, 1, 1, 1], clearDepth: false, depthReadOnly: true},
+    prepare: (commandEncoder, options) => prepareWBOITCapture(commandEncoder, options, 'revealage'),
+    draw: (renderPass, options) => options.drawTranslucent(renderPass)
+  }
+] as const satisfies readonly SceneCapturePassDefinition<
+  WBOITCaptureOptions,
+  'accumulation' | 'revealage'
+>[];
+
+function prepareWBOITCapture(
+  commandEncoder: CommandEncoder,
+  options: WBOITCaptureOptions,
+  pass: WBOITPass
+): void {
+  options.prepareTranslucent({
+    commandEncoder,
+    pass,
+    shaderModuleProps: {pass},
+    captureParameters:
+      pass === 'accumulation'
+        ? WBOITRenderer.accumulationParameters
+        : WBOITRenderer.revealageParameters
+  });
+}
+
 /**
  * Captures approximate weighted-blended transparency and resolves it through a CompositeShaderPass.
  *
@@ -117,7 +163,7 @@ export class WBOITRenderer {
 
   readonly device: Device;
   private renderTargets: WBOITRenderTargets;
-  private readonly resolveRenderer: ShaderPassRenderer;
+  private readonly resolveRenderer: EffectRenderer;
 
   /** Creates a renderer and validates floating-point render-target blending support. */
   constructor(device: Device, props: WBOITRendererProps = {}) {
@@ -128,9 +174,9 @@ export class WBOITRenderer {
 
     this.device = device;
     this.renderTargets = createWBOITRenderTargets(device, 1, 1);
-    this.resolveRenderer = new ShaderPassRenderer(device, {
+    this.resolveRenderer = new EffectRenderer(device, {
       colorFormat: props.colorFormat,
-      shaderPasses: [createWBOITResolveCompositeShaderPass()]
+      effects: [wboitResolveEffect]
     });
   }
 
@@ -143,22 +189,18 @@ export class WBOITRenderer {
   /** Records opaque depth plus accumulation and revealage capture passes. */
   capture(options: WBOITCaptureOptions): WBOITCapture {
     this.resize(options.size);
-    options.prepareOpaqueDepth?.(this.device.commandEncoder);
-    const opaqueDepthPass = this.device.beginRenderPass({
-      id: makeWBOITResourceId('wboit-opaque-depth'),
-      framebuffer: this.renderTargets.accumulationFramebuffer,
-      // The accumulation pass clears this color attachment again before using it.
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1
-    });
-    try {
-      options.drawOpaqueDepth(opaqueDepthPass);
-    } finally {
-      opaqueDepthPass.end();
+    const framebuffers = {
+      accumulation: this.renderTargets.accumulationFramebuffer,
+      revealage: this.renderTargets.revealageFramebuffer
+    };
+    for (const pass of wboitCapturePasses) {
+      encodeSceneCapturePass(pass, {
+        commandEncoder: this.device.commandEncoder,
+        id: makeWBOITResourceId('wboit-' + pass.name),
+        framebuffers,
+        frame: options
+      });
     }
-
-    this.renderCapturePass(options, 'accumulation');
-    this.renderCapturePass(options, 'revealage');
 
     return {
       bindings: {
@@ -194,35 +236,6 @@ export class WBOITRenderer {
     this.renderTargets = createWBOITRenderTargets(this.device, size.width, size.height);
     this.resolveRenderer.resize([size.width, size.height]);
     destroyWBOITRenderTargets(previousRenderTargets);
-  }
-
-  private renderCapturePass(options: WBOITCaptureOptions, pass: WBOITPass): void {
-    const captureParameters =
-      pass === 'accumulation'
-        ? WBOITRenderer.accumulationParameters
-        : WBOITRenderer.revealageParameters;
-    options.prepareTranslucent({
-      commandEncoder: this.device.commandEncoder,
-      pass,
-      shaderModuleProps: {pass},
-      captureParameters
-    });
-
-    const renderPass = this.device.beginRenderPass({
-      id: makeWBOITResourceId(`wboit-${pass}`),
-      framebuffer:
-        pass === 'accumulation'
-          ? this.renderTargets.accumulationFramebuffer
-          : this.renderTargets.revealageFramebuffer,
-      clearColor: pass === 'accumulation' ? [0, 0, 0, 0] : [1, 1, 1, 1],
-      clearDepth: false,
-      depthReadOnly: true
-    });
-    try {
-      options.drawTranslucent(renderPass);
-    } finally {
-      renderPass.end();
-    }
   }
 }
 

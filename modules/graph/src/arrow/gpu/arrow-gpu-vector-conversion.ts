@@ -95,6 +95,8 @@ export type ArrowGPUConversionCost = {
   sourceByteLength: number;
   /** Bytes expected in the prepared GPU payload, excluding auxiliary metadata. */
   targetByteLength: number;
+  /** Estimated transient GPU source and configuration storage during conversion. */
+  temporaryGPUByteLength: number;
   /** Number of Arrow chunks that must be uploaded. */
   uploadCount: number;
   /** Number of CPU transformation passes over source values. */
@@ -201,6 +203,8 @@ export function planArrowGPUConversion(
   validateConversionNullability(source, semantic);
 
   const chunkCount = getSourceChunkCount(source);
+  const temporalInfo =
+    semantic === 'temporal' ? getArrowTemporalVectorInfo(source, options.field) : undefined;
   const sourceByteLength = getSourceByteLength(source);
   const backend = resolveConversionBackend(device, strategy, source, options.policy ?? 'auto');
   const targetByteLength =
@@ -208,6 +212,16 @@ export function planArrowGPUConversion(
     (backend === 'webgpu' && source instanceof Vector && isArrowFloat64NumericType(source.type)
       ? 2
       : 1);
+  const temporarySourceBytes =
+    temporalInfo && source instanceof Vector
+      ? source.data.reduce((total, chunk) => {
+          const offsets = DataType.isList(chunk.type)
+            ? (chunk.valueOffsets as Int32Array)
+            : undefined;
+          const values = offsets ? offsets[chunk.length] - offsets[0] : chunk.length;
+          return total + Math.max(4, (values * temporalInfo.bitWidth) / 8);
+        }, 0)
+      : Math.max(sourceByteLength, chunkCount * Float64Array.BYTES_PER_ELEMENT);
   const transforms = strategy.startsWith('convert-');
   const sourceIsArrow = source instanceof Vector;
   const uploadCount = sourceIsArrow ? chunkCount : 0;
@@ -226,6 +240,11 @@ export function planArrowGPUConversion(
     cost: {
       sourceByteLength,
       targetByteLength,
+      temporaryGPUByteLength:
+        sourceIsArrow && backend === 'webgpu'
+          ? temporarySourceBytes +
+            (strategy === 'convert-temporal' ? chunkCount * 3 * Uint32Array.BYTES_PER_ELEMENT : 0)
+          : 0,
       uploadCount,
       cpuPassCount: transforms && backend === 'cpu' ? 1 : 0,
       gpuPassCount: transforms && (backend === 'webgpu' || backend === 'webgl') ? 1 : 0,

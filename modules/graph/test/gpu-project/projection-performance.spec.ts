@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   makePerformanceOptions,
   parsePerformanceSweep,
@@ -35,7 +35,7 @@ for (const fixture of performanceFixtures) {
         });
         expect(report.comparison).toBe('equal-error-budget');
         expect(report.consumerCount).toBe(consumerCount);
-        expect(report.cpuProvider).toBe('@math.gl/geospatial/projection 5.0.0-beta.12 TypeScript');
+        expect(report.cpuProvider).toBe('@math.gl/geospatial/projection 5.0.3 TypeScript');
         expect(report.cpuPaths).toHaveLength(12);
         for (const path of report.cpuPaths) {
           expect(path.validRows).toBe(rowCount + 9);

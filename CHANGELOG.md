@@ -2,6 +2,29 @@
 
 ## v10.0
 
+### v10.0.0-rc.1
+
+- Upgrade to math.gl 5.0.4 and loaders.gl 5.0.1 and adopt the updated loader entry points.
+- Make GPU grouped sums and means deterministic with a two-pass aggregation.
+- Add independent GPUGraph state and preserve registered operation handlers when loading built-in backends.
+- Support stencil-only WebGL2 framebuffers, capability-gated stencil sampling, and multisampled stencil with offscreen color resolve. Preserve depth-only WebGPU pipeline attachments and correct the SSAO G-buffer normal orientation.
+- Fix glTF audio stopping behavior and update build, test, and website dependencies.
+
+### v10.0.0-beta.2
+
+- Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
+- Flatten public luma.gl subpaths and consolidate the release notes and upgrade guide.
+- Expand GPU DataFrame SQL with scalar functions, casts, null handling, CASE expressions, and pagination. Fix column-only projections and preserve quoted column names.
+- Add reverse-Z depth controls and improve WebGL depth bias and depth clipping support.
+- Stream GPU physics terrain with automatic level-of-detail selection and independent terrain in batched worlds.
+- Improve ANARI ray tracing with directional environment sampling and emissive geometry lighting.
+
+### v10.0.0-beta.1
+
+- Upgrade math.gl to 5.0.0-rc.2 and loaders.gl to 5.0.0-rc.1. Use the updated zero-copy GeoArrow column view API.
+- Use math.gl as GPU SQL's tokenizer and parser. Double-quote reserved column names such as "limit" and "order". Column names still match the dataframe schema exactly.
+- Make native WebGPU and WebGL device handle ownership explicit so applications can control teardown for attached devices.
+
 ### v10.0.0-alpha.17
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.12. Adopt the consolidated Arrow, GeoArrow tessellation, and Parquet entry points.

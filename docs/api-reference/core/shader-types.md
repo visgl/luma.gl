@@ -1,7 +1,7 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
-# Shader Types
+# @luma.gl/core/shadertypes
 
 <CoreDocsTabs group="shader-types" active="shader-types" />
 
@@ -127,7 +127,7 @@ Example:
 ```ts
 import type {ShaderModule, UniformTypes} from '@luma.gl/shaders';
 import {ShaderInputs} from '@luma.gl/engine';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 
 type Uniforms = {
   color: [number, number, number, number];

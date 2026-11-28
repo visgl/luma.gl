@@ -439,6 +439,8 @@ export type {
 
 export {GPUBVH} from './gpu-bvh';
 export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats, GPUBVHStrategy} from './gpu-bvh';
+export {packGPUBVHBounds} from './gpu-bvh-bounds';
+export type {GPUBVHBoundsInput, GPUBVHPackedBounds} from './gpu-bvh-bounds';
 export {GPUSegmentedBVH} from './gpu-segmented-bvh';
 export type {GPUBVHSegment, GPUSegmentedBVHProps} from './gpu-segmented-bvh';
 
@@ -713,6 +715,9 @@ export type {GPUUploadOperationProps, GPUCopyOperationProps} from './gpu-transfe
 export {GPUCompactionOperation} from './gpu-compaction-operation';
 export type {GPUCompactionOperationProps} from './gpu-compaction-operation';
 
+export {GPUGraphState} from './gpu-graph-state';
+export type {GPUGraphStateBindings, GPUGraphStateOptions} from './gpu-graph-state';
+
 export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-graph-value';
 export type {GPUGraphTextureBinding, GPUGraphOutput, GPUGraphOutputs} from './gpu-texture-plan';
 
@@ -729,3 +734,6 @@ export type {
   GPUGraphGroupAggregationProps,
   GPUGraphReductionProps
 } from './gpu-semantic-aggregation-operation';
+
+export {GPUCommandGraphSubmissionPacer} from './gpu-command-graph-submission-pacer';
+export type {GPUCommandGraphSubmissionPacerProps} from './gpu-command-graph-submission-pacer';

@@ -3,8 +3,8 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bokehDof} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {bokehDofEffect} from '@luma.gl/engine/effects';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 
 for (const backend of ['webgpu', 'webgl'] as const) {
@@ -41,8 +41,8 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       colorAttachments: [],
       depthStencilAttachment: depth
     });
-    const renderer = new ShaderPassRenderer(device, {
-      shaderPasses: [bokehDof],
+    const renderer = new EffectRenderer(device, {
+      effects: [bokehDofEffect],
       colorFormat: 'rgba32float'
     });
     renderer.resize([size, size]);

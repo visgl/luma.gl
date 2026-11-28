@@ -113,7 +113,11 @@ export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
         replacePagedShaderSource(
           replacePagedShaderSource(
             replacePagedShaderSource(
-              GPU_SPLAT_FEATURE_SHADER,
+              replacePagedShaderSource(
+                GPU_SPLAT_FEATURE_SHADER,
+                '  semanticFilterActive: u32,\n  padding: u32,\n};',
+                '  semanticFilterActive: u32,\n  padding: u32,\n  colorScale: vec3<f32>,\n};'
+              ),
               'const INVALID_FEATURE_DEPTH_KEY: u32 = 65535u;',
               `const INVALID_FEATURE_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;`
             ),
@@ -164,6 +168,8 @@ export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
       projectedColor.a
     );
   }
+  let tintedColor = projectedRecords[projectedRowIndex].color;
+  projectedRecords[projectedRowIndex].color = vec4<f32>(tintedColor.rgb * featureUniforms.colorScale, tintedColor.a);
   atomicAdd(&drawCommands[1u], 1u);
 }
 `

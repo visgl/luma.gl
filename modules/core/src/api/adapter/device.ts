@@ -331,12 +331,15 @@ export type WebGPUDeviceFeature =
 export type WebGLDeviceFeature =
   // webgl extension features
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'polygon-offset-clamp-webgl'
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'stencil-texturing-webgl' // Sample a stencil aspect as an unsigned integer texture.
+  | 'clip-control-webgl' // RenderPassProps.clipDepthMode 'zero-to-one' (EXT_clip_control)
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
+  | 'shader-conservative-depth-webgl' // GLSL conservative depth qualifiers depth_less and depth_greater permit early depth optimizations
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
 
   // texture rendering

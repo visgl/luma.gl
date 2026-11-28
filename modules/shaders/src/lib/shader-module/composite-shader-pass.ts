@@ -41,6 +41,11 @@ export type CompositeShaderPassComputeOptimization<TargetNameT extends string = 
 export type CompositeShaderPass<TargetNameT extends string = string> = {
   name: string;
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
+  /** Selects an implementation for the initial stage before running shared steps. */
+  initialPasses?: {
+    compute?: Omit<CompositeShaderPassComputeOptimization<TargetNameT>, 'replacedPasses'>;
+    fragment: CompositeShaderPassStep<TargetNameT>[];
+  };
   steps: CompositeShaderPassStep<TargetNameT>[];
   /** Optional fused WebGPU dispatch; existing fragment steps remain the portable fallback. */
   compute?: CompositeShaderPassComputeOptimization<TargetNameT>;

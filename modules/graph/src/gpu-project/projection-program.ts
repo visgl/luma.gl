@@ -3,10 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
+import type {Device} from '@luma.gl/core';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {nextFloat32} from '../utils/float32';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
-  getClassicFP64Defines
+  getClassicFP64Defines,
+  getPlatformFP64Arithmetic
 } from '../geospatial/geospatial-utils';
 import {evaluateProjectionPlan, findProjectionPatch, packProjectionPlan} from './projection-plan';
 import {getProjectionShaderFunctions} from './projection-shader';
@@ -110,6 +113,11 @@ export class CompiledProjection {
        * uniform block and upload `ONE` and `SPLIT` before dispatching.
        */
       fp64Arithmetic?: 'integer' | 'classic';
+      /**
+       * Selects the platform arithmetic when no explicit mode is supplied and retains fp64
+       * uniform metadata for render models that reflect every WGSL uniform declaration.
+       */
+      device?: Device;
     } = {}
   ): ProjectionShader {
     const namespace = options.namespace ?? 'projection';
@@ -124,6 +132,9 @@ export class CompiledProjection {
     ) {
       throw new Error('projection parameter offset must be a uint32 word offset');
     }
+    const {device} = options;
+    const arithmetic =
+      options.fp64Arithmetic ?? (device ? getPlatformFP64Arithmetic(device) : 'integer');
     const prefix = `projection_${namespace}`;
     return {
       source: this.shaderSource.replace(/PROGRAM|PARAMETER_OFFSET/g, token =>
@@ -132,13 +143,13 @@ export class CompiledProjection {
       // Integer-controlled arithmetic needs no uniforms. Classic double-single uses the full
       // module, whose uniforms the consumer binds, and every fp64 workaround define.
       modules: [
-        options.fp64Arithmetic === 'classic'
+        device || arithmetic === 'classic'
           ? (fp64arithmetic as ShaderModule)
           : (GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE as ShaderModule)
       ],
       defines:
-        options.fp64Arithmetic === 'classic'
-          ? getClassicFP64Defines('unknown')
+        arithmetic === 'classic'
+          ? getClassicFP64Defines(device?.info.gpu ?? 'unknown')
           : {LUMA_FP64_INTEGER_ARITHMETIC: true},
       entryPoint: `${prefix}_project`,
       bindingName: `${prefix}_parameters`,
@@ -461,13 +472,4 @@ fn PROGRAM_project(position: ${inputType}, inputValidity: u32) -> PROGRAM_Result
   }
 }`;
   return {source, parameters: Uint32Array.from(words)};
-}
-
-function nextFloat32(value: number, increase: boolean): number {
-  if (value === 0) {
-    return increase ? 2 ** -149 : -(2 ** -149);
-  }
-  const words = new Uint32Array(Float32Array.of(value).buffer);
-  words[0] += value > 0 === increase ? 1 : -1;
-  return new Float32Array(words.buffer)[0];
 }

@@ -3,7 +3,7 @@
 `ScientificFlowTracer` traces explicitly seeded particles through regular 2D
 vector fields on WebGPU. It adds adaptive embedded Runge–Kutta–Fehlberg 4(5)
 integration and persistent termination states alongside the visualization-oriented
-`ScientificFlowGraph`. Import it from `@luma.gl/graph/experimental/simulation`.
+`ScientificFlowGraph`. Import it from `@luma.gl/graph/experimental-simulation`.
 
 ```typescript
 const tracer = new ScientificFlowTracer(device, {
@@ -169,3 +169,105 @@ without respawning or changing particle identity. Latitude and missing-data
 boundaries retain their usual behavior. Snapshot rotation preserves this option.
 Renderers should unwrap segment displacement and split trails at the atlas seam;
 raw consecutive x coordinates can jump from near one to near zero.
+
+## Conservative mask footprints
+
+Set `conservativeMask: true` to check all four interpolation corners of every
+grid cell crossed by each proposed accepted chord, in addition to RK-stage checks.
+The default remains stage-only validation. Missing samples reject the trial and
+reduce its timestep; failure at the minimum timestep reports `MissingData` and
+retains the last accepted position. Longitude footprints wrap when periodic
+longitude is enabled. Both snapshots contribute when their temporal weights do.
+
+Traversal advances both axes at a simultaneous grid-corner crossing, avoiding
+false stops in adjacent cells that the chord does not enter. It detects short cell
+intersections between RK stages. It does not resolve the curved path between stages,
+localize coastline impact, reflect particles or provide slip boundaries. Use it
+when all interpolation cells along an accepted chord must have valid samples.
+
+## Retaining GPU trajectories
+
+`FlowTrajectoryHistory` is an optional, separately owned ring buffer exported from
+`@luma.gl/graph/experimental-simulation`:
+
+```ts
+import {FlowTrajectoryHistory} from '@luma.gl/graph/experimental-simulation';
+
+const history = new FlowTrajectoryHistory(device, {
+  particleCount: tracer.particleCount,
+  capacity: Math.min(32, Math.floor(
+    Math.min(device.limits.maxBufferSize, device.limits.maxStorageBufferBindingSize) /
+    (tracer.particleCount * 16)
+  ))
+});
+let result = await tracer.advance(1);
+while (!result.complete) result = await tracer.continue();
+const encoder = device.createCommandEncoder();
+history.record(encoder, tracer.output, tracer.time);
+device.submit(encoder.finish());
+// Bind history.buffer for rendering. history.frames lists chronological byte offsets.
+// Later, after the renderer no longer borrows it:
+history.destroy();
+```
+
+Memory is exactly `capacity * particleCount * 16` bytes and must fit both
+`maxBufferSize` and `maxStorageBufferBindingSize`; oversized histories are rejected
+before allocating. Capacity must be at least one. Each frame preserves
+normalized x/y, age and generation, with particle identity given by its index.
+Recording beyond capacity overwrites the oldest frame. `frames` returns detached
+CPU metadata (`time`, `byteOffset`, `sequence`), not particle readback. Times must
+be finite and nondecreasing. `reset()` forgets metadata and starts a new capture
+sequence without clearing GPU bytes; reset when reseeding or changing clocks.
+Captured source buffers are borrowed, never destroyed by history.
+
+Submit encoders in recording order and do not discard recorded commands: metadata
+advances at recording time. Capture a completed RK45 horizon for synchronized
+particle times; intermediate dispatches contain mixed progress. Stopped particles
+retain their earlier age, even when the request horizon completes. For visual
+RK2/RK4 simulations, generation changes identify respawns; never join across them.
+Periodic trajectories still require seam-aware rendering.
+
+The [advection roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/advection-roadmap.md) separates
+implemented qualification/history from real-data validation, true spherical
+transport, grid extensions and GPU scheduling work.
+
+
+### Explicit trajectory readback
+
+Call `await history.readFrames()` when CPU trajectories are needed for comparison,
+export or analysis. It returns chronological `FlowTrajectorySnapshot` objects:
+`time`, `sequence`, the original GPU `byteOffset`, and `particles` containing
+interleaved normalized x/y, age and generation. Readback uses at most two contiguous
+ranges and transfers only populated slots, including after ring wraparound.
+An empty history returns an empty array without GPU work.
+
+Submit all recorded captures before calling it. Both readback copies are queued
+before the method yields; subsequent captures or `reset()` do not change the
+returned snapshot. Returned arrays are independent of GPU storage. Await every
+outstanding readback before `destroy()`; premature destruction is rejected.
+`record()` and the `frames` getter continue to perform no readback.
+
+```ts
+const snapshots = await history.readFrames();
+for (const snapshot of snapshots) {
+  const firstParticleX = snapshot.particles[0];
+  console.log(snapshot.time, firstParticleX);
+}
+```
+
+### Archived wind qualification
+
+The offline GFS Atlantic fixture checks four six-hour releases at hourly horizons
+against an independent double-precision CPU RK4 reference. With a 1 m local
+RK45 tolerance and 300-second maximum step, every retained point must be within
+5 m of the reference. Geographic conversion uses a bounded latitude cosine
+polynomial to avoid backend-dependent trigonometric drift. The reference's
+15-second and 30-second integrations agree within 0.0013 m. This qualifies a pinned, 8-bit-quantized model-wind archive, not
+observations or unquantized GFS. See the [fixture provenance and reproduction guide](https://github.com/visgl/luma.gl/blob/master/modules/graph/test/experimental/simulation/fixtures/README.md).
+
+
+The [Vector Observatory GFS lab](https://github.com/visgl/luma.gl/tree/master/examples/experimental/vector-observatory#archived-gfs-trajectory-lab)
+visualizes the same archive and reference releases. It demonstrates bounded GPU
+history, explicit readback, common-horizon comparison and physical-coordinate CSV
+export. Its optional accuracy/cost sweep separates solver settings from changes
+to grid spacing and snapshot interpolation, with backend-tagged JSON results.

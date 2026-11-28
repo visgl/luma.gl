@@ -106,6 +106,11 @@ export function createScenegraphsFromGLTF(
     assertSupportedGLTFExtensions(gltf, device);
   }
 
+  for (const node of gltf.nodes) {
+    if (node.boundingVolume && !gltf.shapes?.[node.boundingVolume.shape])
+      throw new Error('glTF boundingVolume refers to a missing shape');
+  }
+
   // Validate the optional profile before parseGLTF allocates models, textures, or buffers.
   if (options?.billboards) {
     const validationNodes = new Map<number, GroupNode>();
@@ -160,6 +165,13 @@ export function createScenegraphsFromGLTF(
   gltfNodeIndexToNodeMap.forEach((node, index) => {
     const packet = metadata.get('node', index);
     if (packet) node.metadata['xmp'] = packet;
+    /** Bounds are source metadata; they never create a collider implicitly. */
+    const volume = gltf.nodes[index]?.boundingVolume;
+    if (volume) {
+      /** Resolve the same source shape index that can be referenced by physics. */
+      const shape = gltf.shapes![volume.shape];
+      node.metadata['boundingVolume'] = structuredClone({volume, shape});
+    }
     if (!meshPackets.size) return;
     const sourceMesh = gltf.nodes[index]?.mesh;
     const meshPacket = sourceMesh && meshPackets.get(sourceMesh.id);

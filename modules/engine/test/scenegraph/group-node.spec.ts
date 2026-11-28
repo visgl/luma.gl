@@ -4,7 +4,7 @@
 
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
 import {expect, it} from 'vitest';
 

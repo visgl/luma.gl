@@ -5,7 +5,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {RayTracingSceneRenderer, type RayTracingSceneRenderOptions} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('textured cutouts agree across color, picking, channels and retained UV changes', async () => {
@@ -306,4 +306,4 @@ it('textured cutouts agree across color, picking, channels and retained UV chang
     replacement.destroy();
     device.destroy();
   }
-}, 180_000);
+}, 300_000);

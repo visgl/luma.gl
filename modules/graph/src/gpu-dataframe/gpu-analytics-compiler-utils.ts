@@ -38,7 +38,8 @@ const MAXIMUM_UINT32 = 0xffffffff;
 /** Rejects unsupported constants, unknown source nullability, and possible uint32-count overflow. */
 export function validateGPUAnalyticsSource<Source extends GPUTypeMap>(
   source: GPUDataFrame<Source>,
-  columnNames: readonly string[]
+  columnNames: readonly string[],
+  getPackedRowByteLength?: (vector: GPUVector) => number
 ): void {
   if (source.numRows > MAXIMUM_UINT32) {
     throw new Error('GPUDataFrame analytics counts cannot represent more than uint32 source rows');
@@ -49,7 +50,7 @@ export function validateGPUAnalyticsSource<Source extends GPUTypeMap>(
     }
     const vector = source.table.gpuVectors[name];
     if (vector) {
-      validateGPUAnalyticsVectorLayout(vector, name);
+      validateGPUAnalyticsVectorLayout(vector, name, getPackedRowByteLength?.(vector));
     }
     const field = source.schema.fields.find(candidate => candidate.name === name);
     if (field?.nullable && source.numRows > 0 && !source.validity[name as keyof Source & string]) {
@@ -101,23 +102,28 @@ export function getGPUAnalyticsVector<Selection extends GPUTypeMap>(
   return vector as GPUVector<GPUAnalyticsScalarFormat>;
 }
 
-/** Rejects interleaved, padded, or misaligned rows before packed scalar shaders can consume them. */
-function validateGPUAnalyticsVectorLayout(vector: GPUVector, name: string): void {
+/** Rejects interleaved, padded, or misaligned rows before packed numeric shaders consume them. */
+function validateGPUAnalyticsVectorLayout(
+  vector: GPUVector,
+  name: string,
+  rowByteLength = UINT32_BYTE_LENGTH
+): void {
+  const components = rowByteLength / UINT32_BYTE_LENGTH;
   if (
     vector.bufferLayout ||
-    vector.stride !== 1 ||
-    vector.byteStride !== UINT32_BYTE_LENGTH ||
-    vector.rowByteLength !== UINT32_BYTE_LENGTH ||
+    vector.stride !== components ||
+    vector.byteStride !== rowByteLength ||
+    vector.rowByteLength !== rowByteLength ||
     vector.data.some(
       chunk =>
-        chunk.stride !== 1 ||
-        chunk.byteStride !== UINT32_BYTE_LENGTH ||
-        chunk.rowByteLength !== UINT32_BYTE_LENGTH ||
+        chunk.stride !== components ||
+        chunk.byteStride !== rowByteLength ||
+        chunk.rowByteLength !== rowByteLength ||
         chunk.byteOffset % UINT32_BYTE_LENGTH !== 0
     )
   ) {
     throw new Error(
-      `GPUDataFrame analytics column "${name}" requires packed, uint32-aligned scalar GPU data`
+      `GPUDataFrame analytics column "${name}" requires packed, uint32-aligned GPU data`
     );
   }
 }
@@ -126,29 +132,26 @@ function validateGPUAnalyticsVectorLayout(vector: GPUVector, name: string): void
 export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   name: string,
-  id: string
+  id: string,
+  baseMask = context.selectionMask
 ): GraphVectorView<'uint32'> {
   const field = context.table.schema.fields.find(candidate => candidate.name === name);
   if (!field?.nullable) {
-    return context.selectionMask;
+    return baseMask;
   }
   const validity = context.validity[name as keyof Selection & string];
   if (!validity) {
-    if (context.selectionMask.length === 0) {
-      return context.selectionMask;
+    if (baseMask.length === 0) {
+      return baseMask;
     }
     throw new Error(`GPUDataFrame nullable analytics column "${name}" requires GPU validity`);
   }
   const validityView = context.graph.importGPUVector(`${id}-validity`, validity);
-  const output = createTransientVectorView(
-    context.graph,
-    `${id}-combined-mask`,
-    context.selectionMask
-  );
+  const output = createTransientVectorView(context.graph, `${id}-combined-mask`, baseMask);
   context.graph.add(
     new GPUMask({
       id: `${id}-combine-validity`,
-      inputs: [context.selectionMask, validityView],
+      inputs: [baseMask, validityView],
       output
     })
   );

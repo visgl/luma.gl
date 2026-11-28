@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/core';
+import type {NumericArray} from '@math.gl/core/types';
 import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
 import {persistenceEffect} from '@luma.gl/engine/effects';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
@@ -16,7 +16,7 @@ import {
   BackgroundTextureModel,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {Matrix4, Vector3, radians} from '@math.gl/core';
+import {Matrix4, Vector3, radians} from '@math.gl/core/matrix';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
 import type {LightingProps} from '@luma.gl/shaders';
 import {createPBRMesh, drawPBRScene} from '../../pbr-scene';

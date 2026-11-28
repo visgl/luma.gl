@@ -44,12 +44,13 @@ fn queueMeshPairContacts(pair:u32,first:u32,second:u32,previous:Manifold){
    if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
    let minimum=readGeometry(outerOffset+outerNode*3u);
    let maximum=readGeometry(outerOffset+outerNode*3u+1u);
-   if(any(maximum.xyz<outerLower)||any(minimum.xyz>outerUpper)){outerNode=u32(minimum.w);continue;}
+   if(any(minimum.xyz>maximum.xyz)||any(maximum.xyz<outerLower)||any(minimum.xyz>outerUpper)){outerNode=u32(minimum.w);continue;}
    if(maximum.w>0.0){
     let start=u32(readGeometry(outerOffset+outerNode*3u+2u).x);
     for(var offset=0u;offset<u32(maximum.w);offset++){
      if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
      let outerTriangle=start+offset;
+     if(!meshTriangleActive(outerMesh,outerTriangle)){continue;}
      var lower=vec3f(3.402823e38);var upper=vec3f(-3.402823e38);
      for(var corner=0u;corner<3u;corner++){
       let worldPoint=colliderPosition(outerMesh)+rotate(colliderRotation(outerMesh),triangleVertex(outerMesh,outerTriangle,corner));
@@ -63,12 +64,13 @@ fn queueMeshPairContacts(pair:u32,first:u32,second:u32,previous:Manifold){
       if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
       let queryMinimum=readGeometry(queryOffset+queryNode*3u);
       let queryMaximum=readGeometry(queryOffset+queryNode*3u+1u);
-      if(any(queryMaximum.xyz<lower)||any(queryMinimum.xyz>upper)){queryNode=u32(queryMinimum.w);continue;}
+      if(any(queryMinimum.xyz>queryMaximum.xyz)||any(queryMaximum.xyz<lower)||any(queryMinimum.xyz>upper)){queryNode=u32(queryMinimum.w);continue;}
       if(queryMaximum.w>0.0){
        let queryStart=u32(readGeometry(queryOffset+queryNode*3u+2u).x);
        for(var queryIndex=0u;queryIndex<u32(queryMaximum.w);queryIndex++){
         if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
         let queryTriangle=queryStart+queryIndex;
+        if(!meshTriangleActive(queryMesh,queryTriangle)){continue;}
         let firstPoint=triangleVertex(queryMesh,queryTriangle,0u);
         let secondPoint=triangleVertex(queryMesh,queryTriangle,1u);
         let thirdPoint=triangleVertex(queryMesh,queryTriangle,2u);

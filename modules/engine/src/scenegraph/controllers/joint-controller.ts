@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {ScenegraphNode} from '../scenegraph-node';
 import {GroupNode} from '../group-node';
 import {decomposePhysicsTransform} from '../physics-transforms';
@@ -18,6 +18,8 @@ export type {
 } from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphJoint = {
+  /** Instance-local actuator identifier shared by this attachment’s drive axes. */
+  id?: string;
   first: ScenegraphNode;
   second: ScenegraphNode;
   limits?: readonly ScenegraphJointLimit[];

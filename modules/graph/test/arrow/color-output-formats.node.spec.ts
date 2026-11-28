@@ -18,7 +18,7 @@ import {
   getArrowFixedSizeListValues
 } from '@luma.gl/graph/arrow';
 import {GPUDataEvaluator, convertColorData, backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 
 backendRegistry.add('null', cpuBackend);
 

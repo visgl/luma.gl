@@ -241,10 +241,19 @@ returns the full `fp64arithmetic` module and its workaround defines. The consume
 the module's uniform block and upload its `ONE` and `SPLIT` values (for example with
 `computation.updateShaderInputs()`) before dispatching; with zero values the low limbs are lost.
 Keep integer-controlled arithmetic on Metal, which may reassociate the classic transforms.
+Render models can call `getShader({device})` to follow the same platform selection and retain the
+full uniform metadata for shader reflection. `GPUProjectedPointLayer` uses this option.
 
 Zero input validity, non-finite intermediates, and rejected domains produce zero output and validity.
 The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
 buffer. Input, output, and validity columns remain caller-owned.
+
+Set `groupChunks: true` on `GPUProjectionProgram` to pair nonempty chunks of a
+`GraphVectorView` in one dispatch. The program binds the existing position, output and validity
+views directly. Physical chunks and their byte offsets stay intact. This is opt-in and requires at
+least nine compute storage bindings. Adapters below that limit dispatch each chunk individually.
+A trailing chunk and pairs that share a graph buffer or exceed the dispatch limits also use the
+individual path. Parameter updates still reuse the existing graph.
 
 `projection.isCompatible(nextProjection)` checks whether the generated shader and parameter layout
 are unchanged. `contributor.updateProjection(nextProjection)` then writes the new parameters without
@@ -273,9 +282,73 @@ bounds describe stage coordinates, not necessarily the original input coordinate
 arithmetic rounding and native series truncation; they must not be used as certified global error bounds. `local-f32` output
 still rounds at the final origin-relative output boundary.
 
+## Inline Cartesian rendering and CPU picking
+
+`ProjectionRenderTransform` from the optional `@luma.gl/graph/gpu-project-crs` entry point adapts a ready
+`prepareCRSProjection()` result for inline rendering. `GPUProjectedPointLayer` from
+`@deck.gl-community/gpu-layers` consumes that adapter in a WebGPU **non-geospatial Cartesian**
+viewport, such as `OrthographicView`. No upstream deck API change or materialized coordinate buffer
+is required.
+
+```ts
+import {ProjectionRenderTransform} from '@luma.gl/graph/gpu-project-crs';
+import {GPUProjectedPointLayer} from '@deck.gl-community/gpu-layers';
+
+// prepared is the same ready result used by ProjectionTableTransform below.
+const transform = new ProjectionRenderTransform(prepared, {
+  origin: [550000, 4190000], // absolute destination coordinates, in destination axis order/units
+  axes: [0, 1],             // render x/y select destination axes AFTER origin subtraction
+  scale: [1, 1]             // signed render units per selected destination unit
+});
+const layer = new GPUProjectedPointLayer({
+  id: 'projected-points',
+  transform,
+  getPosition: positionVector, // GPUVector<'uint32x4'>: raw binary64 pairs, not integer coordinates
+  inputValidity: validityVector, // GPUVector<'uint32'>: nonzero means valid
+  getSourcePosition: rowIndex => cpuCoordinates[rowIndex] ?? null,
+  pickable: true,
+  pointSize: 4,
+  getColor: [32, 128, 255]
+});
+```
+
+The frame is explicit: `common[i] = (destination[axes[i]] - origin[axes[i]]) * scale[i]`.
+Signed scales support unit conversion and axis direction; `axes` supports axis order. There is no
+implicit degree/metre conversion or inference that projected coordinates are deck map common space.
+The adapter snapshots this frame, reuses the prepared adaptive operation and appends double-single
+origin/axis/scale operations. Only the final small local position narrows to float32. Even a prepared
+`local-f32` table transform is recompiled from its plan, not from already narrowed output.
+The prepared provider/plan must remain unchanged throughout its use. The CPU `projectPosition()`
+returns `{source, destination, common}` using the retained provider, or `null` outside the finite source
+domain; in-domain provider failures propagate as `ProjectionTableError`.
+
+Rendering is strictly 2D at common-space z = 0. Three-component CPU inputs are rejected, and the
+layer rejects geospatial viewports, non-Cartesian coordinate systems, nonzero coordinate origins and
+model matrices. Map/globe common-space conversion and altitude/vertical transformations remain
+separate coverage work. This adapter does not infer an inverse from a screen position.
+
+Inputs are borrowed same-device vertex buffers with aligned physical chunks, stable byte strides and
+matching chunk byte offsets; null bitmaps must be converted explicitly into `inputValidity`. Empty
+chunks preserve global row numbering. Invalid/masked/out-of-domain rows are discarded in both color
+and picking passes. RGB picking is limited to 16,777,215 rows per layer. `getSourcePosition()` is called
+only for a picked row; the caller maintains a CPU mirror matching GPU row order, or returns `null`.
+Picking retains deck's `coordinate` and adds `gpuVector` chunk provenance plus `projection` from the
+retained CPU transform. There is no hidden input readback.
+
+Replace the `transform` object when changing the plan, CRS, origin, axes or units. The layer rebuilds
+its owned model/parameter buffer, and picking immediately uses the replacement CPU transform.
+Replacing input vectors or extensions also rebuilds the model; aligned appended chunks and buffer
+content changes can reuse it. Color and point size update per-chunk uniform regions. Callers request
+redraws after changing GPU contents. Finalization destroys only the layer's model, parameters and
+style buffers, never its input vectors.
+
+Hardware tests compare retained CPU, double-single table output and actual inline render/picking for
+UTM points closer than an absolute float32 ULP. This proves the bounded consumer contract, not a
+cross-vendor precision guarantee or a performance advantage. P.8a.2 measures those separately.
+
 ## Batch-preserving CPU/GPU table projection
 
-`ProjectionTableTransform` from `@luma.gl/graph/gpu-project/crs` uses a ready
+`ProjectionTableTransform` from `@luma.gl/graph/gpu-project-crs` uses a ready
 `prepareCRSProjection()` result for explicit CPU or GPU execution. This first table adapter is
 strictly 2D and requires the default raw-binary64 input format (`uint32x4` on GPU).
 It retains the prepared CPU transform, original spatial references and sampled GPU error metadata.
@@ -286,7 +359,7 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   prepareCRSProjection,
   ProjectionTableTransform
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = prepareCRSProjection({
   from: 'EPSG:4326',
@@ -456,13 +529,13 @@ the application.
 ## Optional math.gl CRS planner
 
 Install `@math.gl/geospatial` version `~5.0.0-beta.1` and import the CPU planner from
-`@luma.gl/graph/gpu-project/crs`. This optional peer is not loaded by the GPU execution
+`@luma.gl/graph/gpu-project-crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
 The default is raw binary64 `uint32x4` input and double-single output.
 
 ```ts
-import {planCRSProjection} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection} from '@luma.gl/graph/gpu-project-crs';
 import {GPUProjectionProgram} from '@luma.gl/graph/gpu-project';
 
 const result = planCRSProjection({
@@ -500,8 +573,8 @@ use the authoritative CPU transform as an opaque oracle, and always produce adap
 They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
-import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
-import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project/crs';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection-projections-lazy';
+import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = await prepareCRSProjectionAsync({
   engine: lazyProjectionEngine,
@@ -765,7 +838,7 @@ Both `planCRSProjection()` and `planProjectionPipeline()` return structured `uns
 by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
 `reasons` contain the same planning diagnostics, including missing bounds, unavailable providers,
 and failed approximation budgets. This changes failure handling, not which semantics are accepted.
-The error class is exported from the optional `gpu-project/crs` entry, not the execution core.
+The error class is exported from the optional `gpu-project-crs` entry, not the execution core.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
 `true` to use declared CRS axes and directions. Native plans retain declared coordinate units
@@ -780,7 +853,7 @@ provider's output at the source-domain center; final Float32 rounding is additio
 
 ```ts
 import {parsePROJString} from '@math.gl/geospatial/crs';
-import {planProjectionPipeline} from '@luma.gl/graph/gpu-project/crs';
+import {planProjectionPipeline} from '@luma.gl/graph/gpu-project-crs';
 
 const result = planProjectionPipeline({
   pipeline: parsePROJString(`+proj=pipeline
@@ -910,7 +983,7 @@ import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {
   runGPUProjectionBenchmark,
   runProjectionBenchmark
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 
 const options = {
   projection: createWebMercatorProjection(),
@@ -952,7 +1025,7 @@ const report = await runProjectionProgramBenchmark(device, {
 });
 ```
 
-Import this helper from `@luma.gl/graph/gpu-project/benchmarks`. All variants receive the
+Import this helper from `@luma.gl/graph/gpu-project-benchmarks`. All variants receive the
 same raw binary64 input rows and must share output precision; origin-relative output must also
 share its destination origin. Arithmetic metadata remains separate from output storage. Budgets
 are Euclidean destination-unit errors including native formula, fitting, and output rounding.
@@ -1005,7 +1078,7 @@ not a proj4js wrapper or the native C++ PROJ library. Provider construction and 
 are outside CPU execution timing; callback/provider allocations and consumer writes are inside it.
 
 Pass `cpuVariants: createCRSProjectionCPUBenchmarks({projection, provider, isValid})`, importing
-the helper from `/gpu-project/crs`, to compare the retained transform's `projectToSync`,
+the helper from `/gpu-project-crs`, to compare the retained transform's `projectToSync`,
 `projectFlatSync`, and `ProjectionBuffer` contiguous, strided and column APIs. `provider` should
 include the actual package version. `isValid` must match the oracle's finite/domain predicate.
 All six API/layout baselines run both consumer modes. Their domain checks, batch input packing,
@@ -1048,7 +1121,7 @@ The benchmark does not automatically select arithmetic or relax application tole
 
 ### Production table-consumer benchmarks
 
-`runProjectionTableBenchmark()` from the optional `/gpu-project/benchmarks` entry point compares
+`runProjectionTableBenchmark()` from the optional `/gpu-project-benchmarks` entry point compares
 the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` materialization:
 
 ```typescript
@@ -1203,7 +1276,7 @@ upload data or submit commands. Those operations remain caller-owned.
 
 ## Fixed-arithmetic routing measurements and execution selection
 
-The optional `gpu-project/benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
+The optional `gpu-project-benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
 options)`. Supply one double-single plan, coordinates, independent oracle and explicit error budget.
 It uses identical coefficients for scan/index full-program qualification, then times lookup-only
 shaders and verifies their selected IDs agree before/after measurement. Reports include index

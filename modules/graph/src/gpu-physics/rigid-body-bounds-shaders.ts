@@ -2,8 +2,22 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export const RIGID_BODY_BOUNDS_SHADER = /* wgsl */ `
+import {RIGID_BODY_HEIGHT_FIELD_SHADER} from './rigid-body-height-field-shader';
+
+/** Common mesh surface helpers, with height-field decoding only in worlds using it. */
+export function getRigidBodyBoundsShader(heightFields: boolean): string {
+  return /* wgsl */ `
+${heightFields ? RIGID_BODY_HEIGHT_FIELD_SHADER : ''}
+fn meshTriangleActive(collider:u32,triangle:u32)->bool{
+ ${heightFields ? 'if(bodies.colliders[collider].padding.y<0.0){return heightFieldTriangleActive(collider,triangle);}' : ''}
+ return true;
+}
+fn meshTriangleData(collider:u32,triangle:u32)->u32{
+ ${heightFields ? 'if(bodies.colliders[collider].padding.y<0.0){return heightFieldTriangleData(collider,triangle);}' : ''}
+ return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+triangle).w);
+}
 fn triangleVertex(collider:u32, triangle:u32, corner:u32)->vec3f {
+ ${heightFields ? 'if(bodies.colliders[collider].padding.y<0.0){return heightFieldTriangleVertex(collider,triangle,corner);}' : ''}
  let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
  return readGeometry(u32(bodies.colliders[collider].padding.x)+u32(indices[corner])).xyz;
 }
@@ -35,6 +49,7 @@ fn shapeWorldExtent(collider:u32)->vec3f {
  return abs(axis(collider,0u))*extent.x+abs(axis(collider,1u))*extent.y+abs(axis(collider,2u))*extent.z;
 }
 `;
+}
 
 export const RIGID_BODY_BOUND_PUBLICATION_SHADER = /* wgsl */ `
 @group(0) @binding(24) var<storage,read_write> minima:array<f32>;

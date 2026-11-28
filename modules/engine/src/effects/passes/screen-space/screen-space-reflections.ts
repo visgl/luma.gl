@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 import {temporalHelpers} from './screen-space-shader-helpers';
 import {
   ssrCameraTemporal,
@@ -653,22 +658,19 @@ fn ssrComposite_sampleColor(
 type SSRRenderTarget = 'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection';
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
-export function createSSRCompositeShaderPass(
-  options: SSRCompositeShaderPassOptions & {reprojection: 'camera'}
-): CompositeShaderPass<SSRRenderTarget | 'ssrHistoryNormal'>;
-export function createSSRCompositeShaderPass(
-  options?: SSRCompositeShaderPassOptions
-): CompositeShaderPass<SSRRenderTarget>;
-export function createSSRCompositeShaderPass(
-  options: SSRCompositeShaderPassOptions = {}
-): CompositeShaderPass {
+export const ssr: ConfigurableEffectDefinition<SSRCompositeShaderPassOptions> = {
+  name: 'ssrCompositeShaderPass',
+  configure: configureSSR
+};
+
+function configureSSR(options: SSRCompositeShaderPassOptions = {}): EffectDefinition {
   const quality = options.quality ? SSR_QUALITY_PRESETS[options.quality] : undefined;
   const scale = options.resolutionScale ?? quality?.resolutionScale ?? 1;
   const cameraHistory = options.reprojection === 'camera';
   const spatialUniforms: Record<string, number> = quality ? {maxRadius: quality.maxRadius} : {};
   return {
     name: 'ssrCompositeShaderPass',
-    renderTargets: {
+    resources: {
       ssrRaw: {scale: [scale, scale], format: 'rgba16float'},
       ssrHistory: {
         scale: [scale, scale],
@@ -700,14 +702,16 @@ export function createSSRCompositeShaderPass(
       ssrScratch: {scale: [scale, scale], format: 'rgba16float'},
       ssrReflection: {scale: [scale, scale], format: 'rgba16float'}
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssrTrace,
         inputs: {sourceTexture: 'previous'},
         output: 'ssrRaw',
         uniforms: quality ? {sampleCount: quality.sampleCount} : undefined
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: cameraHistory ? ssrCameraTemporal : ssrTemporal,
         inputs: {
           sourceTexture: 'ssrRaw',
@@ -719,6 +723,7 @@ export function createSSRCompositeShaderPass(
         uniforms: quality ? {historyWeight: quality.historyWeight} : undefined
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: cameraHistory ? ssrCameraDepthHistoryCopy : ssrDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'ssrHistoryDepth'
@@ -726,6 +731,7 @@ export function createSSRCompositeShaderPass(
       ...(cameraHistory
         ? [
             {
+              kind: 'fullscreen' as const,
               shaderPass: ssrNormalHistoryCopy,
               inputs: {sourceTexture: 'previous'},
               output: 'ssrHistoryNormal'
@@ -733,22 +739,37 @@ export function createSSRCompositeShaderPass(
           ]
         : []),
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssrSpatial,
         inputs: {sourceTexture: 'ssrHistory'},
         output: 'ssrScratch',
         uniforms: {...spatialUniforms, direction: [1, 0]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssrSpatial,
         inputs: {sourceTexture: 'ssrScratch'},
         output: 'ssrReflection',
         uniforms: {...spatialUniforms, direction: [0, 1]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssrComposite,
         inputs: {sourceTexture: 'previous', reflectionTexture: 'ssrReflection'},
         output: 'previous'
       }
     ]
   };
+}
+
+export function createSSRCompositeShaderPass(
+  options: SSRCompositeShaderPassOptions & {reprojection: 'camera'}
+): CompositeShaderPass<SSRRenderTarget | 'ssrHistoryNormal'>;
+export function createSSRCompositeShaderPass(
+  options?: SSRCompositeShaderPassOptions
+): CompositeShaderPass<SSRRenderTarget>;
+export function createSSRCompositeShaderPass(
+  options: SSRCompositeShaderPassOptions = {}
+): CompositeShaderPass {
+  return resolveEffect(ssr.configure(options));
 }

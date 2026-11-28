@@ -162,3 +162,19 @@ Collision snapshots reject repeated subtree references and cap the flattened out
 at one million vertices and three million indices. Accessor counts obey the same
 bounds before allocating decoded arrays. Indexed snapshots discard unused vertices
 before convex-hull cooking, including snapshots supplied by custom resolvers.
+
+
+### Export a settled authored revision
+
+Use `exportGLTFPhysicsState(source, description, world, {sceneNodes})` with the
+same node map used to create the live scene session. Use `session.withWorld`
+to serialize export against simulation, reset, and rebuild. The exporter
+takes body poses and velocities from the accepted GPU state, restores the
+world origin, and retains the current authored collider frames and sizes.
+Shared analytic shapes remain shared. Animated nodes retain TRS fields so
+existing channels still work.
+
+Keep the source description and node map from the same session revision.
+The exporter rejects a mismatch between the authored transforms and the live
+collider frames. Recook mesh deformation and topology edits before exporting.
+Export performs an explicit readback outside the normal render and simulation loop.

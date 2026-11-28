@@ -9,9 +9,9 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
-  // Deck integration packages are scheduled for removal; omit their module suites.
+  // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-projected-point-performance).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -30,6 +30,11 @@ const excludePatterns = [
 // These specs exercise pure data transforms, layouts, shader assembly, and validation. Running
 // them in Node preserves the assertions while avoiding one isolated browser page per file.
 const nodeOnlyTestPatterns = [
+  'test/examples/poisson-problem.spec.{ts,js}',
+  'modules/core/test/webgl/constants/webgl-constant-utils.spec.{ts,js}',
+  'modules/core/test/webgl/adapter/helpers/get-shader-layout-from-glsl.spec.{ts,js}',
+  'modules/engine/test/gltf/parsers/post-process-gltf-legacy.spec.{ts,js}',
+  'modules/shaders/test/modules/volume/volume-raymarch.spec.{ts,js}',
   'test/devtools/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-adjust-filters/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
@@ -140,11 +145,17 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/deck-gpu-layers/test/gpu-projected-point-performance.spec.ts',
+  'modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts',
+  'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
+  'modules/graph/test/gpu-sql/gpu-join-projection-benchmark.spec.ts',
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
 
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
+  'modules/graph/test/experimental/simulation/scientific-flow-gfs-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
+  'modules/graph/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
@@ -167,7 +178,10 @@ const browserIncludePatterns = browserTestGroup === 'render-conformance'
   : browserTestGroup === 'compute'
     ? COMPUTE_TEST_PATTERNS
     : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'];
-const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
+// Upstream Istanbul sends the full coverage map for each test file.
+const reuseComputeContext =
+  process.env.LUMA_TEST_BROWSER_COVERAGE !== 'true' &&
+  ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
   ...getReleaseQualificationExcludes(browserTestGroup),
@@ -224,7 +238,11 @@ const vitestConfig = getVitestConfig({
           ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
           : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
-        exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
+        exclude: [
+          ...excludePatterns,
+          ...nodeWrapperSourcePatterns,
+          ...(process.env.LUMA_TEST_NODE_SKIP_COVERED === 'true' ? nodeCoveragePatterns : [])
+        ]
       }
     },
     browser: {

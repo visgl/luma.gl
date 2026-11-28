@@ -48,3 +48,6 @@ export {
   MLS_MPM_FLUID_STAGE_ORDER,
   MLSMPMFluidSimulation
 } from './mls-mpm-fluid-simulation';
+
+export {FlowTrajectoryHistory} from './flow-trajectory-history';
+export type {FlowTrajectoryFrame, FlowTrajectorySnapshot} from './flow-trajectory-history';

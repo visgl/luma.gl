@@ -4,7 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {castData, backendRegistry, GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 backendRegistry.add('null', cpuBackend);

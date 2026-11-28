@@ -5,10 +5,15 @@
 /** Minimal insertion-ordered LRU cache owned by font atlas generation. */
 export class LRUCache<ValueT> {
   private readonly cache = new Map<string, ValueT>();
-  private readonly limit: number;
+  private limit: number;
 
   constructor(limit: number) {
     this.limit = limit;
+  }
+
+  /** Increases capacity while preserving entries and their recency. */
+  grow(limit: number): void {
+    this.limit = Math.max(this.limit, limit);
   }
 
   get(key: string): ValueT | undefined {

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '../passes/scene-capture-pass';
 import type {
   Framebuffer,
   RenderPass,
@@ -11,8 +15,8 @@ import type {
   TextureView
 } from '@luma.gl/core';
 import {Device, Texture as TextureResource} from '@luma.gl/core';
-import {Matrix4, radians} from '@math.gl/core';
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 import type {
   DirectionalShadowLight,
@@ -23,7 +27,7 @@ import type {
 } from '@luma.gl/shaders';
 export type {DirectionalShadowLight, SpotShadowLight, PointShadowLight} from '@luma.gl/shaders';
 
-const MAX_DIRECTIONAL_LIGHTS = 1;
+const MAX_DIRECTIONAL_LIGHTS = 4;
 const MAX_SPOT_LIGHTS = 4;
 const MAX_POINT_LIGHTS = 4;
 const MAX_CASCADES = 4;
@@ -80,6 +84,25 @@ export type ShadowRenderOptions = {
   /** Upload resources before opening the depth render pass. */
   prepareShadowCasters?: (view: Omit<ShadowRenderView, 'renderPass'>) => void;
 };
+
+type ShadowCaptureFrame = {
+  view: Omit<ShadowRenderView, 'renderPass'>;
+  drawShadowCasters: ShadowRenderOptions['drawShadowCasters'];
+  prepareShadowCasters?: ShadowRenderOptions['prepareShadowCasters'];
+};
+
+/** Depth capture shared by directional cascades, spot lights, and point-light cube faces. */
+export const shadowMapCapturePass = {
+  name: 'shadow-map',
+  target: 'shadowDepth',
+  pass: {clearDepth: 1},
+  prepare: (_commandEncoder, {view, prepareShadowCasters}) => {
+    prepareShadowCasters?.(view);
+  },
+  draw: (renderPass, {view, drawShadowCasters}) => {
+    drawShadowCasters({...view, renderPass});
+  }
+} as const satisfies SceneCapturePassDefinition<ShadowCaptureFrame, 'shadowDepth'>;
 
 /** GPU resource props returned by the renderer for the shadow sampling module. */
 export type ShadowShaderProps = ShadowProps<Texture, Sampler>;
@@ -179,10 +202,11 @@ export class ShadowMapRenderer {
     validateLightCount('point', pointLights.length, this.props.pointLightCapacity);
 
     const directionalViews: ComputedShadowView[] = [];
-    let cascadeSplits = padCascadeSplits([], options.camera.far);
-    if (directionalLights[0]) {
-      const light = resolveDirectionalLight(directionalLights[0], options.camera);
-      cascadeSplits = padCascadeSplits(
+    const resolvedDirectionalLights = directionalLights.map(light =>
+      resolveDirectionalLight(light, options.camera)
+    );
+    const directionalCascadeSplits = resolvedDirectionalLights.map((light, lightIndex) => {
+      const cascadeSplits = padCascadeSplits(
         getPracticalCascadeSplits(
           options.camera.near,
           light.shadowDistance,
@@ -191,21 +215,23 @@ export class ShadowMapRenderer {
         ),
         light.shadowDistance
       );
-      directionalViews.push(
-        ...getDirectionalCascadeViews(
-          options.camera,
-          light,
-          cascadeSplits,
-          this.props.cascadeCount,
-          this.props.directionalMapSize
-        )
+      const lightViews = getDirectionalCascadeViews(
+        options.camera,
+        light,
+        cascadeSplits,
+        this.props.cascadeCount,
+        this.props.directionalMapSize
       );
-      directionalViews.forEach((view, cascadeIndex) => {
+      directionalViews.push(...lightViews);
+      lightViews.forEach((view, cascadeIndex) => {
         this.renderView({
-          framebuffer: this.resources.directionalFramebuffers[cascadeIndex],
+          framebuffer:
+            this.resources.directionalFramebuffers[
+              lightIndex * this.props.cascadeCount + cascadeIndex
+            ],
           view,
           type: 'directional',
-          lightIndex: 0,
+          lightIndex,
           cascadeIndex,
           mapSize: this.props.directionalMapSize,
           light,
@@ -213,7 +239,8 @@ export class ShadowMapRenderer {
           prepareShadowCasters: options.prepareShadowCasters
         });
       });
-    }
+      return cascadeSplits;
+    });
 
     const spotViews = spotLights.map(light => getSpotShadowView(resolveSpotLight(light)));
     spotViews.forEach((view, lightIndex) => {
@@ -253,17 +280,16 @@ export class ShadowMapRenderer {
     return {
       quality: this.props.quality,
       cascadeCount: this.props.cascadeCount,
-      cascadeSplits,
+      cascadeSplits: directionalCascadeSplits[0] ?? padCascadeSplits([], options.camera.far),
+      directionalCascadeSplits,
       blockerSampleCount: this.props.blockerSampleCount,
       filterSampleCount: this.props.filterSampleCount,
-      directionalLights: directionalLights.map(light =>
-        resolveDirectionalLight(light, options.camera)
-      ),
+      directionalLights: resolvedDirectionalLights,
       spotLights: spotLights.map(resolveSpotLight),
       pointLights: pointLights.map(resolvePointLight),
       directionalViewProjectionMatrices: padMatrices(
         directionalViews.map(view => view.viewProjectionMatrix),
-        MAX_CASCADES
+        MAX_DIRECTIONAL_LIGHTS * MAX_CASCADES
       ),
       spotViewProjectionMatrices: padMatrices(
         spotViews.map(view => view.viewProjectionMatrix),
@@ -322,28 +348,16 @@ export class ShadowMapRenderer {
       mapSize: options.mapSize,
       rasterParameters
     };
-    options.prepareShadowCasters?.(context);
-    const renderPass = this.device.beginRenderPass({
-      id: makeShadowResourceId(`${options.type}-shadow-pass`),
-      framebuffer: options.framebuffer,
-      clearDepth: 1
+    encodeSceneCapturePass(shadowMapCapturePass, {
+      commandEncoder: this.device.commandEncoder,
+      id: makeShadowResourceId(options.type + '-shadow-pass'),
+      framebuffers: {shadowDepth: options.framebuffer},
+      frame: {
+        view: context,
+        drawShadowCasters: options.drawShadowCasters,
+        prepareShadowCasters: options.prepareShadowCasters
+      }
     });
-    try {
-      options.drawShadowCasters({
-        renderPass,
-        framebuffer: options.framebuffer,
-        type: options.type,
-        lightIndex: options.lightIndex,
-        cascadeIndex: options.cascadeIndex,
-        pointFace: options.pointFace,
-        camera: options.view.camera,
-        viewProjectionMatrix: options.view.viewProjectionMatrix,
-        mapSize: options.mapSize,
-        rasterParameters
-      });
-    } finally {
-      renderPass.end();
-    }
   }
 
   private assertNotDestroyed(): void {

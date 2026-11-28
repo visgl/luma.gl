@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  resolveEffect,
+  type ConfigurableEffectDefinition,
+  type EffectDefinition
+} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 
 /** Construction options for temporally stabilized diffuse screen-space global illumination. */
 export type SSGICompositeShaderPassOptions = {
@@ -523,15 +528,23 @@ fn ssgiComposite_sampleColor(
 } as const satisfies ShaderPass<Partial<SSGICompositeUniforms>, SSGICompositeUniforms>;
 
 /** Creates a hemisphere-traced, temporally stabilized screen-space diffuse GI pipeline. */
-export function createSSGICompositeShaderPass(
+export const ssgi: ConfigurableEffectDefinition<
+  SSGICompositeShaderPassOptions,
+  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
+> = {
+  name: 'ssgiCompositeShaderPass',
+  configure: configureSSGI
+};
+
+function configureSSGI(
   options: SSGICompositeShaderPassOptions = {}
-): CompositeShaderPass<
+): EffectDefinition<
   'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
 > {
   const scale = options.resolutionScale ?? 1;
   return {
     name: 'ssgiCompositeShaderPass',
-    renderTargets: {
+    resources: {
       ssgiRaw: {scale: [scale, scale], format: 'rgba16float'},
       ssgiHistory: {
         scale: [scale, scale],
@@ -548,13 +561,15 @@ export function createSSGICompositeShaderPass(
       ssgiScratch: {scale: [scale, scale], format: 'rgba16float'},
       ssgiIndirect: {scale: [scale, scale], format: 'rgba16float'}
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiTrace,
         inputs: {sourceTexture: 'previous'},
         output: 'ssgiRaw'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiTemporal,
         inputs: {
           sourceTexture: 'ssgiRaw',
@@ -564,27 +579,39 @@ export function createSSGICompositeShaderPass(
         output: 'ssgiHistory'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'ssgiHistoryDepth'
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiSpatial,
         inputs: {sourceTexture: 'ssgiHistory'},
         output: 'ssgiScratch',
         uniforms: {direction: [1, 0]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiSpatial,
         inputs: {sourceTexture: 'ssgiScratch'},
         output: 'ssgiIndirect',
         uniforms: {direction: [0, 1]}
       },
       {
+        kind: 'fullscreen' as const,
         shaderPass: ssgiComposite,
         inputs: {sourceTexture: 'previous', indirectLightingTexture: 'ssgiIndirect'},
         output: 'previous'
       }
     ]
   };
+}
+
+export function createSSGICompositeShaderPass(
+  options: SSGICompositeShaderPassOptions = {}
+): CompositeShaderPass<
+  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
+> {
+  return resolveEffect(ssgi.configure(options));
 }

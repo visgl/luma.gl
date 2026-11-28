@@ -4,7 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   CubeGeometry,
   PlaneGeometry,

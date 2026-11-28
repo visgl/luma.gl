@@ -13,9 +13,13 @@ export type {
   GPUConvolutionBloomSupport
 } from './fft-bloom';
 export {
+  fftBloomPipeline,
   getGPUConvolutionBloomSupport,
   GPUConvolutionBloom,
   makeBloomPointSpreadFunction,
   makeBloomSpectralPointSpreadFunction,
   makeGPUConvolutionBloomStats
 } from './fft-bloom';
+
+export type {ComputePipelineDefinition} from './compute-pipeline';
+export {encodeComputePipeline} from './compute-pipeline';

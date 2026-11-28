@@ -8,7 +8,8 @@ import {
   type CompositeShaderPass,
   type ContactTraceUniforms
 } from '@luma.gl/shaders';
-import {Matrix4, type NumberArray3, type NumberArray16} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3, type NumberArray16} from '@math.gl/core/types';
 import {ShaderPassRenderer} from '../passes/shader-pass-renderer';
 import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 

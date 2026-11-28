@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {FramebufferProps} from '../../../index';
-import {Framebuffer} from '../../../index';
+import {Framebuffer, Texture} from '../../../index';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUTextureView} from './webgpu-texture-view';
 
@@ -14,6 +14,8 @@ import {WebGPUTextureView} from './webgpu-texture-view';
 export class WebGPUFramebuffer extends Framebuffer {
   readonly device: WebGPUDevice;
   readonly handle = null;
+  /** Private multisampled color attachments resolving into the public color views. */
+  multisampledColors: WebGPUTextureView[] = [];
 
   readonly colorAttachments: WebGPUTextureView[] = [];
   readonly depthStencilAttachment: WebGPUTextureView | null = null;
@@ -24,10 +26,24 @@ export class WebGPUFramebuffer extends Framebuffer {
 
     // Auto create textures for attachments if needed
     this.autoCreateAttachmentTextures();
+    this.updateAttachments();
   }
 
   protected updateAttachments(): void {
-    // WebGPU framebuffers are JS only objects, nothing to update
+    if (this.props.samples !== 4) return;
+    for (const attachment of this.multisampledColors)
+      this.destroyAttachedResource(attachment.texture);
+    this.multisampledColors = this.colorAttachments.map(attachment => {
+      const texture = this.device.createTexture({
+        format: attachment.props.format ?? attachment.texture.format,
+        width: this.width,
+        height: this.height,
+        samples: 4,
+        usage: Texture.RENDER_ATTACHMENT
+      });
+      this.attachResource(texture);
+      return texture.view;
+    });
   }
 
   /**

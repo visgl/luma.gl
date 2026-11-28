@@ -615,6 +615,9 @@ export class WebGPUDevice extends Device {
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
+      // WebGPU provides zero-to-one clip depth and polygon depth-bias clamping in core.
+      'clip-control-webgl',
+      'polygon-offset-clamp-webgl',
       'compilation-status-async-webgl',
       'float32-renderable-webgl',
       'float16-renderable-webgl',

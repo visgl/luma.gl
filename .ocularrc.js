@@ -16,9 +16,9 @@ const config = {
   },
 
   aliases: {
-    '@luma.gl/graph/gpu-simple-graph/cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
-    '@luma.gl/graph/gpu-simple-graph/webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
-    '@luma.gl/graph/gpu-simple-graph/webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
+    '@luma.gl/graph/gpu-simple-graph-cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
+    '@luma.gl/graph/gpu-simple-graph-webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
+    '@luma.gl/graph/gpu-simple-graph-webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
 
     '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
     '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
@@ -65,7 +65,6 @@ const config = {
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
         'wrecking-ball': '/examples/experimental/gpu-rigid-body-world/wrecking-ball.html',
         'vector-observatory': '/examples/experimental/vector-observatory',
-        'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',
         'physics-stress': '/examples/experimental/physics-stress',
         'sphere-world': '/examples/experimental/gpu-sphere-world',

@@ -25,6 +25,7 @@ export type GaussianSplatSourceCatalogEntry = {
     | 'playroom'
     | 'truck'
     | 'coit'
+    | 'cat'
     | 'train-github'
     | 'fixture'
     | 'gltf-fixture';
@@ -226,6 +227,17 @@ const GRAPHDECO_CAMERA_UP = [0, -1, 0] as const;
 /** Selectable complete scenes, plus explicit GitHub fallback and lightweight parser fixture. */
 export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogEntry[] = [
   {
+    id: 'cat',
+    label: 'Cat figurine pair',
+    // CC0 capture from raymondyfei/SharedTestModels (SPZ v2, 2 MB).
+    sourceUrl:
+      'https://raw.githubusercontent.com/raymondyfei/SharedTestModels/92aec9410cd3cbc661d4c4e3c5e8c78157357988/a_cute_cat_float32.spz',
+    expectedSplatCount: 105_128,
+    upAxis: 'z',
+    // The figurine's authored upright direction is +Z in the decoded SPZ.
+    up: [0, 0, 1]
+  },
+  {
     id: 'train',
     label: 'HF Voxel51 Train 7K',
     sourceUrl: `${HUGGING_FACE_GAUSSIAN_SPLAT_BASE_URL}/train/point_cloud/iteration_7000/point_cloud.ply`,
@@ -319,6 +331,7 @@ export function getLocalGaussianSplatLoadersConfiguration(
 
   const loadersRoot = window.__lumaGaussianSplatsLocalLoadersRoot?.replace(/\/+$/, '') || '';
   const loaderBundleUrl = window.__lumaGaussianSplatsLoaderBundleUrl;
+  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const loaderMode: LocalGaussianSplatLoadersConfiguration['loaderMode'] =
     requestedLoaderMode === 'local' ? 'local' : 'bundled';
   if (loaderMode === 'local') {
@@ -327,7 +340,8 @@ export function getLocalGaussianSplatLoadersConfiguration(
     }
   } else if (
     !loaderBundleUrl &&
-    parameters.get('scene') !== 'gltf-fixture' &&
+    sceneId !== 'gltf-fixture' &&
+    sceneId !== 'cat' &&
     !parameters.get('source')?.toLowerCase().split('?')[0].endsWith('.glb')
   ) {
     return undefined;
@@ -359,7 +373,6 @@ export function getLocalGaussianSplatLoadersConfiguration(
     };
   }
 
-  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const scene = GAUSSIAN_SPLAT_SOURCE_CATALOG.find(candidate => candidate.id === sceneId);
   if (!scene) {
     throw new Error(`Unknown Gaussian splat scene: ${sceneId}.`);
@@ -1152,6 +1165,17 @@ async function loadLocalGaussianSplatLoaderModules(
     configuration.sourceFormat === 'RAD'
       ? 'RADSourceLoader'
       : `${configuration.sourceFormat}Loader`;
+  if (
+    configuration.loaderMode === 'bundled' &&
+    configuration.sceneId === 'cat' &&
+    !configuration.loaderBundleUrl
+  ) {
+    const [coreModule, {SPZLoader}] = await Promise.all([
+      import('@loaders.gl/core'),
+      import('@loaders.gl/splats/spz/bundled')
+    ]);
+    return {coreModule, loader: SPZLoader, loaderName};
+  }
   if (configuration.loaderMode === 'bundled') {
     if (!configuration.loaderBundleUrl) {
       throw new Error('The Gaussian splat loader bundle is unavailable.');
@@ -1213,6 +1237,9 @@ function getExpectedGaussianSplatBatchCount(
   scene: GaussianSplatSourceCatalogEntry,
   maxResidentSplatCount?: number
 ): number {
+  if (scene.id === 'cat') {
+    return 1;
+  }
   if (scene.id === 'train-github') {
     return (
       Math.ceil(370_941 / GAUSSIAN_SPLAT_ARROW_BATCH_SIZE) +
