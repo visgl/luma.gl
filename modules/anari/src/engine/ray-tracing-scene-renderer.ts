@@ -1412,7 +1412,10 @@ export class RayTracingSceneRenderer {
     resources.previousViewProjection = new Matrix4(viewProjection);
     resources.previousCameraPosition = Array.from(options.camera.position);
     resources.historyNeedsReset = false;
-    resources.hasGuideHistory = needsGuides;
+    // A partial update during motion carries some guides from the old pose.
+    // Require a complete refresh before those guides can be reused.
+    resources.hasGuideHistory =
+      needsGuides && (activePhaseCount === 1 || (stationaryBatch && resources.hasGuideHistory));
     resources.phaseIndex = (activePhaseIndex + 1) % resources.phaseCount;
     resources.frameIndex++;
     resources.accumulatedFrameCount = progressive ? accumulatedFrameCount + 1 : 0;
