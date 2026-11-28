@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {
+  RayTracingImageExportOptions,
+  RayTracingImageTile
+} from './engine/ray-tracing-image-export';
 import type {Device} from '@luma.gl/core';
 import {
   ANARIArray,
@@ -267,17 +271,7 @@ export class ANARIDevice {
   }
 
   renderFrame(frame: ANARIFrame): ANARIFrameStatistics {
-    const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
-    const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
-    if (!runtimeFactory) {
-      throw new Error(`ANARI renderer "${rendererSubtype}" is not registered.`);
-    }
-
-    let renderingRuntime = this.renderingRuntimes.get(runtimeFactory);
-    if (!renderingRuntime) {
-      renderingRuntime = runtimeFactory(this.device);
-      this.renderingRuntimes.set(runtimeFactory, renderingRuntime);
-    }
+    const renderingRuntime = this.getRenderingRuntime(frame);
     const statistics = renderingRuntime.render(frame);
     this.frameRenderingRuntimes.set(frame.id, renderingRuntime);
     return statistics;
@@ -298,6 +292,32 @@ export class ANARIDevice {
     return (
       this.frameRenderingRuntimes.get(frame.id)?.readRadiance?.(frame) ?? Promise.resolve(null)
     );
+  }
+
+  /** Exports a still using the frame's current renderer subtype. */
+  async *exportFrameTiles(
+    frame: ANARIFrame,
+    options: RayTracingImageExportOptions,
+    format: 'rgba8' | 'rgba16float'
+  ): AsyncGenerator<RayTracingImageTile> {
+    const runtime = this.getRenderingRuntime(frame);
+    if (!runtime.exportTiles) throw new Error('This ANARI renderer does not support tiled export.');
+    yield* runtime.exportTiles(frame, options, format);
+  }
+
+  private getRenderingRuntime(frame: ANARIFrame): ANARIRendererRuntime {
+    const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
+    const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
+    if (!runtimeFactory) {
+      throw new Error(`ANARI renderer "${rendererSubtype}" is not registered.`);
+    }
+
+    let renderingRuntime = this.renderingRuntimes.get(runtimeFactory);
+    if (!renderingRuntime) {
+      renderingRuntime = runtimeFactory(this.device);
+      this.renderingRuntimes.set(runtimeFactory, renderingRuntime);
+    }
+    return renderingRuntime;
   }
 
   destroyFrame(frame: ANARIFrame): void {

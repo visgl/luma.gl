@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  type ConfigurableEffectDefinition,
-  type EffectDefinition
-} from '../../../passes/effect-renderer';
+import {type ConfigurableEffectDefinition} from '../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 import {depthHelpers} from './screen-space-shader-helpers';
 
@@ -129,49 +126,6 @@ vec4 screenSpaceOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export const outlines = {
-  name: 'outlineCompositeShaderPass',
-  configure: configureOutline
-} as const satisfies ConfigurableEffectDefinition<OutlineCompositeShaderPassOptions>;
-
-function configureOutline(options: OutlineCompositeShaderPassOptions = {}): EffectDefinition {
-  const mode = options.mode ?? 'depth-normal';
-  const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
-  const useDiagonalSamples = options.quality === 'fast' ? 0 : 1;
-  if (mode === 'image') {
-    return {
-      name: 'imageOutlineCompositeShaderPass',
-      resources: {},
-      passes: [
-        {
-          kind: 'fullscreen',
-          shaderPass: imageOutlinePass,
-          inputs: {sourceTexture: 'previous'},
-          output: 'previous',
-          uniforms: {useDiagonalSamples}
-        }
-      ]
-    };
-  }
-  const inputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
-  if (!useNormalTexture) {
-    inputs['normalTexture'] = 'previous';
-  }
-  return {
-    name: 'outlineCompositeShaderPass',
-    resources: {},
-    passes: [
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: outlinePass,
-        inputs,
-        output: 'previous',
-        uniforms: {useNormalTexture, useDiagonalSamples}
-      }
-    ]
-  };
-}
-
 const imageOutlinePass = {
   name: 'imageOutline',
   source: /* wgsl */ `\
@@ -218,3 +172,52 @@ vec4 imageOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
+
+/** Use depth and reconstructed normals with the full sample pattern. */
+const outlineOptionDefaults: Required<OutlineCompositeShaderPassOptions> = {
+  mode: 'depth-normal',
+  normalSource: 'reconstruct-from-depth',
+  quality: 'high'
+};
+/** Enable diagonal edge samples for the high-quality outline. */
+const diagonalSamples = {option: 'quality', values: {fast: 0, high: 1}} as const;
+
+/** Selects depth-normal or image-based outlines with declarative quality options. */
+export const outlines = {
+  name: 'outlineCompositeShaderPass',
+  optionDefaults: outlineOptionDefaults,
+  optionUniforms: {
+    screenSpaceOutline: {
+      useNormalTexture: {
+        option: 'normalSource',
+        values: {'normal-texture': 1, 'reconstruct-from-depth': 0}
+      },
+      useDiagonalSamples: diagonalSamples
+    },
+    imageOutline: {useDiagonalSamples: diagonalSamples}
+  },
+  optionInputs: {
+    screenSpaceOutline: {
+      normalTexture: {option: 'normalSource', values: {'reconstruct-from-depth': 'previous'}}
+    }
+  },
+  variants: {
+    option: 'mode',
+    values: {
+      image: {
+        name: 'imageOutlineCompositeShaderPass',
+        passes: [
+          {
+            kind: 'sample',
+            module: imageOutlinePass,
+            inputs: {sourceTexture: 'previous'},
+            output: 'previous'
+          }
+        ]
+      }
+    }
+  },
+  passes: [
+    {kind: 'sample', module: outlinePass, inputs: {sourceTexture: 'previous'}, output: 'previous'}
+  ]
+} as const satisfies ConfigurableEffectDefinition<OutlineCompositeShaderPassOptions>;

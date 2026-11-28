@@ -216,6 +216,56 @@ export async function encodeRayTracingRadiancePFM(
   height: number,
   tiles: AsyncIterable<RayTracingRadianceTile> | Iterable<RayTracingRadianceTile>
 ): Promise<Uint8Array<ArrayBuffer>> {
+  validateImageSize(width, height);
+  const header = new TextEncoder().encode(`PF\n${width} ${height}\n-1.0\n`);
+  const file = new Uint8Array(header.length + width * height * 12);
+  file.set(header);
+  const pixels = new DataView(file.buffer, header.length);
+  for await (const tile of validateTiles(width, height, tiles, 8)) {
+    const samples = new DataView(tile.data.buffer, tile.data.byteOffset, tile.data.byteLength);
+    for (let row = 0; row < tile.height; row++) {
+      // PFM stores the bottom row first.
+      const outputRow = height - 1 - tile.y - row;
+      for (let column = 0; column < tile.width; column++) {
+        const source = (row * tile.width + column) * 8;
+        const target = (outputRow * width + tile.x + column) * 12;
+        for (let channel = 0; channel < 3; channel++) {
+          const bits = samples.getUint16(source + channel * 2, true);
+          pixels.setFloat32(target + channel * 4, fromHalfFloat(bits), true);
+        }
+      }
+    }
+  }
+  return file;
+}
+
+/**
+ * Encodes a complete row-major RGBA8 tile stream as a browser PNG.
+ * Tiles should contain sRGB display color and opaque alpha. The CPU canvas holds the full image.
+ */
+export async function encodeRayTracingImagePNG(
+  width: number,
+  height: number,
+  tiles: AsyncIterable<RayTracingImageTile> | Iterable<RayTracingImageTile>
+): Promise<Blob> {
+  validateImageSize(width, height);
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext('2d');
+  // Canvas 2D is required by the browser PNG encoder.
+  assert(context);
+  try {
+    for await (const tile of validateTiles(width, height, tiles, 4)) {
+      const pixels = new Uint8ClampedArray(tile.data);
+      context.putImageData(new ImageData(pixels, tile.width, tile.height), tile.x, tile.y);
+    }
+    return await canvas.convertToBlob({type: 'image/png'});
+  } finally {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
+function validateImageSize(width: number, height: number): void {
   // Match the limits of the tile iterator.
   assert(
     Number.isInteger(width) &&
@@ -224,10 +274,14 @@ export async function encodeRayTracingRadiancePFM(
       height > 0 &&
       width * height <= 0xffffffff
   );
-  const header = new TextEncoder().encode(`PF\n${width} ${height}\n-1.0\n`);
-  const file = new Uint8Array(header.length + width * height * 12);
-  file.set(header);
-  const pixels = new DataView(file.buffer, header.length);
+}
+
+async function* validateTiles(
+  width: number,
+  height: number,
+  tiles: AsyncIterable<RayTracingImageTile> | Iterable<RayTracingImageTile>,
+  bytesPerPixel: number
+): AsyncGenerator<RayTracingImageTile> {
   let expectedX = 0;
   let expectedY = 0;
   let bandHeight = 0;
@@ -244,21 +298,9 @@ export async function encodeRayTracingRadiancePFM(
         tile.height > 0 &&
         tile.x + tile.width <= width &&
         tile.y + tile.height <= height &&
-        tile.data.byteLength === tile.width * tile.height * 8
+        tile.data.byteLength === tile.width * tile.height * bytesPerPixel
     );
-    const samples = new DataView(tile.data.buffer, tile.data.byteOffset, tile.data.byteLength);
-    for (let row = 0; row < tile.height; row++) {
-      // PFM stores the bottom row first.
-      const outputRow = height - 1 - tile.y - row;
-      for (let column = 0; column < tile.width; column++) {
-        const source = (row * tile.width + column) * 8;
-        const target = (outputRow * width + tile.x + column) * 12;
-        for (let channel = 0; channel < 3; channel++) {
-          const bits = samples.getUint16(source + channel * 2, true);
-          pixels.setFloat32(target + channel * 4, fromHalfFloat(bits), true);
-        }
-      }
-    }
+    yield tile;
     expectedX += tile.width;
     if (expectedX === width) {
       expectedX = 0;
@@ -267,5 +309,4 @@ export async function encodeRayTracingRadiancePFM(
   }
   // Reject a prematurely terminated tile stream.
   assert(expectedX === 0 && expectedY === height);
-  return file;
 }
