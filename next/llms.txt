@@ -575,6 +575,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [MLSMPMFluidSimulation](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md): MLSMPMFluidSimulation is an experimental WebGPU-only, fixed-capacity two-dimensional fluid
 - [ScientificFlowTracer (Experimental)](https://luma.gl/next/docs/api-reference/experimental/scientific-flow-tracer.md): ScientificFlowTracer traces explicitly seeded particles through regular 2D
 - [SpectralOceanSimulation](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md): Overview
+- [SphericalFlowGraph](https://luma.gl/next/docs/api-reference/experimental/spherical-flow-graph.md): SphericalFlowGraph performs fixed-step RK2/RK4 particle transport on a sphere with
 - [VolumetricFireSimulation](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md): VolumetricFireSimulation is an experimental WebGPU-only dense-grid fire and smoke simulation.
 
 #### generated

@@ -116,3 +116,5 @@ Experimental APIs may change or be removed without the compatibility guarantees 
 [`DepthTextureCopy`](https://luma.gl/next/docs/api-reference/anari/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
 
 [`getRayTracingQualityPreset`](https://luma.gl/next/docs/api-reference/anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
+
+[Spherical flow transport](https://luma.gl/next/docs/api-reference/experimental/spherical-flow-graph.md) provides dense global Cartesian-vector sampling and pole-crossing RK2/RK4 with stable particle slots.

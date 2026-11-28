@@ -2,6 +2,8 @@
 
 ## Version 10.0[​](#version-100 "Direct link to Version 10.0")
 
+* **Spherical transport.** [Unit-sphere RK2/RK4](https://luma.gl/next/docs/api-reference/experimental/spherical-flow-graph.md) crosses poles with stable particle identities. Vector Observatory adds a spherical preset, stronger weather streaks and adjustable trail persistence.
+
 * **Scientific trajectories.** [RK45 tracing](https://luma.gl/next/docs/api-reference/experimental/scientific-flow-tracer.md) adds crossed-cell mask checks, bounded GPU trajectory history with explicit readback, and offline GFS trajectory qualification. Vector Observatory adds archived-wind playback, trajectory CSV export and controlled accuracy/cost sweeps.
 
 * **Font atlas cache capacity.** Use `ensureFontAtlasCacheCapacity()` from `@luma.gl/engine/text-fonts` to grow the shared bitmap and SDF atlas cache while retaining cached atlases.
