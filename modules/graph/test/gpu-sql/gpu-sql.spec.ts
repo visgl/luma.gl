@@ -1321,7 +1321,21 @@ it('GPUSQL feeds unique-right join matches into global and grouped aggregates on
     ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
     ownership: 'owned'
   });
-  const rightTable = arrow.tableFromArrays({identifier: Uint32Array.of(20, 40)});
+  const rightBatches = [
+    arrow.tableFromArrays({
+      identifier: Uint32Array.of(20),
+      score: arrow.vectorFromArray([6], new arrow.Float32())
+    }).batches[0],
+    arrow.tableFromArrays({
+      identifier: Uint32Array.of(40),
+      score: arrow.vectorFromArray([null], new arrow.Float32())
+    }).batches[0]
+  ];
+  const nullableRight = rightBatches[1].schema;
+  const rightTable = new arrow.Table(
+    nullableRight,
+    rightBatches.map(batch => new arrow.RecordBatch(nullableRight, batch.data))
+  );
   const right = new GPUDataFrame({
     ...makeGPUAnalyticsTableFromArrowTable(device, rightTable),
     ownership: 'owned'
@@ -1353,9 +1367,29 @@ it('GPUSQL feeds unique-right join matches into global and grouped aggregates on
       }
     }
 
+    const global = context
+      .query(
+        'SELECT COUNT(*) AS trips, COUNT(a.score) AS known, SUM(a.score), AVG(a.score) AS average FROM trips t LEFT JOIN accounts a ON t.identifier = a.identifier'
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      const encoder = device.createCommandEncoder();
+      global.encode(encoder);
+      device.submit(encoder.finish());
+      const rows = await makeArrowTableFromGPUAnalyticsTable({
+        table: global.table,
+        validity: global.validity
+      });
+      expect(Array.from(rows, row => [row.trips, row.known, row.sum_score, row.average])).toEqual([
+        [5, 1, 6, 6]
+      ]);
+    } finally {
+      global.destroy();
+    }
+
     const grouped = context
       .query(
-        'SELECT category, COUNT(*) AS trips, AVG(fare) AS total FROM trips INNER JOIN accounts ON trips.identifier = accounts.identifier GROUP BY category HAVING trips > 0 ORDER BY total DESC LIMIT 1',
+        'SELECT category, COUNT(*) AS trips, AVG(accounts.score) AS total FROM trips LEFT JOIN accounts ON trips.identifier = accounts.identifier GROUP BY category HAVING COUNT(accounts.score) > 0 ORDER BY total DESC LIMIT 1',
         {maxMeanScratchBytes: 4}
       )
       .compile(new GPUCommandGraph(device));
@@ -1373,7 +1407,7 @@ it('GPUSQL feeds unique-right join matches into global and grouped aggregates on
         globalSelectedCount: grouped.globalSelectedCount
       });
       expect(Array.from(rows, row => [row.category, row.trips, row.total])).toEqual([
-        ['premium', 2, 9]
+        ['premium', 2, 6]
       ]);
     } finally {
       grouped.destroy();

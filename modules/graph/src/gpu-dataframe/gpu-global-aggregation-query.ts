@@ -121,7 +121,7 @@ export function getGPUDataFrameAnalyticColumnFormat<
   SelectedColumns extends keyof Logical & string,
   Source extends GPUTypeMap
 >(
-  query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
+  query: Pick<GPUDataFrameQuery<Logical, SelectedColumns, Source>, 'source' | 'derivedColumns'>,
   name: string
 ): GPUDataFrameAnalyticScalarFormat | undefined {
   const formats = new Map<string, string | undefined>(
@@ -140,14 +140,18 @@ export function getGPUDataFrameAnalyticColumnFormat<
   return format === 'float32' || format === 'sint32' || format === 'uint32' ? format : undefined;
 }
 
-/** Rejects unselected columns and non-closed aggregation operators before touching GPU state. */
-function normalizeGPUDataFrameGlobalAggregations<
+/** Validates aggregate definitions against left and gathered right scalar formats. @internal */
+export function normalizeGPUDataFrameGlobalAggregations<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string,
   Source extends GPUTypeMap
 >(
-  query: GPUDataFrameQuery<Logical, SelectedColumns, Source>,
-  definitions: GPUDataFrameGlobalAggregationDefinitions<Logical, SelectedColumns>
+  query: Pick<
+    GPUDataFrameQuery<Logical, SelectedColumns, Source>,
+    'source' | 'selectedColumns' | 'derivedColumns'
+  >,
+  definitions: Readonly<Record<string, unknown>>,
+  joinedFormats: ReadonlyMap<string, string | undefined> = new Map()
 ): GPUDataFrameAggregationDefinition[] {
   const entries = Object.entries(definitions);
   if (entries.length === 0) {
@@ -180,11 +184,18 @@ function normalizeGPUDataFrameGlobalAggregations<
     ) {
       throw new Error(`GPUDataFrame global aggregation "${name}" has an unsupported operation`);
     }
-    if (typeof column !== 'string' || !query.selectedColumns.includes(column as SelectedColumns)) {
+    if (
+      typeof column !== 'string' ||
+      (!query.selectedColumns.includes(column as SelectedColumns) && !joinedFormats.has(column))
+    ) {
       throw new Error(`GPUDataFrame global aggregation "${name}" requires a selected input column`);
     }
-    if (operation !== 'count' && !getGPUDataFrameAnalyticColumnFormat(query, column)) {
-      throw new Error(`GPUDataFrame global aggregation "${name}" requires a scalar GPU column`);
+    if (operation !== 'count') {
+      const format =
+        joinedFormats.get(column) ?? getGPUDataFrameAnalyticColumnFormat(query, column);
+      if (format !== 'float32' && format !== 'uint32' && format !== 'sint32') {
+        throw new Error(`GPUDataFrame global aggregation "${name}" requires a scalar GPU column`);
+      }
     }
     normalized.push(Object.freeze({name, operation, column}));
   }
