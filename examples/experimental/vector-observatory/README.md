@@ -173,3 +173,12 @@ divergence-free circulation; exterior faces are valid zeros, not missing data.
 RK2, RK4 and RK45 sample this layout directly. The existing Settings, Graph and
 Trace panels inspect the same simulation pipeline. This is a manufactured fixture,
 not ocean observations or curvilinear-grid support.
+
+### RK45 scheduling
+
+Select Adaptive RK45 to compare **Dense · all slots** and **Active · GPU queue**,
+with 1, 4 or 16 dispatches per readback. Changing either setting reseeds the simulation.
+Graph and Trace show queue reset/compaction before indirect integration; Diagnostics
+reports integration slots and workgroups for the complete batch. These counters
+exclude the queue scan, while compute timings include it. Dense remains the default
+because compaction overhead can outweigh saved integration work.
