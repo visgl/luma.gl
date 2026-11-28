@@ -139,25 +139,38 @@ export class GPURenderInputs {
   ): void {
     const attributes: Record<string, Buffer> = {};
     const byteOffsets: Record<string, number> = {};
-    const bindings: Bindings = {...this.samplers};
     for (const [name, {source}] of Object.entries(this.attributes)) {
       attributes[name] = context.getBuffer(source);
       byteOffsets[name] = source.byteOffset - (source.byteOffset % 4);
     }
+    const bindings = this.resolveBindings(model.pipeline.shaderLayout, context);
+    if (Object.keys(attributes).length) model.setAttributes(attributes, {byteOffsets});
+    if (Object.keys(bindings).length) model.setBindings(bindings);
+  }
+
+  /** Resolve the resource bindings without applying vertex attributes to a model. */
+  resolveBindings(
+    shaderLayout: Pick<ShaderLayout, 'bindings'>,
+    context: Pick<GPUCommandGraphEncodeContext<unknown>, 'getBuffer' | 'getTextureView'>
+  ): Bindings {
+    const bindings: Bindings = {...this.samplers};
     for (const [name, input] of Object.entries(this.storage)) {
-      const declaration = model.pipeline.shaderLayout.bindings?.find(
+      const declaration = shaderLayout.bindings?.find(
         binding => binding.name === name
       );
       // Shader access must agree with the graph dependency declaration.
       assert(declaration?.type === (input.access === 'read' ? 'read-only-storage' : 'storage'));
-      const {offset, size} = getStorageRange(input);
-      bindings[name] = {buffer: context.getBuffer(input.source), offset, size};
+      const range = this.storageViews[name];
+      bindings[name] = {
+        buffer: context.getBuffer(range),
+        offset: range.byteOffset,
+        size: range.length * range.byteStride
+      };
     }
     for (const [name, {source}] of Object.entries(this.textures)) {
       bindings[name] = context.getTextureView(source);
     }
-    if (Object.keys(attributes).length) model.setAttributes(attributes, {byteOffsets});
-    if (Object.keys(bindings).length) model.setBindings(bindings);
+    return bindings;
   }
 }
 
