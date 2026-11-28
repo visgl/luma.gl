@@ -156,7 +156,10 @@ it.each([
       id: 'webgl-sepia',
       input: source,
       output: target,
-      effects: [sepiaEffect]
+      effects: [
+        {effect: sepiaEffect, uniforms: {sepia: {amount: 1}}},
+        {effect: sepiaEffect, uniforms: {sepia: {amount: 0}}}
+      ]
     })
   );
   const compiled = graph.compile();
@@ -177,8 +180,8 @@ it.each([
     });
     device.submit(encoder.finish());
     const bytes = await readback.readAsync();
-    expect(bytes[0]).toBeCloseTo(178, -1);
-    expect(bytes[1]).toBeCloseTo(44, -1);
+    expect(bytes[0]).toBeCloseTo(100, -1);
+    expect(bytes[1]).toBeCloseTo(89, -1);
     expect(bytes[3]).toBe(255);
   } finally {
     readback.destroy();

@@ -10,6 +10,7 @@ import {
   type GPURenderCommandNode,
   type GPURenderOperationResources,
   gpuGraph,
+  type GPUGraph,
   type GPUGraphTextureDescriptor,
   type GPUOperation,
   type GPUOperationContract,
@@ -32,13 +33,46 @@ import {
   type PlannedFullscreenPass
 } from '../../passes/shader-pass-renderer';
 
+/** Overrides for one named effect occurrence. */
+type EffectOccurrence<TextureBinding> = {
+  /** Shader binding names mapped to logical names or caller-owned textures. */
+  bindings?: Readonly<Record<string, TextureBinding>>;
+  /** Values keyed by shader module name. */
+  uniforms?: Readonly<Record<string, Record<string, unknown>>>;
+};
+
+/** Typed effect entries with graph bindings and uniforms for each occurrence. */
+export type GPUEffectEntries<Options extends readonly unknown[], TextureBinding = string> = {
+  readonly [Index in keyof Options]:
+    | Exclude<EffectEntries<Options>[Index], {effect: unknown}>
+    | (Extract<EffectEntries<Options>[Index], {effect: unknown}> &
+        EffectOccurrence<TextureBinding>);
+};
+
+/** Executable form of a single effect occurrence. */
+type PlannedEffectOccurrence<TextureBinding> = EffectOccurrence<TextureBinding> & {
+  definition: CompositeShaderPass;
+};
+
+/** Resolves the same construction options and occurrence overrides for both graph entry points. */
+function planEffectOccurrences<Options extends readonly unknown[], TextureBinding>(
+  entries: GPUEffectEntries<Options, TextureBinding>
+): PlannedEffectOccurrence<TextureBinding>[] {
+  return resolveEffectEntries<Options>(entries).map((definition, index) => {
+    const entry = entries[index];
+    return 'effect' in entry
+      ? {definition, bindings: {...entry.bindings}, uniforms: {...entry.uniforms}}
+      : {definition};
+  });
+}
+
 /** An effect stack with named graph inputs and an operation-produced color result. */
 export type GPUEffectOperationProps<Options extends readonly unknown[]> = {
   id?: string;
   input: string;
   output: string;
   outputDescriptor: GPUGraphTextureDescriptor<TextureFormatColor>;
-  effects: EffectEntries<Options>;
+  effects: GPUEffectEntries<Options>;
   /** Shader binding names mapped to logical graph texture names. */
   bindings?: Readonly<Record<string, string>>;
   /** Uniforms keyed by shader module name. */
@@ -54,7 +88,7 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
   readonly type = 'effects';
   readonly id: string;
   /** @internal Shared, resolved effect definitions. */
-  readonly effects: CompositeShaderPass[];
+  readonly effects: readonly PlannedEffectOccurrence<string>[];
   /** @internal Logical shader texture bindings. */
   readonly bindings: Readonly<Record<string, string>>;
   /** @internal Single-sample output used by the operation contract. */
@@ -62,7 +96,7 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
 
   constructor(readonly props: GPUEffectOperationProps<Options>) {
     this.id = props.id ?? props.output + '-effects';
-    this.effects = resolveEffectEntries(props.effects);
+    this.effects = planEffectOccurrences<Options, string>(props.effects);
     this.bindings = Object.freeze({...props.bindings});
     const {outputDescriptor} = props;
     assert(
@@ -83,16 +117,33 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
   get contract(): GPUOperationContract {
     return {
       values: [
-        ...Array.from(new Set([this.props.input, ...Object.values(this.bindings)]), value => ({
-          value,
-          access: 'read' as const,
-          textureUsage: 'sampled' as const
-        })),
+        ...Array.from(
+          new Set([
+            this.props.input,
+            ...Object.values(this.bindings),
+            ...this.effects.flatMap(entry => Object.values(entry.bindings ?? {}))
+          ]),
+          value => ({
+            value,
+            access: 'read' as const,
+            textureUsage: 'sampled' as const
+          })
+        ),
         {value: this.props.output, access: 'write', textureUsage: 'render-attachment'}
       ],
       outputs: {[this.props.output]: this.outputDescriptor}
     } satisfies GPUOperationContract;
   }
+}
+
+/** Appends an effect stack and returns its logical color result. */
+export function appendEffects<Options extends readonly unknown[]>(
+  graph: GPUGraph,
+  props: GPUEffectOperationProps<Options>
+): string {
+  if (!props.effects.length) return props.input;
+  graph.add(new GPUEffectOperation(props));
+  return props.output;
 }
 
 /** Compiler lowering for engine effects. Install it in GPUGraph compile options. */
@@ -128,8 +179,10 @@ function lowerEffectOperation(
 /** Borrowed textures for a portable SimpleGraph effect stack. */
 export type EffectRenderOperationProps<Options extends readonly unknown[]> = Pick<
   GPUEffectOperationProps<Options>,
-  'effects' | 'uniforms' | 'flipY'
+  'uniforms' | 'flipY'
 > & {
+  /** Effect entries with caller-owned textures as per-occurrence bindings. */
+  effects: GPUEffectEntries<Options, Texture>;
   /** Operation and resource namespace. */
   id: string;
   /** The borrowed input color and destination textures. */
@@ -144,7 +197,7 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
   props: EffectRenderOperationProps<Options>
 ): GPURenderOperation<void> {
   const {id, input, output, bindings, uniforms, flipY} = props;
-  const effects = resolveEffectEntries(props.effects);
+  const effects = planEffectOccurrences<Options, Texture>(props.effects);
   return new GPURenderOperation({
     id,
     createNodes: graph => {
@@ -155,7 +208,7 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
         view = graph.createTextureView(
           graph.importTexture(
             {
-              id: id + '/borrowed-' + name,
+              id: id + '/borrowed-' + borrowed.size + '-' + name,
               format: texture.format,
               width: texture.width,
               height: texture.height,
@@ -175,8 +228,8 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
         id,
         source: importTexture(input, 'source') as GraphTextureView<TextureFormatColor>,
         output: importTexture(output, 'output') as GraphTextureView<TextureFormatColor>,
-        resolveTexture: name => importTexture(bindings![name], 'binding-' + name),
-        bindings: Object.fromEntries(Object.keys(bindings ?? {}).map(name => [name, name])),
+        resolveTexture: (texture, name) => importTexture(texture, 'binding-' + name),
+        bindings: {...bindings},
         effects,
         uniforms,
         flipY
@@ -186,15 +239,15 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
 }
 
 /** Creates the same concrete render commands for either graph entry point. */
-function buildEffectNodes(
+function buildEffectNodes<TextureBinding>(
   graph: GPURenderOperationResources<void>,
   props: {
     id: string;
     source: GraphTextureView<TextureFormatColor>;
     output: GraphTextureView<TextureFormatColor>;
-    resolveTexture: (name: string) => GraphTextureView;
-    bindings: Readonly<Record<string, string>>;
-    effects: readonly CompositeShaderPass[];
+    resolveTexture: (value: TextureBinding, bindingName: string) => GraphTextureView;
+    bindings: Readonly<Record<string, TextureBinding>>;
+    effects: readonly PlannedEffectOccurrence<TextureBinding>[];
     uniforms?: Readonly<Record<string, Record<string, unknown>>>;
     flipY?: boolean;
     allowCompute?: boolean;
@@ -208,14 +261,18 @@ function buildEffectNodes(
   const nodes: (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] = [];
   let index = 0;
   const nextId = (name: string) => props.id + '/' + index++ + '-' + name;
-  const sharedBindings = Object.fromEntries(
-    Object.entries(props.bindings).map(([name, value]) => [
-      name,
-      {view: props.resolveTexture(value)}
-    ])
-  );
-  const plans = props.effects.map(effect => ({
+  const resolveBindings = (bindings: Readonly<Record<string, TextureBinding>> = {}) =>
+    Object.fromEntries(
+      Object.entries(bindings).map(([name, value]) => [
+        name,
+        {view: props.resolveTexture(value, name)}
+      ])
+    );
+  const sharedBindings = resolveBindings(props.bindings);
+  const plans = props.effects.map(({definition: effect, bindings, uniforms}) => ({
     effect,
+    bindings: {...sharedBindings, ...resolveBindings(bindings)},
+    uniforms,
     ...planFullscreenPasses(graph.device, effect, {
       allowCompute: props.allowCompute === true,
       colorFormat
@@ -241,7 +298,10 @@ function buildEffectNodes(
     emitRender(copy, {sourceTexture: source}, previous, flipY);
   }
 
-  for (const [planIndex, {effect, compute, passes}] of plans.entries()) {
+  for (const [
+    planIndex,
+    {effect, bindings: effectBindings, uniforms, compute, passes}
+  ] of plans.entries()) {
     const targets: Record<string, Target> = Object.create(null);
     const written = new Set<GraphTextureView>();
     for (const [name, spec] of Object.entries(effect.renderTargets ?? {})) {
@@ -313,7 +373,8 @@ function buildEffectNodes(
                   ...shader?.defaultUniforms,
                   ...shader?.uniforms,
                   ...compute.uniforms,
-                  ...props.uniforms?.[compute.uniformModule]
+                  ...props.uniforms?.[compute.uniformModule],
+                  ...uniforms?.[compute.uniformModule]
                 }
               ),
             encode: ({computePass}) =>
@@ -328,7 +389,7 @@ function buildEffectNodes(
       const name = pass.output ?? 'previous';
       const last = planIndex === plans.length - 1 && passIndex === passes.length - 1;
       const bindings: Record<string, Target> = {sourceTexture: previous};
-      for (const [binding, target] of Object.entries(sharedBindings)) {
+      for (const [binding, target] of Object.entries(effectBindings)) {
         if (
           binding === 'sourceTexture' ||
           pass.shaderPass.bindingLayout?.some(entry => entry.name === binding)
@@ -349,7 +410,7 @@ function buildEffectNodes(
             : createTarget('previous')
           : targets[name];
       if (!destination) throw new Error(effect.name + ': unknown output ' + name);
-      emitRender(pass, bindings, destination, flipY);
+      emitRender(pass, bindings, destination, flipY, uniforms?.[pass.shaderPass.name]);
       written.add(destination.view);
       if (name === 'previous') previous = destination;
     }
@@ -383,7 +444,8 @@ function buildEffectNodes(
     pass: PlannedFullscreenPass,
     bindings: Record<string, Target>,
     destination: Target,
-    flip: boolean
+    flip: boolean,
+    uniforms?: Readonly<Record<string, unknown>>
   ) {
     const inputs = new GPURenderInputs({
       textures: Object.fromEntries(
@@ -419,7 +481,7 @@ function buildEffectNodes(
               commandEncoder: encoding.commandEncoder,
               bindings: {...textures, ...resolvedSamplers},
               textureScale: calculateTextureScale(sourceView, destination.view),
-              uniforms: {...pass.uniforms, ...props.uniforms?.[pass.shaderPass.name]}
+              uniforms: {...pass.uniforms, ...props.uniforms?.[pass.shaderPass.name], ...uniforms}
             });
           },
           encode: ({renderPass}) => executable.draw(renderPass),

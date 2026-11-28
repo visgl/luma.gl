@@ -384,3 +384,15 @@ output textures and register it with `graph.addRenderOperation`. This path
 uses the same fullscreen plan and fragment fallback as the WebGPU graph.
 Choose effects with GLSL implementations. The graph owns any transient
 scratch textures and borrows the input, output, and optional shader bindings.
+
+Use `appendEffects(graph, props)` to connect a stack and pass its logical
+color result to the next operation. An entry can attach its own `bindings`
+and `uniforms`, so two occurrences of the same definition can sample different
+graph textures or use different values. Supply a named depth or normal output
+from a scene render operation just as you would supply a named imported
+texture. Select the final color as a graph output and bind a caller-owned
+destination through `prepare({outputTargets})` when recording the frame.
+
+The portable operation also accepts per-occurrence overrides. Its bindings
+refer to caller-owned textures, while named graph operations refer to graph
+texture names.

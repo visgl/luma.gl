@@ -255,10 +255,12 @@ export * from './temporal-upscale/index';
 
 export {
   GPUEffectOperation,
+  appendEffects,
   createEffectRenderOperation,
   effectOperationLowering
 } from './graph/gpu-effect-operation';
 export type {
   EffectRenderOperationProps,
+  GPUEffectEntries,
   GPUEffectOperationProps
 } from './graph/gpu-effect-operation';
