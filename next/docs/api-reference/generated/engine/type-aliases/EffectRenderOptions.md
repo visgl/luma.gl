@@ -2,7 +2,7 @@
 
 > **EffectRenderOptions** = [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md) & `object`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L177)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:183](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L183)
 
 Inputs and destination for a single effects frame.
 

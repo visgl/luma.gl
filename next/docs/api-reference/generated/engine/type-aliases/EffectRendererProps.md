@@ -2,7 +2,7 @@
 
 > **EffectRendererProps**<`Options`> = `Omit`<[`ShaderPassRendererProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererProps.md), `"shaderPasses"`> & `object`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L153)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L159)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 
