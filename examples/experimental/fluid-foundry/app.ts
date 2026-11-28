@@ -11,7 +11,6 @@ import {
   Texture
 } from '@luma.gl/core';
 import {
-  configureEffect,
   AnimationLoopTemplate,
   Computation,
   Model,
@@ -204,7 +203,7 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.postprocessingRenderer = new EffectRenderer(device, {
       effects: [
-        configureEffect(hdrBloom, {colorFormat: 'rgba16float', resolutionScale: 0.68}),
+        {effect: hdrBloom, options: {colorFormat: 'rgba16float', resolutionScale: 0.68}},
         toneMappingEffect
       ],
       colorFormat: 'rgba16float'

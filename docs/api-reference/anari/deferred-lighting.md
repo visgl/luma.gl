@@ -41,8 +41,8 @@ limit.
 
 ```ts
 import {Buffer} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createDeferredLightingCompositeShaderPass, GBuffer, makeDeferredPointLightBufferData, MAX_DEFERRED_POINT_LIGHTS} from '@luma.gl/anari';
+import {EffectRenderer} from '@luma.gl/engine';
+import {deferredLightingEffect, GBuffer, makeDeferredPointLightBufferData, MAX_DEFERRED_POINT_LIGHTS} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {
   width,
@@ -59,11 +59,12 @@ const pointLights = device.createBuffer({
   usage: Buffer.STORAGE | Buffer.COPY_DST
 });
 
-const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [createDeferredLightingCompositeShaderPass()]
+const renderer = new EffectRenderer(device, {
+  effects: [deferredLightingEffect]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: {
     depthTexture: gBuffer.depthTexture,
@@ -104,7 +105,7 @@ Its uniforms are `inverseProjectionMatrix`, `ambientColor`,
 `directionalLightDirectionView`, `directionalLightColor`, `directionalLightIntensity`, and
 `pointLightCount`.
 
-### `createDeferredLightingCompositeShaderPass(): CompositeShaderPass`
+### `deferredLightingEffect: CompositeShaderPass`
 
 Returns a one-step pipeline that reads the current `previous` color and writes the lighting result
 back into `previous`. Put it before SSAO, reflections, temporal accumulation, bloom, and tone

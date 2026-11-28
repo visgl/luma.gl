@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
@@ -105,43 +104,6 @@ export const ssaoEvaluate = {
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-/** Screen-space ambient occlusion with configurable normal input and target size. */
-export const ssaoEffect = {
-  name: 'ssaoCompositeShaderPass',
-  configure: configureSSAO
-} as const satisfies ConfigurableEffectDefinition<
-  SSAOCompositeShaderPassOptions,
-  'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
->;
-
-/** @deprecated Use `ssaoEffect` with `EffectRenderer`. */
-export function createSSAOCompositeShaderPass(options: SSAOCompositeShaderPassOptions = {}) {
-  return resolveEffect(ssaoEffect.configure(options));
-}
-
-function configureSSAO(
-  options: SSAOCompositeShaderPassOptions = {}
-): EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
-  const scale = options.resolutionScale ?? 1;
-  const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
-  const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
-  if (!useNormalTexture) {
-    evaluateInputs['normalTexture'] = 'previous';
-  }
-  return {
-    ...ssao,
-    resources: {
-      ssaoRaw: {...ssao.resources.ssaoRaw, scale: [scale, scale]},
-      ssaoScratch: {...ssao.resources.ssaoScratch, scale: [scale, scale]},
-      ssaoBlurred: {...ssao.resources.ssaoBlurred, scale: [scale, scale]}
-    },
-    passes: [
-      {...ssao.passes[0], inputs: evaluateInputs, uniforms: {useNormalTexture}},
-      ...ssao.passes.slice(1)
-    ]
-  };
-}
-
 export const ssaoComposite = {
   name: 'ssaoComposite',
   source: /* wgsl */ `\
@@ -205,3 +167,32 @@ export const ssao = {
     }
   ]
 } as const satisfies EffectDefinition<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'>;
+
+const ssaoOptionDefaults: Required<SSAOCompositeShaderPassOptions> = {
+  normalSource: 'reconstruct-from-depth',
+  resolutionScale: 1
+};
+
+/** Screen-space ambient occlusion with configurable normal input and target size. */
+export const ssaoEffect = {
+  ...ssao,
+  optionDefaults: ssaoOptionDefaults,
+  scaleResources: {
+    option: 'resolutionScale',
+    targets: ['ssaoRaw', 'ssaoScratch', 'ssaoBlurred']
+  },
+  passVariants: {
+    option: 'normalSource',
+    values: {
+      'normal-texture': [
+        {...ssao.passes[0], inputs: {sourceTexture: 'previous'}, uniforms: {useNormalTexture: 1}},
+        ssao.passes[1],
+        ssao.passes[2],
+        ssao.passes[3]
+      ]
+    }
+  }
+} as const satisfies ConfigurableEffectDefinition<
+  SSAOCompositeShaderPassOptions,
+  'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
+>;

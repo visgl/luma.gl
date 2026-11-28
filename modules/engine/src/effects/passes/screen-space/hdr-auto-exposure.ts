@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 /** Construction options for GPU-resident HDR luminance metering and adaptation. */
 export type HDRAutoExposureCompositeShaderPassOptions = {
@@ -370,18 +369,4 @@ function configureHDRAutoExposure(
       }
     ]
   };
-}
-
-/** @deprecated Use `hdrAutoExposure` with `EffectRenderer`. */
-export function createHDRAutoExposureCompositeShaderPass(
-  options: HDRAutoExposureCompositeShaderPassOptions = {}
-): CompositeShaderPass<
-  | 'hdrLuminanceQuarter'
-  | 'hdrLuminanceSixteenth'
-  | 'hdrLuminanceSixtyFourth'
-  | 'hdrLuminanceTwoFiftySixth'
-  | 'hdrLuminanceThousandth'
-  | 'hdrExposureHistory'
-> {
-  return resolveEffect(hdrAutoExposure.configure(options));
 }

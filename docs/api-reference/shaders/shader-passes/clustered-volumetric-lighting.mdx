@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # Clustered Volumetric Lighting
 
 Integrate participating-media illumination from the same directional and clustered point lights
-used by scene shading. `createClusteredVolumetricLightingCompositeShaderPass` combines height fog,
+used by scene shading. `clusteredVolumetricLighting` combines height fog,
 anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising,
 and Beer-Lambert extinction.
 
@@ -13,7 +13,7 @@ and Beer-Lambert extinction.
 
 | Property | Value |
 | --- | --- |
-| Export | `createClusteredVolumetricLightingCompositeShaderPass` |
+| Export | `clusteredVolumetricLighting` |
 | Backend | WebGPU |
 | Render passes | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
 | Required scene inputs | Depth, velocity, camera transforms, directional lighting, and point-light storage |
@@ -23,8 +23,8 @@ and Beer-Lambert extinction.
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createClusteredVolumetricLightingCompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {clusteredVolumetricLighting} from '@luma.gl/engine/effects';
 
 clusteredLightGrid.encode(device.commandEncoder, {
   pointLights,
@@ -34,14 +34,15 @@ clusteredLightGrid.encode(device.commandEncoder, {
   farPlane
 });
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createClusteredVolumetricLightingCompositeShaderPass({resolutionScale: 0.5})
+  effects: [
+    {effect: clusteredVolumetricLighting, options: {resolutionScale: 0.5}}
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: {
     ...gBuffer.getShaderPassBindings(),

@@ -3,7 +3,7 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 # Screen-Space Ambient Occlusion
 
 Darken tight creases and nearby surface contacts using the current scene depth buffer.
-`createSSAOCompositeShaderPass` evaluates screen-space ambient visibility, smooths it with a
+`ssaoEffect` evaluates screen-space ambient visibility, smooths it with a
 depth-aware bilateral blur, and composites the result into scene color.
 
 <AdvancedEffectsExample embedded showStats={false} />
@@ -12,7 +12,7 @@ depth-aware bilateral blur, and composites the result into scene color.
 
 | Property | Value |
 | --- | --- |
-| Export | `createSSAOCompositeShaderPass` |
+| Export | `ssaoEffect` |
 | Backend | WebGPU |
 | Render passes | Four: evaluate, horizontal blur, vertical blur, and composite |
 | Required binding | `depthTexture` |
@@ -22,19 +22,20 @@ depth-aware bilateral blur, and composites the result into scene color.
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createSSAOCompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {ssaoEffect} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [
-    createSSAOCompositeShaderPass({
+const renderer = new EffectRenderer(device, {
+  effects: [
+    {effect: ssaoEffect, options: {
       normalSource: 'normal-texture',
       resolutionScale: 0.5
-    })
+    }}
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: gBuffer.getShaderPassBindings(),
   uniforms: {

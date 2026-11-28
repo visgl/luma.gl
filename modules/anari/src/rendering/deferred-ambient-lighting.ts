@@ -5,7 +5,7 @@
 import type {EffectDefinition} from '@luma.gl/engine';
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray3} from '@math.gl/core/types';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 type DeferredAmbientLightingUniforms = {
   ambientColor: Readonly<NumberArray3>;
@@ -94,11 +94,3 @@ export const deferredAmbientLightingEffect = {
     }
   ]
 } as const satisfies EffectDefinition<never>;
-
-/** @deprecated Use `deferredAmbientLightingEffect` with `EffectRenderer`. */
-export function createDeferredAmbientLightingCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: deferredAmbientLightingEffect.name,
-    steps: deferredAmbientLightingEffect.passes.map(pass => ({...pass}))
-  };
-}

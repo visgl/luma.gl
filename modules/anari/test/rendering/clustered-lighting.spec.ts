@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect} from '../../../engine/src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   ClusteredLightGrid,
-  createClusteredDeferredLightingCompositeShaderPass,
+  clusteredDeferredLightingEffect,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
@@ -16,7 +17,7 @@ import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core/matrix';
 
 it('clustered lighting exposes one composable fullscreen resolve', () => {
-  const pipeline = createClusteredDeferredLightingCompositeShaderPass();
+  const pipeline = resolveEffect(clusteredDeferredLightingEffect);
   expect(pipeline.steps.length, 'the resolve is one fullscreen pass').toBe(1);
   expect(
     pipeline.steps[0].shaderPass.name,
@@ -195,7 +196,7 @@ it('clustered light grid bins lights and resolves materials on WebGPU', async ()
     depthStencilAttachment: depthTexture
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
+    shaderPasses: [resolveEffect(clusteredDeferredLightingEffect)],
     colorFormat: 'rgba16float',
     flipY: false
   });

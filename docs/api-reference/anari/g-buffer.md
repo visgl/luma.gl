@@ -37,8 +37,8 @@ requiring motion vectors, such as TAA or motion blur, must retain the default co
 ## Usage
 
 ```ts
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createSSRCompositeShaderPass, createTAACompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {ssr, taa} from '@luma.gl/engine/effects';
 import {GBuffer} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {
@@ -61,11 +61,12 @@ const scenePass = device.beginRenderPass({
 sceneModel.draw(scenePass);
 scenePass.end();
 
-const effects = new ShaderPassRenderer(device, {
-  shaderPasses: [createSSRCompositeShaderPass(), createTAACompositeShaderPass()]
+const effects = new EffectRenderer(device, {
+  effects: [{effect: ssr}, taa]
 });
 
-effects.renderToScreen({
+effects.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: {
     ...gBuffer.getShaderPassBindings(),

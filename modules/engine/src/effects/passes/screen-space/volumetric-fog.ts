@@ -3,11 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
 import {heightFog} from './height-fog';
 
@@ -109,13 +108,4 @@ function configureVolumetricFog(): EffectDefinition<'fogHistory'> {
       }
     ]
   };
-}
-
-/** @deprecated Use `volumetricFog` with `EffectRenderer`. */
-export function createVolumetricFogCompositeShaderPass(
-  options: VolumetricFogCompositeShaderPassOptions = {}
-): CompositeShaderPass<'fogHistory'> {
-  return options.mode === 'height'
-    ? {name: heightFog.name, steps: heightFog.passes}
-    : resolveEffect(configureVolumetricFog());
 }

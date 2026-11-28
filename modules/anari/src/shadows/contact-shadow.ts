@@ -10,4 +10,3 @@ export {
   contactShadowBilateralBlur,
   contactShadowComposite
 } from '@luma.gl/shaders';
-export {createContactShadowCompositeShaderPass} from '@luma.gl/engine/lighting';

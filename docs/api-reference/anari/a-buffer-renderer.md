@@ -99,7 +99,7 @@ export type ABufferRenderOptions = {
 storage buffers. `getABufferSlicePlan(...)` exposes the renderer's bounded-memory allocation
 calculation for diagnostics and tests.
 
-`createABufferResolveCompositeShaderPass({maxFragmentsPerPixel})` exposes the same one-slice
+`aBufferResolveEffect({maxFragmentsPerPixel})` exposes the same one-slice
 fullscreen resolve used internally by `ABufferRenderer`. The renderer invokes it once per captured
 slice so storage buffers can be reused without allocating full-frame fragment storage.
 
@@ -115,7 +115,7 @@ For each horizontal slice, the renderer:
 1. Clears linked-list heads and allocation counters.
 2. Captures visible translucent fragments after sampling opaque depth.
 3. Reads at most `maxFragmentsPerPixel` records per pixel.
-4. Runs `createABufferResolveCompositeShaderPass()` to sort records back-to-front and composite
+4. Runs `aBufferResolveEffect` to sort records back-to-front and composite
    premultiplied color over the previous slice result.
 
 If storage capacity is exhausted, additional fragments are dropped. If a pixel contains more than

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+import {type EffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shaders';
 
@@ -60,8 +60,3 @@ export const motionBlur = {
   resources: {},
   passes: [{kind: 'fullscreen', shaderPass: motionBlurPass, output: 'previous'}]
 } as const satisfies EffectDefinition<never>;
-
-/** @deprecated Use `motionBlur` with `EffectRenderer`. */
-export function createMotionBlurCompositeShaderPass() {
-  return resolveEffect<never>(motionBlur);
-}

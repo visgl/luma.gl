@@ -65,9 +65,7 @@ export type {
   BloomCompositeShaderPassOptions
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export {
-  bloomCompositeShaderPass,
   bloomLow,
-  createBloomCompositeShaderPass,
   hdrBloom,
   multiscaleBloomEffect
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
@@ -145,15 +143,13 @@ export {
   clusteredVolumetricComposite,
   clusteredVolumetricDepthHistoryCopy,
   clusteredVolumetricTemporal,
-  clusteredVolumetricTrace,
-  createClusteredVolumetricLightingCompositeShaderPass
+  clusteredVolumetricTrace
 } from './passes/screen-space/clustered-volumetric-lighting';
 export type {CameraReprojectionTAAUniforms} from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export {
   cameraReprojectionTaaDepthHistoryCopy,
   cameraReprojectionTaaResolve,
-  cameraReprojectionTaa,
-  createCameraReprojectionTAACompositeShaderPass
+  cameraReprojectionTaa
 } from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
@@ -163,16 +159,14 @@ export {
 } from './passes/screen-space/depth-aware-blur';
 export type {HDRAutoExposureCompositeShaderPassOptions} from './passes/screen-space/hdr-auto-exposure';
 export {
-  createHDRAutoExposureCompositeShaderPass,
   hdrAutoExposureAdapt,
   hdrAutoExposureApply,
   hdrLuminanceExtract,
   hdrLuminanceReduce
 } from './passes/screen-space/hdr-auto-exposure';
-export {createMotionBlurCompositeShaderPass, motionBlur} from './passes/screen-space/motion-blur';
+export {motionBlur} from './passes/screen-space/motion-blur';
 export type {GTAOCompositeShaderPassOptions} from './passes/screen-space/gtao';
 export {
-  createGTAOCompositeShaderPass,
   gtaoAmbientComposite,
   gtaoComposite,
   gtaoDepthHistoryCopy,
@@ -180,10 +174,9 @@ export {
   gtaoTemporal
 } from './passes/screen-space/gtao';
 export type {OutlineCompositeShaderPassOptions} from './passes/screen-space/outlines';
-export {createOutlineCompositeShaderPass} from './passes/screen-space/outlines';
+
 export type {SSGICompositeShaderPassOptions} from './passes/screen-space/screen-space-global-illumination';
 export {
-  createSSGICompositeShaderPass,
   ssgiComposite,
   ssgiDepthHistoryCopy,
   ssgiSpatial,
@@ -195,7 +188,6 @@ export type {
   SSRQuality
 } from './passes/screen-space/screen-space-reflections';
 export {
-  createSSRCompositeShaderPass,
   SSR_QUALITY_PRESETS,
   ssrComposite,
   ssrDepthHistoryCopy,
@@ -204,9 +196,8 @@ export {
   ssrTrace
 } from './passes/screen-space/screen-space-reflections';
 export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
-export {createSSAOCompositeShaderPass, ssao, ssaoEffect} from './passes/screen-space/ssao';
-export {createTAACompositeShaderPass, taa} from './passes/screen-space/temporal-antialiasing';
-export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
+export {ssao, ssaoEffect} from './passes/screen-space/ssao';
+export {taa} from './passes/screen-space/temporal-antialiasing';
 
 export {
   ssrCameraTemporal,

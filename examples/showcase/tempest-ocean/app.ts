@@ -4,7 +4,6 @@
 
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
-  configureEffect,
   AnimationLoopTemplate,
   Model,
   OrbitControls,
@@ -183,7 +182,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.postprocessingRenderer = new EffectRenderer(device, {
       effects: [
-        configureEffect(hdrBloom, {colorFormat: 'rgba16float', resolutionScale: 0.62}),
+        {effect: hdrBloom, options: {colorFormat: 'rgba16float', resolutionScale: 0.62}},
         toneMappingEffect
       ],
       colorFormat: 'rgba16float'

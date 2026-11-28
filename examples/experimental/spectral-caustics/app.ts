@@ -4,7 +4,6 @@
 
 import {type Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
-  configureEffect,
   AnimationLoopTemplate,
   CubeGeometry,
   IcoSphereGeometry,
@@ -276,7 +275,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.postprocessingRenderer = new EffectRenderer(device, {
       effects: [
-        configureEffect(hdrBloom, {colorFormat: 'rgba16float', resolutionScale: 0.72}),
+        {effect: hdrBloom, options: {colorFormat: 'rgba16float', resolutionScale: 0.72}},
         toneMappingEffect
       ],
       colorFormat: 'rgba16float'

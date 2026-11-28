@@ -3,7 +3,7 @@ import {ANARIPlaygroundExample} from '@site/src/examples';
 # Camera-Reprojection Antialiasing
 
 Reconstruct previous-frame image coordinates from scene depth and camera transforms when a
-per-pixel velocity buffer is unavailable. `createCameraReprojectionTAACompositeShaderPass` powers
+per-pixel velocity buffer is unavailable. `cameraReprojectionTaa` powers
 the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
 
 <ANARIPlaygroundExample embedded />
@@ -12,7 +12,7 @@ the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime
 
 | Property | Value |
 | --- | --- |
-| Export | `createCameraReprojectionTAACompositeShaderPass` |
+| Export | `cameraReprojectionTaa` |
 | Backend | WebGPU |
 | Render passes | Three: temporal resolve, resolved-color copy, and depth-history copy |
 | Required binding | `depthTexture` |
@@ -22,15 +22,16 @@ the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createCameraReprojectionTAACompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {cameraReprojectionTaa} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [createCameraReprojectionTAACompositeShaderPass()]
+  effects: [cameraReprojectionTaa]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: sceneColorTexture,
   bindings: {depthTexture: sceneDepthTexture},
   uniforms: {

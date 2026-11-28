@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
-import type {CompositeShaderPass} from '@luma.gl/shaders';
-import {ShaderPassRenderer, type ShaderPassRendererProps} from './shader-pass-renderer';
+import type {CommandEncoder, Device, Framebuffer, Texture} from '@luma.gl/core';
+import type {CompositeShaderPass, ShaderModule} from '@luma.gl/shaders';
+import {
+  ShaderPassRenderer,
+  type ShaderPassRendererProps,
+  type ShaderPassRendererRenderOptions
+} from './shader-pass-renderer';
 
 /**
  * A fullscreen draw in an effect. The shader supplies the filtering or sampling
@@ -12,7 +16,11 @@ import {ShaderPassRenderer, type ShaderPassRendererProps} from './shader-pass-re
  * destination. Uniform values here provide defaults for this draw.
  */
 export type EffectPass<TargetName extends string = string> =
-  CompositeShaderPass<TargetName>['steps'][number] & {kind: 'fullscreen'};
+  | (CompositeShaderPass<TargetName>['steps'][number] & {kind: 'fullscreen'})
+  | (Omit<CompositeShaderPass<TargetName>['steps'][number], 'shaderPass'> & {
+      kind: 'filter' | 'sample';
+      module: ShaderModule;
+    });
 
 /**
  * A reusable, device-independent description of a fullscreen effect.
@@ -37,7 +45,7 @@ export type EffectDefinition<TargetName extends string = string> = {
    * declare how to initialize it. Use an empty object for an effect that only
    * writes to the shared color chain.
    */
-  resources: NonNullable<CompositeShaderPass<TargetName>['renderTargets']>;
+  resources?: NonNullable<CompositeShaderPass<TargetName>['renderTargets']>;
 
   /**
    * Optional backend alternatives for a stage before the shared passes. Both
@@ -65,25 +73,58 @@ export type EffectDefinition<TargetName extends string = string> = {
   passes: EffectPass<TargetName>[];
 };
 
+type EffectOptionKey<Options> = Options extends unknown ? Extract<keyof Options, string> : never;
+
 /**
  * A reusable effect whose resource descriptors or pass sequence depend on options.
  * Configure it when constructing the stack or when topology changes. Per-frame
  * uniforms and external textures are supplied to the renderer separately.
  */
-export type ConfigurableEffectDefinition<Options, TargetName extends string = string> = {
-  /** Name of the effect being configured. */
-  name: string;
+export type ConfigurableEffectDefinition<Options, TargetName extends string = string> =
+  | {
+      /** Name of the effect being configured. */
+      name: string;
 
-  /** Returns resources and passes for one configuration. */
-  configure(options?: Options): EffectDefinition<TargetName>;
-};
+      /** Returns resources and passes for one configuration. */
+      configure(options?: Options): EffectDefinition<TargetName>;
+    }
+  | (EffectDefinition<TargetName> & {
+      optionDefaults: Required<Options>;
+      /** A numeric option used for both dimensions of the listed render targets. */
+      scaleResources?: {option: EffectOptionKey<Options>; targets: readonly TargetName[]};
+      /** Choose a pass sequence using the value of a declared option. */
+      passVariants?: {
+        option: EffectOptionKey<Options>;
+        values: Record<string, readonly EffectPass<TargetName>[]>;
+      };
+    });
 
-/** Resolves a configurable effect for use in an EffectRenderer chain. */
-export function configureEffect<Options, TargetName extends string>(
+/** @internal Resolves construction options into the executable effect. */
+export function resolveEffectOptions<Options, TargetName extends string>(
   effect: ConfigurableEffectDefinition<Options, TargetName>,
   options?: NoInfer<Options>
 ): EffectDefinition<TargetName> {
-  return effect.configure(options);
+  if ('configure' in effect) return effect.configure(options);
+  const {scaleResources, passVariants, optionDefaults} = effect;
+  const overrides = options as Partial<Record<EffectOptionKey<Options>, unknown>> | undefined;
+  const defaults = optionDefaults as Partial<Record<EffectOptionKey<Options>, unknown>>;
+  const resources = {...effect.resources} as NonNullable<EffectDefinition<TargetName>['resources']>;
+  if (scaleResources) {
+    const scale = overrides?.[scaleResources.option] ?? defaults[scaleResources.option];
+    if (typeof scale !== 'number' || !Number.isFinite(scale) || scale <= 0) {
+      throw new Error(effect.name + ': resource scale must be a finite positive number');
+    }
+    for (const name of scaleResources.targets) {
+      resources[name] = {...resources[name], scale: [scale, scale]};
+    }
+  }
+  const variant =
+    passVariants && String(overrides?.[passVariants.option] ?? defaults[passVariants.option]);
+  const passes =
+    variant && passVariants && Object.hasOwn(passVariants.values, variant)
+      ? [...passVariants.values[variant]]
+      : effect.passes;
+  return {...effect, resources, passes};
 }
 
 /** @internal Lowers an effect definition to the fullscreen renderer's execution format. */
@@ -93,9 +134,20 @@ export function resolveEffect<TargetName extends string>(
   return {
     name: effect.name,
     renderTargets: effect.resources,
-    initialPasses: effect.initialPasses,
-    steps: effect.passes
+    initialPasses: effect.initialPasses && {
+      ...effect.initialPasses,
+      fragment: effect.initialPasses.fragment.map(lowerEffectPass)
+    },
+    steps: effect.passes.map(lowerEffectPass)
   };
+}
+
+function lowerEffectPass<TargetName extends string>(
+  pass: EffectPass<TargetName>
+): CompositeShaderPass<TargetName>['steps'][number] {
+  if (pass.kind === 'fullscreen') return pass;
+  const {kind, module, ...routing} = pass;
+  return {...routing, shaderPass: {...module, passes: [{action: kind}]}};
 }
 
 export type EffectRendererProps<Options extends readonly unknown[] = readonly unknown[]> = Omit<
@@ -112,9 +164,21 @@ export type EffectRendererProps<Options extends readonly unknown[] = readonly un
       | EffectDefinition
       | {
           effect: ConfigurableEffectDefinition<Options[Index]>;
-          configuration?: NoInfer<Options[Index]>;
+          options?: NoInfer<Options[Index]>;
+        }
+      | {
+          effect: EffectDefinition & {configure?: never; optionDefaults?: never};
+          options?: never;
         };
   };
+};
+
+/** Inputs and destination for a single effects frame. */
+export type EffectRenderOptions = ShaderPassRendererRenderOptions & {
+  /** Omit to return the texture, pass null to present, or supply a borrowed framebuffer. */
+  target?: Framebuffer | null;
+  /** Defaults to the device encoder. The renderer records work without submitting it. */
+  commandEncoder?: CommandEncoder;
 };
 
 /**
@@ -131,11 +195,42 @@ export class EffectRenderer<
   constructor(device: Device, {effects, ...props}: EffectRendererProps<Options>) {
     super(device, {
       ...props,
-      shaderPasses: effects.map(entry =>
-        resolveEffect(
-          'effect' in entry ? configureEffect(entry.effect, entry.configuration) : entry
-        )
-      )
+      shaderPasses: effects.map(entry => {
+        if (!('effect' in entry)) return resolveEffect(entry);
+        const {effect} = entry;
+        if (('configure' in effect && effect.configure) || 'optionDefaults' in effect) {
+          return resolveEffect(
+            resolveEffectOptions(
+              effect as ConfigurableEffectDefinition<Options[number]>,
+              entry.options
+            )
+          );
+        }
+        return resolveEffect(effect);
+      })
     });
+  }
+
+  /** Records a frame and returns a borrowed texture, or whether presentation was recorded. */
+  render(options: EffectRenderOptions & {target?: undefined}): Texture | null;
+  render(options: EffectRenderOptions & {target: Framebuffer | null}): boolean;
+  render(options: EffectRenderOptions): Texture | null | boolean;
+  render({
+    target,
+    commandEncoder = this.device.commandEncoder,
+    ...frame
+  }: EffectRenderOptions): Texture | null | boolean {
+    if (target && target.device !== this.device) {
+      throw new Error('EffectRenderer target must belong to the renderer device');
+    }
+    const output = this.encodeToTexture(commandEncoder, frame);
+    if (target === undefined) {
+      return output;
+    }
+    if (!output) {
+      return false;
+    }
+    this.drawOutput(commandEncoder, output, target);
+    return true;
   }
 }

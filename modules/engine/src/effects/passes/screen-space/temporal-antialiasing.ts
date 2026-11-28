@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+import {type EffectDefinition} from '../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
 
@@ -127,8 +127,3 @@ export const taa = {
     }
   ]
 } as const satisfies EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'>;
-
-/** @deprecated Use `taa` with `EffectRenderer`. */
-export function createTAACompositeShaderPass() {
-  return resolveEffect(taa);
-}

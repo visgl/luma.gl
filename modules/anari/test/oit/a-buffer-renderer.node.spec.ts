@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect} from '../../../engine/src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {configureEffect, Model, ShaderInputs} from '@luma.gl/engine';
+import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
   aBuffer,
   aBufferPlugin,
   aBufferResolveEffect,
-  createABufferResolveCompositeShaderPass,
   getABufferSlicePlan,
   getABufferSupport
 } from '@luma.gl/anari';
@@ -44,11 +44,12 @@ it('aBuffer plugin exposes the WGSL module only', () => {
 });
 
 it('A-buffer resolves with the same shader through either definition', () => {
-  const pipeline = createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 8});
-  const effect = configureEffect(aBufferResolveEffect, {maxFragmentsPerPixel: 8});
+  const pipeline = resolveEffect(aBufferResolveEffect.configure({maxFragmentsPerPixel: 8}));
+  const effect = aBufferResolveEffect.configure({maxFragmentsPerPixel: 8});
   expect(effect.passes).toEqual(pipeline.steps);
-  expect(configureEffect(aBufferResolveEffect).passes[0].shaderPass.source).toEqual(
-    createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 12}).steps[0].shaderPass.source
+  expect(aBufferResolveEffect.configure().passes[0].shaderPass.source).toEqual(
+    resolveEffect(aBufferResolveEffect.configure({maxFragmentsPerPixel: 12})).steps[0].shaderPass
+      .source
   );
   expect(pipeline.steps.length, 'resolve pipeline has one fullscreen step').toBe(1);
   expect(pipeline.steps[0].shaderPass.name, 'pipeline uses the resolve pass').toBe(
@@ -66,7 +67,7 @@ it('A-buffer resolves with the same shader through either definition', () => {
     'resolve restores HDR blue and alpha channels'
   ).toMatch(/unpack2x16float\(capturedFragment\.colorBlueAlpha\)/);
   expect(
-    () => createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 0}),
+    () => resolveEffect(aBufferResolveEffect.configure({maxFragmentsPerPixel: 0})),
     'invalid fragment limits are rejected'
   ).toThrow(/at least 1/);
   void 0;

@@ -83,8 +83,7 @@ export const persistence = {
 
 export const sepiaEffect = {
   name: sepia.name,
-  resources: {},
-  passes: [{kind: 'fullscreen', shaderPass: sepia, output: 'previous'}]
+  passes: [{kind: 'filter', module: sepia}]
 } as const satisfies EffectDefinition<never>;
 
 export const vibranceEffect = {

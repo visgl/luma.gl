@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect} from '../../../engine/src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
-import {
-  ABufferRenderer,
-  aBuffer,
-  aBufferPlugin,
-  createABufferResolveCompositeShaderPass
-} from '@luma.gl/anari';
+import {ABufferRenderer, aBuffer, aBufferPlugin, aBufferResolveEffect} from '@luma.gl/anari';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const SHADER_STAGE_FRAGMENT = 0x2;
@@ -78,7 +74,7 @@ it('A-buffer resolve CompositeShaderPass compiles on WebGPU', async () => {
   }
 
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 12})]
+    shaderPasses: [resolveEffect(aBufferResolveEffect.configure({maxFragmentsPerPixel: 12}))]
   });
   expect(
     renderer.passRenderers[0].passDefinition.name,

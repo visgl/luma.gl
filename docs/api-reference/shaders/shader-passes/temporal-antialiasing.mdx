@@ -3,7 +3,7 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 # Temporal Antialiasing
 
 Accumulate jittered samples from successive frames while following scene motion and rejecting
-invalid history. `createTAACompositeShaderPass` combines velocity reprojection, depth validation,
+invalid history. `taa` combines velocity reprojection, depth validation,
 and neighborhood clamping to reduce spatial aliasing and temporal shimmer.
 
 <AdvancedEffectsExample embedded showStats={false} />
@@ -12,7 +12,7 @@ and neighborhood clamping to reduce spatial aliasing and temporal shimmer.
 
 | Property | Value |
 | --- | --- |
-| Export | `createTAACompositeShaderPass` |
+| Export | `taa` |
 | Backend | WebGPU |
 | Render passes | Three: temporal resolve, resolved-color copy, and depth-history copy |
 | Required bindings | `depthTexture` and `velocityTexture` |
@@ -21,15 +21,16 @@ and neighborhood clamping to reduce spatial aliasing and temporal shimmer.
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createTAACompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {taa, toneMapping} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [createTAACompositeShaderPass(), toneMapping]
+  effects: [taa, toneMappingEffect]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: gBuffer.getShaderPassBindings(),
   uniforms: {

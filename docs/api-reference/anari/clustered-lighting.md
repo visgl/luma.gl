@@ -45,8 +45,8 @@ occupancy debug view useful for tuning dimensions, light ranges, and retained ca
 
 ```ts
 import {Buffer} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {ClusteredLightGrid, createClusteredDeferredLightingCompositeShaderPass, makeDeferredPointLightBufferData, MAX_CLUSTERED_POINT_LIGHTS} from '@luma.gl/anari';
+import {EffectRenderer} from '@luma.gl/engine';
+import {ClusteredLightGrid, clusteredDeferredLightingEffect, makeDeferredPointLightBufferData, MAX_CLUSTERED_POINT_LIGHTS} from '@luma.gl/anari';
 
 const pointLights = device.createBuffer({
   data: makeDeferredPointLightBufferData([], MAX_CLUSTERED_POINT_LIGHTS),
@@ -66,12 +66,13 @@ clusteredLightGrid.encode(device.commandEncoder, {
   farPlane
 });
 
-const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
+const renderer = new EffectRenderer(device, {
+  effects: [clusteredDeferredLightingEffect],
   colorFormat: 'rgba16float'
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: {
     depthTexture: gBuffer.depthTexture,
@@ -121,7 +122,7 @@ Returns `clusterLightCounts` and `clusterLightIndices` for
 Returns the dimensions, retained capacity, active point-light count from the latest `encode()`,
 and logarithmic depth-range uniforms needed by the fullscreen resolve.
 
-### `createClusteredDeferredLightingCompositeShaderPass()`
+### `clusteredDeferredLightingEffect`
 
 Returns a one-step `CompositeShaderPass` that resolves the current cluster's point-light list into
 the ordered `previous` color chain.

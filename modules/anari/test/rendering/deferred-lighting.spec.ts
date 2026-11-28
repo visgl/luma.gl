@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect} from '../../../engine/src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  createDeferredAmbientLightingCompositeShaderPass,
-  createDeferredLightingCompositeShaderPass,
+  deferredAmbientLightingEffect,
+  deferredLightingEffect,
   deferredAmbientLighting,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
@@ -50,7 +51,7 @@ it('deferred lighting packs fixed-size point-light records', () => {
 });
 
 it('deferred lighting exposes one composable fullscreen resolve', () => {
-  const pipeline = createDeferredLightingCompositeShaderPass();
+  const pipeline = resolveEffect(deferredLightingEffect);
   expect(pipeline.steps.length, 'the resolve is one fullscreen pass').toBe(1);
   expect(pipeline.steps[0].shaderPass.name, 'the pipeline exposes the deferred-lighting pass').toBe(
     'deferredLighting'
@@ -61,7 +62,7 @@ it('deferred lighting exposes one composable fullscreen resolve', () => {
 });
 
 it('deferred ambient lighting isolates the material ambient contribution', () => {
-  const pipeline = createDeferredAmbientLightingCompositeShaderPass();
+  const pipeline = resolveEffect(deferredAmbientLightingEffect);
   expect(pipeline.steps.length, 'ambient extraction remains one composable pass').toBe(1);
   expect(
     pipeline.steps[0].shaderPass,
@@ -146,7 +147,7 @@ it('deferred lighting resolves G-buffer material attachments on WebGPU', async (
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createDeferredLightingCompositeShaderPass()],
+    shaderPasses: [resolveEffect(deferredLightingEffect)],
     flipY: false
   });
   renderer.resize([width, height]);

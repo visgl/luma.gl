@@ -175,7 +175,7 @@ export class ABufferRenderer {
       effects: [
         {
           effect: aBufferResolveEffect,
-          configuration: {maxFragmentsPerPixel: this.props.maxFragmentsPerPixel}
+          options: {maxFragmentsPerPixel: this.props.maxFragmentsPerPixel}
         }
       ]
     });

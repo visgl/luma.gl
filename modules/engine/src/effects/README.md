@@ -21,14 +21,14 @@ GTAO additionally supports `composition: 'ambient-only'` with an explicit
 
 Notable exports include:
 
-- `bloom`, `bloomCompositeShaderPass`, and `createBloomCompositeShaderPass`
+- `bloom`, `multiscaleBloomEffect`, and `hdrBloom`
 - `toneMapping`, `ToneMappingProps`, and `ToneMappingUniforms`
 - `dof` and `dofCompositeShaderPass`
-- `createGTAOCompositeShaderPass`, `createSSGICompositeShaderPass`, and
-  `createSSRCompositeShaderPass`
-- `createClusteredVolumetricLightingCompositeShaderPass` for light-driven participating media;
-  `createVolumetricFogCompositeShaderPass` remains the simpler, lower-cost height-fog option.
-- `createHDRAutoExposureCompositeShaderPass` for center-weighted GPU luminance metering and
+- `gtao`, `ssgi`, and
+  `ssr`
+- `clusteredVolumetricLighting` for light-driven participating media;
+  `volumetricFog` remains the simpler, lower-cost height-fog option.
+- `hdrAutoExposure` for center-weighted GPU luminance metering and
   temporally adapted exposure.
 
 The [Visualization City](https://luma.gl/examples/experimental/advanced-effects) example
@@ -38,7 +38,7 @@ deferred lighting, higher-quality ambient visibility, diffuse bounce, specular r
 participating-media scattering. Shared effects such as SSR use the same exported implementation
 in both scenes.
 
-`createBloomCompositeShaderPass` builds an HDR bloom pyramid with quality presets from two to five
+`hdrBloom` builds an HDR bloom pyramid with quality presets from two to five
 levels. `exposure` and photographic `exposureCompensation` adjust the scene-referred threshold as
 `threshold / (exposure * 2 ** exposureCompensation)`. Choose normalized nine-tap tent filtering or
 four-fetch bicubic B-spline reconstruction with `reconstruction`. `scatter`, `softKnee`,
@@ -105,12 +105,12 @@ The existing deck.gl `PostProcessEffect` accepts shader-pass modules rather than
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
 
 ```typescript
-import {configureEffect, EffectRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
 const renderer = new EffectRenderer(device, {
   effects: [
-    configureEffect(hdrBloom, {
+    {effect: hdrBloom, options: {
       quality: 'high',
       threshold: 0.8,
       exposure: 1,
@@ -132,7 +132,7 @@ const renderer = new EffectRenderer(device, {
         chromaticAberration: 0.35,
         dirtIntensity: 0.4
       }
-    }),
+    }},
     toneMappingEffect
   ]
 });

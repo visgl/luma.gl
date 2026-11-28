@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # Screen-Space Global Illumination
 
 Gather colored diffuse light bouncing between surfaces that are visible in the current frame.
-`createSSGICompositeShaderPass` traces a screen-space hemisphere, reprojects indirect-light
+`ssgi` traces a screen-space hemisphere, reprojects indirect-light
 history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
 
 <DeferredRenderingExample embedded showStats={false} />
@@ -12,7 +12,7 @@ history, denoises across compatible surfaces, and adds the stabilized radiance t
 
 | Property | Value |
 | --- | --- |
-| Export | `createSSGICompositeShaderPass` |
+| Export | `ssgi` |
 | Backend | WebGPU |
 | Render passes | Six: hemisphere trace, temporal resolve, depth history, two spatial filters, and composite |
 | Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture` |
@@ -22,18 +22,19 @@ history, denoises across compatible surfaces, and adds the stabilized radiance t
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createGTAOCompositeShaderPass, createSSGICompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {gtao, ssgi} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createGTAOCompositeShaderPass(),
-    createSSGICompositeShaderPass({resolutionScale: 0.5})
+  effects: [
+    {effect: gtao},
+    {effect: ssgi, options: {resolutionScale: 0.5}}
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: litSceneTexture,
   bindings: gBuffer.getShaderPassBindings(),
   uniforms: {

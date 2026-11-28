@@ -4,7 +4,7 @@
 
 import type {EffectDefinition} from '@luma.gl/engine';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 /** External capture textures consumed by the weighted-blended OIT resolve pass. */
 export type WBOITResolveBindings = {
@@ -77,8 +77,3 @@ export const wboitResolveEffect = {
     }
   ]
 } as const satisfies EffectDefinition<never>;
-
-/** @deprecated Use `wboitResolveEffect` with `EffectRenderer`. */
-export function createWBOITResolveCompositeShaderPass(): CompositeShaderPass {
-  return {name: wboitResolveEffect.name, steps: wboitResolveEffect.passes.map(pass => ({...pass}))};
-}
