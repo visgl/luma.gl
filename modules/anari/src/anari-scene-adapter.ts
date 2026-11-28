@@ -298,7 +298,10 @@ export class ANARISceneAdapter {
   private readonly materials = new Map<ANARIMaterial, CachedMaterial>();
   private readonly worlds = new Map<ANARIWorld, CachedWorldScene>();
 
-  makeRenderOptions(frame: ANARIFrame): SceneRenderOptions | null {
+  makeRenderOptions(
+    frame: ANARIFrame,
+    size?: readonly [number, number]
+  ): SceneRenderOptions | null {
     const world = frame.getParameter('world');
     const camera = frame.getParameter('camera');
     const renderer = frame.getParameter('renderer');
@@ -306,7 +309,7 @@ export class ANARISceneAdapter {
       return null;
     }
 
-    const [width, height] = getFrameSize(frame, frame.device.device);
+    const [width, height] = size ?? getFrameSize(frame, frame.device.device);
     const ambientRadiance = renderer.getParameter('ambientRadiance') ?? 0.12;
     const toneMapMode = renderer.getParameter('toneMapMode');
     const outputColorSpace = renderer.getParameter('outputColorSpace');

@@ -189,6 +189,7 @@ export {
   exportRayTracingImage,
   exportRayTracingRadiance,
   encodeRayTracingRadiancePFM,
+  encodeRayTracingImagePNG,
   iterateRayTracingImageTiles
 } from './engine/ray-tracing-image-export';
 export type {
