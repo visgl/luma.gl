@@ -355,8 +355,8 @@ increase for that handle, and match every `frameTextures` and `externalTextures`
 to the same encoding. The concrete `ExternalTexture` wrapper must also be fresh; incrementing the
 frame ID cannot make an earlier opaque browser binding valid again.
 
-Only render nodes may declare `{externalTexture, usage: 'sampled'}`. Executables resolve the current
-snapshot with `getExternalTexture(handle)`. This intentionally rules out views, copies, storage,
+Only render nodes may declare `{externalTexture, usage: 'sampled'}`. Each render node must declare every external image it samples, even when another node already
+declares the same image. Its executable resolves the current snapshot with `getExternalTexture(handle)`. This intentionally rules out views, copies, storage,
 attachments, transient allocation, and implicit conversion. Use a normal `Texture` import when a
 workflow needs those operations.
 

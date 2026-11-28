@@ -1662,7 +1662,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       return texture;
     };
 
-    const baseContext: GPUCommandGraphEncodeContext<Parameters> = {
+    const sharedContext: GPUCommandGraphEncodeContext<Parameters> = {
       commandEncoder,
       parameters: options.parameters,
       getBuffer,
@@ -1715,6 +1715,24 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             continue;
           }
         }
+        const baseContext: GPUCommandGraphEncodeContext<Parameters> = externalTextureResult.textures
+          .size
+          ? {
+              ...sharedContext,
+              getExternalTexture: handle => {
+                if (
+                  !node.resources?.some(
+                    use => 'externalTexture' in use && use.externalTexture === handle
+                  )
+                ) {
+                  throw new Error(
+                    `GPUCommandGraph node "${node.id}" did not declare external texture "${handle.id}"`
+                  );
+                }
+                return getExternalTexture(handle);
+              }
+            }
+          : sharedContext;
         if ('prepare' in executable && executable.prepare) {
           endActiveComputePass();
           executable.prepare(baseContext);
