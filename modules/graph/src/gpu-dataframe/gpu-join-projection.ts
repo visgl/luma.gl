@@ -93,10 +93,12 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
       const id = `${context.queryId}-join-projection-${columnIndex}`;
       const values = createGPUQueryOutputVector(graph.device, id, lengths, format, false, true);
       ownedVectors.push(values);
-      const valid = createGPUQueryOutputVector(graph.device, id + '-validity', lengths, 'uint32');
-      ownedVectors.push(valid);
+      const valid = lengths.length
+        ? createGPUQueryOutputVector(graph.device, id + '-validity', lengths, 'uint32')
+        : undefined;
+      if (valid) ownedVectors.push(valid);
       const sourceKey = source as keyof Right & string;
-      if (ranges.length && lengths.some(length => length > 0)) {
+      if (valid && ranges.length && leftBatchCount > 0) {
         const input = graph.importGPUVector(id + '-input', right.table.gpuVectors[source]);
         const inputValidity = right.validity[sourceKey];
         const validInput =
@@ -140,7 +142,7 @@ export function projectGPUJoinColumns<Left extends GPUTypeMap, Right extends GPU
   const outputs = rightColumns.map(({name, source}) => {
     const {format, values, valid} = projectedSources.get(source)!;
     const nameKey = name as keyof Left & string;
-    validity[nameKey] = valid;
+    if (valid) validity[nameKey] = valid;
     const dictionary = right.dictionaries[source as keyof Right & string];
     if (dictionary) {
       dictionaries[nameKey] = dictionary;
