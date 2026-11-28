@@ -638,8 +638,16 @@ function buildGPUSQLPlan(
 
   const selected: string[] = [];
   const rightColumns: GPUJoinRightColumn[] = [];
+  const joinedExpressions: GPUDataFrameDerivedColumn[] = [];
+  const joinedLeftInputs = new Set<string>();
+  const joinedRightInputs = new Map<string, string>();
   const boundJoin = statement.join && bindJoin(statement.join);
   const rightQualifier = statement.join && (statement.join.alias ?? statement.join.table);
+  const reservedNames = new Set([
+    ...frame.columnNames,
+    ...(boundJoin?.right.columnNames ?? []),
+    ...statement.items.flatMap(item => (item.alias ? [item.alias] : []))
+  ]);
   for (const item of statement.items) {
     if (item.star) {
       if (statement.items.length !== 1)
@@ -673,10 +681,45 @@ function buildGPUSQLPlan(
         continue;
       }
     }
-    const node = lowerSQLExpression(expression, parameters, resolve);
+    let usesRight = false;
+    const leftInputs = new Set<string>();
+    const node = lowerSQLExpression(expression, parameters, reference => {
+      if (
+        boundJoin &&
+        rightQualifier &&
+        matchesGPUSQLColumn(reference, rightQualifier, boundJoin.right.columnNames) &&
+        !matchesGPUSQLColumn(reference, qualifier, frame.columnNames)
+      ) {
+        usesRight = true;
+        let name = joinedRightInputs.get(reference.name);
+        if (!name) {
+          name = `__gpu_join_right_${joinedRightInputs.size}`;
+          while (reservedNames.has(name)) name += '_';
+          reservedNames.add(name);
+          joinedRightInputs.set(reference.name, name);
+          rightColumns.push({name, source: reference.name});
+        }
+        return name;
+      }
+      const name = resolve(reference);
+      leftInputs.add(name);
+      return name;
+    });
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
     if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
     if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
+    if (usesRight) {
+      if (statement.join?.type !== 'inner' && statement.join?.type !== 'left') {
+        throw new Error('GPUSQL right projections require INNER or LEFT JOIN');
+      }
+      if (frame.columnNames.includes(name)) {
+        throw new Error(`GPUSQL derived alias "${name}" conflicts with an existing source column`);
+      }
+      joinedExpressions.push({name, expression: new GPUExpression<number | null, string>(node)});
+      for (const input of leftInputs) joinedLeftInputs.add(input);
+      selected.push(name);
+      continue;
+    }
     if (node.kind !== 'column' || node.name !== name) {
       if (frame.columnNames.includes(name)) {
         throw new Error(`GPUSQL derived alias "${name}" conflicts with an existing source column`);
@@ -691,7 +734,24 @@ function buildGPUSQLPlan(
       throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
     const {right, leftKey, rightKey} = boundJoin!;
-    const leftColumns = selected.filter(name => !rightColumns.some(column => column.name === name));
+    for (const {name} of rightColumns) {
+      if (joinedLeftInputs.has(name)) {
+        throw new Error(
+          `GPUSQL right output alias "${name}" conflicts with a joined expression input`
+        );
+      }
+    }
+    const joinedExpressionNames = new Set(joinedExpressions.map(column => column.name));
+    const projectedColumns = selected.filter(name => !joinedExpressionNames.has(name));
+    const leftColumns = [
+      ...new Set([
+        ...projectedColumns.filter(name => !rightColumns.some(column => column.name === name)),
+        ...joinedLeftInputs
+      ])
+    ];
+    const projectionColumns = [
+      ...new Set([...projectedColumns, ...joinedLeftInputs, ...joinedRightInputs.values()])
+    ];
     const keyIsSelected = leftColumns.includes(leftKey);
     const workingColumns = keyIsSelected ? leftColumns : [...leftColumns, leftKey];
     const workingQuery = query.select(workingColumns);
@@ -714,9 +774,12 @@ function buildGPUSQLPlan(
             join.options,
             joinType,
             graph,
-            selected,
+            projectionColumns,
             rightColumns,
-            maxJoinProjectionScratchBytes
+            maxJoinProjectionScratchBytes,
+            joinedExpressions.length
+              ? {columns: selected, derivedColumns: joinedExpressions}
+              : undefined
           )
       },
       'unique-right-join',
