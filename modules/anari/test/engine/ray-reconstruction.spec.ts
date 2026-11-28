@@ -163,3 +163,40 @@ it('retains separate luminance moments and shows variance at a sampled texture e
     destroy();
   }
 }, 180_000);
+
+it('restarts glossy PBR history on camera motion and accumulates at the stationary pose', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, readPixel, readRadiance, destroy} = await createMaterialFixture();
+  try {
+    options.camera = makeCamera(0);
+    options.cameraProjection = 'orthographic';
+    options.temporalReprojection = true;
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 1;
+    options.surfaces = [
+      {
+        ...surface,
+        material: {
+          id: 'glossy',
+          uniforms: {metallicRoughnessValues: [1, 0.12]}
+        }
+      }
+    ];
+    /** Read retained confidence at the center of the reflective triangle. */
+    const readConfidence = async () => {
+      await readPixel();
+      const radiance = (await readRadiance())!;
+      return new DataView(radiance.data.buffer).getFloat16((4 * radiance.width + 4) * 8 + 6, true);
+    };
+    expect(await readConfidence()).toBe(1);
+    expect(await readConfidence()).toBe(2);
+    expect(await readConfidence()).toBe(3);
+
+    options.camera = makeCamera(0.25);
+    expect(await readConfidence()).toBe(1);
+    expect(await readConfidence()).toBe(2);
+  } finally {
+    destroy();
+  }
+}, 180_000);

@@ -1275,6 +1275,7 @@ export class RayTracingSceneRenderer {
       makeUniformData({
         options,
         inverseViewProjection,
+        stationaryScene: stationaryBatch,
         previousViewProjection: resources.previousViewProjection,
         previousCameraPosition: resources.previousCameraPosition,
         displayWidth,
@@ -4614,6 +4615,8 @@ function makeStorageData(values: number[], minimumFloatCount: number): Float32Ar
 function makeUniformData(props: {
   options: RayTracingSceneRenderOptions;
   inverseViewProjection: Matrix4;
+  /** Whether the camera, transforms and lights match the preceding frame. */
+  stationaryScene: boolean;
   previousViewProjection: Matrix4;
   previousCameraPosition: readonly number[];
   displayWidth: number;
@@ -4648,6 +4651,7 @@ function makeUniformData(props: {
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
   unsignedData[90] = Number(props.options.roughDielectricTransmission ?? false);
+  unsignedData[91] = Number(props.stationaryScene);
   unsignedData[88] = Number(props.options.filteredCutouts ?? false);
   unsignedData[89] = Number(
     props.options.surfaces.some(surface => surface.material.alphaMode === 'BLEND')

@@ -364,3 +364,14 @@ number of new samples. GPU time is null when the relevant timestamps are
 unavailable. The HDR capture measures temporal reconstruction before the spatial
 presentation filter. Each checkpoint also writes a display PNG, the raw HDR
 attachment, and metadata.
+
+For the glossy scene, the final checkpoint includes a comparison of temporal
+reprojection with the control at the same new sample count. Pass
+`--maximum-glossy-rmse-ratio 1.1` to make the run fail if temporal HDR RMSE
+exceeds 110% of the control. The report is written before the error so both
+captures remain available for diagnosis.
+
+PBR bounce history accumulates directly at stationary poses to avoid clipping
+bright, noisy reflections around the latest sample. During movement, glossy
+metal, clearcoat and transmission guides discard history whose secondary hits
+cannot be checked by the primary visibility buffer.
