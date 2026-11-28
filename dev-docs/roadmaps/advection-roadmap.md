@@ -67,7 +67,7 @@ shipped in #3963. A5 and B1b1 shipped in #3974, and B2a/B2b shipped in #3975; ob
 | C1c — Curvilinear grids | After C1b | Cell localization, inverse mapping, basis rotation and local cell-travel limits. Validate warped cells and coastal model fixtures. |
 | C1d — Unstructured mesh sampling | Deferred after C1c | Explicit node/face/edge placement and bounded neighbor search; qualify mesh-edge crossings. Not implied by C-grid support. |
 | C2c1 — Spherical batching | Implemented | One counter readback per bounded dense batch, with per-dispatch graph inspection and equivalent state/work across snapshot rotation. |
-| C2c2 — Spherical survivor queues | Next | Add persistent survivor queues and compare matched-error whole-frame costs. |
+| C2c2 — Spherical survivor queues | Implemented | Persistent queues match dense state/work on reversing flow. The initial globe comparison reached the same display cadence in both modes. |
 | C3 — 3D transport | Planned after C1 | Explicit vertical units, coordinate transforms and time-varying vertical grids. Validate vertical shear, analytic 3D flow and boundary crossings before adding diffusion. |
 | C4a — Uniform 2D diffusion | After explicit stochastic time contract; does not require C3 | Counter-based random streams, stable IDs and a defined physical noise timestep. Qualify mean/variance, scheduling invariance and boundary behavior. |
 | C4b — Variable diffusivity | After C4a | Diffusivity-gradient drift, selected Euler–Maruyama/Milstein scheme and retry/noise semantics. Qualify strong/weak convergence; extend to 3D only after C3. |
@@ -89,7 +89,7 @@ loading remains in loaders.gl/application adapters. They do not all belong in gr
 
 ## Recommended sequence and claim boundaries
 
-1. **Next numerical PR: C2c2 + further B2c3b/Q1 qualification.** Add spherical survivor scheduling equivalence and measure complete globe frames, including trails and
+1. **Next numerical PR: Further B2c3b/Q1 qualification.** Extend spherical survivor qualification and measure complete globe frames at heavier loads and on other adapters, including trails and
    counter synchronization. Publish failures and unsupported adapters as well as wins.
 2. **Next web delivery PR: D1 + a B1b2 fixture slice.** Stream a reproducible global
    weather sequence through bounded residency, with units/provenance and independent

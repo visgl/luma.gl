@@ -383,21 +383,19 @@ export class ObservatoryControlPanel {
                       {label: '1e-7 · demanding', value: 1e-7}
                     ]
                   },
-                  ...(this.settings.field === 'spherical'
-                    ? []
-                    : [
-                        {
-                          name: 'scheduling',
-                          label: 'RK45 scheduling',
-                          type: 'select' as const,
-                          persist: 'none' as const,
-                          options: [
-                            {label: 'Dense · all slots', value: 'dense'},
-                            {label: 'Active · GPU queue', value: 'active'},
-                            {label: 'Persistent · survivors', value: 'persistent'}
-                          ]
-                        }
-                      ]),
+                  {
+                    name: 'scheduling',
+                    label: 'RK45 scheduling',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: 'Dense · all slots', value: 'dense'},
+                      ...(this.settings.field === 'spherical'
+                        ? []
+                        : [{label: 'Active · GPU queue', value: 'active'}]),
+                      {label: 'Persistent · survivors', value: 'persistent'}
+                    ]
+                  },
                   {
                     name: 'dispatchesPerReadback',
                     label: 'Dispatches per readback',

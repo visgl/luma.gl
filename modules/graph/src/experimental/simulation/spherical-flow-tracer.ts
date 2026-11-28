@@ -7,7 +7,8 @@ import {GPUCommandGraph, type CompiledGPUCommandGraph} from '../../gpu-core/inde
 import {SphericalFlowField, type SphericalVectorFieldInput} from './spherical-flow-field';
 import type {SphericalFlowGraphProps} from './spherical-flow-graph';
 import type {ScientificFlowTraceResult} from './scientific-flow-tracer';
-import {SPHERICAL_FLOW_RK45} from './spherical-flow-rk45-shaders';
+import {makeScientificFlowSchedulingShader} from './scientific-flow-scheduling-shaders';
+import {makeSphericalFlowRK45Shader} from './spherical-flow-rk45-shaders';
 
 /** Forward adaptive sphere transport with a bounded trial budget per call. */
 export type SphericalFlowTracerProps = Omit<SphericalFlowGraphProps, 'integrator'> & {
@@ -21,6 +22,8 @@ export type SphericalFlowTracerProps = Omit<SphericalFlowGraphProps, 'integrator
   maximumAttempts?: number;
   /** Physical lifetime in seconds; default 1e30. */
   lifetime?: number;
+  /** Dense slots or a persistent GPU survivor queue. Defaults to dense. */
+  scheduling?: 'dense' | 'persistent';
   /** Dense dispatches per counter readback, from 1 to 32. Defaults to 1. */
   dispatchesPerReadback?: number;
 };
@@ -85,6 +88,24 @@ export class SphericalFlowTracer {
   private readonly emptyStatistics: Buffer;
   /** Spherical RKF45 integration kernel. */
   private readonly kernel: Kernel;
+  /** Optional stable-ID queue; the first word stores its populated length. */
+  private readonly activeIndices?: Buffer;
+  /** Optional three-word indirect integration command. */
+  private readonly dispatchArguments?: Buffer;
+  /** Constant [0, 1, 1] command used to reset the indirect workgroup count. */
+  private readonly emptyDispatchArguments?: Buffer;
+  /** Optional GPU queue builder, kept separate from expensive integration. */
+  private readonly schedulingKernel?: Kernel;
+  /** Second queue, populated directly by unfinished integration invocations. */
+  private readonly survivorIndices?: Buffer;
+  /** Indirect command for the second queue. */
+  private readonly survivorArguments?: Buffer;
+  /** Logical queue cursor; bindings are captured separately for every encoding. */
+  private queueCursor = 0;
+  /** CPU-known request boundary controlling the initial full-slot scan. */
+  private initializeQueue = false;
+  /** CPU-known call boundary controlling the stable previous-state copy. */
+  private capturePrevious = false;
   /** Optional GPU compute timestamps. */
   private readonly queries?: QuerySet;
 
@@ -206,19 +227,74 @@ export class SphericalFlowTracer {
       this.batchStatistics = own(
         device.createBuffer({
           id: 'spherical-tracer-batch-statistics',
-          byteLength: 36 * dispatchesPerReadback,
+          byteLength: (props.scheduling === 'persistent' ? 44 : 36) * dispatchesPerReadback,
           usage: Buffer.COPY_DST | Buffer.COPY_SRC
         })
       );
+      if (props.scheduling === 'persistent') {
+        this.activeIndices = own(
+          device.createBuffer({
+            id: 'spherical-tracer-active-indices',
+            byteLength: (this.particleCount + 1) * 4,
+            usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        );
+        this.dispatchArguments = own(
+          device.createBuffer({
+            id: 'spherical-tracer-dispatch-arguments',
+            byteLength: 12,
+            usage: Buffer.STORAGE | Buffer.INDIRECT | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        );
+        this.emptyDispatchArguments = makeBuffer(
+          'spherical-tracer-empty-dispatch',
+          new Uint32Array([0, 1, 1])
+        );
+        if (props.scheduling === 'persistent') {
+          this.survivorIndices = own(
+            device.createBuffer({
+              id: 'spherical-tracer-survivor-indices',
+              byteLength: this.activeIndices.byteLength,
+              usage: this.activeIndices.usage
+            })
+          );
+          this.survivorArguments = own(
+            device.createBuffer({
+              id: 'spherical-tracer-survivor-arguments',
+              byteLength: 12,
+              usage: this.dispatchArguments.usage
+            })
+          );
+        }
+        this.schedulingKernel = own(
+          new Kernel(device, {
+            id: 'spherical-tracer-schedule',
+            source: makeScientificFlowSchedulingShader(true, true),
+            shaderLayout: {
+              bindings: [
+                {name: 'parameters', type: 'uniform', group: 0, location: 0},
+                {name: 'particles', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'previous', type: 'storage', group: 0, location: 2},
+                {name: 'diagnostics', type: 'storage', group: 0, location: 3},
+                {name: 'statistics', type: 'storage', group: 0, location: 4},
+                {name: 'activeIndices', type: 'storage', group: 0, location: 5},
+                {name: 'dispatchArguments', type: 'storage', group: 0, location: 6}
+              ]
+            }
+          })
+        );
+      }
       this.kernel = own(
         new Kernel(device, {
           id: 'spherical-tracer-rk45',
-          source: SPHERICAL_FLOW_RK45,
+          source: makeSphericalFlowRK45Shader(Boolean(this.survivorIndices)),
           shaderLayout: {
             bindings: [
               {name: 'parameters', type: 'uniform', group: 0, location: 0},
               {name: 'particles', type: 'storage', group: 0, location: 1},
-              {name: 'previous', type: 'storage', group: 0, location: 2},
+              ...(!this.survivorIndices
+                ? [{name: 'previous', type: 'storage' as const, group: 0, location: 2}]
+                : []),
               {
                 name: 'velocityField',
                 type: 'texture',
@@ -234,7 +310,19 @@ export class SphericalFlowTracer {
                 sampleType: 'unfilterable-float'
               },
               {name: 'diagnostics', type: 'storage', group: 0, location: 5},
-              {name: 'statistics', type: 'storage', group: 0, location: 6}
+              {name: 'statistics', type: 'storage', group: 0, location: 6},
+              ...(this.survivorIndices
+                ? [
+                    {
+                      name: 'activeIndices',
+                      type: 'read-only-storage' as const,
+                      group: 0,
+                      location: 7
+                    },
+                    {name: 'survivorIndices', type: 'storage' as const, group: 0, location: 8},
+                    {name: 'survivorArguments', type: 'storage' as const, group: 0, location: 9}
+                  ]
+                : [])
             ]
           }
         })
@@ -242,7 +330,10 @@ export class SphericalFlowTracer {
       this.commandGraph = own(this.makeCommandGraph());
       if (device.features.has('timestamp-query'))
         this.queries = own(
-          device.createQuerySet({type: 'timestamp', count: 2 * dispatchesPerReadback})
+          device.createQuerySet({
+            type: 'timestamp',
+            count: (this.survivorIndices ? 4 : 2) * dispatchesPerReadback
+          })
         );
     } catch (error) {
       /** Release each successfully allocated resource in reverse ownership order. */
@@ -328,6 +419,12 @@ export class SphericalFlowTracer {
       this.emptyStatistics
     ])
       buffer.destroy();
+    this.schedulingKernel?.destroy();
+    this.activeIndices?.destroy();
+    this.dispatchArguments?.destroy();
+    this.survivorIndices?.destroy();
+    this.survivorArguments?.destroy();
+    this.emptyDispatchArguments?.destroy();
     this.currentField.destroy();
     if (this.nextField !== this.currentField) this.nextField.destroy();
   }
@@ -340,6 +437,7 @@ export class SphericalFlowTracer {
   }
   /** Build the actual reset and bounded-integration graph exposed to inspectors. */
   private makeCommandGraph(): CompiledGPUCommandGraph {
+    if (this.survivorIndices) return this.makePersistentCommandGraph();
     /** Graph owns execution metadata while imported buffers remain tracer-owned. */
     const graph = new GPUCommandGraph(this.device, {id: 'spherical-flow-rk45'});
     /** Import exact storage usages and retain stable buffer identities. */
@@ -426,6 +524,187 @@ export class SphericalFlowTracer {
     });
     return graph.compile();
   }
+  /** Compile the queue reset, initialization and indirect integration passes. */
+  private makePersistentCommandGraph(): CompiledGPUCommandGraph {
+    /** Persistent graph shares allocations with every encoding and swaps queue bindings explicitly. */
+    const graph = new GPUCommandGraph(this.device, {id: 'spherical-flow-persistent-rk45'});
+    /** Import owned storage with exact usages for dependency inference. */
+    const importBuffer = (buffer: Buffer) =>
+      graph.importBuffer(
+        {id: buffer.id, byteLength: buffer.byteLength, usage: buffer.usage},
+        buffer
+      );
+    /** Stable public state and per-dispatch uniforms. */
+    const particles = importBuffer(this.output);
+    /** Full-slot pre-call state; a GPU copy preserves stopped and completed slots too. */
+    const previous = importBuffer(this.previous);
+    /** Stable adaptive progress. */
+    const diagnostics = importBuffer(this.diagnostics);
+    /** Persistent statuses plus transient pending/work counters. */
+    const statistics = importBuffer(this.statistics);
+    /** Zero counter source. */
+    const emptyStatistics = importBuffer(this.emptyStatistics);
+    /** Immutable parameters for each batch dispatch. */
+    const parameters = importBuffer(this.uniforms);
+    /** Input queue and command, rebound on every alternating dispatch. */
+    const activeIndices = importBuffer(this.activeIndices!);
+    /** Integration dispatch arguments for the input queue. */
+    const dispatchArguments = importBuffer(this.dispatchArguments!);
+    /** Output survivor queue. */
+    const survivorIndices = importBuffer(this.survivorIndices!);
+    /** GPU-written next integration command. */
+    const survivorArguments = importBuffer(this.survivorArguments!);
+    /** Empty indirect command with y=z=1. */
+    const emptyArguments = importBuffer(this.emptyDispatchArguments!);
+    /** Identical resident snapshot texture descriptors. */
+    const descriptor = {
+      width: this.currentField.texture.width,
+      height: this.currentField.texture.height,
+      format: 'rgba32float' as const,
+      usage: Texture.SAMPLE
+    };
+    /** Current resident field. */
+    const velocity = graph.importTexture({id: 'spherical-tracer-field', ...descriptor});
+    /** Following resident field. */
+    const nextVelocity = graph.importTexture({id: 'spherical-tracer-next-field', ...descriptor});
+    graph.addCopyPass({
+      id: 'prepare-survivor-dispatch',
+      description:
+        'Reset only transient counters and next queue; capture previous once per call and initialize the input queue once per horizon.',
+      resources: [
+        {buffer: particles, usage: 'copy-source'},
+        {buffer: previous, usage: 'copy-destination'},
+        {buffer: emptyStatistics, usage: 'copy-source'},
+        {buffer: statistics, usage: 'copy-destination'},
+        {buffer: emptyArguments, usage: 'copy-source'},
+        ...[activeIndices, dispatchArguments, survivorIndices, survivorArguments].map(buffer => ({
+          buffer,
+          usage: 'copy-destination' as const
+        }))
+      ],
+      workload: {
+        operation: 'PrepareSurvivorDispatch',
+        commandCount: 6,
+        readByteLength: this.output.byteLength + 68,
+        writeByteLength: this.output.byteLength + 68
+      },
+      compile: () => ({
+        encode: ({commandEncoder, getBuffer}) => {
+          if (this.capturePrevious)
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(particles),
+              destinationBuffer: getBuffer(previous),
+              size: this.output.byteLength
+            });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyStatistics),
+            destinationBuffer: getBuffer(statistics),
+            destinationOffset: this.initializeQueue ? 0 : 24,
+            size: this.initializeQueue ? 36 : 12
+          });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyArguments),
+            destinationBuffer: getBuffer(survivorIndices),
+            size: 4
+          });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyArguments),
+            destinationBuffer: getBuffer(survivorArguments),
+            size: 12
+          });
+          if (this.initializeQueue) {
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyArguments),
+              destinationBuffer: getBuffer(activeIndices),
+              size: 4
+            });
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyArguments),
+              destinationBuffer: getBuffer(dispatchArguments),
+              size: 12
+            });
+          }
+        }
+      })
+    });
+    graph.addComputePass({
+      id: 'initialize-survivor-queue',
+      description:
+        'Scan stable slots only when a new horizon starts; continuations skip this pass.',
+      condition: {id: 'new-trace-horizon', source: 'cpu', evaluate: () => this.initializeQueue},
+      resources: [
+        {buffer: parameters, usage: 'uniform'},
+        {buffer: particles, usage: 'storage-read'},
+        {buffer: previous, usage: 'storage-write'},
+        {buffer: diagnostics, usage: 'storage-read-write'},
+        {buffer: statistics, usage: 'storage-read-write'},
+        {buffer: activeIndices, usage: 'storage-read-write'},
+        {buffer: dispatchArguments, usage: 'storage-read-write'}
+      ],
+      workload: {
+        operation: 'InitializeSurvivorQueue',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+        maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+      },
+      compile: () => ({
+        encode: ({computePass, getBuffer}) =>
+          this.schedulingKernel!.dispatch(computePass, {
+            x: Math.ceil(this.particleCount / 128),
+            bindings: {
+              parameters: getBuffer(parameters),
+              particles: getBuffer(particles),
+              previous: getBuffer(previous),
+              diagnostics: getBuffer(diagnostics),
+              statistics: getBuffer(statistics),
+              activeIndices: getBuffer(activeIndices),
+              dispatchArguments: getBuffer(dispatchArguments)
+            }
+          })
+      })
+    });
+    graph.addComputePass({
+      id: 'trace-survivors-rk45',
+      description:
+        'Integrate queued stable IDs, update status transitions and append unfinished survivors for the next dispatch.',
+      resources: [
+        {buffer: parameters, usage: 'uniform'},
+        {buffer: particles, usage: 'storage-read-write'},
+        {buffer: diagnostics, usage: 'storage-read-write'},
+        {buffer: statistics, usage: 'storage-read-write'},
+        {buffer: activeIndices, usage: 'storage-read'},
+        {buffer: dispatchArguments, usage: 'indirect'},
+        {buffer: survivorIndices, usage: 'storage-read-write'},
+        {buffer: survivorArguments, usage: 'storage-read-write'},
+        {texture: velocity, usage: 'sampled'},
+        {texture: nextVelocity, usage: 'sampled'}
+      ],
+      workload: {
+        operation: 'AdaptiveSurvivorAdvection',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+        maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+      },
+      compile: () => ({
+        encode: ({computePass, getBuffer, getTexture}) =>
+          this.kernel.dispatchIndirect(computePass, {
+            indirectBuffer: getBuffer(dispatchArguments),
+            bindings: {
+              parameters: getBuffer(parameters),
+              particles: getBuffer(particles),
+              diagnostics: getBuffer(diagnostics),
+              statistics: getBuffer(statistics),
+              activeIndices: getBuffer(activeIndices),
+              survivorIndices: getBuffer(survivorIndices),
+              survivorArguments: getBuffer(survivorArguments),
+              velocityField: getTexture(velocity),
+              nextVelocityField: getTexture(nextVelocity)
+            }
+          })
+      })
+    });
+    return graph.compile();
+  }
   /** Encode and await a bounded dispatch batch without reading particle state. */
   private async dispatch(first: boolean): Promise<ScientificFlowTraceResult> {
     this.busy = true;
@@ -467,15 +746,38 @@ export class SphericalFlowTracer {
       view.setUint32(52, this.options.maximumAttempts!, true);
       /** Command encoder shared by the bounded dispatch batch. */
       const encoder = this.device.createCommandEncoder({timeProfilingQuerySet: this.queries});
+      /** Counter bytes saved for each dispatch, including queue telemetry when enabled. */
+      const counterStride = this.batchStatistics.byteLength / this.batchUniforms.length;
       /** Graph encodings retained for inspection and per-dispatch timings. */
       const encodings = this.batchUniforms.map((uniforms, index) => {
+        this.initializeQueue = first && index === 0;
+        this.capturePrevious = index === 0;
+        /** Alternate queue roles while retaining the stable public particle buffers. */
+        const queueBindings =
+          this.survivorIndices && this.survivorArguments
+            ? {
+                [this.activeIndices!.id]: this.queueCursor
+                  ? this.survivorIndices
+                  : this.activeIndices!,
+                [this.survivorIndices.id]: this.queueCursor
+                  ? this.activeIndices!
+                  : this.survivorIndices,
+                [this.dispatchArguments!.id]: this.queueCursor
+                  ? this.survivorArguments
+                  : this.dispatchArguments!,
+                [this.survivorArguments.id]: this.queueCursor
+                  ? this.dispatchArguments!
+                  : this.survivorArguments
+              }
+            : {};
+        // Later dispatches resume progress rather than restarting the request clock.
         view.setUint32(56, first && index === 0 ? 1 : 0, true);
         view.setUint32(60, index === 0 ? 1 : 0, true);
         uniforms.write(new Uint8Array(bytes));
         /** This dispatch's graph encoding. */
         const encoding = this.commandGraph.encode(encoder, {
           parameters: undefined,
-          buffers: {[this.uniforms.id]: uniforms},
+          buffers: {[this.uniforms.id]: uniforms, ...queueBindings},
           textures: {
             'spherical-tracer-field': this.currentField.texture,
             'spherical-tracer-next-field': this.nextField.texture
@@ -484,9 +786,28 @@ export class SphericalFlowTracer {
         encoder.copyBufferToBuffer({
           sourceBuffer: this.statistics,
           destinationBuffer: this.batchStatistics,
-          destinationOffset: index * 36,
+          destinationOffset: index * counterStride,
           size: 36
         });
+        if (this.activeIndices && this.dispatchArguments) {
+          encoder.copyBufferToBuffer({
+            sourceBuffer:
+              this.queueCursor && this.survivorIndices ? this.survivorIndices : this.activeIndices,
+            destinationBuffer: this.batchStatistics,
+            destinationOffset: index * counterStride + 36,
+            size: 4
+          });
+          encoder.copyBufferToBuffer({
+            sourceBuffer:
+              this.queueCursor && this.survivorArguments
+                ? this.survivorArguments
+                : this.dispatchArguments,
+            destinationBuffer: this.batchStatistics,
+            destinationOffset: index * counterStride + 40,
+            size: 4
+          });
+        }
+        if (this.survivorIndices) this.queueCursor = 1 - this.queueCursor;
         return encoding;
       });
       this.device.submit(encoder.finish());
@@ -494,17 +815,28 @@ export class SphericalFlowTracer {
       /** Read all counter snapshots together after submission. */
       const result = await this.batchStatistics.readAsync();
       /** Final status and cumulative work across the dispatches. */
-      const snapshots = new Uint32Array(result.buffer, result.byteOffset, encodings.length * 9);
+      const snapshots = new Uint32Array(
+        result.buffer,
+        result.byteOffset,
+        this.batchStatistics.byteLength / 4
+      );
       /** The final dispatch determines completion and status counts. */
-      const counts = snapshots.subarray(snapshots.length - 9);
+      const counts = snapshots.subarray(snapshots.length - counterStride / 4);
       /** Accepted work across the complete batch. */
       let acceptedSteps = 0;
       /** Rejected work across the complete batch. */
       let rejectedSteps = 0;
+      /** Submitted stable IDs and workgroups across all dispatches. */
+      let scheduledParticles = 0;
+      let integrationWorkgroups = 0;
       /** Counter snapshot offset in units of u32. */
-      for (let offset = 0; offset < snapshots.length; offset += 9) {
+      for (let offset = 0; offset < snapshots.length; offset += counterStride / 4) {
         acceptedSteps += snapshots[offset + 7];
         rejectedSteps += snapshots[offset + 8];
+        scheduledParticles += this.survivorIndices ? snapshots[offset + 9] : this.particleCount;
+        integrationWorkgroups += this.survivorIndices
+          ? snapshots[offset + 10]
+          : Math.ceil(this.particleCount / 128);
       }
       /** Optional timings are available only if every dispatch has a timestamp snapshot. */
       const timings = await Promise.all(encodings.map(encoding => encoding.readTimings()));
@@ -535,8 +867,8 @@ export class SphericalFlowTracer {
         dispatchCount: encodings.length,
         dispatchIndex: this.dispatchIndex,
         counterReadbackBytes: this.batchStatistics.byteLength,
-        scheduledParticles: this.particleCount * encodings.length,
-        integrationWorkgroups: Math.ceil(this.particleCount / 128) * encodings.length,
+        scheduledParticles,
+        integrationWorkgroups,
         isContinuation: !first,
         targetTime,
         complete,
