@@ -34,6 +34,9 @@
 - GPU weighted shortest paths stop on the GPU once converged, continue past 1,024 rounds with
   `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing.
   [Weighted routes](./api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
+- [Model](./api-reference/engine/model.md) keeps one render pipeline per attachment-format
+  variant and now releases the pipeline and shader references it replaces, so with
+  `_destroyPipelines: true` replaced and evicted pipelines and their shaders are destroyed.
 
 - WebGPU Cartesian point rendering and CPU picking share a prepared CRS transform. The GPU
   subtracts the destination origin before narrowing to float32 and draws directly from borrowed

@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import type {Device} from '@luma.gl/core';
+import {
+  PipelineFactory,
+  ShaderFactory,
+  type Device,
+  type RenderPipeline,
+  type RenderPipelineProps
+} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shaders';
 import {NullDevice} from '@luma.gl/core/test-utils';
@@ -332,3 +338,153 @@ function makeWebGPUDevice(): Device {
 
   return webgpuDevice;
 }
+
+it('Model releases references when invalidation returns the same cached pipeline', () => {
+  const device = new NullDevice({
+    _cachePipelines: true,
+    _destroyPipelines: true,
+    _destroyShaders: true
+  });
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  const pipeline = model.pipeline;
+  try {
+    model.setTopology('point-list');
+    model.setTopology('triangle-list');
+    model._updatePipeline();
+    expect(model.pipeline).toBe(pipeline);
+    expect(pipeline.destroyed).toBe(false);
+    model.destroy();
+    expect(pipeline.destroyed).toBe(true);
+    expect(pipeline.vs?.destroyed).toBe(true);
+    expect(pipeline.fs?.destroyed).toBe(true);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});
+
+it('Model keeps a topology change made while the async pipeline compiles', async () => {
+  const device = new NullDevice({});
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling a triangle-list pipeline. Change the topology now.
+    model.setTopology('point-list');
+    await Promise.all(compilation);
+
+    model._updatePipeline();
+    expect(model.pipeline.props.topology).toBe('point-list');
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});
+
+it('Model caches an async pipeline under the attachment formats it was built for', async () => {
+  const device = makeWebGPUDevice();
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    source: WGSL_SOURCE,
+    vertexCount: 1,
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling for the default render target. Switch targets now.
+    const syncAttachmentFormats = (
+      model as unknown as {_syncAttachmentFormats(renderPass: unknown): void}
+    )._syncAttachmentFormats.bind(model);
+    syncAttachmentFormats({
+      props: {colorAttachmentFormats: ['rgba16float'], depthStencilAttachmentFormat: 'depth24plus'}
+    });
+    await Promise.all(compilation);
+
+    const asyncPipeline = model.pipeline;
+
+    model._updatePipeline();
+    expect(model.pipeline.props.colorAttachmentFormats).toEqual(['rgba16float']);
+    expect(model.pipeline.props.depthStencilAttachmentFormat).toBe('depth24plus');
+
+    // Switching back to the default render target adopts the pipeline compiled for it.
+    syncAttachmentFormats({props: {}});
+    model._updatePipeline();
+    expect(model.pipeline).toBe(asyncPipeline);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});
+
+/** Pipeline factory whose async creates resolve only when the test calls `resolveAsync()`. */
+class DeferredPipelineFactory extends PipelineFactory {
+  /** Pending async creates, oldest first. */
+  private pendingCreates: (() => void)[] = [];
+  /** Every pipeline handed back through `release()`, in order. */
+  releasedPipelines: RenderPipeline[] = [];
+
+  override createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline> {
+    return new Promise(resolve => {
+      this.pendingCreates.push(() => resolve(this.createRenderPipeline(props)));
+    });
+  }
+
+  override release(pipeline: RenderPipeline): void {
+    this.releasedPipelines.push(pipeline);
+    super.release(pipeline);
+  }
+
+  /** Resolve the oldest pending async create. */
+  resolveAsync(): void {
+    this.pendingCreates.shift()?.();
+  }
+}
+
+it('Model releases a stale async pipeline instead of the newer one built while it compiled', async () => {
+  const device = new NullDevice({});
+  const pipelineFactory = new DeferredPipelineFactory(device);
+  const compilation = PipelineFactory.beginAsyncCompilation(device);
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory,
+    shaderFactory: new ShaderFactory(device)
+  });
+  PipelineFactory.endAsyncCompilation(device, compilation);
+  try {
+    // The constructor started compiling a triangle-list pipeline. Change the topology and
+    // draw before that compile resolves.
+    model.setTopology('point-list');
+    model.predraw(device.commandEncoder);
+    const pointPipeline = model.pipeline;
+    expect(pointPipeline.props.topology).toBe('point-list');
+
+    pipelineFactory.resolveAsync();
+    await Promise.all(compilation);
+
+    const [stalePipeline] = pipelineFactory.releasedPipelines;
+    expect(pipelineFactory.releasedPipelines).toHaveLength(1);
+    expect(stalePipeline.props.topology).toBe('triangle-list');
+    expect(pointPipeline.destroyed).toBe(false);
+
+    model.predraw(device.commandEncoder);
+    expect(model.pipeline).toBe(pointPipeline);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});

@@ -96,6 +96,15 @@ import {
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
 const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
+/**
+ * Upper bound on how many attachment-format variants one model keeps pipelines for.
+ * A model is normally drawn into a small, fixed set of render targets (screen pass,
+ * picking pass, one or two offscreen passes). Beyond this bound the model falls back
+ * to rebuilding, so an unusual caller cannot grow the cache without limit.
+ */
+const MAX_CACHED_PIPELINE_VARIANTS = 8;
+/** The one invalidation reason that only selects a different pipeline variant. */
+const ATTACHMENT_FORMATS_CHANGED = 'attachment formats';
 const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
   'stencil8',
   'depth16unorm',
@@ -107,6 +116,18 @@ const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
 /** Resource accepted by one model binding slot. */
 export type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
 type ModelBuffer = Buffer | DynamicBuffer;
+/** Pipeline props and shader references prepared for one pipeline create. */
+type PipelineUpdate = {
+  props: RenderPipelineProps;
+  vertexShader: Shader;
+  fragmentShader: Shader | null;
+  /** Whether the cached variants were stale when this update was prepared. */
+  releaseCache: boolean;
+  /** The render-target shape the pipeline is built for, taken when the update was prepared. */
+  attachmentFormatKey: string;
+  /** Increases with every prepared update, so an async create can tell it was overtaken. */
+  sequence: number;
+};
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
@@ -379,6 +400,30 @@ export class GPUVectorModel {
   private _colorAttachmentFormats: (TextureFormatColor | null)[] | undefined;
   private _depthStencilAttachmentFormat: TextureFormatDepthStencil | undefined;
 
+  /**
+   * Pipelines already built by this model, keyed by attachment-format signature.
+   *
+   * A model drawn into render passes with different attachment formats - the common
+   * case being a screen pass plus a picking pass - used to rebuild its pipeline on
+   * every alternation. The rebuild always hit the pipeline cache, so it produced no
+   * new GPU pipeline, but it still cost a full `_preparePipelineUpdate()` and took an
+   * extra `PipelineFactory` reference each time, which made `useCount` grow without
+   * bound and defeated eviction for applications running with `_destroyPipelines: true`.
+   *
+   * Each entry owns exactly one `PipelineFactory` reference and one `ShaderFactory`
+   * reference per distinct shader, released by `_releasePipelineVariant()`.
+   */
+  private _pipelineCache = new Map<
+    string,
+    {pipeline: RenderPipeline; attributeInfos: Record<string, AttributeInfo>}
+  >();
+  /** Set when an invalidation other than attachment formats makes every cached variant obsolete. */
+  private _pipelineCacheStale = false;
+  /** Sequence number of the last prepared pipeline update. */
+  private _preparedPipelineUpdate = 0;
+  /** Sequence number of the update that built the bound pipeline. */
+  private _appliedPipelineUpdate = 0;
+
   _pipelineNeedsUpdate: string | false = 'newly created';
   private _needsRedraw: string | false = 'initializing';
   private _drawBlockedReason: string | false = false;
@@ -622,15 +667,9 @@ export class GPUVectorModel {
 
   destroy(): void {
     if (!this._destroyed) {
-      // Release pipeline before we destroy the shaders used by the pipeline
-      if (this.pipeline) {
-        this.pipelineFactory.release(this.pipeline);
-        // Release the shaders
-        this.shaderFactory.release(this.pipeline.vs);
-        if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
-          this.shaderFactory.release(this.pipeline.fs);
-        }
-      }
+      // `_pipelineCache` owns one reference per variant this model built, including the
+      // bound one, and releases each pipeline before the shaders it uses.
+      this._releasePipelineCache();
       this.vertexArray?.destroy();
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
@@ -1593,6 +1632,13 @@ export class GPUVectorModel {
 
   /** Mark pipeline as needing update */
   _setPipelineNeedsUpdate(reason: string): void {
+    // Anything other than a change of render target changes the shape of every variant,
+    // so previously cached pipelines cannot be reused. They are released in
+    // `_finishPipelineUpdate()`, after the replacement exists, so that a shader or
+    // pipeline shared with the replacement is never destroyed and recreated.
+    if (reason !== ATTACHMENT_FORMATS_CHANGED) {
+      this._pipelineCacheStale = true;
+    }
     this._pipelineNeedsUpdate ||= reason;
     this._drawBlockedReason = false;
     this.setNeedsRedraw(reason);
@@ -1600,6 +1646,10 @@ export class GPUVectorModel {
 
   /** Update pipeline if needed */
   _updatePipeline(): RenderPipeline {
+    if (this._pipelineNeedsUpdate && this._adoptCachedPipelineVariant()) {
+      this._pipelineNeedsUpdate = false;
+      return this.pipeline;
+    }
     const update = this._preparePipelineUpdate();
     if (update) {
       try {
@@ -1607,6 +1657,7 @@ export class GPUVectorModel {
       } catch (error) {
         this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
         this._pipelineNeedsUpdate = 'pipeline creation failed';
+        this._pipelineCacheStale ||= update.releaseCache;
         throw error;
       }
       this._finishPipelineUpdate(update);
@@ -1614,32 +1665,62 @@ export class GPUVectorModel {
     return this.pipeline;
   }
 
-  /** Creates or replaces the render pipeline through the backend's asynchronous compilation path. */
+  /**
+   * Creates or replaces the render pipeline through the backend's asynchronous compilation path.
+   *
+   * The only caller is `_initializePipelineAsync()`, once per model from the constructor,
+   * so the cache is always empty at this point and the reuse check below is a no-op
+   * today - it is present so the two update paths stay consistent if a second caller
+   * appears. Concurrent requests for an equivalent pipeline are already deduplicated one
+   * layer down, by `PipelineFactory`'s pending-pipeline cache.
+   *
+   * Changes made during the await are kept:
+   * - If a newer update was applied, for example by `predraw()`, this create is stale. It
+   *   releases only its own pipeline and shaders and leaves the bound pipeline and the cache
+   *   alone. A stale failure is dropped for the same reason.
+   * - Otherwise a topology, parameter or buffer-layout change left the pipeline marked for
+   *   update and the cache stale, so the next update rebuilds and releases the pipeline
+   *   created here along with the other variants.
+   * - A render-target change caches the pipeline for the formats it was built for, and the
+   *   current target's variant is adopted or rebuilt.
+   * On failure nothing was inserted, because only `_finishPipelineUpdate()` inserts, so
+   * the `catch` below leaves any existing variants untouched and still valid.
+   */
   async _updatePipelineAsync(): Promise<RenderPipeline> {
+    if (this._pipelineNeedsUpdate && this._adoptCachedPipelineVariant()) {
+      this._pipelineNeedsUpdate = false;
+      return this.pipeline;
+    }
     const update = this._preparePipelineUpdate();
     if (update) {
+      let pipeline: RenderPipeline;
       try {
-        this.pipeline = await this.pipelineFactory.createRenderPipelineAsync(update.props);
+        pipeline = await this.pipelineFactory.createRenderPipelineAsync(update.props);
       } catch (error) {
         this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        if (this._appliedPipelineUpdate > update.sequence) {
+          return this.pipeline;
+        }
         this._pipelineNeedsUpdate = 'asynchronous pipeline creation failed';
+        this._pipelineCacheStale ||= update.releaseCache;
         throw error;
       }
+      if (this._appliedPipelineUpdate > update.sequence) {
+        // Release the pipeline before the shaders it uses. This update took the stale
+        // flag, and the newer update may not have released the variants it covered.
+        this.pipelineFactory.release(pipeline);
+        this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        this._pipelineCacheStale ||= update.releaseCache;
+        return this.pipeline;
+      }
+      this.pipeline = pipeline;
       this._finishPipelineUpdate(update);
     }
     return this.pipeline;
   }
 
-  private _preparePipelineUpdate(): {
-    props: RenderPipelineProps;
-    vertexShader: Shader;
-    fragmentShader: Shader | null;
-    previousVertexShader: Shader | null;
-    previousFragmentShader: Shader | null;
-  } | null {
+  private _preparePipelineUpdate(): PipelineUpdate | null {
     if (!this._pipelineNeedsUpdate) return null;
-    const previousVertexShader = this.pipeline?.vs ?? null;
-    const previousFragmentShader = this.pipeline?.fs ?? null;
     if (this.pipeline) {
       log.log(
         1,
@@ -1672,6 +1753,10 @@ export class GPUVectorModel {
       this._pipelineNeedsUpdate = 'shader creation failed';
       throw error;
     }
+    // Take the stale flag now. An invalidation while an async create awaits sets it
+    // again, so the next update rebuilds and releases the in-flight pipeline as well.
+    const releaseCache = this._pipelineCacheStale;
+    this._pipelineCacheStale = false;
     return {
       props: {
         ...this.props,
@@ -1687,20 +1772,104 @@ export class GPUVectorModel {
       },
       vertexShader,
       fragmentShader,
-      previousVertexShader,
-      previousFragmentShader
+      releaseCache,
+      attachmentFormatKey: this._getAttachmentFormatKey(),
+      sequence: ++this._preparedPipelineUpdate
     };
   }
 
-  private _finishPipelineUpdate(update: {
-    previousVertexShader: Shader | null;
-    previousFragmentShader: Shader | null;
-  }): void {
+  private _finishPipelineUpdate(update: PipelineUpdate): void {
+    this._appliedPipelineUpdate = update.sequence;
     this._attributeInfos = getAttributeInfosFromLayouts(
       this.pipeline.shaderLayout,
       this.bufferLayout
     );
-    this._releasePipelineShaders(update.previousVertexShader, update.previousFragmentShader);
+
+    // The replacement now exists, so obsolete variants can be released safely: a shader
+    // or pipeline shared with the replacement keeps a reference.
+    if (update.releaseCache) {
+      this._releasePipelineCache();
+    }
+    this._cachePipelineVariant(update.attachmentFormatKey);
+
+    // The render target changed while an async create awaited. The new pipeline is cached
+    // for the formats it was built for; bind the current target's variant or rebuild it.
+    if (
+      update.attachmentFormatKey !== this._getAttachmentFormatKey() &&
+      !this._adoptCachedPipelineVariant()
+    ) {
+      this._setPipelineNeedsUpdate(ATTACHMENT_FORMATS_CHANGED);
+    }
+  }
+
+  /** Reuse a variant already built for the current render target, if there is one. */
+  private _adoptCachedPipelineVariant(): boolean {
+    if (this._pipelineCacheStale) {
+      return false;
+    }
+    const key = this._getAttachmentFormatKey();
+    const cached = this._pipelineCache.get(key);
+    if (!cached) {
+      return false;
+    }
+    // Refresh recency without changing ownership. Eviction is LRU rather than
+    // insertion-order FIFO, which keeps frequently reused render targets hot.
+    this._pipelineCache.delete(key);
+    this._pipelineCache.set(key, cached);
+    this.pipeline = cached.pipeline;
+    this._attributeInfos = cached.attributeInfos;
+    return true;
+  }
+
+  /** Identifies the render-target shape a pipeline was built for. */
+  private _getAttachmentFormatKey(): string {
+    // JSON keeps the key unambiguous as the descriptor grows. Normalize absent
+    // values so an omitted attachment list and an explicit undefined do not
+    // create accidental variants.
+    return JSON.stringify({
+      colorAttachmentFormats: this._colorAttachmentFormats ?? null,
+      depthStencilAttachmentFormat: this._depthStencilAttachmentFormat ?? null
+    });
+  }
+
+  /**
+   * Record the pipeline just built as the variant for the current render target, taking
+   * ownership of one reference to it and to its shaders.
+   */
+  private _cachePipelineVariant(key: string): void {
+    // A cached key is normally adopted instead of rebuilt, and a stale rebuild clears the
+    // cache first. Overlapping async creates can still finish for the same key, so the
+    // newer entry replaces the older one and releases its references.
+    const replaced = this._pipelineCache.get(key);
+    if (replaced) {
+      this._pipelineCache.delete(key);
+      this._releasePipelineVariant(replaced.pipeline);
+    } else if (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
+      // Map iteration order is least-recently-used first. Each entry owns its own reference,
+      // so evicting one that shares the bound pipeline object leaves the bound entry intact.
+      const [evictedKey, evicted] = this._pipelineCache.entries().next().value!;
+      this._pipelineCache.delete(evictedKey);
+      this._releasePipelineVariant(evicted.pipeline);
+    }
+    this._pipelineCache.set(key, {
+      pipeline: this.pipeline,
+      attributeInfos: this._attributeInfos
+    });
+  }
+
+  /** Release the reference owned by every entry, including shared pipeline objects. */
+  private _releasePipelineCache(): void {
+    for (const {pipeline} of this._pipelineCache.values()) {
+      this._releasePipelineVariant(pipeline);
+    }
+    this._pipelineCache.clear();
+  }
+
+  /** Hand back the one pipeline reference and shader references a cache entry owns. */
+  private _releasePipelineVariant(pipeline: RenderPipeline): void {
+    // Release the pipeline before the shaders it uses.
+    this.pipelineFactory.release(pipeline);
+    this._releasePipelineShaders(pipeline.vs, pipeline.fs);
   }
 
   private _releasePipelineShaders(
@@ -1868,7 +2037,16 @@ export class GPUVectorModel {
     ) {
       this._colorAttachmentFormats = nextColorAttachmentFormats;
       this._depthStencilAttachmentFormat = nextDepthStencilAttachmentFormat;
-      this._setPipelineNeedsUpdate('attachment formats');
+
+      // If a pipeline was already built for these formats, adopt it instead of arming a
+      // rebuild. Only safe while nothing else has invalidated the pipeline.
+      if (!this._pipelineNeedsUpdate && this._adoptCachedPipelineVariant()) {
+        this._drawBlockedReason = false;
+        this.setNeedsRedraw(ATTACHMENT_FORMATS_CHANGED);
+        return;
+      }
+
+      this._setPipelineNeedsUpdate(ATTACHMENT_FORMATS_CHANGED);
     }
   }
 }
