@@ -5,7 +5,13 @@
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPUEffectOperation, effectOperationLowering, hdrBloom, ssaoEffect, sepiaEffect} from '@luma.gl/engine/effects';
+import {
+  appendEffects,
+  effectOperationLowering,
+  hdrBloom,
+  ssaoEffect,
+  sepiaEffect
+} from '@luma.gl/engine/effects';
 import {GPUGraph, gpuGraph} from '@luma.gl/graph';
 import type {GPUOperation, GPUOperationLowering} from '@luma.gl/graph/gpu-core';
 
@@ -31,7 +37,9 @@ const scene = {
   type: 'test-scene',
   contract: {
     values: ['color', 'normal', 'depth'].map(value => ({
-      value, access: 'write' as const, textureUsage: 'render-attachment' as const
+      value,
+      access: 'write' as const,
+      textureUsage: 'render-attachment' as const
     })),
     outputs: {
       color: gpuGraph.texture({format: 'rgba8unorm', extent}),
@@ -85,7 +93,7 @@ it('composes scene capture, SSAO and bloom into a caller-owned destination', asy
   if (!device) return context.skip();
   const program = new GPUGraph();
   program.add(scene);
-  program.add(new GPUEffectOperation({
+  const output = appendEffects(program, {
     input: 'color',
     output: 'present',
     outputDescriptor: gpuGraph.texture({format: 'rgba8unorm', extent: {like: 'color'}}),
@@ -102,9 +110,9 @@ it('composes scene capture, SSAO and bloom into a caller-owned destination', asy
       {effect: sepiaEffect, uniforms: {sepia: {amount: 0.6}}},
       {effect: sepiaEffect, uniforms: {sepia: {amount: 0.2}}}
     ]
-  }));
+  });
   const compiled = program.compile<{present: Texture}>(device, {
-    outputs: ['present'],
+    outputs: [output],
     lowerings: [sceneLowering, effectOperationLowering]
   });
   const destination = device.createTexture({
