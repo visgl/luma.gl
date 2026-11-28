@@ -53,8 +53,8 @@ export class GPUTableMapPointSource implements MaterializedMapPointSource {
       renderable: true
     });
     const {gpuVectors} = this.projected.table;
-    const positions = gpuVectors.positions as GPUVector<'float32x2'> | undefined;
-    const validity = gpuVectors.validity as GPUVector<'uint32'> | undefined;
+    const positions = gpuVectors['positions'] as GPUVector<'float32x2'> | undefined;
+    const validity = gpuVectors['validity'] as GPUVector<'uint32'> | undefined;
     this.positions =
       positions ?? new GPUVector({type: 'data', name: 'positions', format: 'float32x2', data: []});
     this.validity =
