@@ -282,6 +282,5 @@ history, and filter textures at the same relative size.
 Use `variants` when an option selects a different set of passes or resources.
 Each value replaces the listed fields for that instance. A value without an
 entry uses the base definition. For example, `volumetricFog` uses screen-space
-passes and a history texture by default. With `{effect: volumetricFog, options:
-{mode: 'height'}}`, it uses the analytic height-fog pass and allocates no fog
-history texture.
+passes and a history texture by default. Set the effect's `mode` option to
+`'height'` to use the analytic pass without allocating a fog history texture.
