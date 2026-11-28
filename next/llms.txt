@@ -864,6 +864,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Function: decodeMorphTargetAttribute()](https://luma.gl/next/docs/api-reference/generated/engine/functions/decodeMorphTargetAttribute.md): decodeMorphTargetAttribute(attribute): Float32Array
 - [Function: decomposePhysicsTransform()](https://luma.gl/next/docs/api-reference/generated/engine/functions/decomposePhysicsTransform.md): decomposePhysicsTransform(matrix): object
 - [Function: deformPositions()](https://luma.gl/next/docs/api-reference/generated/engine/functions/deformPositions.md): deformPositions(props): Float32Array
+- [Function: encodeSceneCapturePass()](https://luma.gl/next/docs/api-reference/generated/engine/functions/encodeSceneCapturePass.md): encodeSceneCapturePass\(definition, options): DrawResult
 - [Function: evaluateAnimationSampler()](https://luma.gl/next/docs/api-reference/generated/engine/functions/evaluateAnimationSampler.md): evaluateAnimationSampler(time, sampler, valueType?): number[] \| null
 - [Function: getFirstScenegraphInteractionHit()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getFirstScenegraphInteractionHit.md): getFirstScenegraphInteractionHit\(hits, kind): Hit \| undefined
 - [Function: getGPUVectorModelBatches()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getGPUVectorModelBatches.md): getGPUVectorModelBatches\(ownerName, vectors): GPUVectorModelBatch\\["data"\]\[number\]\>[]
@@ -1018,6 +1019,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: ResolvedPickingMode](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedPickingMode.md): ResolvedPickingMode = Exclude\
 - [Type Alias: ResolvedScenegraphJoint](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedScenegraphJoint.md): ResolvedScenegraphJoint = object
 - [Type Alias: RingGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/RingGeometryProps.md): RingGeometryProps = object
+- [Type Alias: SceneCapturePassDefinition<Frame, Target, DrawResult>](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/SceneCapturePassDefinition.md): SceneCapturePassDefinition\ = object
 - [Type Alias: ScenegraphAnimationClip](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphAnimationClip.md): ScenegraphAnimationClip = AnimationClipController & object
 - [Type Alias: ScenegraphBounds](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphBounds.md): ScenegraphBounds = \[\[number, number, number\], \[number, number, number\]\]
 - [Type Alias: ScenegraphInteractionEvent](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphInteractionEvent.md): ScenegraphInteractionEvent = object

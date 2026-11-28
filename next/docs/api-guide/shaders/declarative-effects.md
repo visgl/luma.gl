@@ -107,6 +107,17 @@ A `ComputePipelineDefinition` is an ordered list of compute passes and reusable 
 
 `ClusteredLightGrid` executes `clusteredLightGridPipeline` from `@luma.gl/engine/lighting`. Its clear, bin, and compact dispatches share one compute pass. Deferred and volumetric lighting continue to consume the resulting light counts and indices through the grid's bindings.
 
+## Capture scene geometry[​](#capture-scene-geometry "Direct link to Capture scene geometry")
+
+A `SceneCapturePassDefinition` names a framebuffer, declares attachment clear and depth settings, and supplies synchronous preparation and geometry hooks. `encodeSceneCapturePass` prepares GPU resources, opens the render pass, invokes the draw, and closes the pass. The scene supplies and owns the framebuffers and their texture attachments.
+
+* `shadowMapCapturePass` in `@luma.gl/engine/lighting` runs with the depth attachment view for each directional cascade, spot light, or point cube face.
+* `deferredGBufferCapturePass` in `@luma.gl/anari` clears the scene's MRT and depth attachments and returns the recorded draw count.
+* `wboitCapturePasses` records opaque depth, weighted accumulation, and revealage in that order. Both translucent passes reuse opaque depth.
+* `aBufferCapturePass` resets the head pointers and scissor before drawing a slice. The renderer resolves that slice before reusing its buffers.
+
+Preparation and draw hooks let the scene supply view-specific models and bindings. The capture outputs remain available to the existing shadow sampling and fullscreen resolve stages.
+
 ## Resolve scene buffers[​](#resolve-scene-buffers "Direct link to Resolve scene buffers")
 
 ANARI exposes fullscreen definitions for deferred direct lighting, ambient lighting, clustered deferred lighting, weighted blended transparency, and A-buffer transparency. Import them from `@luma.gl/anari`.

@@ -1,4 +1,4 @@
-import{C as e,D as t,E as n,M as r,N as i,O as a,S as o,T as s,_ as c,g as l,h as u,j as d,k as f,t as p,w as m,y as h}from"./robot-arm-scene-BPvYrK6d.js";import{z as g}from"./wgsl-interface-scan-BeLN4x0P.js";var _=`
+import{C as e,D as t,E as n,M as r,N as i,O as a,S as o,T as s,_ as c,g as l,h as u,j as d,k as f,t as p,w as m,y as h}from"./robot-arm-scene-DxjZ_FAC.js";import{z as g}from"./wgsl-interface-scan-BeLN4x0P.js";var _=`
 struct ContactRow {
  direction:vec3f, arm:vec3f, angularResponse:vec3f, effectiveInverseMass:f32,
  jacobian:array<f32,N>, response:array<f32,N>, accumulated:f32
