@@ -55,7 +55,14 @@ export {
   GPUTableMapPointSource,
   type GPUTableMapPointSourceProps
 } from './projection/gpu-table-map-point-source';
-export type {MaterializedMapPointSource} from './projection/materialized-map-frame';
+export type {
+  MaterializedMapPointSource,
+  MaterializedMapProjectionSource
+} from './projection/materialized-map-frame';
+export type {
+  MaterializedProjectionOutput,
+  MaterializedProjectionSource
+} from './projection/materialized-projection-source';
 export {
   GPUMaterializedMapLineLayer,
   type GPUMaterializedMapLinePickingInfo,

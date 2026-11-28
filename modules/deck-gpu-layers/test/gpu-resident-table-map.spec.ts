@@ -129,6 +129,11 @@ it('projects resident UTM batches and picks points and segments without a coordi
     data: new Uint32Array(new Float64Array([600000, 4184000]).buffer),
     usage: Buffer.COPY_SRC
   });
+  const retainedPositions = end.positions;
+  const retainedValidity = end.validity;
+  const retainedBuffers = [...retainedPositions.data, ...retainedValidity.data].map(
+    chunk => chunk.buffer
+  );
   try {
     start.updateChunks();
     end.updateChunks();
@@ -154,6 +159,11 @@ it('projects resident UTM batches and picks points and segments without a coordi
     });
     device.submit(encoder.finish());
     end.updateChunks([1, 1]);
+    expect(end.positions).toBe(retainedPositions);
+    expect(end.validity).toBe(retainedValidity);
+    [...end.positions.data, ...end.validity.data].forEach((chunk, index) => {
+      expect(chunk.buffer).toBe(retainedBuffers[index]);
+    });
     expect(encodedNodes()).toEqual(['local-end-batch-1-chunk-0']);
     encode.mockClear();
     await redraw();

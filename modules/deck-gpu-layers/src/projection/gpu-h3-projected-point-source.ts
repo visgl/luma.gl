@@ -8,6 +8,7 @@ import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
 import {GPUProjectionProgram, type CompiledProjection} from '@luma.gl/graph/gpu-project';
 import type {ProjectionRenderTransform} from '@luma.gl/graph/gpu-project-crs';
+import type {MaterializedProjectionSource} from './materialized-projection-source';
 import {MaterializedProjectionChunks} from './materialized-projection-chunks';
 import {getGPUDataBuffer} from '../layers/gpu-vector-layer-utils';
 
@@ -22,7 +23,7 @@ export type GPUH3ProjectedPointSourceProps = {
 };
 
 /** Owns materialized coordinates for a fixed set of resident H3 chunks. */
-export class GPUH3ProjectedPointSource {
+export class GPUH3ProjectedPointSource implements MaterializedProjectionSource {
   /** Local float32 positions, retaining the physical input chunk boundaries. */
   readonly positions: GPUVector<'float32x2'>;
   /** Validity mask aligned to positions. */

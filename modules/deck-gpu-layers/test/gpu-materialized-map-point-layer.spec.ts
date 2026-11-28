@@ -112,6 +112,11 @@ it('picks resident H3 points across Mercator zoom modes and updates only the dir
       radius: 0
     })) as GPUProjectedPointPickingInfo | null;
   };
+  const retainedPositions = source.positions;
+  const retainedValidity = source.validity;
+  const retainedBuffers = [...retainedPositions.data, ...retainedValidity.data].map(
+    chunk => chunk.buffer
+  );
   try {
     source.updateChunks();
     expect(getEncodedNodes()).toEqual([
@@ -150,6 +155,11 @@ it('picks resident H3 points across Mercator zoom modes and updates only the dir
     device.submit(encoder.finish());
     rowCells[2] = replacement;
     source.updateChunks([1]);
+    expect(source.positions).toBe(retainedPositions);
+    expect(source.validity).toBe(retainedValidity);
+    [...source.positions.data, ...source.validity.data].forEach((chunk, index) => {
+      expect(chunk.buffer).toBe(retainedBuffers[index]);
+    });
     expect(getEncodedNodes()).toEqual(['h3-centers-1', 'h3-projection-1-chunk-0']);
     encode.mockClear();
     await redraw();

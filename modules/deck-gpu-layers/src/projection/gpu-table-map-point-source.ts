@@ -9,7 +9,7 @@ import {GPUProjectionTable, type GPUProjectionTableProps} from '@luma.gl/graph/g
 import {
   prepareMaterializedMapFrame,
   type MaterializedMapFrameOptions,
-  type MaterializedMapPointSource
+  type MaterializedMapProjectionSource
 } from './materialized-map-frame';
 import {MaterializedProjectionChunks} from './materialized-projection-chunks';
 
@@ -21,15 +21,15 @@ export type GPUTableMapPointSourceProps = Omit<
   MaterializedMapFrameOptions;
 
 /** Materializes resident binary64 XY table columns as retained map positions. */
-export class GPUTableMapPointSource implements MaterializedMapPointSource {
+export class GPUTableMapPointSource implements MaterializedMapProjectionSource {
   /** Borrowed by render layers for the lifetime of this source. */
   readonly positions: GPUVector<'float32x2'>;
   /** One validity value per source row. */
   readonly validity: GPUVector<'uint32'>;
   /** The fixed source-to-map transform. */
-  readonly transform: MaterializedMapPointSource['transform'];
+  readonly transform: MaterializedMapProjectionSource['transform'];
   /** Absolute Deck common-space origin. */
-  readonly commonOrigin: MaterializedMapPointSource['commonOrigin'];
+  readonly commonOrigin: MaterializedMapProjectionSource['commonOrigin'];
   private readonly projected: GPUProjectionTable;
   private readonly chunks: MaterializedProjectionChunks;
 
