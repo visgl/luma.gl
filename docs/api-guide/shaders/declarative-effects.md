@@ -241,3 +241,18 @@ determine the dispatch grid. The renderer checks WebGPU, storage-format
 support, binding limits, and workgroup dimensions. On other devices it runs
 the fragment sequence. Both paths should populate every resource the shared
 passes read.
+
+### Temporal frame conventions
+
+Supply projection jitter in top-left UV units. Divide jitter in render pixels
+by the render width and height to convert it. Motion vectors point from the
+previous unjittered position to the current unjittered position, in UV units.
+Subtract the motion vector from the current unjittered UV to find the previous
+position. Apply previous jitter only when sampling history stored in jittered
+coordinates.
+
+The velocity-based TAA effect takes motion from the scene. Camera-reprojection
+TAA derives it from current depth and unjittered camera matrices. Supply
+hardware depth from the same view used to render the current color. Reset
+history after a camera cut, scene replacement, or a change in resolution that
+invalidates history.

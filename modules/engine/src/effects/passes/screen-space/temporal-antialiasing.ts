@@ -5,17 +5,17 @@
 import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
+import {temporalMotionReprojectionWGSL, type TemporalFrameJitter} from './temporal-frame';
 
-type TAAUniforms = {
+type TAAUniforms = TemporalFrameJitter & {
   historyWeight: number;
   depthThreshold: number;
-  currentJitter: [number, number];
-  previousJitter: [number, number];
 };
 
 export const taaResolve = {
   name: 'taaResolve',
   source: /* wgsl */ `\
+${temporalMotionReprojectionWGSL}
 struct taaResolveUniforms {
   historyWeight: f32,
   depthThreshold: f32,
@@ -38,7 +38,7 @@ fn taaResolve_sampleColor(
   let texel = 1.0 / dimensions;
   let sceneCoord = texCoord;
   let velocity = textureSample(velocityTexture, velocityTextureSampler, sceneCoord).xy;
-  let previousUv = texCoord - velocity + taaResolve.previousJitter - taaResolve.currentJitter;
+  let previousUv = temporal_reprojectMotion(texCoord - taaResolve.currentJitter, velocity) + taaResolve.previousJitter;
   let currentDepth = textureSample(depthTexture, depthTextureSampler, sceneCoord);
   let previousDepth = textureSample(previousDepthTexture, previousDepthTextureSampler, clamp(previousUv, vec2f(0.0), vec2f(1.0))).r;
   let current = textureSample(sourceTexture, sourceTextureSampler, texCoord);

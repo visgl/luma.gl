@@ -260,3 +260,4 @@ export {contactShadows} from '../lighting/contact-shadow-composite';
 
 
 export * from './temporal-upscale/index';
+export type {TemporalFrameJitter, TemporalJitter} from './passes/screen-space/temporal-frame';
