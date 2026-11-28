@@ -160,6 +160,20 @@ node scripts/playwright/chart-baseline-capture.mjs --compare-motion \
   --hardware "GPU and driver" --output /tmp/motion-reconstruction
 ```
 
+Captures with `--gpu-timing` include `graphTimings` in each checkpoint's metadata. The reports keep GPU Graph node IDs and separate topology, acceleration build, acceleration refit, and trace graph costs. The trace graph contains history carry, ray tracing, and presentation. Pass times are available on timestamp-capable devices and exclude queue latency, startup, and readback.
+
+Run the traversal capture separately to avoid measuring the instrumented shader:
+
+```
+node scripts/playwright/chart-baseline-capture.mjs --sample-traversal \
+
+  --frames 4 --width 640 --height 480
+```
+
+The capture reports raw counts from the final encoded frame. Each 8×8 dispatch tile samples its top-left lane when that lane maps to a valid pixel. The report includes sampled pixels, primary and guide rays, shadow queries, continuation rays, TLAS and BLAS nodes visited by the nearest-hit and any-hit walkers, and triangle intersection tests. Counts describe the selected lanes and active interleave phase. Spatial correlation can bias them, so use matched scenes, resolutions, and phase settings when comparing results.
+
+Applications can enable `sampleTraversal` on the ray-tracing renderer and call `statistics.rayTracing?.readTraversalCounters?.()` after submitting the frame and before encoding the next one. The diagnostic is disabled by default. When an application wraps frame encoding in an encoder timestamp-query scope, `statistics.rayTracing?.readGraphTimings?.()` reads the per-stage reports after submission.
+
 The benchmark runs Chart Motion and a glossy variant that animates emissive marks above the reflective Chart Materials floor. For each scene it starts a fresh reference directly at the target pose, disables reprojection and spatial filtering, and accumulates 256 samples per pixel by default using an independent seed. Each candidate replays the same 60 Hz motion prefix, then holds the exact target pose with reprojection on or off. Each checkpoint starts in a fresh page.
 
 `motion-reconstruction.json` records linear RGB HDR error, including RMSE, against the matching reference for every checkpoint. Plot RMSE against `samplesAtPose` or `gpuTimeAtPoseMilliseconds` to compare recovery at equal target-pose work. `gpuTimeMilliseconds` includes the motion prefix. `historyConfidence` reports retained per-pixel confidence separately from the number of new samples. GPU time is null when the relevant timestamps are unavailable. The HDR capture measures temporal reconstruction before the spatial presentation filter. Each checkpoint also writes a display PNG, the raw HDR attachment, and metadata.
