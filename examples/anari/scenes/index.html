@@ -259,6 +259,12 @@
         text-align: right;
       }
 
+      #preview-fps {
+        min-width: 3ch;
+        color: #fff;
+        font-weight: 700;
+      }
+
       .meta-value {
         margin-top: 8px;
         color: rgba(238, 242, 255, 0.87);
@@ -412,6 +418,10 @@
       <a class="playground-link" href="./playground.html">JSON LAB ↗</a>
     </aside>
     <aside class="telemetry">
+      <div title="Rendered preview frames per second, including pauses between ray batches">
+        <div class="meta-label">FPS</div>
+        <div id="preview-fps" class="meta-value">—</div>
+      </div>
       <div>
         <div class="meta-label">Instances</div>
         <div id="instance-count" class="meta-value">—</div>
