@@ -604,6 +604,25 @@ export-owned GPU resources. Cancellation is checked between tiles/frames and
 after readback; it does not interrupt work already submitted to the GPU.
 Scene geometries and the device remain caller-owned.
 
+For linear HDR output, use `exportRayTracingRadiance(device, scene, options)`.
+It yields tightly packed little-endian RGBA16F tiles in row-major order. RGB
+contains the progressive radiance history before exposure, tone mapping, and
+display denoising. Alpha contains history confidence. Readback memory scales
+with tile size, including the progressive history halo.
+
+To get a floating-point image file, pass the complete stream to
+`encodeRayTracingRadiancePFM`:
+
+```ts
+const tiles = exportRayTracingRadiance(device, scene, {width, height, frames: 16});
+const file = await encodeRayTracingRadiancePFM(width, height, tiles);
+const blob = new Blob([file], {type: 'application/octet-stream'});
+```
+
+The encoder writes [bottom-up little-endian RGB PFM](https://netpbm.sourceforge.net/doc/pfm.html).
+It expands each RGB sample to float32 without changing the source precision and
+allocates the complete file in CPU memory.
+
 `iterateRayTracingImageTiles(width, height, tileSize, halo = 0)` exposes the lazy
 row-major tile plan. Each result contains interior `x`, `y`, `width`, `height`
 and padded `renderX`, `renderY`, `renderWidth`, `renderHeight`. Halo must be an
