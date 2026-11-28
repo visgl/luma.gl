@@ -8,7 +8,12 @@ import type {GPURenderCommandNode} from './gpu-command-node';
 /** Resource declarations shared by SimpleGraph and full WebGPU graphs. */
 export type GPURenderOperationResources<Parameters = unknown> = Pick<
   GPUCommandGraph<Parameters>,
-  'device' | 'importBuffer' | 'importTexture' | 'createTransientTexture' | 'createTextureView'
+  | 'device'
+  | 'createDataView'
+  | 'importBuffer'
+  | 'importTexture'
+  | 'createTransientTexture'
+  | 'createTextureView'
 >;
 
 /**
