@@ -432,8 +432,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     if (timedFrame && this.captureGpuTiming) this.captureGpuTimes.push(timedFrame.gpuTime);
     const statistics = timedFrame?.result ?? scene.frame.render();
     if (this.captureGpuTiming) {
+      const graphTimings = statistics.rayTracing?.readGraphTimings?.();
       this.captureGraphTimings.push(
-        statistics.rayTracing?.readGraphTimings?.().catch(() => null) ?? Promise.resolve(null)
+        graphTimings ? graphTimings.catch(() => null) : Promise.resolve(null)
       );
     }
     this.readCaptureTraversal = statistics.rayTracing?.readTraversalCounters;
