@@ -74,9 +74,9 @@ shared color chain between them.
 
 ## Configure an effect
 
-Use `{effect, configuration}` for settings that affect resources or pass order
-when building the stack. The renderer resolves the definition once at construction. Keep animated controls in the render call's
-`uniforms` so they can change without reallocating those resources.
+Set an effect entry’s `options` field for settings that affect resources or pass
+order. The renderer resolves the definition once at construction. Keep animated
+controls in the render call’s `uniforms` so they can change without reallocating those resources.
 
 ```ts
 import {EffectRenderer} from '@luma.gl/engine';
