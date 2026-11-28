@@ -364,7 +364,9 @@ export class TemporalUpscaler {
    * a depth-stencil attachment, and an offscreen target usually has none.
    */
   private getSharpenPipeline(target: Framebuffer | null): RenderPipeline {
-    const colorFormat = (target?.colorAttachments[0]?.texture.props.format ??
+    const colorAttachment = target?.colorAttachments[0];
+    const colorFormat = (colorAttachment?.props.format ??
+      colorAttachment?.texture.props.format ??
       this.outputFormat) as TextureFormatColor;
     const depthFormat = target
       ? target.depthStencilAttachment?.texture.props.format

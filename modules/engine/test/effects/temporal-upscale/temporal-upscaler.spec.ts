@@ -230,3 +230,34 @@ it('kernel sweep: 0.75 and 0.85 both converge >=27 dB', async context => {
     ).toBeGreaterThanOrEqual(27);
   }
 });
+
+it('sharpens into an sRGB view of a linear output texture', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const fixture = createTemporalScene(device);
+  const [width, height] = OUTPUT_SIZE;
+  const handle = device.handle.createTexture({
+    size: {width, height},
+    format: 'rgba8unorm',
+    viewFormats: ['rgba8unorm-srgb'],
+    usage: GPUTextureUsage.RENDER_ATTACHMENT
+  });
+  const texture = device.createTexture({handle, width, height, format: 'rgba8unorm'});
+  const view = texture.createView({
+    format: 'rgba8unorm-srgb',
+    mipLevelCount: 1,
+    arrayLayerCount: 1
+  });
+  const target = device.createFramebuffer({width, height, colorAttachments: [view]});
+  device.handle.pushErrorScope('validation');
+  try {
+    fixture.render(0, {}, {target});
+  } finally {
+    const error = await device.handle.popErrorScope();
+    fixture.destroy();
+    target.destroy();
+    view.destroy();
+    texture.destroy();
+    expect(error).toBeNull();
+  }
+});
