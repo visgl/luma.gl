@@ -230,3 +230,6 @@ export type {
   GPUGraphGroupAggregationProps,
   GPUGraphReductionProps
 } from './gpu-core/gpu-semantic-aggregation-operation';
+
+export {GPURenderInputs} from './gpu-core/gpu-render-inputs';
+export type {GPURenderInputsProps} from './gpu-core/gpu-render-inputs';
