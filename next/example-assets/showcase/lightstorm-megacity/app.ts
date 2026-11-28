@@ -6,7 +6,6 @@ import {Buffer, type Device, type RenderBundle, type TextureFormatColor} from '@
 import {hdrBloom, ssr, toneMappingEffect} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
-  configureEffect,
   AnimationLoopTemplate,
   Computation,
   CubeGeometry,
@@ -323,13 +322,16 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       effects: [
         makeLightstormDeferredLightingEffect(this.sceneColorFormat),
         ...(this.sceneColorFormat === 'rgba16float'
-          ? [configureEffect(ssr, {resolutionScale: 0.5})]
+          ? [{effect: ssr, options: {resolutionScale: 0.5}}]
           : [])
       ],
       colorFormat: this.sceneColorFormat
     });
     this.postprocessingRenderer = new EffectRenderer(device, {
-      effects: [configureEffect(hdrBloom, {colorFormat: this.sceneColorFormat}), toneMappingEffect],
+      effects: [
+        {effect: hdrBloom, options: {colorFormat: this.sceneColorFormat}},
+        toneMappingEffect
+      ],
       colorFormat: this.sceneColorFormat
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});

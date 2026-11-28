@@ -24,28 +24,28 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
-| Implementation          | Export                                                          | Backends          | Suitable for                                                                        |
-| ----------------------- | --------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
-| Compact bloom           | `bloom` from `@luma.gl/engine/effects`                          | WebGPU and WebGL2 | A single inexpensive highlight-glow pass.                                           |
-| Multiscale HDR bloom    | `createBloomCompositeShaderPass` from `@luma.gl/engine/effects` | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
-| FFT optical convolution | `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects`         | WebGPU            | Full-image generated or measured RGB lens-response kernels.                         |
+| Implementation          | Export                                                  | Backends          | Suitable for                                                                        |
+| ----------------------- | ------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Compact bloom           | `bloom` from `@luma.gl/engine/effects`                  | WebGPU and WebGL2 | A single inexpensive highlight-glow pass.                                           |
+| Multiscale HDR bloom    | `hdrBloom` from `@luma.gl/engine/effects`               | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
+| FFT optical convolution | `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects` | WebGPU            | Full-image generated or measured RGB lens-response kernels.                         |
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createBloomCompositeShaderPass({
+    {effect: hdrBloom, options: {
 
       quality: 'high',
 
@@ -65,9 +65,9 @@ const renderer = new ShaderPassRenderer(device, {
 
       lens: {starburstIntensity: 0.3, ghostIntensity: 0.15, dirtIntensity: 0.2}
 
-    }),
+    }},
 
-    toneMapping
+    toneMappingEffect
 
   ]
 
@@ -75,7 +75,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: hdrSceneTexture,
 

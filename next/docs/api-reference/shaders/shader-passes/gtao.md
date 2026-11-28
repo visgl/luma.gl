@@ -1,6 +1,6 @@
 # Ground-Truth Ambient Occlusion
 
-Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware spatial denoising. `createGTAOCompositeShaderPass` can attenuate either the complete lit image or only a separately supplied ambient-light contribution.
+Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware spatial denoising. `gtao` can attenuate either the complete lit image or only a separately supplied ambient-light contribution.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property          | Value                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------ |
-| Export            | `createGTAOCompositeShaderPass`                                                      |
+| Export            | `gtao`                                                                               |
 | Backend           | WebGPU                                                                               |
 | Render passes     | Six: evaluation, temporal resolve, depth history, two bilateral blurs, and composite |
 | Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture`                               |
@@ -36,19 +36,19 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
+import {gtao} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createGTAOCompositeShaderPass({resolutionScale: 0.5, composition: 'ambient-only'})
+    {effect: gtao, options: {resolutionScale: 0.5, composition: 'ambient-only'}}
 
   ]
 
@@ -56,7 +56,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: litSceneTexture,
 

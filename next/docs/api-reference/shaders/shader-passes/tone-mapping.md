@@ -34,23 +34,25 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createBloomCompositeShaderPass(), toneMapping]
+  effects: [{effect: hdrBloom}, toneMappingEffect]
 
 });
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: hdrSceneTexture,
 

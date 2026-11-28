@@ -122,7 +122,7 @@ Records the shader-pass chain and presentation into a caller-owned command encod
 
 > **encodeToTexture**(`commandEncoder`, `options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:198](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L198)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:210](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L210)
 
 Records the shader-pass chain into a caller-owned command encoder. The encoder must belong to this renderer's device and have no active pass. This method does not finish or submit the encoder.
 
@@ -164,7 +164,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://gith
 
 > **renderToTexture**(`options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:189](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L189)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L201)
 
 Runs the shaderPasses in sequence on the sourceTexture and returns a texture with the results.
 

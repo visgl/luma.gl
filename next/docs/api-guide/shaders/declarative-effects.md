@@ -80,11 +80,11 @@ const renderer = new EffectRenderer(device, {
 
   effects: [
 
-    {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+    {effect: ssaoEffect, options: {normalSource: 'normal-texture', resolutionScale: 0.5}},
 
-    {effect: ssr, configuration: {reprojection: 'camera', quality: 'fast'}},
+    {effect: ssr, options: {reprojection: 'camera', quality: 'fast'}},
 
-    {effect: hdrBloom, configuration: {quality: 'ultra', downsample: 'auto'}}
+    {effect: hdrBloom, options: {quality: 'ultra', downsample: 'auto'}}
 
   ],
 
@@ -92,8 +92,6 @@ const renderer = new EffectRenderer(device, {
 
 });
 ```
-
-Use `configureEffect` to resolve a definition separately when you want to inspect or reuse its configured resources and passes.
 
 Supply each effect's scene bindings at render time. SSAO in normal-texture mode needs the normal texture in addition to depth. Camera-reprojected SSR also needs camera uniforms. HDR bloom automatically selects fused compute on eligible WebGPU devices. Its fragment alternative produces the same named pyramid levels for the shared downstream passes.
 
@@ -152,7 +150,7 @@ const litColor = lighting.renderToTexture({
 });
 ```
 
-The scene renderer supplies and owns the G-buffer or transparency captures. The resolve samples those resources and writes the color result. For A-buffer resolve, use `{effect: aBufferResolveEffect, configuration: {maxFragmentsPerPixel}}` and match the limit used to capture fragments. The higher-level A-buffer, weighted blended transparency, and deferred scene renderers wire their own inputs automatically.
+The scene renderer supplies and owns the G-buffer or transparency captures. The resolve samples those resources and writes the color result. For A-buffer resolve, use `{effect: aBufferResolveEffect, options: {maxFragmentsPerPixel}}` and match the limit used to capture fragments. The higher-level A-buffer, weighted blended transparency, and deferred scene renderers wire their own inputs automatically.
 
 ## Author an effect[​](#author-an-effect "Direct link to Author an effect")
 
@@ -218,3 +216,37 @@ export const softVignette = {
 Put the two implementations in `initialPasses`, then list their shared downstream draws in `passes`. Bloom declares half- and quarter-resolution extraction textures. Its compute branch writes both in one dispatch. Its fragment branch extracts highlights at half resolution, then downsamples to quarter resolution. Both feed the same blur and reconstruction passes.
 
 For your own compute variant, map each storage binding to a named output and mark those resources with `storage: true`. The first output's dimensions determine the dispatch grid. The renderer checks WebGPU, storage-format support, binding limits, and workgroup dimensions. On other devices it runs the fragment sequence. Both paths should populate every resource the shared passes read.
+
+## Record a frame with EffectRenderer[​](#record-a-frame-with-effectrenderer "Direct link to Record a frame with EffectRenderer")
+
+Use `render({sourceTexture, target: null})` to draw to the canvas. Supply a framebuffer as `target` to draw into it, or omit `target` to return the output texture. The returned texture is borrowed. A later draw, resize, or destruction can overwrite or invalidate it. Rendering records commands without submitting. Use `commandEncoder` to record into a caller-owned encoder on the same device.
+
+Set `resetHistory: true` on the first frame after a camera cut. Scene depth, normals, prepared light textures and buffers, and uniform values can change on each call.
+
+A filter can reference its shader module directly:
+
+```
+const sepiaEffect = {
+
+  name: 'sepia',
+
+  passes: [{kind: 'filter', module: sepia}]
+
+} as const satisfies EffectDefinition;
+
+
+
+const renderer = new EffectRenderer(device, {
+
+  effects: [
+
+    {effect: ssaoEffect, options: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+
+    {effect: sepiaEffect}
+
+  ]
+
+});
+```
+
+The sepia `amount` remains a shader uniform. SSAO resolves its target scales and normal-source pass sequence from its definition when the renderer is created.

@@ -98,7 +98,7 @@ The pass contains no history. Re-rendering without an occluder resets visibility
 
 ## Shader-pass consumers[​](#shader-pass-consumers "Direct link to Shader-pass consumers")
 
-`@luma.gl/shaders` exports `contactShadowTrace`, `contactShadowBilateralBlur`, and `contactShadowComposite` with WGSL and GLSL implementations and generic texture bindings. `createContactShadowCompositeShaderPass` in engine lighting supplies a complete color composition chain when the caller already has an isolated directional-direct-light texture. That composite subtracts only the occluded part of the supplied direct contribution; it requires the matching direct-light input rather than multiplying the entire lit color. Use the visibility/PBR workflow above for composition with standalone shadow-map receivers.
+`@luma.gl/shaders` exports `contactShadowTrace`, `contactShadowBilateralBlur`, and `contactShadowComposite` with WGSL and GLSL implementations and generic texture bindings. `contactShadows` in engine lighting supplies a complete color composition chain when the caller already has an isolated directional-direct-light texture. That composite subtracts only the occluded part of the supplied direct contribution; it requires the matching direct-light input rather than multiplying the entire lit color. Use the visibility/PBR workflow above for composition with standalone shadow-map receivers.
 
 ## Limits[​](#limits "Direct link to Limits")
 

@@ -22,9 +22,9 @@ Named `extraColorAttachments` are appended in declaration order after the enable
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createSSRCompositeShaderPass, createTAACompositeShaderPass} from '@luma.gl/engine/effects';
+import {ssr, taa} from '@luma.gl/engine/effects';
 
 import {GBuffer} from '@luma.gl/anari';
 
@@ -70,15 +70,17 @@ scenePass.end();
 
 
 
-const effects = new ShaderPassRenderer(device, {
+const effects = new EffectRenderer(device, {
 
-  shaderPasses: [createSSRCompositeShaderPass(), createTAACompositeShaderPass()]
+  effects: [{effect: ssr}, taa]
 
 });
 
 
 
-effects.renderToScreen({
+effects.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 

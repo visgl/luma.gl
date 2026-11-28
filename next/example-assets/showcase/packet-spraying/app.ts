@@ -14,7 +14,6 @@ import {multiscaleBloomEffect, hdrBloom, toneMappingEffect} from '@luma.gl/engin
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   type EffectDefinition,
-  configureEffect,
   AnimationLoopTemplate,
   colorPicking,
   CubeGeometry,
@@ -3741,7 +3740,7 @@ function makeBloomPipeline(
   renderProfile: NetworkRenderProfile
 ): EffectDefinition {
   const bloomPipeline = renderProfile.handheld
-    ? configureEffect(hdrBloom, {
+    ? hdrBloom.configure({
         blurAlgorithm: 'dual-kawase',
         colorFormat,
         quality: renderProfile.bloomQuality,

@@ -1,6 +1,6 @@
 # Screen-Space Ambient Occlusion
 
-Darken tight creases and nearby surface contacts using the current scene depth buffer. `createSSAOCompositeShaderPass` evaluates screen-space ambient visibility, smooths it with a depth-aware bilateral blur, and composites the result into scene color.
+Darken tight creases and nearby surface contacts using the current scene depth buffer. `ssaoEffect` evaluates screen-space ambient visibility, smooths it with a depth-aware bilateral blur, and composites the result into scene color.
 
 ### Advanced Effects: Visualization City
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property         | Value                                                         |
 | ---------------- | ------------------------------------------------------------- |
-| Export           | `createSSAOCompositeShaderPass`                               |
+| Export           | `ssaoEffect`                                                  |
 | Backend          | WebGPU                                                        |
 | Render passes    | Four: evaluate, horizontal blur, vertical blur, and composite |
 | Required binding | `depthTexture`                                                |
@@ -36,23 +36,23 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createSSAOCompositeShaderPass} from '@luma.gl/engine/effects';
+import {ssaoEffect} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
-  shaderPasses: [
+  effects: [
 
-    createSSAOCompositeShaderPass({
+    {effect: ssaoEffect, options: {
 
       normalSource: 'normal-texture',
 
       resolutionScale: 0.5
 
-    })
+    }}
 
   ]
 
@@ -60,7 +60,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 

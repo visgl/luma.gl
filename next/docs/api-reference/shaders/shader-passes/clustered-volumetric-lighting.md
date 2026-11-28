@@ -1,6 +1,6 @@
 # Clustered Volumetric Lighting
 
-Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingCompositeShaderPass` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
+Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `clusteredVolumetricLighting` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property                  | Value                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------- |
-| Export                    | `createClusteredVolumetricLightingCompositeShaderPass`                                  |
+| Export                    | `clusteredVolumetricLighting`                                                           |
 | Backend                   | WebGPU                                                                                  |
 | Render passes             | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
 | Required scene inputs     | Depth, velocity, camera transforms, directional lighting, and point-light storage       |
@@ -36,9 +36,9 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createClusteredVolumetricLightingCompositeShaderPass} from '@luma.gl/engine/effects';
+import {clusteredVolumetricLighting} from '@luma.gl/engine/effects';
 
 
 
@@ -58,13 +58,13 @@ clusteredLightGrid.encode(device.commandEncoder, {
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createClusteredVolumetricLightingCompositeShaderPass({resolutionScale: 0.5})
+    {effect: clusteredVolumetricLighting, options: {resolutionScale: 0.5}}
 
   ]
 
@@ -72,7 +72,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 

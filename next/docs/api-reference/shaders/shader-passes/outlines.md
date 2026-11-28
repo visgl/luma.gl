@@ -1,6 +1,6 @@
 # Screen-Space Outlines
 
-Reveal object silhouettes and hard surface transitions by comparing nearby depth and normal values. `createOutlineCompositeShaderPass` overlays a configurable edge color in one scene-aware fullscreen pass.
+Reveal object silhouettes and hard surface transitions by comparing nearby depth and normal values. `outlines` overlays a configurable edge color in one scene-aware fullscreen pass.
 
 ### Advanced Effects: Visualization City
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property                 | Value                                                 |
 | ------------------------ | ----------------------------------------------------- |
-| Export                   | `createOutlineCompositeShaderPass`                    |
+| Export                   | `outlines`                                            |
 | Shader uniform namespace | `screenSpaceOutline`                                  |
 | Backend                  | WebGPU                                                |
 | Render passes            | One fullscreen depth/normal edge pass                 |
@@ -36,21 +36,23 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createOutlineCompositeShaderPass} from '@luma.gl/engine/effects';
+import {outlines} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
-  shaderPasses: [createOutlineCompositeShaderPass({normalSource: 'normal-texture'})]
+  effects: [{effect: outlines, options: {normalSource: 'normal-texture'}}]
 
 });
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 

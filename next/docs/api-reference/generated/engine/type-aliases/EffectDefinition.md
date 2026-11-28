@@ -2,7 +2,7 @@
 
 > **EffectDefinition**<`TargetName`> = `object`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L30)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L38)
 
 A reusable, device-independent description of a fullscreen effect.
 
@@ -24,7 +24,7 @@ Names of textures owned by this effect.
 
 > `optional` **initialPasses?**: `object`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L47)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L55)
 
 Optional backend alternatives for a stage before the shared passes. Both implementations must produce the named textures the shared passes consume. The renderer selects the implementation once when constructed.
 
@@ -46,7 +46,7 @@ Portable fullscreen draws in execution order.
 
 > **name**: `string`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L32)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L40)
 
 Label used to identify the effect and its GPU resources in diagnostics.
 
@@ -56,16 +56,16 @@ Label used to identify the effect and its GPU resources in diagnostics.
 
 > **passes**: [`EffectPass`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectPass.md)<`TargetName`>\[]
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L65)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L73)
 
 Shared fullscreen draws in execution order. Use `previous` to read or update the color chain, `original` to read the stack's input image, and a local resource name to route a texture between draws within the effect.
 
 ***
 
-### resources[​](#resources "Direct link to resources")
+### resources?[​](#resources "Direct link to resources?")
 
-> **resources**: `NonNullable`<`CompositeShaderPass`<`TargetName`>\[`"renderTargets"`]>
+> `optional` **resources?**: `NonNullable`<`CompositeShaderPass`<`TargetName`>\[`"renderTargets"`]>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L40)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L48)
 
 Textures owned by each occurrence of this effect. A target's scale is relative to the renderer size. History targets retain their prior frame value and may declare how to initialize it. Use an empty object for an effect that only writes to the shared color chain.

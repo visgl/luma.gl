@@ -128,7 +128,7 @@ Use physical pixels for both attachments and the receiver viewport. Depth, norma
 
 Use `AmbientOcclusionPass` with PBR receiving when the material pipeline can apply visibility at light accumulation. It reuses the existing SSAO/GTAO evaluators and depth-aware blur; it does not introduce another AO algorithm. It has no temporal history or velocity input.
 
-Existing `createSSAOCompositeShaderPass` and `createGTAOCompositeShaderPass` exports in `@luma.gl/engine/effects` remain available for postprocessing. Multiplying complete scene color also darkens direct light and emission. GTAO's `composition: 'ambient-only'` avoids that by requiring a separately supplied ambient-light color texture. This is a different contract from a visibility mask bound to a PBR receiver.
+Use `ssaoEffect` or `gtao` from `@luma.gl/engine/effects` for postprocessing. Multiplying complete scene color also darkens direct light and emission. GTAO's `composition: 'ambient-only'` avoids that by requiring a separately supplied ambient-light color texture. This is a different contract from a visibility mask bound to a PBR receiver.
 
 The existing GTAO composite includes temporal reprojection and needs a matching velocity texture. The reusable surface prepass currently supplies depth and normals, not motion vectors. Do not substitute zero velocities for moving objects or cameras to claim temporal stability. Integrating motion-vector production and shared history is a separate step.
 

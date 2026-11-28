@@ -1,6 +1,6 @@
 # Class: EffectRenderer\<Options>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L128)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:192](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L192)
 
 Runs a chain of reusable fullscreen effects for a single device.
 
@@ -22,7 +22,7 @@ Resize to the desired output size before rendering. Supply scene textures and pe
 
 > **new EffectRenderer**<`Options`>(`device`, `__namedParameters`): `EffectRenderer`<`Options`>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L131)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L195)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -154,7 +154,7 @@ Records the shader-pass chain and presentation into a caller-owned command encod
 
 > **encodeToTexture**(`commandEncoder`, `options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:198](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L198)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:210](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L210)
 
 Records the shader-pass chain into a caller-owned command encoder. The encoder must belong to this renderer's device and have no active pass. This method does not finish or submit the encoder.
 
@@ -178,19 +178,77 @@ Records the shader-pass chain into a caller-owned command encoder. The encoder m
 
 ***
 
+### render()[​](#render "Direct link to render()")
+
+#### Call Signature[​](#call-signature "Direct link to Call Signature")
+
+> **render**(`options`): `Texture` | `null`
+
+Defined in: [modules/engine/src/passes/effect-renderer.ts:215](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L215)
+
+Records a frame and returns a borrowed texture, or whether presentation was recorded.
+
+##### Parameters[​](#parameters-3 "Direct link to Parameters")
+
+###### options[​](#options-3 "Direct link to options")
+
+[`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md) & `object` & `object`
+
+##### Returns[​](#returns-4 "Direct link to Returns")
+
+`Texture` | `null`
+
+#### Call Signature[​](#call-signature-1 "Direct link to Call Signature")
+
+> **render**(`options`): `boolean`
+
+Defined in: [modules/engine/src/passes/effect-renderer.ts:216](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L216)
+
+Records a frame and returns a borrowed texture, or whether presentation was recorded.
+
+##### Parameters[​](#parameters-4 "Direct link to Parameters")
+
+###### options[​](#options-4 "Direct link to options")
+
+[`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md) & `object` & `object`
+
+##### Returns[​](#returns-5 "Direct link to Returns")
+
+`boolean`
+
+#### Call Signature[​](#call-signature-2 "Direct link to Call Signature")
+
+> **render**(`options`): `boolean` | `Texture` | `null`
+
+Defined in: [modules/engine/src/passes/effect-renderer.ts:217](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L217)
+
+Records a frame and returns a borrowed texture, or whether presentation was recorded.
+
+##### Parameters[​](#parameters-5 "Direct link to Parameters")
+
+###### options[​](#options-5 "Direct link to options")
+
+[`EffectRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRenderOptions.md)
+
+##### Returns[​](#returns-6 "Direct link to Returns")
+
+`boolean` | `Texture` | `null`
+
+***
+
 ### renderToScreen()[​](#rendertoscreen "Direct link to renderToScreen()")
 
 > **renderToScreen**(`options`): `boolean`
 
 Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L151)
 
-#### Parameters[​](#parameters-3 "Direct link to Parameters")
+#### Parameters[​](#parameters-6 "Direct link to Parameters")
 
-##### options[​](#options-3 "Direct link to options")
+##### options[​](#options-6 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
-#### Returns[​](#returns-4 "Direct link to Returns")
+#### Returns[​](#returns-7 "Direct link to Returns")
 
 `boolean`
 
@@ -204,17 +262,17 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://gith
 
 > **renderToTexture**(`options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:189](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L189)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L201)
 
 Runs the shaderPasses in sequence on the sourceTexture and returns a texture with the results.
 
-#### Parameters[​](#parameters-4 "Direct link to Parameters")
+#### Parameters[​](#parameters-7 "Direct link to Parameters")
 
-##### options[​](#options-4 "Direct link to options")
+##### options[​](#options-7 "Direct link to options")
 
 [`ShaderPassRendererRenderOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ShaderPassRendererRenderOptions.md)
 
-#### Returns[​](#returns-5 "Direct link to Returns")
+#### Returns[​](#returns-8 "Direct link to Returns")
 
 `Texture` | `null`
 
@@ -234,7 +292,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:145](https://gith
 
 Invalidates persistent composite-pass targets without destroying their allocations.
 
-#### Returns[​](#returns-6 "Direct link to Returns")
+#### Returns[​](#returns-9 "Direct link to Returns")
 
 `void`
 
@@ -250,13 +308,13 @@ Invalidates persistent composite-pass targets without destroying their allocatio
 
 Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L136)
 
-#### Parameters[​](#parameters-5 "Direct link to Parameters")
+#### Parameters[​](#parameters-8 "Direct link to Parameters")
 
 ##### size?[​](#size "Direct link to size?")
 
 \[`number`, `number`]
 
-#### Returns[​](#returns-7 "Direct link to Returns")
+#### Returns[​](#returns-10 "Direct link to Returns")
 
 `void`
 

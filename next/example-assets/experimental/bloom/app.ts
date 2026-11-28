@@ -6,7 +6,6 @@ import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@
 import {bloomEffect, hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 import {
   type EffectDefinition,
-  configureEffect,
   AnimationLoopTemplate,
   type AnimationProps,
   ClipSpace,
@@ -246,7 +245,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           .supported)
     ) {
       effects.push(
-        configureEffect(hdrBloom, {
+        hdrBloom.configure({
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
           exposure: this.settings.exposure,

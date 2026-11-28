@@ -1,6 +1,6 @@
 # HDR Auto Exposure
 
-Continuously meter scene luminance and adapt camera exposure entirely on the GPU. `createHDRAutoExposureCompositeShaderPass` uses a center-weighted logarithmic luminance pyramid, persistent exposure history, and independent brightening and darkening response speeds.
+Continuously meter scene luminance and adapt camera exposure entirely on the GPU. `hdrAutoExposure` uses a center-weighted logarithmic luminance pyramid, persistent exposure history, and independent brightening and darkening response speeds.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property          | Value                                                           |
 | ----------------- | --------------------------------------------------------------- |
-| Export            | `createHDRAutoExposureCompositeShaderPass`                      |
+| Export            | `hdrAutoExposure`                                               |
 | Backend           | WebGPU                                                          |
 | Render passes     | Seven: extraction, four reductions, adaptation, and application |
 | Persistent state  | One GPU-owned exposure-history texture                          |
@@ -35,13 +35,13 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
 import {
 
-  createBloomCompositeShaderPass,
+  hdrBloom,
 
-  createHDRAutoExposureCompositeShaderPass,
+  hdrAutoExposure,
 
   toneMapping
 
@@ -49,15 +49,15 @@ import {
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createHDRAutoExposureCompositeShaderPass({meteringScale: 0.25, initialExposure: 1}),
+    {effect: hdrAutoExposure, options: {meteringScale: 0.25, initialExposure: 1}},
 
-    createBloomCompositeShaderPass({quality: 'high'}),
+    {effect: hdrBloom, options: {quality: 'high'}},
 
     toneMapping
 
@@ -67,7 +67,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: hdrSceneTexture,
 

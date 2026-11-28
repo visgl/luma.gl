@@ -7,9 +7,9 @@
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
+import {Model, ShaderInputs, EffectRenderer} from '@luma.gl/engine';
 
-import {WBOITRenderer, createWBOITResolveCompositeShaderPass, wboit, wboitPlugin} from '@luma.gl/anari';
+import {WBOITRenderer, wboitResolveEffect, wboit, wboitPlugin} from '@luma.gl/anari';
 
 
 
@@ -78,9 +78,17 @@ fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 
 Use `wboit_capturePremultipliedColor` when RGB is already multiplied by alpha.
 
-`render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects stack, call `capture()` and pass its bindings to a `ShaderPassRenderer` containing `createWBOITResolveCompositeShaderPass()`:
+`render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects stack, call `capture()` and pass its bindings to a `EffectRenderer` containing `wboitResolveEffect`:
 
 ```
+import {EffectRenderer} from '@luma.gl/engine';
+
+import {multiscaleBloomEffect} from '@luma.gl/engine/effects';
+
+import {wboitResolveEffect} from '@luma.gl/anari';
+
+
+
 const capture = renderer.capture({
 
   size: {width: sceneColor.width, height: sceneColor.height},
@@ -95,13 +103,13 @@ const capture = renderer.capture({
 
 
 
-const effects = new ShaderPassRenderer(device, {
+const effects = new EffectRenderer(device, {
 
-  shaderPasses: [createWBOITResolveCompositeShaderPass(), bloomCompositeShaderPass]
+  effects: [wboitResolveEffect, multiscaleBloomEffect]
 
 });
 
-const output = effects.renderToTexture({sourceTexture: sceneColor, bindings: capture.bindings});
+const output = effects.render({sourceTexture: sceneColor, bindings: capture.bindings});
 ```
 
 ## Rendering Model[​](#rendering-model "Direct link to Rendering Model")
@@ -111,7 +119,7 @@ For each frame the renderer:
 1. Draws opaque depth into an internal depth target shared by both capture passes.
 2. Accumulates weighted premultiplied color and weighted alpha into `rgba16float`.
 3. Accumulates multiplicative revealage into a second `rgba16float` target.
-4. Runs `createWBOITResolveCompositeShaderPass()` to composite the normalized weighted color and revealage over `sourceTexture`.
+4. Runs `wboitResolveEffect` to composite the normalized weighted color and revealage over `sourceTexture`.
 
 `prepareTranslucent` and `drawTranslucent` are called twice, once with `pass: 'accumulation'` and once with `pass: 'revealage'`.
 

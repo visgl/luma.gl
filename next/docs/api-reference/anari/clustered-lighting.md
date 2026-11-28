@@ -50,9 +50,9 @@ The fullscreen resolve uses the compact list while it fits. Overflow is compacte
 ```
 import {Buffer} from '@luma.gl/core';
 
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {ClusteredLightGrid, createClusteredDeferredLightingCompositeShaderPass, makeDeferredPointLightBufferData, MAX_CLUSTERED_POINT_LIGHTS} from '@luma.gl/anari';
+import {ClusteredLightGrid, clusteredDeferredLightingEffect, makeDeferredPointLightBufferData, MAX_CLUSTERED_POINT_LIGHTS} from '@luma.gl/anari';
 
 
 
@@ -92,9 +92,9 @@ clusteredLightGrid.encode(device.commandEncoder, {
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
-  shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
+  effects: [clusteredDeferredLightingEffect],
 
   colorFormat: 'rgba16float'
 
@@ -102,7 +102,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 
@@ -165,7 +167,7 @@ Returns `clusterLightCounts` and `clusterLightIndices` for `clusteredDeferredLig
 
 Returns the dimensions, retained capacity, active point-light count from the latest `encode()`, and logarithmic depth-range uniforms needed by the fullscreen resolve.
 
-### `createClusteredDeferredLightingCompositeShaderPass()`[​](#createclustereddeferredlightingcompositeshaderpass "Direct link to createclustereddeferredlightingcompositeshaderpass")
+### `clusteredDeferredLightingEffect`[​](#clustereddeferredlightingeffect "Direct link to clustereddeferredlightingeffect")
 
 Returns a one-step `CompositeShaderPass` that resolves the current cluster's point-light list into the ordered `previous` color chain.
 

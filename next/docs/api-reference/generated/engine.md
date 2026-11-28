@@ -124,6 +124,7 @@
 * [EffectDefinition](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectDefinition.md)
 * [EffectPass](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectPass.md)
 * [EffectRendererProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRendererProps.md)
+* [EffectRenderOptions](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectRenderOptions.md)
 * [GeometryAttribute](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryAttribute.md)
 * [GeometryAttributeInput](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryAttributeInput.md)
 * [GeometryNodeProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryNodeProps.md)
@@ -246,7 +247,6 @@
 
 * [applyMorphTargets](https://luma.gl/next/docs/api-reference/generated/engine/functions/applyMorphTargets.md)
 * [cancelAnimationFramePolyfill](https://luma.gl/next/docs/api-reference/generated/engine/functions/cancelAnimationFramePolyfill.md)
-* [configureEffect](https://luma.gl/next/docs/api-reference/generated/engine/functions/configureEffect.md)
 * [createAreaLightLTCTextures](https://luma.gl/next/docs/api-reference/generated/engine/functions/createAreaLightLTCTextures.md)
 * [createParametricAudioResponse](https://luma.gl/next/docs/api-reference/generated/engine/functions/createParametricAudioResponse.md)
 * [createSkinJointPaletteResource](https://luma.gl/next/docs/api-reference/generated/engine/functions/createSkinJointPaletteResource.md)

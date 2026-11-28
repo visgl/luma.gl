@@ -46,9 +46,9 @@ The extra attachment names are conventions at the application boundary; `GBuffer
 ```
 import {Buffer} from '@luma.gl/core';
 
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createDeferredLightingCompositeShaderPass, GBuffer, makeDeferredPointLightBufferData, MAX_DEFERRED_POINT_LIGHTS} from '@luma.gl/anari';
+import {deferredLightingEffect, GBuffer, makeDeferredPointLightBufferData, MAX_DEFERRED_POINT_LIGHTS} from '@luma.gl/anari';
 
 
 
@@ -82,15 +82,17 @@ const pointLights = device.createBuffer({
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
-  shaderPasses: [createDeferredLightingCompositeShaderPass()]
+  effects: [deferredLightingEffect]
 
 });
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: gBuffer.colorTexture,
 
@@ -147,7 +149,7 @@ The exported `ShaderPass` descriptor. It samples:
 
 Its uniforms are `inverseProjectionMatrix`, `ambientColor`, `directionalLightDirectionView`, `directionalLightColor`, `directionalLightIntensity`, and `pointLightCount`.
 
-### `createDeferredLightingCompositeShaderPass(): CompositeShaderPass`[​](#createdeferredlightingcompositeshaderpass-compositeshaderpass "Direct link to createdeferredlightingcompositeshaderpass-compositeshaderpass")
+### `deferredLightingEffect: CompositeShaderPass`[​](#deferredlightingeffect-compositeshaderpass "Direct link to deferredlightingeffect-compositeshaderpass")
 
 Returns a one-step pipeline that reads the current `previous` color and writes the lighting result back into `previous`. Put it before SSAO, reflections, temporal accumulation, bloom, and tone mapping unless a deliberate stylized ordering needs otherwise.
 

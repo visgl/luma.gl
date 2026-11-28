@@ -1,6 +1,6 @@
 # Screen-Space Reflections
 
-Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `createSSRCompositeShaderPass` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
+Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `ssr` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property            | Value                                                                                                                         |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Export              | `createSSRCompositeShaderPass`                                                                                                |
+| Export              | `ssr`                                                                                                                         |
 | Backend             | WebGPU                                                                                                                        |
 | Render passes       | Six with velocity history; seven with camera history (adds a normal-history copy)                                             |
 | Required bindings   | `depthTexture`, `normalTexture`; velocity mode also requires `velocityTexture`                                                |
@@ -36,21 +36,21 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createSSGICompositeShaderPass, createSSRCompositeShaderPass} from '@luma.gl/engine/effects';
+import {ssgi, ssr} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createSSGICompositeShaderPass({resolutionScale: 0.5}),
+    {effect: ssgi, options: {resolutionScale: 0.5}},
 
-    createSSRCompositeShaderPass({resolutionScale: 0.5})
+    {effect: ssr, options: {resolutionScale: 0.5}}
 
   ]
 
@@ -58,7 +58,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: litSceneTexture,
 
@@ -111,7 +113,7 @@ renderer.renderToScreen({
 
 ## Camera-only history[​](#camera-only-history "Direct link to Camera-only history")
 
-For static geometry without a velocity attachment, use `createSSRCompositeShaderPass({reprojection: 'camera', quality: 'balanced'})`. The factory composes `ssrCameraTemporal`, full-resolution packed depth and normal histories, and the existing tracing, denoising, and composition passes. Supply `currentClipToPreviousClip` (previous view-projection multiplied by inverse current view-projection, using WebGPU clip depth), `currentViewToPreviousView`, and `previousInverseProjectionMatrix`. Form the clip-to-clip product on the CPU to avoid reconstructing large world coordinates in the shader. Matrix conventions and units must match the depth and view-normal attachments.
+For static geometry without a velocity attachment, use `ssr({reprojection: 'camera', quality: 'balanced'})`. The factory composes `ssrCameraTemporal`, full-resolution packed depth and normal histories, and the existing tracing, denoising, and composition passes. Supply `currentClipToPreviousClip` (previous view-projection multiplied by inverse current view-projection, using WebGPU clip depth), `currentViewToPreviousView`, and `previousInverseProjectionMatrix`. Form the clip-to-clip product on the CPU to avoid reconstructing large world coordinates in the shader. Matrix conventions and units must match the depth and view-normal attachments.
 
 The pass reads `depthTexture`, `normalTexture`, `historyTexture`, `previousDepthTexture`, and `previousNormalTexture`. The factory maintains three renderer history targets: RGBA16F reflection radiance, RGBA8 packed depth, and RGBA8 encoded view normals plus roughness. It writes depth with `ssrCameraDepthHistoryCopy` and normals with `ssrNormalHistoryCopy` **after** the temporal resolve. It initializes reflection history to zero and packed depth history to `[1, 1, 1, 1]`. The packed depth preserves 24 bits without requiring filterable 32-bit float textures; it is not interchangeable with the red-channel output of `ssrDepthHistoryCopy`.
 

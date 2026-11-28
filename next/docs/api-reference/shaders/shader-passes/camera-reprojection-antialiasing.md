@@ -1,6 +1,6 @@
 # Camera-Reprojection Antialiasing
 
-Reconstruct previous-frame image coordinates from scene depth and camera transforms when a per-pixel velocity buffer is unavailable. `createCameraReprojectionTAACompositeShaderPass` powers the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
+Reconstruct previous-frame image coordinates from scene depth and camera transforms when a per-pixel velocity buffer is unavailable. `cameraReprojectionTaa` powers the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
 
 [ANARI Scene Lab](/next/standalone-examples/scene/playground.html)
 
@@ -10,7 +10,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property         | Value                                                                  |
 | ---------------- | ---------------------------------------------------------------------- |
-| Export           | `createCameraReprojectionTAACompositeShaderPass`                       |
+| Export           | `cameraReprojectionTaa`                                                |
 | Backend          | WebGPU                                                                 |
 | Render passes    | Three: temporal resolve, resolved-color copy, and depth-history copy   |
 | Required binding | `depthTexture`                                                         |
@@ -20,23 +20,25 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createCameraReprojectionTAACompositeShaderPass} from '@luma.gl/engine/effects';
+import {cameraReprojectionTaa} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createCameraReprojectionTAACompositeShaderPass()]
+  effects: [cameraReprojectionTaa]
 
 });
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: sceneColorTexture,
 

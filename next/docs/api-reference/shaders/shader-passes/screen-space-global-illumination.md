@@ -1,6 +1,6 @@
 # Screen-Space Global Illumination
 
-Gather colored diffuse light bouncing between surfaces that are visible in the current frame. `createSSGICompositeShaderPass` traces a screen-space hemisphere, reprojects indirect-light history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
+Gather colored diffuse light bouncing between surfaces that are visible in the current frame. `ssgi` traces a screen-space hemisphere, reprojects indirect-light history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -26,7 +26,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property          | Value                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------------------ |
-| Export            | `createSSGICompositeShaderPass`                                                            |
+| Export            | `ssgi`                                                                                     |
 | Backend           | WebGPU                                                                                     |
 | Render passes     | Six: hemisphere trace, temporal resolve, depth history, two spatial filters, and composite |
 | Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture`                                     |
@@ -36,21 +36,21 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-import {createGTAOCompositeShaderPass, createSSGICompositeShaderPass} from '@luma.gl/engine/effects';
+import {gtao, ssgi} from '@luma.gl/engine/effects';
 
 
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [
+  effects: [
 
-    createGTAOCompositeShaderPass(),
+    {effect: gtao},
 
-    createSSGICompositeShaderPass({resolutionScale: 0.5})
+    {effect: ssgi, options: {resolutionScale: 0.5}}
 
   ]
 
@@ -58,7 +58,9 @@ const renderer = new ShaderPassRenderer(device, {
 
 
 
-renderer.renderToScreen({
+renderer.render({
+
+  target: null,
 
   sourceTexture: litSceneTexture,
 
