@@ -460,10 +460,15 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'ln':
       case 'log10':
       case 'asin':
-      case 'acos': {
+      case 'acos':
+      case 'sin':
+      case 'cos':
+      case 'tan':
+      case 'atan':
+      case 'exp': {
         const operand = this.emit(operandNode, this.inferFormat(operandNode) ?? 'float32');
         if (operand.format !== 'float32') {
-          throw new Error('GPUDataFrame domain-sensitive functions require Float32 input');
+          throw new Error('GPUDataFrame transcendental functions require Float32 input');
         }
         const value = operand.value;
         const domain =
@@ -471,7 +476,12 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
             ? `${value} >= 0.0`
             : operator === 'ln' || operator === 'log10'
               ? `${value} > 0.0`
-              : `abs(${value}) <= 1.0`;
+              : operator === 'asin' || operator === 'acos'
+                ? `abs(${value}) <= 1.0`
+                : operator === 'exp'
+                  ? // The next Float32 input at this boundary is above log(maxFloat32).
+                    `${value} < 88.72283935546875`
+                  : 'true';
         const valid = `(${operand.valid} && (bitcast<u32>(${value}) & 0x7fffffffu) < 0x7f800000u && (${domain}))`;
         const input = `select(1.0, ${value}, ${valid})`;
         const result =
