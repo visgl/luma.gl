@@ -288,7 +288,7 @@ function lowerEffectOperation(
         const samplers = Object.fromEntries(
           Object.entries(bindings)
             .filter(([, target]) => target.sampler)
-            .map(([name, target]) => [name, device.createSampler(target.sampler)])
+            .map(([name, target]) => [name, device.createSampler(target.sampler!)])
         );
         return {
           prepare: encoding => {
@@ -302,7 +302,7 @@ function lowerEffectOperation(
                 samplers[name] ?? encoding.getTexture(target.view).sampler
               ])
             );
-            const sourceView = bindings.sourceTexture.view;
+            const sourceView = bindings['sourceTexture'].view;
             executable.prepare({
               commandEncoder: encoding.commandEncoder,
               bindings: {...textures, ...resolvedSamplers},

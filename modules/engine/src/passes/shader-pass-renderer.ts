@@ -812,7 +812,7 @@ function isCompositeShaderPass(shaderPass: ShaderPassLike): shaderPass is Compos
 export function supportsComputeOptimization(
   device: Device,
   compositeShaderPass: CompositeShaderPass,
-  colorFormat = device.preferredColorFormat
+  colorFormat: TextureFormatColor = device.preferredColorFormat
 ): boolean {
   const optimization = compositeShaderPass.initialPasses
     ? compositeShaderPass.initialPasses.compute
