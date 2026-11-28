@@ -3,6 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  addArticulationWorldContacts,
+  type GPUArticulationWorldContact
+} from './articulation-world-contacts';
+
+import {
   type BoundKernel,
   type BoundKernelProps,
   createBoundKernel,
@@ -1026,7 +1031,24 @@ export class GPURigidBodyWorld {
     };
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  addToGraph<Parameters>(
+    graph: GPUCommandGraph<Parameters>,
+    articulation?: GPUArticulationWorldContact
+  ): void {
+    // Coupled ordering currently supports one solid box per body in a small standalone world.
+    if (
+      articulation &&
+      (this.count > 16 ||
+        this.colliders.length !== this.count ||
+        this.colliders.some(
+          (collider, index) =>
+            collider.body !== index || collider.shape.type !== 'box' || collider.isTrigger
+        ) ||
+        this.props.failurePolicy === 'rollback' ||
+        this.props.ensembleBodiesPerInstance ||
+        articulation.tree.timeStep !== this.timeStep)
+    )
+      throw new Error('Unsupported articulation world');
     if (this.device || this.destroyed)
       throw new Error('Rigid-body world already attached or destroyed');
     const {
@@ -2151,6 +2173,8 @@ export class GPURigidBodyWorld {
         compileAsync: async ({device}) =>
           createExecutable(await createBoundKernelAsync(device, computationProps))
       });
+      if (entryPoint === 'integrate' && articulation)
+        addArticulationWorldContacts(graph, this.id, articulation, this.count, bindings);
     }
     continuous?.finish();
     triggers?.sample();

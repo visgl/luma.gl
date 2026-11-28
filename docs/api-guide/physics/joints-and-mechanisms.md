@@ -137,4 +137,21 @@ const tree = new GPUArticulationTree({links, base, payload, publishMatrices: tru
 
 Drive the finger joints inward to build normal force. Tangential impulses are limited by pad friction and the current normal impulse. The impulses act on the fingers and the free box, including its rotation. Opening the fingers releases the workpiece. The final record in `readState()` and the final published matrix belong to the box.
 
-Open **Try pick and place** in the Robot arm lab. Use **Next phase** to examine the grip, lift, carry, lower and release, or **Run cycle** to play the sequence. Switch to frictionless pads and repeat to see the load stay on the bench during lift.
+Open **Try pick and place** in the Robot arm lab. Use **Run cycle** to grip, lift, carry, lower and release. **Stop cycle** restores the starting poses. Adjust the block mass in the panel header to try another load. Switch to frictionless pads and repeat to see the load stay on the bench during lift.
+
+### Picking a box from a bin
+
+Use a rigid-body world when a gripper must discover which object it touched. Register the boxes, bench and tray as ordinary world bodies. With an authored scene you can use `makePhysicsControllerScene` from `@luma.gl/engine/physics` to infer their collider geometry from scene nodes. Create a fixed-base tree for the arm, then register the world and tree together:
+
+```ts
+const tree = new GPUArticulationTree({links, base, timeStep: 1 / 120, publishMatrices: true});
+world.addToGraph(graph, {
+  tree,
+  pads: [{link: 'left', radius: 0.095}, {link: 'right', radius: 0.095}],
+  friction: 0.9
+});
+```
+
+Each fingertip tests the oriented boxes on the GPU. Selecting a destination or a pickup changes the arm's drive targets. Contact geometry determines which bodies receive impulses. The tree and world publish separate matrix buffers for rendering. For inspection, read `padContactMasks` from the tree's simulation diagnostics. Bit `i` identifies world body `i`. Two different bits on opposite fingers can mean that an obstruction has left the fingers pressing on separate objects.
+
+This path supports one tree and up to 16 bodies with one solid box each, using the same fixed timestep. Pad friction combines geometrically with each box's sliding friction. World contacts resolve after the fingertip impulses in each step. The coupling currently uses all registered boxes and requires a standalone world with the reporting failure policy. Use the Bin Picking controls in the gripper lab to pick a workpiece, release it in the tray and grasp it again, or release it onto a neighbor.

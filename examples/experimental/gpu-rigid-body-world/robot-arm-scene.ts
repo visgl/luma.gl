@@ -25,7 +25,9 @@ export class RobotArmScene {
     device: Device,
     world: {poseMatrices: Buffer | null; count: number},
     treeBodies?: GPURigidBody[],
-    gripper = false
+    gripper = false,
+    workcell?: ReturnType<typeof import('./bin-workcell').makeBinWorkcell>,
+    binMatrices?: Buffer | null
   ) {
     this.renderer = new SceneRenderer(device);
     const bindings = new Map<ScenegraphNode, ScenegraphTransformBinding>();
@@ -37,6 +39,14 @@ export class RobotArmScene {
         bindings
       })
     };
+    if (workcell) {
+      workcell.bind(
+        binMatrices ?? world.poseMatrices!,
+        binMatrices ? workcell.bodies.length : world.count,
+        !binMatrices
+      );
+      this.root.add(workcell.root);
+    }
     const cube = new CubeGeometry();
     const hub = new CylinderGeometry({height: 2, radius: 1, topCap: true, bottomCap: true});
     const sphere = new SphereGeometry({nlat: 24, nlong: 32});
@@ -72,8 +82,8 @@ export class RobotArmScene {
     };
     if (gripper) {
       const teal = material('payload-teal', [0.034, 0.57, 0.52, 1], 0.18, 0.31);
-      add('workbench', 0, cube, bench, [0, 0, 0], [2.4, 2.4, 0.12]);
-      for (const angle of [0, 1]) {
+      if (!workcell) add('workbench', 0, cube, bench, [0, 0, 0], [2.4, 2.4, 0.12]);
+      for (const angle of workcell ? [] : [0, 1]) {
         const center = [1.4 * Math.cos(angle), 1.4 * Math.sin(angle)];
         for (const sign of [-1, 1]) {
           add(
@@ -104,6 +114,7 @@ export class RobotArmScene {
         add('pad-' + body, body, sphere, graphite, [0, 0, 0], [0.095, 0.095, 0.095]);
         add('knuckle-' + body, body, sphere, enamel, [0, 0, 0.74], [0.095, 0.095, 0.095]);
       }
+      if (workcell) return;
       add('free-workpiece', 6, cube, teal, [0, 0, 0], [0.19, 0.2, 0.24]);
       add('workpiece-stripe', 6, cube, steel, [0, 0, 0.14], [0.191, 0.201, 0.012]);
       return;
