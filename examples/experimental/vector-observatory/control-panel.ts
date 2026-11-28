@@ -23,6 +23,10 @@ export type ObservatorySettings = {
   particleCount: number;
   integrator: 'rk2' | 'rk4' | 'rk45';
   tolerance: number;
+  /** Dense or compacted RK45 integration work. */
+  scheduling: 'dense' | 'active';
+  /** Bounded number of RK45 dispatches per counter synchronization. */
+  dispatchesPerReadback: number;
   coloring: 'speed' | 'step' | 'status';
   timeScale: number;
   exposure: number;
@@ -50,6 +54,8 @@ export class ObservatoryControlPanel {
     particleCount: 65536,
     integrator: 'rk4',
     tolerance: 1e-5,
+    scheduling: 'dense',
+    dispatchesPerReadback: 1,
     coloring: 'speed',
     timeScale: 1,
     exposure: 0.85,
@@ -87,11 +93,14 @@ export class ObservatoryControlPanel {
           this.settings.integrator = next.integrator;
         if (this.settings.field === 'spherical' && this.settings.integrator === 'rk45')
           this.settings.integrator = 'rk4';
+        if (next.scheduling === 'dense' || next.scheduling === 'active')
+          this.settings.scheduling = next.scheduling;
         if (next.coloring === 'speed' || next.coloring === 'step' || next.coloring === 'status')
           this.settings.coloring = next.coloring;
         for (const name of [
           'particleCount',
           'tolerance',
+          'dispatchesPerReadback',
           'timeScale',
           'exposure',
           'streakWidth',
@@ -108,7 +117,9 @@ export class ObservatoryControlPanel {
           before.field !== this.settings.field ||
             before.particleCount !== this.settings.particleCount ||
             before.integrator !== this.settings.integrator ||
-            before.tolerance !== this.settings.tolerance
+            before.tolerance !== this.settings.tolerance ||
+            before.scheduling !== this.settings.scheduling ||
+            before.dispatchesPerReadback !== this.settings.dispatchesPerReadback
         );
       }
     });
@@ -279,7 +290,10 @@ export class ObservatoryControlPanel {
         ['Tolerance failure', result.toleranceFailure],
         ['Numerical failure', result.numericalFailure],
         ['Accepted steps', result.acceptedSteps],
-        ['Rejected steps', result.rejectedSteps]
+        ['Rejected steps', result.rejectedSteps],
+        ['Scheduled integration slots', result.scheduledParticles],
+        ['Integration workgroups', result.integrationWorkgroups],
+        ['Counter readback bytes', result.counterReadbackBytes]
       ] as const)
         entries.push([label, value.toLocaleString()]);
     }
@@ -294,7 +308,7 @@ export class ObservatoryControlPanel {
     }
     const note = document.createElement('p');
     note.textContent = result
-      ? 'Work counts describe the latest dispatch. GPU time excludes counter readback and rendering. Pending particles may be at different intermediate times.'
+      ? 'Work counts describe the latest batch. Scheduled slots exclude the full-slot queue scan; GPU time includes it, but excludes counter readback and rendering. Pending particles may be at different intermediate times.'
       : 'Frame rate measures the animation loop, not GPU compute time. Select RK45 for adaptive work and particle-state diagnostics.';
     this.telemetryHost.replaceChildren(list, note);
   }
@@ -367,6 +381,27 @@ export class ObservatoryControlPanel {
                       {label: '1e-3 · exploratory', value: 1e-3},
                       {label: '1e-5 · precise', value: 1e-5},
                       {label: '1e-7 · demanding', value: 1e-7}
+                    ]
+                  },
+                  {
+                    name: 'scheduling',
+                    label: 'RK45 scheduling',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: 'Dense · all slots', value: 'dense'},
+                      {label: 'Active · GPU queue', value: 'active'}
+                    ]
+                  },
+                  {
+                    name: 'dispatchesPerReadback',
+                    label: 'Dispatches per readback',
+                    type: 'select' as const,
+                    persist: 'none' as const,
+                    options: [
+                      {label: '1 · interactive', value: 1},
+                      {label: '4', value: 4},
+                      {label: '16 · throughput', value: 16}
                     ]
                   },
                   {
