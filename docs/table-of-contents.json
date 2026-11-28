@@ -942,6 +942,7 @@
               "api-reference/experimental/mls-mpm-fluid-simulation",
               "api-reference/experimental/spectral-ocean-simulation",
               "api-reference/experimental/scientific-flow-tracer",
+              "api-reference/experimental/spherical-flow-graph",
               "api-reference/experimental/volumetric-fire-simulation"
             ]
           },

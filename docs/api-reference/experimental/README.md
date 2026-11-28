@@ -123,3 +123,5 @@ specific rather than universal performance claims.
 [`DepthTextureCopy`](../anari/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
 
 [`getRayTracingQualityPreset`](../anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
+
+[Spherical flow transport](/docs/api-reference/experimental/spherical-flow-graph) provides dense global Cartesian-vector sampling and pole-crossing RK2/RK4 with stable particle slots.

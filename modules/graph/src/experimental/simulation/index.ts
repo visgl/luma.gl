@@ -51,3 +51,8 @@ export {
 
 export {FlowTrajectoryHistory} from './flow-trajectory-history';
 export type {FlowTrajectoryFrame, FlowTrajectorySnapshot} from './flow-trajectory-history';
+
+export {SphericalFlowField} from './spherical-flow-field';
+export type {SphericalVectorFieldInput} from './spherical-flow-field';
+export {SphericalFlowGraph} from './spherical-flow-graph';
+export type {SphericalFlowGraphProps} from './spherical-flow-graph';

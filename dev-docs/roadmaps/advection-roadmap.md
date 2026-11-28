@@ -17,7 +17,7 @@ periodic longitude. RK45 has stable identities, explicit termination reasons,
 bounded continuation, graph inspection and dispatch timings. Its local tolerance
 is not a bound on total trajectory error. Geographic transport uses a local
 metres-to-degrees conversion limited to ±85°; the weather globe uses illustrative
-Cartesian atlas coordinates, not pole-crossing spherical transport.
+Cartesian atlas coordinates. The separate `SphericalFlowGraph` and pole-crossing preset integrate unit Cartesian sphere positions with dense world-vector snapshots; adaptive spherical transport remains open.
 
 The existing tests cover rotations, geographic units, temporal interpolation,
 masks, snapshot rotation, dispatch budgets and periodic longitude. The opt-in
@@ -28,7 +28,7 @@ references. No observational-data qualification or general speedup claim is esta
 ## Delivery tranches
 
 Each row is independently reviewable. A1–A3 shipped in #3956. A4, B1a and B3a
-are implemented in #3963. The visual follow-up adds A5 and the B1b1
+shipped in #3963. The visual follow-up adds A5 and the B1b1
 controlled model-wind sweeps; observational qualification and boundary policies remain separate deliverables.
 
 | Tranche | Status | Deliverable and exit evidence |
@@ -41,7 +41,9 @@ controlled model-wind sweeps; observational qualification and boundary policies 
 | A5 — Visual trajectory playback and export | Implemented in visual follow-up | Archived GFS map with 73 bounded GPU captures, explicit CPU playback, UTC/physical-coordinate CSV export, reference overlays and RK45 Graph/Trace inspection. |
 | B1b1 — Controlled accuracy/cost sweeps | Implemented in visual follow-up | Reproducible GFS tolerance/timestep, grid-decimation and frozen-snapshot variants, discarded warmup and two samples with reversed order. Reports common-horizon error, work, GPU/wall time, memory and backend metadata; browser table and JSON export. |
 | B1b2 — Broader real-data qualification | Next | Publish grid/snapshot/tolerance-versus-cost sweeps, hardware details and observational/ocean fixtures. The quantized GFS fixture establishes agreement on that stored model field, not meteorological accuracy or Parcels parity. |
-| B2 — True spherical transport | Planned after B1a | Integrate sphere positions and tangent velocities with a defined pole sampling convention. Exact solid-body rotations must cross both poles and the antimeridian without identity changes; report radius and trajectory drift. Keep atlas rendering separate from solver coordinates. |
+| B2a — Global spherical fields | Implemented in spherical follow-up | Dense Cartesian world-vector snapshots, explicit global seam/pole conventions, tangent projection and linear physical-time interpolation. Reject inconsistent seam and pole data. |
+| B2b — Pole-crossing transport | Implemented in spherical follow-up | Unit-sphere RK2/RK4 with stable identities, bounded dispatches, snapshot rotation and Graph/Trace inspection. Manufactured rotation tests cover both poles, antimeridian, radius drift and grid refinement. Separate visual preset uses equal-area seeds. |
+| B2c — Adaptive spherical qualification | Next | Adaptive spherical integration, broader fields and hardware accuracy/cost evidence; qualify sampling near poles independently of timestep and replace atlas trail clipping with geodesic rendering. |
 | B3a — Crossed-cell mask traversal | Implemented | Bounded traversal checks cells actually entered by an accepted chord, detecting brief masked intersections between RK stages and avoiding adjacent-cell false positives at simultaneous corners. Periodic seams remain qualified. |
 | B3b — Boundary policies | Planned after B3a | Explicit stop, reflect and slip semantics, segment/cell intersection and coastline event localization. Qualify thin barriers, diagonal corners, narrow channels and temporal mask changes; do not silently change defaults. |
 | C1 — Staggered grids | Planned | Rectilinear Arakawa C-grid sampling with face locations, masks and flux semantics preserved. Compare against independent manufactured divergence-free fields before curvilinear grids and vector-basis rotation. |
@@ -49,7 +51,7 @@ controlled model-wind sweeps; observational qualification and boundary policies 
 | C3 — 3D transport | Planned after C1 | Explicit vertical units, coordinate transforms and time-varying vertical grids. Validate vertical shear, analytic 3D flow and boundary crossings before adding diffusion. |
 | C4 — Stochastic transport | Planned after C3 | Reproducible counter-based random streams keyed by particle ID, time step and seed. Qualify ensemble mean/variance and convergence; deterministic advection tests do not establish diffusion accuracy. |
 
-Recommended order: B1b2, B2. Ocean applications should prioritize B3b/C1;
+Recommended order: B1b2, B2c. Ocean applications should prioritize B3b/C1;
 large interactive releases should prioritize C2. Chord traversal does not complete
 B3b, and retained/readable history does not complete C2. Broader real-data
 qualification remains open after the GFS fixture.

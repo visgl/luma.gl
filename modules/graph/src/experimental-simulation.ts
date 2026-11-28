@@ -46,3 +46,9 @@ export type {
   MLSMPMFluidStabilityOptions,
   MLSMPMParticle
 } from './experimental/simulation/index';
+
+export {SphericalFlowField, SphericalFlowGraph} from './experimental/simulation/index';
+export type {
+  SphericalVectorFieldInput,
+  SphericalFlowGraphProps
+} from './experimental/simulation/index';

@@ -145,3 +145,12 @@ two follow-ups, neither of which blocks this export:
 The published writer already quotes commas, quotes, CR/LF and Unicode correctly;
 this example does not need an escaping workaround. Batched writing is outside this
 bounded 292-row export and is not a prerequisite for it.
+
+## Spherical transport and stronger globe streaks
+
+The default weather globe uses fewer, wider streaks, adjustable persistence in seconds
+and bounded glow to keep Earth imagery readable. Trail decay follows elapsed wall
+time. The separate **Pole-crossing globe · spherical** preset uses equal-area seeds
+and Cartesian RK2/RK4 transport with Graph/Trace inspection. It is an illustrative
+evolving rotation, not observed weather. See the [spherical API](../../../docs/api-reference/experimental/spherical-flow-graph.md)
+for units, seam/pole conventions, ownership and qualification limits.
