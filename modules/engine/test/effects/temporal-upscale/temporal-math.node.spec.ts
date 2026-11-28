@@ -171,8 +171,8 @@ it('camera translation recovers unjittered motion and previous depth from jitter
   };
   const velocity = getVelocityFromDepth(options);
   expectVector(velocity, [
-    previousPoint[0] - currentPoint[0],
-    previousPoint[1] - currentPoint[1],
+    currentPoint[0] - previousPoint[0],
+    currentPoint[1] - previousPoint[1],
     1 - previousPoint[2]
   ]);
   expectVector(
@@ -187,7 +187,7 @@ it('camera translation recovers unjittered motion and previous depth from jitter
     0,
     1 - currentPoint[2]
   ]);
-  expectVector(reprojectUV([0.25, 0.6], [0.1, -0.2]), [0.35, 0.4]);
+  expectVector(reprojectUV([0.25, 0.6], [0.1, -0.2]), [0.15, 0.8]);
 });
 
 it('YCoCg basis and round trip preserve linear HDR and signed values', () => {

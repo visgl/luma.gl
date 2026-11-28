@@ -5,6 +5,8 @@
 // Inspired by AMD FSR 2 (MIT): dilate, reproject, rectify, accumulate, RCAS-style sharpen.
 // Independently authored WGSL; no AMD shader source or coefficients are copied.
 
+import {temporalMotionReprojectionWGSL} from '../passes/screen-space/temporal-frame';
+
 /** Fullscreen triangle with top-left texture coordinates derived from fragment position. */
 export const temporalUpscaleVertex = /* wgsl */ `
 @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
@@ -15,6 +17,7 @@ export const temporalUpscaleVertex = /* wgsl */ `
 
 /** Shared bindings, color math and rejection policy. Uniforms occupy four aligned vec4 slots. */
 const TEMPORAL_COMMON = /* wgsl */ `
+${temporalMotionReprojectionWGSL}
 struct Settings {
   sizes: vec4f, // render width/height, output width/height
   jitterControls: vec4f, // render-pixel jitter, reset, sharpness
@@ -72,7 +75,7 @@ fn reproject(uv: vec2f) -> Reprojection {
     }
   }
   let velocity = textureLoad(velocityTexture, coordinate, 0);
-  let previousUV = uv + velocity.xy;
+  let previousUV = temporal_reprojectMotion(uv, velocity.xy);
   let base = vec2i(floor(previousUV * settings.sizes.zw - vec2f(0.5)));
   var minimumDepth = 1.0;
   var count = 1e30;

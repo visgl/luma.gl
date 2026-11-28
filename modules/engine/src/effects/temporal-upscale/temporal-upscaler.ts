@@ -19,6 +19,7 @@ import {
   encodeSceneCapturePass,
   type SceneCapturePassDefinition
 } from '../../passes/scene-capture-pass';
+import type {TemporalJitter} from '../passes/screen-space/temporal-frame';
 import {DEFAULT_KERNEL_SHARPNESS, DEFAULT_RESPONSIVENESS} from './temporal-math';
 import type {TemporalVector2} from './temporal-math';
 import {
@@ -76,12 +77,12 @@ export type TemporalUpscalerRenderOptions = {
   /** Render-sized device depth, zero near and one far. */
   depthTexture: Texture;
   /**
-   * Render-sized rgba16float: xy = unjittered previousUV - currentUV, z = 1 - expected previous
+   * Render-sized rgba16float: xy = unjittered current UV minus previous UV, z = 1 - expected previous
    * device depth, w = validity.
    */
   velocityTexture: Texture;
-  /** Render-pixel projection jitter, +x right and +y down. */
-  jitter: [number, number];
+  /** Projection jitter in top-left UV units at the render resolution. */
+  currentJitter: TemporalJitter;
   /** Output-sized framebuffer, or the current canvas framebuffer. Must not alias inputs/history. */
   target: Framebuffer | null;
   /** Sharpening strength in [0,1]; zero is an exact history copy (default). */
@@ -96,7 +97,7 @@ export type TemporalUpscalerRenderOptions = {
    */
   responsiveness?: number;
   /** Discard temporal history for this frame. */
-  reset?: boolean;
+  resetHistory?: boolean;
   /** Maximum history contribution of a full-weight sample, default 0.95. */
   historyWeightMax?: number;
   /**
@@ -274,8 +275,9 @@ export class TemporalUpscaler {
       new Float32Array([
         ...this.renderSize,
         ...this.outputSize,
-        ...options.jitter,
-        Number(this.needsReset || Boolean(options.reset)),
+        options.currentJitter[0] * this.renderSize[0],
+        options.currentJitter[1] * this.renderSize[1],
+        Number(this.needsReset || Boolean(options.resetHistory)),
         options.sharpness ?? 0,
         options.historyWeightMax ?? 0.95,
         debugMode,

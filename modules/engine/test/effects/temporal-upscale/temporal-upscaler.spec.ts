@@ -67,7 +67,7 @@ it('disocclusion: exact rejection mask, revealed MAE <0.01 and depth control >=0
       fixture.render(
         32,
         {rectangle: false, rectangleDepth: mode === 'control'},
-        {debugView: mode === 'debug' ? 'disocclusion' : 'none', reset: mode === 'fresh'}
+        {debugView: mode === 'debug' ? 'disocclusion' : 'none', resetHistory: mode === 'fresh'}
       );
       outputs.push(await fixture.readOutput());
     } finally {
@@ -93,7 +93,7 @@ it('disocclusion: exact rejection mask, revealed MAE <0.01 and depth control >=0
   );
 });
 
-it('reset: true matches frame 1 within 1/255 in every RGBA component', async context => {
+it('resetHistory: true matches frame 1 within 1/255 in every RGBA component', async context => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip();
   const fixture = createTemporalScene(device);
@@ -102,7 +102,7 @@ it('reset: true matches frame 1 within 1/255 in every RGBA component', async con
     const first = await fixture.readOutput();
     for (let frame = 1; frame < 32; frame++) fixture.render(frame);
     // Reuse frame zero's jitter, so only the presence of accumulated history differs.
-    fixture.render(0, {}, {reset: true});
+    fixture.render(0, {}, {resetHistory: true});
     const result = await fixture.readOutput();
     const maximum = result.reduce(
       (error, value, index) => Math.max(error, Math.abs(value - first[index])),

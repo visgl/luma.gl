@@ -54,9 +54,9 @@ struct Output {
 @fragment fn fragmentMain(@builtin(position) fragment: vec4f) -> Output {
   let uv = (fragment.xy - settings.jitterMotion.xy) / settings.sizes.xy;
   let sample = scene(uv, settings.controls.x);
-  // A feature moves by +motion, so previousUV - currentUV is -motion/outputSize.
+  // A feature moves by +motion, so current UV minus previous UV is motion divided by outputSize.
   return Output(sample.color,
-    vec4f(-settings.jitterMotion.zw / settings.sizes.zw * settings.velocity.x,
+    vec4f(settings.jitterMotion.zw / settings.sizes.zw * settings.velocity.x,
       1.0 - sample.depth, 1.0), sample.depth);
 }
 `;
@@ -235,7 +235,7 @@ export function createTemporalScene(device: Device, renderSize: [number, number]
           colorTexture,
           depthTexture,
           velocityTexture,
-          jitter,
+          currentJitter: [jitter[0] / renderSize[0], jitter[1] / renderSize[1]],
           target: outputTarget,
           sharpness: 0,
           // The tests state the responsiveness; the library default is not 0.

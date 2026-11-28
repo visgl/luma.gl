@@ -59,9 +59,9 @@ export function applyJitterToProjectionMatrix(
   return result;
 }
 
-/** Reprojects an UNJITTERED top-left UV using previousUV - currentUV velocity. */
+/** Reprojects an UNJITTERED top-left UV using current UV minus previous UV motion. */
 export function reprojectUV(uv: TemporalVector2, velocity: TemporalVector2): TemporalVector2 {
-  return [uv[0] + velocity[0], uv[1] + velocity[1]];
+  return [uv[0] - velocity[0], uv[1] - velocity[1]];
 }
 
 /** Inputs to the camera-only CPU velocity reference. Both matrices are UNJITTERED. */
@@ -88,7 +88,7 @@ function transformVector(matrix: ArrayLike<number>, vector: number[]): number[] 
 }
 
 /**
- * Returns [previousU - currentU, previousV - currentV, 1 - previous device depth], excluding
+ * Returns [currentU - previousU, currentV - previousV, 1 - previous device depth], excluding
  * jitter. The third component is one minus the depth: most depth values are close to 1, and a
  * half-float texture keeps a small number much more exactly than a number close to 1.
  */
@@ -104,8 +104,8 @@ export function getVelocityFromDepth(options: VelocityFromDepthOptions): Tempora
   ]);
   const previous = transformVector(previousViewProjection, world);
   return [
-    (previous[0] / previous[3]) * 0.5 + 0.5 - currentUV[0],
-    0.5 - (previous[1] / previous[3]) * 0.5 - currentUV[1],
+    currentUV[0] - ((previous[0] / previous[3]) * 0.5 + 0.5),
+    currentUV[1] - (0.5 - (previous[1] / previous[3]) * 0.5),
     (previous[3] - previous[2]) / (2 * previous[3])
   ];
 }
