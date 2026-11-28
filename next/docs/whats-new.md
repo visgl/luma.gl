@@ -10,6 +10,8 @@
 
 * **GPU graphs.** [Graph](https://luma.gl/next/docs/api-reference/graph.md) composes compute and render operations, manages transient resources, and processes GPU vectors and tables.
 
+* **Fixed-width Arrow column streams.** [Arrow column streams](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md#fixed-width-column-streams) preserve transforms, residual-low values, and validity vectors with abortable reads.
+
 * **Shaders.** [Shaders](https://luma.gl/next/docs/api-reference/shaders.md) provides language-specific assemblers and reusable WGSL and GLSL shader modules.
 
 * **Rendering.** [Engine](https://luma.gl/next/docs/api-reference/engine.md) brings together models, glTF, scenegraphs, effects, text, and physics integration. [ANARI](https://luma.gl/next/docs/api-reference/anari.md) adds forward, deferred, ray-traced, and ray-marched rendering.
