@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {EffectRenderer} from '../src/passes/effect-renderer';
-import {bloomLow, hdrBloom, ssaoEffect} from '../src/effects';
+import {configureEffect, EffectRenderer} from '../src/passes/effect-renderer';
+import {bloomLow, hdrBloom, ssaoEffect, volumetricFog} from '../src/effects';
 
 /** Compile-time checks for heterogeneous inline effect configurations. */
 export function checkEffectRendererOptions(device: Device): void {
@@ -12,6 +12,8 @@ export function checkEffectRendererOptions(device: Device): void {
     effects: [
       {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
       bloomLow,
+      configureEffect(volumetricFog, {mode: 'height'}),
+      configureEffect(volumetricFog),
       {effect: hdrBloom, configuration: {quality: 'ultra'}}
     ]
   });
