@@ -944,6 +944,7 @@
               "api-reference/experimental/scientific-flow-tracer",
               "api-reference/experimental/staggered-flow-fields",
               "api-reference/experimental/spherical-flow-graph",
+              "api-reference/experimental/spherical-flow-tracer",
               "api-reference/experimental/volumetric-fire-simulation"
             ]
           },

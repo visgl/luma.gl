@@ -124,4 +124,4 @@ specific rather than universal performance claims.
 
 [`getRayTracingQualityPreset`](../anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
 
-[Spherical flow transport](/docs/api-reference/experimental/spherical-flow-graph) provides dense global Cartesian-vector sampling and pole-crossing RK2/RK4 with stable particle slots.
+[Spherical flow transport](/docs/api-reference/experimental/spherical-flow-graph) provides dense global Cartesian-vector sampling and pole-crossing RK2/RK4 with stable particle slots. [Adaptive spherical tracing](/docs/api-reference/experimental/spherical-flow-tracer) adds bounded RK45 with physical local-error control.

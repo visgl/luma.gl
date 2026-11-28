@@ -182,3 +182,12 @@ Graph and Trace show queue reset/compaction before indirect integration; Diagnos
 reports integration slots and workgroups for the complete batch. These counters
 exclude the queue scan, while compute timings include it. Dense remains the default
 because compaction overhead can outweigh saved integration work.
+
+### Persistent and spherical RK45
+
+Cartesian RK45 offers **Persistent · survivors**, which initializes a queue once
+per requested horizon and carries unfinished stable IDs through bounded continuation.
+Graph/Trace show the skipped initialization pass on later dispatches.
+The spherical preset now also offers RK45 with a physical local-error tolerance,
+Diagnostics and Graph/Trace while retaining great-circle trails. It currently uses
+one dense dispatch per call; Cartesian scheduling/batch/coloring controls are hidden.

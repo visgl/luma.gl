@@ -162,3 +162,17 @@ zero integration workgroups. Queue ordering never changes public particle storag
 Dense scheduling remains the default. Scheduling telemetry and matched-error costs
 include an explicit distinction between integration work and full-slot queue scans;
 see the [tracer API](../../../../../docs/api-reference/experimental/scientific-flow-tracer.md).
+
+### Persistent survivors and adaptive spherical transport
+
+Persistent Cartesian scheduling initializes a stable-ID queue once per requested
+horizon, then integration appends unfinished IDs directly to the alternating queue.
+Status totals persist while transient counters reset. A GPU copy captures every
+previous slot once per call. See the checked-in survivor benchmark for matched-error
+end-to-end gains and the inconclusive single-dispatch results.
+
+`SphericalFlowTracer` adds bounded Cartesian RKF45 with physical chord-error control
+to dense global world-vector snapshots. It uses the shared spherical sampler and
+Parcels-attributed embedded tableau, preserves unit directions, and exposes explicit
+continuation, lifetime/tolerance failure and a reset/integration command graph.
+Broader fields and multi-adapter qualification remain separate roadmap work.

@@ -2,6 +2,7 @@
 
 ## Version 10.0
 
+- **Persistent and spherical advection.** [RK45 survivor queues](./api-reference/experimental/scientific-flow-tracer.md#persistent-survivor-queues) avoid repeated full-slot scans. [Adaptive spherical tracing](./api-reference/experimental/spherical-flow-tracer.md) adds physical error control, continuation and graph inspection across poles and the seam.
 - **Active advection scheduling.** [RK45 tracing](./api-reference/experimental/scientific-flow-tracer.md#gpu-active-scheduling) adds opt-in GPU compaction and indirect dispatch, scheduling counters, and sparse/dense cost qualification. Vector Observatory exposes scheduling and batch controls.
 - **Staggered advection and batching.** [Cartesian C-grid fields](./api-reference/experimental/staggered-flow-fields.md) retain face velocities and masks. RK45 supports bounded dispatch batches with one counter synchronization per batch.
 - **Spherical transport.** [Unit-sphere RK2/RK4](./api-reference/experimental/spherical-flow-graph.md) crosses poles with stable particle identities. Vector Observatory adds geodesic spherical trails, stronger weather streaks and adjustable trail persistence. Direct GPU sampling tests qualify near-pole precision independently of integration.

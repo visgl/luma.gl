@@ -15,7 +15,7 @@ import {
   type ScientificFlowInput
 } from './scientific-flow-field';
 import {makeScientificFlowRK45Shader} from './scientific-flow-rk45-shaders';
-import {SCIENTIFIC_FLOW_SCHEDULING} from './scientific-flow-scheduling-shaders';
+import {makeScientificFlowSchedulingShader} from './scientific-flow-scheduling-shaders';
 
 /** Stable values stored in diagnostics.z; particle identity is its buffer index. */
 export enum ScientificParticleStatus {
@@ -45,7 +45,7 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   /** Fixed dispatches submitted before one counter readback (1–32). Default 1 retains interactive behavior. */
   dispatchesPerReadback?: number;
   /** Opt-in GPU queue and indirect integration; dense remains the default. */
-  scheduling?: 'dense' | 'active';
+  scheduling?: 'dense' | 'active' | 'persistent';
 };
 
 export type ScientificFlowTraceResult = {
@@ -118,6 +118,16 @@ export class ScientificFlowTracer {
   private readonly schedulingKernel?: Kernel;
   /** Counter snapshot stride, including queue telemetry only in active mode. */
   private readonly statisticsByteLength: number;
+  /** Second queue, populated directly by unfinished integration invocations. */
+  private readonly survivorIndices?: Buffer;
+  /** Indirect command for the second queue. */
+  private readonly survivorArguments?: Buffer;
+  /** Logical queue cursor; bindings are captured separately for every encoding. */
+  private queueCursor = 0;
+  /** CPU-known request boundary controlling the initial full-slot scan. */
+  private initializeQueue = false;
+  /** CPU-known call boundary controlling the stable previous-state copy. */
+  private capturePrevious = false;
   private readonly statistics: Buffer;
   private readonly emptyStatistics: Buffer;
   private dispatchIndex = 0;
@@ -141,13 +151,14 @@ export class ScientificFlowTracer {
   constructor(device: Device, props: ScientificFlowTracerProps) {
     assert(device.type === 'webgpu'); // Adaptive scientific tracing requires WebGPU.
     this.device = device;
-    // Only the two explicit scheduling contracts are supported.
+    // Only the explicit scheduling contracts are supported.
     assert(
       props.scheduling === undefined ||
         props.scheduling === 'dense' ||
-        props.scheduling === 'active'
+        props.scheduling === 'active' ||
+        props.scheduling === 'persistent'
     );
-    this.statisticsByteLength = props.scheduling === 'active' ? 44 : 36;
+    this.statisticsByteLength = props.scheduling && props.scheduling !== 'dense' ? 44 : 36;
     this.fieldOptions = {
       bounds: props.bounds,
       coordinates: props.coordinates,
@@ -249,7 +260,7 @@ export class ScientificFlowTracer {
           usage: Buffer.COPY_SRC | Buffer.COPY_DST
         })
       );
-      if (props.scheduling === 'active') {
+      if (props.scheduling === 'active' || props.scheduling === 'persistent') {
         this.activeIndices = own(
           device.createBuffer({
             id: 'scientific-tracer-active-indices',
@@ -268,10 +279,26 @@ export class ScientificFlowTracer {
           'scientific-tracer-empty-dispatch',
           new Uint32Array([0, 1, 1])
         );
+        if (props.scheduling === 'persistent') {
+          this.survivorIndices = own(
+            device.createBuffer({
+              id: 'scientific-tracer-survivor-indices',
+              byteLength: this.activeIndices.byteLength,
+              usage: this.activeIndices.usage
+            })
+          );
+          this.survivorArguments = own(
+            device.createBuffer({
+              id: 'scientific-tracer-survivor-arguments',
+              byteLength: 12,
+              usage: this.dispatchArguments.usage
+            })
+          );
+        }
         this.schedulingKernel = own(
           new Kernel(device, {
             id: 'scientific-tracer-schedule',
-            source: SCIENTIFIC_FLOW_SCHEDULING,
+            source: makeScientificFlowSchedulingShader(Boolean(this.survivorIndices)),
             shaderLayout: {
               bindings: [
                 {name: 'parameters', type: 'uniform', group: 0, location: 0},
@@ -289,7 +316,10 @@ export class ScientificFlowTracer {
       this.kernel = own(
         new Kernel(device, {
           id: 'scientific-tracer-rk45',
-          source: makeScientificFlowRK45Shader(Boolean(this.activeIndices)),
+          source: makeScientificFlowRK45Shader(
+            Boolean(this.activeIndices),
+            Boolean(this.survivorIndices)
+          ),
           shaderLayout: {
             bindings: [
               {name: 'parameters', type: 'uniform', group: 0, location: 0},
@@ -313,6 +343,12 @@ export class ScientificFlowTracer {
               },
               {name: 'diagnostics', type: 'storage', group: 0, location: 5},
               {name: 'statistics', type: 'storage', group: 0, location: 6},
+              ...(this.survivorIndices
+                ? [
+                    {name: 'survivorIndices', type: 'storage' as const, group: 0, location: 8},
+                    {name: 'survivorArguments', type: 'storage' as const, group: 0, location: 9}
+                  ]
+                : []),
               ...(this.activeIndices
                 ? [
                     {
@@ -404,6 +440,8 @@ export class ScientificFlowTracer {
     this.commandGraph.destroy();
     this.kernel.destroy();
     this.schedulingKernel?.destroy();
+    this.survivorIndices?.destroy();
+    this.survivorArguments?.destroy();
     this.activeIndices?.destroy();
     this.dispatchArguments?.destroy();
     this.emptyDispatchArguments?.destroy();
@@ -423,6 +461,7 @@ export class ScientificFlowTracer {
   }
 
   private makeCommandGraph(): CompiledGPUCommandGraph {
+    if (this.survivorIndices) return this.makePersistentCommandGraph();
     const graph = new GPUCommandGraph(this.device, {id: 'scientific-flow-rk45'});
     const importBuffer = (buffer: Buffer) =>
       graph.importBuffer(
@@ -587,6 +626,188 @@ export class ScientificFlowTracer {
     return graph.compile();
   }
 
+  /** Initialize each horizon once, then integrate and append only unfinished stable IDs. */
+  private makePersistentCommandGraph(): CompiledGPUCommandGraph {
+    /** Persistent graph shares allocations with every encoding and swaps queue bindings explicitly. */
+    const graph = new GPUCommandGraph(this.device, {id: 'scientific-flow-persistent-rk45'});
+    /** Import owned storage with exact usages for dependency inference. */
+    const importBuffer = (buffer: Buffer) =>
+      graph.importBuffer(
+        {id: buffer.id, byteLength: buffer.byteLength, usage: buffer.usage},
+        buffer
+      );
+    /** Stable public state and per-dispatch uniforms. */
+    const particles = importBuffer(this.output);
+    /** Full-slot pre-call state; a GPU copy preserves stopped and completed slots too. */
+    const previous = importBuffer(this.previous);
+    /** Stable adaptive progress. */
+    const diagnostics = importBuffer(this.diagnostics);
+    /** Persistent statuses plus transient pending/work counters. */
+    const statistics = importBuffer(this.statistics);
+    /** Zero counter source. */
+    const emptyStatistics = importBuffer(this.emptyStatistics);
+    /** Immutable parameters for each batch dispatch. */
+    const parameters = importBuffer(this.uniforms);
+    /** Input queue and command, rebound on every alternating dispatch. */
+    const activeIndices = importBuffer(this.activeIndices!);
+    /** Integration dispatch arguments for the input queue. */
+    const dispatchArguments = importBuffer(this.dispatchArguments!);
+    /** Output survivor queue. */
+    const survivorIndices = importBuffer(this.survivorIndices!);
+    /** GPU-written next integration command. */
+    const survivorArguments = importBuffer(this.survivorArguments!);
+    /** Empty indirect command with y=z=1. */
+    const emptyArguments = importBuffer(this.emptyDispatchArguments!);
+    /** Identical resident snapshot texture descriptors. */
+    const descriptor = {
+      width: this.currentField.texture.width,
+      height: this.currentField.texture.height,
+      format: 'rgba32float' as const,
+      usage: Texture.SAMPLE
+    };
+    /** Current resident field. */
+    const velocity = graph.importTexture({id: 'tracer-velocity', ...descriptor});
+    /** Following resident field. */
+    const nextVelocity = graph.importTexture({id: 'tracer-next-velocity', ...descriptor});
+    graph.addCopyPass({
+      id: 'prepare-survivor-dispatch',
+      description:
+        'Reset only transient counters and next queue; capture previous once per call and initialize the input queue once per horizon.',
+      resources: [
+        {buffer: particles, usage: 'copy-source'},
+        {buffer: previous, usage: 'copy-destination'},
+        {buffer: emptyStatistics, usage: 'copy-source'},
+        {buffer: statistics, usage: 'copy-destination'},
+        {buffer: emptyArguments, usage: 'copy-source'},
+        ...[activeIndices, dispatchArguments, survivorIndices, survivorArguments].map(buffer => ({
+          buffer,
+          usage: 'copy-destination' as const
+        }))
+      ],
+      workload: {
+        operation: 'PrepareSurvivorDispatch',
+        commandCount: 6,
+        readByteLength: this.output.byteLength + 68,
+        writeByteLength: this.output.byteLength + 68
+      },
+      compile: () => ({
+        encode: ({commandEncoder, getBuffer}) => {
+          if (this.capturePrevious)
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(particles),
+              destinationBuffer: getBuffer(previous),
+              size: this.output.byteLength
+            });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyStatistics),
+            destinationBuffer: getBuffer(statistics),
+            destinationOffset: this.initializeQueue ? 0 : 24,
+            size: this.initializeQueue ? 36 : 12
+          });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyArguments),
+            destinationBuffer: getBuffer(survivorIndices),
+            size: 4
+          });
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyArguments),
+            destinationBuffer: getBuffer(survivorArguments),
+            size: 12
+          });
+          if (this.initializeQueue) {
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyArguments),
+              destinationBuffer: getBuffer(activeIndices),
+              size: 4
+            });
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyArguments),
+              destinationBuffer: getBuffer(dispatchArguments),
+              size: 12
+            });
+          }
+        }
+      })
+    });
+    graph.addComputePass({
+      id: 'initialize-survivor-queue',
+      description:
+        'Scan stable slots only when a new horizon starts; continuations skip this pass.',
+      condition: {id: 'new-trace-horizon', source: 'cpu', evaluate: () => this.initializeQueue},
+      resources: [
+        {buffer: parameters, usage: 'uniform'},
+        {buffer: particles, usage: 'storage-read'},
+        {buffer: previous, usage: 'storage-write'},
+        {buffer: diagnostics, usage: 'storage-read-write'},
+        {buffer: statistics, usage: 'storage-read-write'},
+        {buffer: activeIndices, usage: 'storage-read-write'},
+        {buffer: dispatchArguments, usage: 'storage-read-write'}
+      ],
+      workload: {
+        operation: 'InitializeSurvivorQueue',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+        maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+      },
+      compile: () => ({
+        encode: ({computePass, getBuffer}) =>
+          this.schedulingKernel!.dispatch(computePass, {
+            x: Math.ceil(this.particleCount / 128),
+            bindings: {
+              parameters: getBuffer(parameters),
+              particles: getBuffer(particles),
+              previous: getBuffer(previous),
+              diagnostics: getBuffer(diagnostics),
+              statistics: getBuffer(statistics),
+              activeIndices: getBuffer(activeIndices),
+              dispatchArguments: getBuffer(dispatchArguments)
+            }
+          })
+      })
+    });
+    graph.addComputePass({
+      id: 'trace-survivors-rk45',
+      description:
+        'Integrate queued stable IDs, update status transitions and append unfinished survivors for the next dispatch.',
+      resources: [
+        {buffer: parameters, usage: 'uniform'},
+        {buffer: particles, usage: 'storage-read-write'},
+        {buffer: diagnostics, usage: 'storage-read-write'},
+        {buffer: statistics, usage: 'storage-read-write'},
+        {buffer: activeIndices, usage: 'storage-read'},
+        {buffer: dispatchArguments, usage: 'indirect'},
+        {buffer: survivorIndices, usage: 'storage-read-write'},
+        {buffer: survivorArguments, usage: 'storage-read-write'},
+        {texture: velocity, usage: 'sampled'},
+        {texture: nextVelocity, usage: 'sampled'}
+      ],
+      workload: {
+        operation: 'AdaptiveSurvivorAdvection',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+        maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+      },
+      compile: () => ({
+        encode: ({computePass, getBuffer, getTexture}) =>
+          this.kernel.dispatchIndirect(computePass, {
+            indirectBuffer: getBuffer(dispatchArguments),
+            bindings: {
+              parameters: getBuffer(parameters),
+              particles: getBuffer(particles),
+              diagnostics: getBuffer(diagnostics),
+              statistics: getBuffer(statistics),
+              activeIndices: getBuffer(activeIndices),
+              survivorIndices: getBuffer(survivorIndices),
+              survivorArguments: getBuffer(survivorArguments),
+              velocityField: getTexture(velocity),
+              nextVelocityField: getTexture(nextVelocity)
+            }
+          })
+      })
+    });
+    return graph.compile();
+  }
+
   private validateField(field: ScientificFlowField): void {
     assert(
       field.layout === this.currentField.layout &&
@@ -639,13 +860,37 @@ export class ScientificFlowTracer {
       const encodings: GPUCommandGraphEncoding[] = [];
       /** Dispatch cursor within the fixed per-readback batch. */
       for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
+        this.initializeQueue = first && batchIndex === 0;
+        this.capturePrevious = batchIndex === 0;
+        /** Physical buffers serving as input and output queues for this encoding. */
+        const queueBindings =
+          this.survivorIndices && this.survivorArguments
+            ? {
+                [this.activeIndices!.id]: this.queueCursor
+                  ? this.survivorIndices
+                  : this.activeIndices!,
+                [this.survivorIndices.id]: this.queueCursor
+                  ? this.activeIndices!
+                  : this.survivorIndices,
+                [this.dispatchArguments!.id]: this.queueCursor
+                  ? this.survivorArguments
+                  : this.dispatchArguments!,
+                [this.survivorArguments.id]: this.queueCursor
+                  ? this.dispatchArguments!
+                  : this.survivorArguments
+              }
+            : {};
         // Later dispatches resume progress rather than restarting the request clock.
-        view.setUint32(44, (first && batchIndex === 0 ? 1 : 0) | (batchIndex === 0 ? 2 : 0), true);
+        view.setUint32(
+          44,
+          (first && batchIndex === 0 ? 1 : 0) | (batchIndex === 0 && !this.survivorIndices ? 2 : 0),
+          true
+        );
         this.batchUniforms[batchIndex].write(new Uint8Array(bytes));
         encodings.push(
           this.commandGraph.encode(encoder, {
             parameters: undefined,
-            buffers: {[this.uniforms.id]: this.batchUniforms[batchIndex]},
+            buffers: {[this.uniforms.id]: this.batchUniforms[batchIndex], ...queueBindings},
             textures: {
               'tracer-velocity': this.currentField.texture,
               'tracer-next-velocity': this.nextField.texture
@@ -662,18 +907,23 @@ export class ScientificFlowTracer {
         });
         if (this.activeIndices && this.dispatchArguments) {
           encoder.copyBufferToBuffer({
-            sourceBuffer: this.activeIndices,
+            sourceBuffer:
+              this.queueCursor && this.survivorIndices ? this.survivorIndices : this.activeIndices,
             destinationBuffer: this.batchStatistics,
             destinationOffset: batchIndex * this.statisticsByteLength + 36,
             size: 4
           });
           encoder.copyBufferToBuffer({
-            sourceBuffer: this.dispatchArguments,
+            sourceBuffer:
+              this.queueCursor && this.survivorArguments
+                ? this.survivorArguments
+                : this.dispatchArguments,
             destinationBuffer: this.batchStatistics,
             destinationOffset: batchIndex * this.statisticsByteLength + 40,
             size: 4
           });
         }
+        if (this.survivorIndices) this.queueCursor = 1 - this.queueCursor;
       }
       this.device.submit(encoder.finish());
       this.dispatchIndex += this.dispatchesPerReadback;

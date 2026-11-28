@@ -9,6 +9,7 @@ import {GLOBE_PRESENTATION} from './globe';
 import {SphericalTrails} from './spherical-trails';
 import {
   SphericalFlowGraph,
+  SphericalFlowTracer,
   ScientificFlowGraph,
   ScientificFlowTracer,
   type ScientificFlowTraceResult
@@ -198,7 +199,7 @@ struct View {size: vec4f, options: vec4f};
     device.submit();
     present.setBindings({history: historyTexture});
   }
-  let graph: ScientificFlowGraph | ScientificFlowTracer | SphericalFlowGraph;
+  let graph: ScientificFlowGraph | ScientificFlowTracer | SphericalFlowGraph | SphericalFlowTracer;
   let activeField = 'gyre';
   let activeIntegrator = 'rk4';
   let activeCount = 262144;
@@ -220,7 +221,10 @@ struct View {size: vec4f, options: vec4f};
     }
   );
   function updateLegend() {
-    const mode = activeIntegrator === 'rk45' ? controls.settings.coloring : 'speed';
+    const mode =
+      activeField !== 'spherical' && activeIntegrator === 'rk45'
+        ? controls.settings.coloring
+        : 'speed';
     element<HTMLElement>('legend-low').textContent =
       mode === 'step' ? 'SHORT STEP' : mode === 'status' ? 'ACTIVE' : 'LOW VELOCITY';
     element<HTMLElement>('legend-high').textContent =
@@ -258,15 +262,26 @@ struct View {size: vec4f, options: vec4f};
       lifetime: 45
     };
     if (activeField === 'spherical') {
-      graph = new SphericalFlowGraph(device, {
+      /** Both spherical solvers share stable Cartesian state and geodesic trail storage. */
+      const sphericalProps = {
         input: makeSphericalField(0),
         nextInput: makeSphericalField(snapshotEnd),
-        timeRange: [0, snapshotEnd],
+        timeRange: [0, snapshotEnd] as const,
         positions: makeSphericalPositions(activeCount),
         maximumTimeStep: 1 / 30,
-        radius: 1,
-        integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
-      });
+        radius: 1
+      };
+      graph =
+        activeIntegrator === 'rk45'
+          ? new SphericalFlowTracer(device, {
+              ...sphericalProps,
+              tolerance: controls.settings.tolerance,
+              maximumAttempts: 16
+            })
+          : new SphericalFlowGraph(device, {
+              ...sphericalProps,
+              integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
+            });
       sphericalTrails = new SphericalTrails(device, activeCount);
       sphericalTrails.capture(graph.output, graph.time, controls.settings.trailPersistence);
     } else if (activeIntegrator === 'rk45') {
@@ -349,14 +364,21 @@ struct View {size: vec4f, options: vec4f};
       if (!controls.settings.paused) {
         queuedTime += deltaTime;
         let firstSegment = true;
-        while (queuedTime > 0 || (graph instanceof ScientificFlowTracer && graph.hasPendingWork)) {
+        while (
+          queuedTime > 0 ||
+          ((graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) &&
+            graph.hasPendingWork)
+        ) {
           if (
             (activeField === 'gyre' || activeField === 'weather' || activeField === 'spherical') &&
             graph.remainingTime === 0 &&
-            !(graph instanceof ScientificFlowTracer && graph.hasPendingWork)
+            !(
+              (graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) &&
+              graph.hasPendingWork
+            )
           ) {
             snapshotEnd += 0.25;
-            if (graph instanceof SphericalFlowGraph)
+            if (graph instanceof SphericalFlowGraph || graph instanceof SphericalFlowTracer)
               graph.setNextSnapshot(makeSphericalField(snapshotEnd), snapshotEnd);
             else graph.setNextSnapshot(makeField(activeField, snapshotEnd), snapshotEnd);
           }
@@ -364,7 +386,7 @@ struct View {size: vec4f, options: vec4f};
             activeField === 'gyre' || activeField === 'weather' || activeField === 'spherical'
               ? Math.min(queuedTime, graph.remainingTime)
               : queuedTime;
-          if (graph instanceof ScientificFlowTracer) {
+          if (graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) {
             if (graph.hasPendingWork) traceResult = await graph.continue();
             else {
               queuedTime -= deltaTime;
@@ -421,7 +443,10 @@ struct View {size: vec4f, options: vec4f};
             view,
             current: graph.output,
             previous: graph.previous,
-            diagnostics: graph instanceof ScientificFlowTracer ? graph.diagnostics : graph.output
+            diagnostics:
+              graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer
+                ? graph.diagnostics
+                : graph.output
           });
           const pass = device.beginRenderPass({framebuffer: history, clearColor: false});
           if (firstSegment) fade.draw(pass);
@@ -430,7 +455,7 @@ struct View {size: vec4f, options: vec4f};
           // Submit this segment before the next advance reuses its state and uniform buffers.
           device.submit();
           firstSegment = false;
-          if (graph instanceof ScientificFlowTracer) break; // One bounded dispatch per animation frame.
+          if (graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) break; // One bounded dispatch per animation frame.
         }
       }
       if (

@@ -72,9 +72,8 @@ grid refinement from integration using time-varying angular speed. These tests
 qualify dense manufactured global fields, not weather forecast accuracy. Direct sampler
 tests additionally cover both exact poles, offsets of 0.0001 radians from each pole,
 and seam-adjacent queries on 17×9, 33×17 and 65×33 grids, independently of timestep.
-Latitude uses `atan2(z, length(xy))` to retain offsets that float32 `asin(z)` loses. Adaptive
-spherical RK45, masked boundaries, staggered grids and observational qualification
-remain follow-ups.
+Latitude uses `atan2(z, length(xy))` to retain offsets that float32 `asin(z)` loses. [Adaptive spherical RK45](spherical-flow-tracer.md) uses the same global field contract.
+Masked boundaries, staggered spherical grids and observational qualification remain follow-ups.
 
 The Vector Observatory's **Pole-crossing globe · spherical** preset uses an
 illustrative evolving rotation and equal-area release. Its renderer retains bounded GPU Cartesian history and draws subdivided short

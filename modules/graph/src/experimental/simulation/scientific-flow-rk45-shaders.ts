@@ -29,7 +29,10 @@ SOFTWARE.
 import {SCIENTIFIC_FLOW_SAMPLING} from './scientific-flow-sampling-shaders';
 
 /** Builds dense or stable-slot work-queue integration without changing RK stages. */
-export function makeScientificFlowRK45Shader(activeScheduling: boolean): string {
+export function makeScientificFlowRK45Shader(
+  activeScheduling: boolean,
+  persistent = false
+): string {
   return /* wgsl */ `
 struct Parameters {
   domain: vec4<f32>,
@@ -46,6 +49,13 @@ struct Parameters {
 @group(0) @binding(6) var<storage, read_write> statistics: array<atomic<u32>>;
 
 ${activeScheduling ? '@group(0) @binding(7) var<storage, read> activeIndices: array<u32>;' : ''}
+
+${
+  persistent
+    ? `@group(0) @binding(8) var<storage, read_write> survivorIndices: array<atomic<u32>>;
+@group(0) @binding(9) var<storage, read_write> survivorArguments: array<atomic<u32>>;`
+    : ''
+}
 
 ${SCIENTIFIC_FLOW_SAMPLING}
 
@@ -179,7 +189,19 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   }
   particles[index] = particle;
   diagnostics[index] = state;
-  atomicAdd(&statistics[u32(state.z)], 1u);
+  ${
+    persistent
+      ? `if (state.z != 0.0) {
+    atomicSub(&statistics[0], 1u);
+    atomicAdd(&statistics[u32(state.z)], 1u);
+  }
+  if (state.z == 0.0 && state.x < parameters.temporal.z) {
+    let slot = atomicAdd(&survivorIndices[0], 1u);
+    atomicStore(&survivorIndices[slot + 1u], index);
+    atomicMax(&survivorArguments[0], slot / 128u + 1u);
+  }`
+      : 'atomicAdd(&statistics[u32(state.z)], 1u);'
+  }
   if (state.z == 0.0 && state.x < parameters.temporal.z) {atomicAdd(&statistics[6], 1u);}
   atomicAdd(&statistics[7], accepted);
   atomicAdd(&statistics[8], rejected);

@@ -16,7 +16,7 @@ for (const dispatchesPerReadback of [1, 4, 16]) {
       accepted: number;
       rejected: number;
     }[] = [];
-    for (const scheduling of ['dense', 'active'] as const) {
+    for (const scheduling of ['dense', 'active', 'persistent'] as const) {
       const positions = new Float32Array(259 * 2).fill(-0.1);
       for (const index of [0, 127, 128, 258]) positions.set([0.6 + index / 4000, 0.5], index * 2);
       const tracer = new ScientificFlowTracer(device, {
@@ -49,7 +49,7 @@ for (const dispatchesPerReadback of [1, 4, 16]) {
         expect(result.active).toBe(4);
         expect(result.outsideDomain).toBe(255);
         expect(rejected).toBeGreaterThan(0);
-        if (scheduling === 'active') {
+        if (scheduling !== 'dense') {
           expect(result.scheduledParticles).toBeLessThanOrEqual(
             259 + 4 * (dispatchesPerReadback - 1)
           );
@@ -60,7 +60,7 @@ for (const dispatchesPerReadback of [1, 4, 16]) {
         result = await tracer.advance(0);
         expect(result.active).toBe(4);
         expect(result.outsideDomain).toBe(255);
-        if (scheduling === 'active') {
+        if (scheduling !== 'dense') {
           expect(result.scheduledParticles).toBe(0);
           expect(result.integrationWorkgroups).toBe(0);
         }
@@ -97,6 +97,7 @@ for (const dispatchesPerReadback of [1, 4, 16]) {
       }
     }
     expect(reports[1]).toEqual(reports[0]);
+    expect(reports[2]).toEqual(reports[0]);
   });
 }
 
@@ -152,7 +153,7 @@ it('active scheduling rebuilds work across temporal C-grid snapshots and periodi
     northwardValid: new Uint8Array([1, 1])
   });
   const outputs: number[][] = [];
-  for (const scheduling of ['dense', 'active'] as const) {
+  for (const scheduling of ['dense', 'active', 'persistent'] as const) {
     const tracer = new ScientificFlowTracer(device, {
       input: makeInput(0.1),
       nextInput: makeInput(0.3),
@@ -185,4 +186,45 @@ it('active scheduling rebuilds work across temporal C-grid snapshots and periodi
     }
   }
   expect(outputs[1]).toEqual(outputs[0]);
+  expect(outputs[2]).toEqual(outputs[0]);
+});
+
+it('persistent survivors retain expiration totals and pre-call state across empty continuation tails', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const tracer = new ScientificFlowTracer(device, {
+    input: {
+      dimensions: ['y', 'x'],
+      shape: [2, 2],
+      eastward: new Float32Array(4).fill(0.1),
+      northward: new Float32Array(4),
+      valid: new Uint8Array(4).fill(1)
+    },
+    bounds: [0, 0, 1, 1],
+    positions: new Float32Array([0.2, 0.5, -0.1, 0.5]),
+    tolerance: 1e-5,
+    maximumTimeStep: 0.01,
+    maximumAttempts: 1,
+    lifetime: 0.025,
+    scheduling: 'persistent',
+    dispatchesPerReadback: 3
+  });
+  try {
+    let result = await tracer.advance(0.1);
+    while (!result.complete) result = await tracer.continue();
+    expect(result.expired).toBe(1);
+    expect(result.outsideDomain).toBe(1);
+    expect(result.active).toBe(0);
+    const bytes = await tracer.output.readAsync();
+    const values = new Float32Array(bytes.buffer, bytes.byteOffset, 8);
+    expect(values[2]).toBeCloseTo(0.025, 7);
+    const next = await tracer.advance(0.1);
+    expect(next.expired).toBe(1);
+    expect(next.outsideDomain).toBe(1);
+    expect(next.scheduledParticles).toBe(0);
+    expect(next.integrationWorkgroups).toBe(0);
+    expect(Array.from(await tracer.previous.readAsync())).toEqual(Array.from(bytes));
+  } finally {
+    tracer.destroy();
+  }
 });
