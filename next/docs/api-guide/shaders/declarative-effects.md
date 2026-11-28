@@ -50,7 +50,7 @@ The effects run in array order. SSAO samples the scene depth and updates the col
 
 To use camera-reprojection TAA, add `cameraReprojectionTaa` between SSAO and bloom. Supply the camera matrices and jitter each frame as `cameraReprojectionTaaResolve` uniforms. After a camera cut, call `resetHistory()` before rendering the next frame. See the [camera-reprojection shader definition](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/effects/passes/screen-space/camera-reprojection-temporal-antialiasing.ts) for its camera uniform types.
 
-The other fullscreen definitions include `motionBlur`, `taa`, and `depthOfField`. Motion blur and standard TAA use the scene velocity texture. Depth of field uses scene depth and the `dof` camera and lens uniforms. For a display-ready chain, place `toneMappingEffect` after HDR bloom and `fxaaEffect` after tone mapping.
+The other fullscreen definitions include `motionBlur`, `taa`, and `depthOfField`. Motion blur and standard TAA use the scene velocity texture. Depth of field uses scene depth and camera and lens uniforms. Use `depthOfField` for separable blur or `bokehDofEffect` for a circular aperture. `depthAwareBlurEffect` runs horizontal and vertical filtering with scene depth and preserves edges across depth discontinuities. For a display-ready chain, place `toneMappingEffect` after HDR bloom and `fxaaEffect` after tone mapping.
 
 ## Apply glfx image filters[​](#apply-glfx-image-filters "Direct link to Apply glfx image filters")
 
