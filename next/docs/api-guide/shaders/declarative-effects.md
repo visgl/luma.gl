@@ -156,7 +156,7 @@ The scene renderer supplies and owns the G-buffer or transparency captures. The 
 
 ## Author an effect[​](#author-an-effect "Direct link to Author an effect")
 
-Start with a fullscreen shader that follows the [shader pass convention](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). Declare a pass for each draw and route each shader's inputs to the textures it samples. This example adjusts contrast and then applies a vignette, reusing two built-in shaders.
+Start with a fullscreen shader that follows the [shader pass convention](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). Declare a pass for each draw and route each shader's inputs to the textures it samples. Use `as const satisfies EffectDefinition<...>` to check the definition while preserving its literal names and pass structure. This example adjusts contrast and then applies a vignette, reusing two built-in shaders.
 
 ```
 import type {EffectDefinition} from '@luma.gl/engine';
@@ -165,7 +165,7 @@ import {brightnessContrast, vignette} from '@luma.gl/engine/effects';
 
 
 
-export const softVignette: EffectDefinition<'adjusted'> = {
+export const softVignette = {
 
   name: 'softVignette',
 
@@ -205,7 +205,7 @@ export const softVignette: EffectDefinition<'adjusted'> = {
 
   ]
 
-};
+} as const satisfies EffectDefinition<'adjusted'>;
 ```
 
 * **Resources** are private to each occurrence of the effect. Set the texture format and scale when the default format or full resolution is unsuitable. `EffectDefinition<...>` checks that named targets are declared.
