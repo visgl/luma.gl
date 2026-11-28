@@ -12,10 +12,19 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from './info-box';
 import {makeArmContactTrial} from './robot-arm-contact';
 import {makeGripperTrial, GRIPPER_PHASES} from './gripper';
+import {enableGraspSweep} from './grasp-sweep';
 import {RobotArmScene} from './robot-arm-scene';
 
 const gripper = document.body.dataset.lab === 'gripper';
-const friction = new URLSearchParams(location.search).get('friction') === '0' ? 0 : 0.9;
+const query = new URLSearchParams(location.search);
+function numericSetting(name: string, fallback: number, minimum: number, maximum: number) {
+  const raw = query.get(name);
+  const value = raw === null ? fallback : Number(raw);
+  return Number.isFinite(value) && value >= minimum && value <= maximum ? value : fallback;
+}
+const friction = numericSetting('friction', 0.9, 0, 1);
+const mass = numericSetting('mass', 1, 0.25, 4);
+const torque = numericSetting('torque', 32, 1, 64);
 const backend = document.querySelector<HTMLSelectElement>('#backend')!;
 const reduced = new URLSearchParams(location.search).get('solver') !== 'ordered';
 backend.value = reduced ? 'tree' : 'ordered';
@@ -39,7 +48,7 @@ try {
     createCanvasContext: {canvas, autoResize: true}
   });
   const trial = gripper ? undefined : makeArmContactTrial(reduced, true);
-  const pick = gripper ? makeGripperTrial(reduced, friction, true) : undefined;
+  const pick = gripper ? makeGripperTrial(reduced, friction, true, {mass, torque}) : undefined;
   const {world, bodies} = (pick ?? trial)!;
   const definition = new GPUCommandGraph(device);
   world.addToGraph(definition);
@@ -73,6 +82,7 @@ try {
     }
   };
   if (pick) {
+    enableGraspSweep(device, document.querySelector<HTMLElement>('#grasp-sweep')!);
     const advance = document.querySelector<HTMLButtonElement>('#advance')!;
     advance.onclick = () => {
       cycling = false;
@@ -83,6 +93,8 @@ try {
     };
     document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => location.reload();
     const grip = document.querySelector<HTMLSelectElement>('#friction')!;
+    if (!Array.from(grip.options).some(option => Number(option.value) === friction))
+      grip.add(new Option(String(friction), String(friction)));
     grip.value = String(friction);
     grip.onchange = () => {
       const url = new URL(location.href);
@@ -128,7 +140,7 @@ try {
     panel.update();
     if (now - lastReading > 250 && pick) {
       const positions = await pick.positions();
-      output.value = `Payload height ${positions[4][2].toFixed(3)} m`;
+      output.value = `Payload ${mass} kg · Grip cap ${torque} N·m · height ${positions[4][2].toFixed(3)} m`;
       lastReading = now;
     } else if (now - lastReading > 250 && trial) {
       const [height, status] = await Promise.all([

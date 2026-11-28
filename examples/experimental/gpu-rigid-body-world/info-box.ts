@@ -35,6 +35,7 @@ export function createRigidBodyPanel(
       document.body.append(content);
     };
   };
+  const sweep = document.querySelector<HTMLElement>('#grasp-sweep');
   const actions = document.querySelector<HTMLElement>('#lab-actions');
   const content = document.querySelector<HTMLElement>('#lab-canvas');
   if (actions) applyPanelTheme(host, PANEL_THEME_SLEEK_DARK);
@@ -52,6 +53,16 @@ export function createRigidBodyPanel(
         html: '',
         onRender: root => mount(controls, root)
       }),
+      ...(sweep
+        ? [
+            makeHtmlCustomPanel({
+              id: 'grasp-sweep-panel',
+              title: 'Grasp Sweep',
+              html: '',
+              onRender: root => mount(sweep, root)
+            })
+          ]
+        : []),
       makeHtmlCustomPanel({
         id: 'lab-details-panel',
         title: 'Info',
@@ -98,6 +109,7 @@ export function createRigidBodyPanel(
       host.remove();
       controls.remove();
       details.remove();
+      sweep?.remove();
     }
   };
 }

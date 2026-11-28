@@ -16,15 +16,15 @@ test('scatter load failures remain outside the selected model and attribution ta
   const fetchMock = vi
     .spyOn(globalThis, 'fetch')
     .mockRejectedValue(new Error('Reference unavailable'));
+  const load = vi.spyOn(ScatterExample.prototype, 'loadGLTF');
   let example: ScatterExample | undefined;
   try {
     example = new ScatterExample({device} as AnimationProps, 'scatter');
-    await vi.waitFor(() => {
-      const error = document.getElementById('error');
-      expect(error?.textContent).toContain('Reference unavailable');
-      expect(error?.closest('[aria-hidden]')).toBeNull();
-      expect(error && getComputedStyle(error).display).not.toBe('none');
-    });
+    await load.mock.results[0].value;
+    const error = document.getElementById('error');
+    expect(error?.textContent).toContain('Reference unavailable');
+    expect(error?.closest('[aria-hidden]')).toBeNull();
+    expect(error && getComputedStyle(error).display).not.toBe('none');
     const attributions = Array.from(document.querySelectorAll('button')).find(
       button => button.textContent === 'Attributions'
     );
@@ -35,6 +35,7 @@ test('scatter load failures remain outside the selected model and attribution ta
     );
   } finally {
     example?.onFinalize();
+    load.mockRestore();
     fetchMock.mockRestore();
     canvas.remove();
   }

@@ -17,7 +17,12 @@ export const REACH = 1.4;
 type Vector = [number, number, number];
 
 /** Build both formulations from the same revolute axes, offsets, inertias and force drives. */
-export function makeGripperTrial(reduced: boolean, friction = 0.9, publish = false) {
+export function makeGripperTrial(
+  reduced: boolean,
+  friction = 0.9,
+  publish = false,
+  options: {mass?: number; torque?: number; id?: string} = {}
+) {
   const base: Vector = [0, 0, 0.98];
   const box: Vector = [0.19, 0.2, 0.24];
   const padRadius = 0.095;
@@ -108,7 +113,7 @@ export function makeGripperTrial(reduced: boolean, friction = 0.9, publish = fal
   const position: Vector = [REACH, 0, box[2]];
   bodies.push({
     position,
-    mass: 1,
+    mass: options.mass ?? 1,
     shape: {type: 'box', halfExtents: box},
     // Ordered combines collider friction using the geometric mean.
     friction: 1,
@@ -117,10 +122,11 @@ export function makeGripperTrial(reduced: boolean, friction = 0.9, publish = fal
   const world = reduced
     ? new GPUArticulationTree({
         base,
+        id: options.id,
         links,
         publishMatrices: publish,
         payload: {
-          mass: 1,
+          mass: options.mass ?? 1,
           position,
           halfExtents: box,
           pads: [
@@ -163,7 +169,7 @@ export function makeGripperTrial(reduced: boolean, friction = 0.9, publish = fal
       const targets = [yaw, pitch, grip, -grip];
       links.forEach((joint, index) => {
         const angle = targets[index];
-        const maximumTorque = index >= 2 ? 32 : 100;
+        const maximumTorque = index >= 2 ? (options.torque ?? 32) : 100;
         if (world instanceof GPUArticulationTree)
           world.setDrive(joint.id, {angle, stiffness: 900, damping: 45, maximumTorque});
         else world.setAngularActuator(joint.id, axes[index] as 0 | 1 | 2, {angle, maximumTorque});

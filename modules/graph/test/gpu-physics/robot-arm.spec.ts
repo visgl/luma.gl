@@ -180,3 +180,33 @@ it.for([
     trial.world.destroy();
   }
 });
+
+it('keeps light and heavy grasp trials independent in one graph', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const definition = new GPUCommandGraph(device);
+  const trials = [0.5, 3].map(mass =>
+    makeGripperTrial(true, 0.35, false, {id: 'grasp-' + mass, mass, torque: 32})
+  );
+  for (const trial of trials) trial.world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let phase = 0; phase <= 2; phase++) {
+      for (let step = 0; step < 180; step += 4) {
+        if (step <= 120) for (const trial of trials) trial.command(phase, step);
+        const encoder = device.createCommandEncoder();
+        for (let substep = 0; substep < 4; substep++)
+          graph.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+      }
+    }
+    const [light, heavy] = await Promise.all(trials.map(trial => trial.positions()));
+    expect(light[4][2]).toBeGreaterThan(0.58);
+    expect(heavy[4][2]).toBeLessThan(0.32);
+    for (const {world} of trials)
+      expect(await world.readSimulationDiagnostics()).toMatchObject({steps: 540, complete: true});
+  } finally {
+    graph.destroy();
+    for (const {world} of trials) world.destroy();
+  }
+});
