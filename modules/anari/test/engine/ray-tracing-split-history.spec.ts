@@ -10,9 +10,11 @@ import {expect, it, vi} from 'vitest';
 
 it('preserves stationary HDR and confidence with split histories through sparse batches and resize', async () => {
   if (!webgpuAdapter.isSupported()) return;
-  const device = await webgpuAdapter.create({
-    featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(16, 16)}
+  const device = await webgpuAdapter.create({featureLevel: 'core'});
+  const framebuffer = device.createFramebuffer({
+    width: 16,
+    height: 16,
+    colorAttachments: ['rgba8unorm']
   });
   const reportError = vi.spyOn(device, 'reportError');
   const renderer = new RayTracingSceneRenderer(device);
@@ -25,6 +27,7 @@ it('preserves stationary HDR and confidence with split histories through sparse 
     });
     const scene: RayTracingSceneRenderOptions = {
       id: 'split-history',
+      framebuffer,
       width: 16,
       height: 16,
       camera: {
@@ -111,10 +114,10 @@ it('preserves stationary HDR and confidence with split histories through sparse 
     }
     expect(retainedDiffuse).toBe(true);
 
-    renderer.render({...scene, width: 11, height: 9, separateLobeHistories: true});
+    renderer.render({...scene, resolutionScale: 0.5, separateLobeHistories: true});
     device.submit();
     const resized = await renderer.readRadiance(scene.id);
-    expect([resized?.width, resized?.height]).toEqual([11, 9]);
+    expect([resized?.width, resized?.height]).toEqual([8, 8]);
     const samples = new DataView(resized!.data.buffer, resized!.data.byteOffset);
     for (let offset = 6; offset < samples.byteLength; offset += 8) {
       expect(fromHalfFloat(samples.getUint16(offset, true))).toBe(1);
@@ -122,6 +125,7 @@ it('preserves stationary HDR and confidence with split histories through sparse 
     expect(reportError).not.toHaveBeenCalled();
   } finally {
     renderer.destroy();
+    framebuffer.destroy();
     reportError.mockRestore();
     device.destroy();
   }
