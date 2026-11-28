@@ -175,3 +175,16 @@ to ray visibility, and closed transmissive meshes keep both interfaces.
 
 Opt-in rough dielectric continuation uses GGX facet sampling for Fresnel reflection
 and refraction. Light-sampled rough dielectric connections and nested media remain open.
+
+
+The next transport increment adds analytic-light connections at nondispersive
+exterior rough dielectric interfaces and tracks IOR and absorption through
+properly nested closed shells. Rough dielectric area/environment MIS and bent
+light connections through nested media remain open.
+
+Separate diffuse and specular histories need per-lobe radiance and confidence.
+The trace graph must carry each lobe across sparse batches and resize or reset
+both histories together. Composite the lobes in linear HDR before presentation
+and HDR readback. Use the pose-matched motion benchmark to check that rejecting
+glossy history retains diffuse confidence and that stationary accumulation
+matches the existing linear estimator.

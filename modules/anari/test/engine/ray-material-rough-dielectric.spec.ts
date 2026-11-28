@@ -77,6 +77,16 @@ it('spreads transmitted radiance with roughness and preserves the smooth limit',
     glass.material.uniforms.metallicRoughnessValues[1] = 0.05;
     const tiltedRough = await readPixel();
     expect(tiltedRough[0]).toBeGreaterThan(tiltedSmooth[0] * 0.8);
+    // A rear directional light couples to rough transmission at an open interface.
+    options.surfaces = [glass];
+    options.lights = [
+      {type: 'directional', direction: [0, 0, 1], color: [1, 1, 1], intensity: 0.1}
+    ];
+    glass.material.uniforms.metallicRoughnessValues[1] = 0.8;
+    options.roughDielectricTransmission = false;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.roughDielectricTransmission = true;
+    expect((await readPixel())[0]).toBeGreaterThan(10);
   } finally {
     destroy();
   }
