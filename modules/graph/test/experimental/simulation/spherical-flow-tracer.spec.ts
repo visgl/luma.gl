@@ -116,7 +116,7 @@ it('adaptive sphere reports unmet tolerance instead of accepting at its timestep
 });
 
 /** Solid-body rotation about y crosses both poles and the longitude seam. */
-function makeRotation(width: number) {
+function makeRotation(width: number, speed = 1) {
   const height = (width + 1) / 2;
   const velocity = new Float32Array(width * height * 3);
   for (let row = 0; row < height; row++) {
@@ -124,7 +124,7 @@ function makeRotation(width: number) {
     for (let column = 0; column < width; column++) {
       const longitude = -Math.PI + (column / (width - 1)) * 2 * Math.PI;
       velocity.set(
-        [Math.sin(latitude), 0, -Math.cos(latitude) * Math.cos(longitude)],
+        [speed * Math.sin(latitude), 0, -speed * Math.cos(latitude) * Math.cos(longitude)],
         (row * width + column) * 3
       );
     }
@@ -187,6 +187,7 @@ it('adaptive sphere validates inputs and preserves ownership across rejected sna
     {radius: 0},
     {tolerance: NaN},
     {maximumAttempts: 257},
+    {dispatchesPerReadback: 33},
     {minimumTimeStep: 1},
     {positions: new Float32Array([0, 0, 0])},
     {nextInput: makeUniform()}
@@ -218,4 +219,63 @@ it('adaptive sphere validates inputs and preserves ownership across rejected sna
     tracer.destroy();
   }
   await expect(tracer.advance(0)).rejects.toThrow();
+});
+
+it('matches batched and single dispatches across a reversing spherical rotation', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const initial = new Float32Array([1, 0, 0, 0, 1, 0]);
+  const props = {
+    input: makeRotation(129, 2),
+    nextInput: makeRotation(129, 0),
+    timeRange: [0, 2] as const,
+    positions: initial,
+    radius: 1,
+    tolerance: 1e-6,
+    maximumTimeStep: 0.025,
+    maximumAttempts: 4
+  };
+  const single = new SphericalFlowTracer(device, props);
+  const batched = new SphericalFlowTracer(device, {...props, dispatchesPerReadback: 8});
+  try {
+    for (const [speed, angle] of [
+      [0, 2],
+      [-2, 0]
+    ]) {
+      if (speed < 0) {
+        for (const tracer of [single, batched]) tracer.setNextSnapshot(makeRotation(129, speed), 4);
+      }
+      const totals = [];
+      for (const tracer of [single, batched]) {
+        const before = await tracer.output.readAsync();
+        let result = await tracer.advance(2);
+        expect(await tracer.previous.readAsync()).toEqual(before);
+        const batchSize = tracer === batched ? 8 : 1;
+        expect(result.encodings).toHaveLength(batchSize);
+        expect(result.counterReadbackBytes).toBe(batchSize * 36);
+        let accepted = result.acceptedSteps;
+        let rejected = result.rejectedSteps;
+        for (let call = 0; !result.complete && call < 100; call++) {
+          result = await tracer.continue();
+          accepted += result.acceptedSteps;
+          rejected += result.rejectedSteps;
+        }
+        expect(result.complete).toBe(true);
+        expect(result.active).toBe(2);
+        totals.push([accepted, rejected]);
+        const bytes = await tracer.output.readAsync();
+        const values = new Float32Array(bytes.buffer, bytes.byteOffset, 8);
+        expect(
+          Math.hypot(values[0] - Math.cos(angle), values[1], values[2] + Math.sin(angle))
+        ).toBeLessThan(0.004);
+        expect(Math.hypot(...values.subarray(0, 3))).toBeCloseTo(1, 6);
+      }
+      expect(totals[1]).toEqual(totals[0]);
+      expect(await batched.output.readAsync()).toEqual(await single.output.readAsync());
+      expect(await batched.diagnostics.readAsync()).toEqual(await single.diagnostics.readAsync());
+    }
+  } finally {
+    batched.destroy();
+    single.destroy();
+  }
 });

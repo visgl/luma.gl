@@ -276,7 +276,8 @@ struct View {size: vec4f, options: vec4f};
           ? new SphericalFlowTracer(device, {
               ...sphericalProps,
               tolerance: controls.settings.tolerance,
-              maximumAttempts: 16
+              maximumAttempts: 16,
+              dispatchesPerReadback: controls.settings.dispatchesPerReadback
             })
           : new SphericalFlowGraph(device, {
               ...sphericalProps,
@@ -455,7 +456,7 @@ struct View {size: vec4f, options: vec4f};
           // Submit this segment before the next advance reuses its state and uniform buffers.
           device.submit();
           firstSegment = false;
-          if (graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) break; // One bounded dispatch per animation frame.
+          if (graph instanceof ScientificFlowTracer || graph instanceof SphericalFlowTracer) break; // One bounded batch per animation frame.
         }
       }
       if (
