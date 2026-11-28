@@ -1,4 +1,4 @@
-import{h as e,m as t,r as n}from"./gpu-rigid-body-world-WacThrOi.js";import{z as r}from"./wgsl-interface-scan-BeLN4x0P.js";function i(e,t){return`
+import{h as e,m as t,r as n}from"./gpu-rigid-body-world-D5pqV3vF.js";import{z as r}from"./wgsl-interface-scan-BeLN4x0P.js";function i(e,t){return`
 const CAPACITY=24u;
 var<private> contactCount:u32;
 var<private> boxIds:array<u32,CAPACITY>;

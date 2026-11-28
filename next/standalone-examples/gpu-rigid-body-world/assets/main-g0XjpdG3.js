@@ -1,4 +1,4 @@
-import{A as e,B as t,D as n,L as r,M as i,O as a,_ as o,c as s,d as c,f as l,g as u,j as d,k as f,l as p,o as m,p as ee,s as h,t as te,u as g,w as _,y as v,z as y}from"./gpu-rigid-body-world-WacThrOi.js";import{E as b,V as x,z as S}from"./wgsl-interface-scan-BeLN4x0P.js";import{c as C,l as w,n as ne,o as T,r as E,s as re,t as ie}from"./robot-arm-scene-CJrOu8k8.js";var D={name:`pbrEnvironmentFilter`,bindingLayout:[{name:`pbrEnvironmentFilter`,group:0},{name:`pbrEnvironmentSource`,group:0}],fs:`layout(std140) uniform pbrEnvironmentFilterUniforms {
+import{A as e,B as t,D as n,L as r,M as i,O as a,_ as o,c as s,d as c,f as l,g as u,j as d,k as f,l as p,o as m,p as ee,s as h,t as te,u as g,w as _,y as v,z as y}from"./gpu-rigid-body-world-D5pqV3vF.js";import{E as b,V as x,z as S}from"./wgsl-interface-scan-BeLN4x0P.js";import{c as C,l as w,n as ne,o as T,r as E,s as re,t as ie}from"./robot-arm-scene-Chj4fIGn.js";var D={name:`pbrEnvironmentFilter`,bindingLayout:[{name:`pbrEnvironmentFilter`,group:0},{name:`pbrEnvironmentSource`,group:0}],fs:`layout(std140) uniform pbrEnvironmentFilterUniforms {
   int face;
   float roughness;
   int mode;
