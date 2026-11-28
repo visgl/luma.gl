@@ -652,6 +652,24 @@ it('GPUCommandGraph enforces sampled-only external texture frames', async () => 
     'an expired binding cannot be reused after an intervening frame'
   ).toThrow(/requires a fresh binding/);
   nonconsecutiveReuseEncoder.destroy();
+
+  const invalidGraph = new GPUCommandGraph(device);
+  const undeclaredVideo = invalidGraph.importExternalTexture({id: 'video', width: 4, height: 4});
+  invalidGraph.addCopyPass({
+    id: 'undeclared-reader',
+    resources: [],
+    compile: () => ({encode: context => void context.getExternalTexture(undeclaredVideo)})
+  });
+  const invalidCompiled = invalidGraph.compile();
+  const undeclaredEncoder = device.createCommandEncoder();
+  expect(() =>
+    invalidCompiled.encode(undeclaredEncoder, {
+      parameters: undefined,
+      externalTextures: {video: {texture: firstExternalTexture, frameId: 0}}
+    })
+  ).toThrow(/undeclared-reader.*did not declare external texture "video"/);
+  undeclaredEncoder.destroy();
+  invalidCompiled.destroy();
   compiled.destroy();
   expect(
     Boolean(firstExternalTexture.destroyed),
