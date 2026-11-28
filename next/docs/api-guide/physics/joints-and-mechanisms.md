@@ -173,3 +173,39 @@ world.addToGraph(graph, {
 Each fingertip tests the oriented boxes on the GPU. Selecting a destination or a pickup changes the arm's drive targets. Contact geometry determines which bodies receive impulses. The tree and world publish separate matrix buffers for rendering. For inspection, read `padContactMasks` from the tree's simulation diagnostics. Bit `i` identifies world body `i`. Two different bits on opposite fingers can mean that an obstruction has left the fingers pressing on separate objects.
 
 This path supports one tree and up to 16 bodies with one solid box each, using the same fixed timestep. Pad friction combines geometrically with each box's sliding friction. World contacts resolve after the fingertip impulses in each step. The coupling currently uses all registered boxes and requires a standalone world with the reporting failure policy. Use the Bin Picking controls in the gripper lab to pick a workpiece, release it in the tray and grasp it again, or release it onto a neighbor.
+
+### Colliding a whole arm with a workcell[​](#colliding-a-whole-arm-with-a-workcell "Direct link to Colliding a whole arm with a workcell")
+
+Register link-local colliders when a palm, forearm or tool can touch the scene. Each link has a fixed center-of-mass frame. A sphere, a box, or a capsule can be translated and rotated in that frame. Several colliders can belong to the same link. The engine helper resolves scene nodes or paths and cooks their geometry once, using the same rules as the physics controller.
+
+```
+import {makeArticulationCollidersFromScenegraph} from '@luma.gl/engine/physics';
+
+
+
+const colliders = makeArticulationCollidersFromScenegraph(scene, [
+
+  {link: 'left', node: '/machine/left-finger'},
+
+  {link: 'right', node: '/machine/right-finger'},
+
+  {link: 'boom', node: '/machine/forearm'}
+
+]);
+
+world.addToGraph(graph, {tree, colliders, friction: 0.81});
+```
+
+Direct authoring uses the rigid-body shape types. Give the capsule equal cap radii and set `height` to the distance between cap centers along local Y. The indexed path accepts up to 16 link colliders and 1,024 world bodies, each with one solid box. It sorts leaves by their initial Morton keys and refits groups of eight from the current GPU poses every step. Contact rows reuse impulses when the same bodies, colliders, points and normals remain compatible.
+
+Use `tree.readSimulationDiagnostics()` to inspect candidate pairs, active contacts, reused contacts and the world body and link collider indices for each active pair. The 25th simultaneous contact sets `contactOverflow` and stops the tree before applying its impulses. The standalone world continues stepping. Restore the world and reset the tree together to restart a coupled simulation. Box contacts currently use one representative point per pair. The discrete solver covers fixed-base mechanisms.
+
+In the gripper workcell selector, **Crowded bin** picks and regrasps a block, **Forearm stop** obstructs the carry, **Stack delivery** releases onto a second block and **Scale** increases the load to 256 parts.
+
+### Rendering a ring of independent workpieces[​](#rendering-a-ring-of-independent-workpieces "Direct link to Rendering a ring of independent workpieces")
+
+The gripper lab authors each workpiece as a scenegraph node with its own dimensions, transform and rigid-body mass. Several nodes reference the same cube geometry and the same named finish, much as several glTF nodes can reference one mesh. The scene renderer groups compatible opaque instances for drawing and reads a separate physics pose matrix for each one. An aluminum shim can be lighter, smaller and moving independently of a die with the same finish.
+
+Give a piece its own material when its finish needs to change independently. Its physics body, joint targets and pickup sequence work the same way.
+
+The ring arm has a sliding carriage between its boom and fingers. Set a tree link’s `jointType` to `'prismatic'` and supply a unit axis in the parent frame. For example, `tree.setLinearDrive('slide', {position: -0.44, stiffness: 1000, damping: 60, maximumForce: 80})` commands 44 cm of retraction from the authored pose. Both fingers travel with the carriage, and friction carries the grasped piece. Read the signed motor force in newtons with `tree.readForce('slide')`. The crowded-bin scenario uses the same scenegraph and materials for all 64 bodies.
