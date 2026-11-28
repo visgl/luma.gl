@@ -4,6 +4,7 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import type {
+  Binding,
   Device,
   Framebuffer,
   RenderPipeline,
@@ -14,6 +15,10 @@ import type {
   TextureFormatColor,
   TextureFormatDepthStencil
 } from '@luma.gl/core';
+import {
+  encodeSceneCapturePass,
+  type SceneCapturePassDefinition
+} from '../../passes/scene-capture-pass';
 import {DEFAULT_KERNEL_SHARPNESS, DEFAULT_RESPONSIVENESS} from './temporal-math';
 import type {TemporalVector2} from './temporal-math';
 import {
@@ -21,6 +26,36 @@ import {
   temporalUpscaleAccumulate,
   temporalUpscaleSharpen
 } from './temporal-upscale-shaders';
+
+type TemporalUpscalePassFrame = {
+  outputSize: TemporalVector2;
+  pipeline: RenderPipeline;
+  bindings: Record<string, Binding>;
+  clear?: boolean;
+};
+
+const temporalUpscaleAccumulationPass = {
+  name: 'temporal-upscale-accumulation',
+  target: 'history',
+  pass: {clearColor: false, clearDepth: false, clearStencil: false},
+  getPassProps: ({outputSize}) => ({parameters: {viewport: [0, 0, ...outputSize]}}),
+  draw: (renderPass, {pipeline, bindings}) => {
+    renderPass.setPipeline(pipeline);
+    renderPass.setBindings(bindings);
+    renderPass.draw({vertexCount: 3});
+  }
+} as const satisfies SceneCapturePassDefinition<TemporalUpscalePassFrame, 'history'>;
+
+const temporalUpscaleSharpenPass = {
+  name: 'temporal-upscale-sharpen',
+  target: 'output',
+  pass: {clearDepth: false, clearStencil: false},
+  getPassProps: ({outputSize, clear}) => ({
+    parameters: {viewport: [0, 0, ...outputSize]},
+    clearColor: clear === false ? false : [0, 0, 0, 0]
+  }),
+  draw: temporalUpscaleAccumulationPass.draw
+} as const satisfies SceneCapturePassDefinition<TemporalUpscalePassFrame, 'output'>;
 
 /** Construction settings for the independent two-pass temporal upscaler. */
 export type TemporalUpscalerProps = {
@@ -261,20 +296,12 @@ export class TemporalUpscaler {
       historyAux: previous.auxiliary,
       linearSampler: this.sampler
     };
-    const accumulatePass = this.device.beginRenderPass({
-      framebuffer: next.framebuffer,
-      parameters: {viewport: [0, 0, ...this.outputSize]},
-      clearColor: false,
-      clearDepth: false,
-      clearStencil: false
+    const commandEncoder = this.device.commandEncoder;
+    encodeSceneCapturePass(temporalUpscaleAccumulationPass, {
+      commandEncoder,
+      framebuffers: {history: next.framebuffer},
+      frame: {pipeline: this.accumulatePipeline, outputSize: this.outputSize, bindings}
     });
-    try {
-      accumulatePass.setPipeline(this.accumulatePipeline);
-      accumulatePass.setBindings(bindings);
-      accumulatePass.draw({vertexCount: 3});
-    } finally {
-      accumulatePass.end();
-    }
     // A color-only view of the target avoids coupling this pipeline to a caller's
     // depth format or additional MRT attachments. These borrowed views remain caller-owned.
     const target =
@@ -288,19 +315,18 @@ export class TemporalUpscaler {
             colorAttachments: [target.colorAttachments[0]]
           })
         : target;
-    const sharpenPass = this.device.beginRenderPass({
-      framebuffer: colorTarget,
-      parameters: {viewport: [0, 0, ...this.outputSize]},
-      clearColor: options.clear === false ? false : [0, 0, 0, 0],
-      clearDepth: false,
-      clearStencil: false
-    });
     try {
-      sharpenPass.setPipeline(this.getSharpenPipeline(colorTarget));
-      sharpenPass.setBindings({...bindings, resolvedColor: next.color});
-      sharpenPass.draw({vertexCount: 3});
+      encodeSceneCapturePass(temporalUpscaleSharpenPass, {
+        commandEncoder,
+        framebuffers: {output: colorTarget},
+        frame: {
+          pipeline: this.getSharpenPipeline(colorTarget),
+          outputSize: this.outputSize,
+          bindings: {...bindings, resolvedColor: next.color},
+          clear: options.clear
+        }
+      });
     } finally {
-      sharpenPass.end();
       if (colorTarget !== target) colorTarget.destroy();
     }
     this.historyIndex = nextIndex;
