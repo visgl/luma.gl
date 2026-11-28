@@ -34,22 +34,37 @@ import {
 } from '../../passes/shader-pass-renderer';
 
 /** Overrides for one named effect occurrence. */
-type EffectOccurrence = {
-  /** Shader names to logical graph texture names. */
-  bindings?: Readonly<Record<string, string>>;
+type EffectOccurrence<TextureBinding> = {
+  /** Shader binding names mapped to logical names or caller-owned textures. */
+  bindings?: Readonly<Record<string, TextureBinding>>;
   /** Values keyed by shader module name. */
   uniforms?: Readonly<Record<string, Record<string, unknown>>>;
 };
 
 /** Typed effect entries with graph bindings and uniforms for each occurrence. */
-export type GPUEffectEntries<Options extends readonly unknown[]> = {
+export type GPUEffectEntries<Options extends readonly unknown[], TextureBinding = string> = {
   readonly [Index in keyof Options]:
     | Exclude<EffectEntries<Options>[Index], {effect: unknown}>
-    | (Extract<EffectEntries<Options>[Index], {effect: unknown}> & EffectOccurrence);
+    | (Extract<EffectEntries<Options>[Index], {effect: unknown}> &
+        EffectOccurrence<TextureBinding>);
 };
 
 /** Executable form of a single effect occurrence. */
-type PlannedEffectOccurrence = EffectOccurrence & {definition: CompositeShaderPass};
+type PlannedEffectOccurrence<TextureBinding> = EffectOccurrence<TextureBinding> & {
+  definition: CompositeShaderPass;
+};
+
+/** Resolves the same construction options and occurrence overrides for both graph entry points. */
+function planEffectOccurrences<Options extends readonly unknown[], TextureBinding>(
+  entries: GPUEffectEntries<Options, TextureBinding>
+): PlannedEffectOccurrence<TextureBinding>[] {
+  return resolveEffectEntries<Options>(entries).map((definition, index) => {
+    const entry = entries[index];
+    return 'effect' in entry
+      ? {definition, bindings: {...entry.bindings}, uniforms: {...entry.uniforms}}
+      : {definition};
+  });
+}
 
 /** An effect stack with named graph inputs and an operation-produced color result. */
 export type GPUEffectOperationProps<Options extends readonly unknown[]> = {
@@ -73,7 +88,7 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
   readonly type = 'effects';
   readonly id: string;
   /** @internal Shared, resolved effect definitions. */
-  readonly effects: readonly PlannedEffectOccurrence[];
+  readonly effects: readonly PlannedEffectOccurrence<string>[];
   /** @internal Logical shader texture bindings. */
   readonly bindings: Readonly<Record<string, string>>;
   /** @internal Single-sample output used by the operation contract. */
@@ -81,13 +96,7 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
 
   constructor(readonly props: GPUEffectOperationProps<Options>) {
     this.id = props.id ?? props.output + '-effects';
-    const definitions = resolveEffectEntries<Options>(props.effects);
-    this.effects = definitions.map((definition, index) => {
-      const entry = props.effects[index];
-      return 'effect' in entry
-        ? {definition, bindings: {...entry.bindings}, uniforms: {...entry.uniforms}}
-        : {definition};
-    });
+    this.effects = planEffectOccurrences<Options, string>(props.effects);
     this.bindings = Object.freeze({...props.bindings});
     const {outputDescriptor} = props;
     assert(
@@ -170,8 +179,10 @@ function lowerEffectOperation(
 /** Borrowed textures for a portable SimpleGraph effect stack. */
 export type EffectRenderOperationProps<Options extends readonly unknown[]> = Pick<
   GPUEffectOperationProps<Options>,
-  'effects' | 'uniforms' | 'flipY'
+  'uniforms' | 'flipY'
 > & {
+  /** Effect entries with caller-owned textures as per-occurrence bindings. */
+  effects: GPUEffectEntries<Options, Texture>;
   /** Operation and resource namespace. */
   id: string;
   /** The borrowed input color and destination textures. */
@@ -186,7 +197,7 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
   props: EffectRenderOperationProps<Options>
 ): GPURenderOperation<void> {
   const {id, input, output, bindings, uniforms, flipY} = props;
-  const effects = resolveEffectEntries<Options>(props.effects).map(definition => ({definition}));
+  const effects = planEffectOccurrences<Options, Texture>(props.effects);
   return new GPURenderOperation({
     id,
     createNodes: graph => {
@@ -197,7 +208,7 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
         view = graph.createTextureView(
           graph.importTexture(
             {
-              id: id + '/borrowed-' + name,
+              id: id + '/borrowed-' + borrowed.size + '-' + name,
               format: texture.format,
               width: texture.width,
               height: texture.height,
@@ -217,8 +228,8 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
         id,
         source: importTexture(input, 'source') as GraphTextureView<TextureFormatColor>,
         output: importTexture(output, 'output') as GraphTextureView<TextureFormatColor>,
-        resolveTexture: name => importTexture(bindings![name], 'binding-' + name),
-        bindings: Object.fromEntries(Object.keys(bindings ?? {}).map(name => [name, name])),
+        resolveTexture: (texture, name) => importTexture(texture, 'binding-' + name),
+        bindings: {...bindings},
         effects,
         uniforms,
         flipY
@@ -228,15 +239,15 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
 }
 
 /** Creates the same concrete render commands for either graph entry point. */
-function buildEffectNodes(
+function buildEffectNodes<TextureBinding>(
   graph: GPURenderOperationResources<void>,
   props: {
     id: string;
     source: GraphTextureView<TextureFormatColor>;
     output: GraphTextureView<TextureFormatColor>;
-    resolveTexture: (name: string) => GraphTextureView;
-    bindings: Readonly<Record<string, string>>;
-    effects: readonly PlannedEffectOccurrence[];
+    resolveTexture: (value: TextureBinding, bindingName: string) => GraphTextureView;
+    bindings: Readonly<Record<string, TextureBinding>>;
+    effects: readonly PlannedEffectOccurrence<TextureBinding>[];
     uniforms?: Readonly<Record<string, Record<string, unknown>>>;
     flipY?: boolean;
     allowCompute?: boolean;
@@ -250,9 +261,12 @@ function buildEffectNodes(
   const nodes: (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] = [];
   let index = 0;
   const nextId = (name: string) => props.id + '/' + index++ + '-' + name;
-  const resolveBindings = (bindings: Readonly<Record<string, string>> = {}) =>
+  const resolveBindings = (bindings: Readonly<Record<string, TextureBinding>> = {}) =>
     Object.fromEntries(
-      Object.entries(bindings).map(([name, value]) => [name, {view: props.resolveTexture(value)}])
+      Object.entries(bindings).map(([name, value]) => [
+        name,
+        {view: props.resolveTexture(value, name)}
+      ])
     );
   const sharedBindings = resolveBindings(props.bindings);
   const plans = props.effects.map(({definition: effect, bindings, uniforms}) => ({
