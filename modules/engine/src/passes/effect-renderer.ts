@@ -75,6 +75,11 @@ export type EffectDefinition<TargetName extends string = string> = {
 
 type EffectOptionKey<Options> = Options extends unknown ? Extract<keyof Options, string> : never;
 
+type EffectOptionValue<Options, Value = unknown> = {
+  option: EffectOptionKey<Options>;
+  values?: Readonly<Record<string, Value>>;
+};
+
 /**
  * A reusable effect whose resource descriptors or pass sequence depend on options.
  * Configure it when constructing the stack or when topology changes. Per-frame
@@ -89,9 +94,26 @@ export type ConfigurableEffectDefinition<Options, TargetName extends string = st
       configure(options?: Options): EffectDefinition<TargetName>;
     }
   | (EffectDefinition<TargetName> & {
-      optionDefaults: Required<Options>;
+      optionDefaults: Options;
       /** A numeric option used for both dimensions of the listed render targets. */
-      scaleResources?: {option: EffectOptionKey<Options>; targets: readonly TargetName[]};
+      scaleResources?: EffectOptionValue<Options, number> & {
+        targets: readonly TargetName[];
+        fallback?: EffectOptionValue<Options, number>;
+        defaultScale?: number;
+        minimum?: number;
+        factors?: Partial<Record<TargetName, number>>;
+      };
+      /** Initialize a history texture’s red channel from a numeric option. */
+      historyClearOptions?: Partial<
+        Record<TargetName, {option: EffectOptionKey<Options>; minimum?: number}>
+      >;
+      /** Map options to uniform defaults by shader module and uniform name. */
+      optionUniforms?: Record<string, Record<string, EffectOptionValue<Options>>>;
+      /** Map option choices to logical inputs by shader module and binding name. */
+      optionInputs?: Record<
+        string,
+        Record<string, EffectOptionValue<Options, 'previous' | 'original' | TargetName>>
+      >;
       /** Select replacement passes and resources using the value of an option. */
       variants?: {
         option: EffectOptionKey<Options>;
@@ -108,10 +130,24 @@ export function resolveEffectOptions<Options, TargetName extends string>(
   options?: NoInfer<Options>
 ): EffectDefinition<TargetName> {
   if ('configure' in effect) return effect.configure(options);
-  const {scaleResources, variants, optionDefaults} = effect;
+  const {
+    scaleResources,
+    variants,
+    optionDefaults,
+    optionUniforms,
+    optionInputs,
+    historyClearOptions
+  } = effect;
   const overrides = options as Partial<Record<EffectOptionKey<Options>, unknown>> | undefined;
   const defaults = optionDefaults as Partial<Record<EffectOptionKey<Options>, unknown>>;
-  const value = variants && String(overrides?.[variants.option] ?? defaults[variants.option]);
+  const readOption = (key: EffectOptionKey<Options>) => overrides?.[key] ?? defaults[key];
+  const readValue = (mapping: EffectOptionValue<Options>) => {
+    const option = readOption(mapping.option);
+    if (!mapping.values) return option;
+    const key = String(option);
+    return Object.hasOwn(mapping.values, key) ? mapping.values[key] : undefined;
+  };
+  const value = variants && String(readOption(variants.option));
   const variant =
     variants && value !== undefined && Object.hasOwn(variants.values, value)
       ? variants.values[value]
@@ -121,16 +157,59 @@ export function resolveEffectOptions<Options, TargetName extends string>(
     EffectDefinition<TargetName>['resources']
   >;
   if (scaleResources) {
-    const scale = overrides?.[scaleResources.option] ?? defaults[scaleResources.option];
-    if (typeof scale !== 'number' || !Number.isFinite(scale) || scale <= 0) {
+    const scale =
+      readValue(scaleResources) ??
+      (scaleResources.fallback && readValue(scaleResources.fallback)) ??
+      scaleResources.defaultScale;
+    if (
+      typeof scale !== 'number' ||
+      !Number.isFinite(scale) ||
+      (scale <= 0 && !scaleResources.minimum)
+    ) {
       throw new Error(effect.name + ': resource scale must be a finite positive number');
     }
     for (const name of scaleResources.targets) {
       const resource = resources[name];
-      if (resource) resources[name] = {...resource, scale: [scale, scale]};
+      if (!resource?.scale) continue;
+      const factor = scaleResources.factors?.[name] ?? 1;
+      const size = Math.max(scale, scaleResources.minimum ?? 0) * factor;
+      resources[name] = {...resource, scale: [size, size]};
     }
   }
-  return {...resolved, resources};
+  for (const name of Object.keys(historyClearOptions ?? {}) as TargetName[]) {
+    const mapping = historyClearOptions?.[name];
+    const resource = resources[name];
+    const initial = resource?.initialize;
+    if (!mapping || !initial || initial === 'original') continue;
+    const value = readOption(mapping.option);
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const [, green, blue, alpha] = initial.clearColor;
+      resources[name] = {
+        ...resource,
+        initialize: {
+          clearColor: [Math.max(value, mapping.minimum ?? -Infinity), green, blue, alpha]
+        }
+      };
+    }
+  }
+  const passes = resolved.passes.map(pass => {
+    const moduleName = pass.kind === 'fullscreen' ? pass.shaderPass.name : pass.module.name;
+    const uniformOptions = optionUniforms?.[moduleName];
+    const inputOptions = optionInputs?.[moduleName];
+    if (!uniformOptions && !inputOptions) return pass;
+    const uniforms = {...pass.uniforms};
+    const inputs = {...pass.inputs};
+    for (const [name, mapping] of Object.entries(uniformOptions ?? {})) {
+      const value = readValue(mapping);
+      if (value !== undefined) uniforms[name] = value;
+    }
+    for (const [name, mapping] of Object.entries(inputOptions ?? {})) {
+      const value = readValue(mapping);
+      if (typeof value === 'string') inputs[name] = value as 'previous' | 'original' | TargetName;
+    }
+    return {...pass, uniforms, ...(inputOptions ? {inputs} : {})};
+  });
+  return {...resolved, resources, passes};
 }
 
 /** @internal Lowers an effect definition to the fullscreen renderer's execution format. */

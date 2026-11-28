@@ -655,106 +655,158 @@ fn ssrComposite_sampleColor(
 >;
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
+const ssrOptionDefaults: SSRCompositeShaderPassOptions = {reprojection: 'velocity'};
+const ssrTargets = {
+  ssrRaw: {scale: [1, 1], format: 'rgba16float'},
+  ssrHistory: {
+    scale: [1, 1],
+    format: 'rgba16float',
+    lifetime: 'history',
+    initialize: {clearColor: [0, 0, 0, 0]}
+  },
+  ssrHistoryDepth: {
+    scale: [1, 1],
+    format: 'rgba16float',
+    lifetime: 'history',
+    initialize: {clearColor: [1, 0, 0, 1]}
+  },
+  ssrScratch: {scale: [1, 1], format: 'rgba16float'},
+  ssrReflection: {scale: [1, 1], format: 'rgba16float'}
+} as const satisfies NonNullable<EffectDefinition['resources']>;
+const ssrTraceStep = {
+  kind: 'sample',
+  module: ssrTrace,
+  inputs: {sourceTexture: 'previous'},
+  output: 'ssrRaw'
+} as const;
+const ssrDenoiseAndComposite = [
+  {
+    kind: 'sample',
+    module: ssrSpatial,
+    inputs: {sourceTexture: 'ssrHistory'},
+    output: 'ssrScratch',
+    uniforms: {direction: [1, 0]}
+  },
+  {
+    kind: 'sample',
+    module: ssrSpatial,
+    inputs: {sourceTexture: 'ssrScratch'},
+    output: 'ssrReflection',
+    uniforms: {direction: [0, 1]}
+  },
+  {
+    kind: 'sample',
+    module: ssrComposite,
+    inputs: {sourceTexture: 'previous', reflectionTexture: 'ssrReflection'}
+  }
+] as const;
+const ssrTemporalInputs = {
+  sourceTexture: 'ssrRaw',
+  historyTexture: 'ssrHistory',
+  previousDepthTexture: 'ssrHistoryDepth'
+} as const;
+const ssrHistoryWeight = {
+  option: 'quality',
+  values: {
+    fast: SSR_QUALITY_PRESETS.fast.historyWeight,
+    balanced: SSR_QUALITY_PRESETS.balanced.historyWeight,
+    detailed: SSR_QUALITY_PRESETS.detailed.historyWeight
+  }
+} as const;
+
+/** Screen-space reflections with velocity or camera reprojection. */
 export const ssr = {
   name: 'ssrCompositeShaderPass',
-  configure: configureSSR
-} as const satisfies ConfigurableEffectDefinition<SSRCompositeShaderPassOptions>;
-
-function configureSSR(options: SSRCompositeShaderPassOptions = {}): EffectDefinition {
-  const quality = options.quality ? SSR_QUALITY_PRESETS[options.quality] : undefined;
-  const scale = options.resolutionScale ?? quality?.resolutionScale ?? 1;
-  const cameraHistory = options.reprojection === 'camera';
-  const spatialUniforms: Record<string, number> = quality ? {maxRadius: quality.maxRadius} : {};
-  return {
-    name: 'ssrCompositeShaderPass',
-    resources: {
-      ssrRaw: {scale: [scale, scale], format: 'rgba16float'},
-      ssrHistory: {
-        scale: [scale, scale],
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [0, 0, 0, 0]}
-      },
-      ssrHistoryDepth: cameraHistory
-        ? {
+  optionDefaults: ssrOptionDefaults,
+  scaleResources: {
+    option: 'resolutionScale',
+    targets: ['ssrRaw', 'ssrHistory', 'ssrHistoryDepth', 'ssrScratch', 'ssrReflection'],
+    defaultScale: 1,
+    fallback: {
+      option: 'quality',
+      values: {
+        fast: SSR_QUALITY_PRESETS.fast.resolutionScale,
+        balanced: SSR_QUALITY_PRESETS.balanced.resolutionScale,
+        detailed: SSR_QUALITY_PRESETS.detailed.resolutionScale
+      }
+    }
+  },
+  optionUniforms: {
+    [ssrTrace.name]: {
+      sampleCount: {
+        option: 'quality',
+        values: {
+          fast: SSR_QUALITY_PRESETS.fast.sampleCount,
+          balanced: SSR_QUALITY_PRESETS.balanced.sampleCount,
+          detailed: SSR_QUALITY_PRESETS.detailed.sampleCount
+        }
+      }
+    },
+    [ssrTemporal.name]: {historyWeight: ssrHistoryWeight},
+    [ssrCameraTemporal.name]: {historyWeight: ssrHistoryWeight},
+    [ssrSpatial.name]: {
+      maxRadius: {
+        option: 'quality',
+        values: {
+          fast: SSR_QUALITY_PRESETS.fast.maxRadius,
+          balanced: SSR_QUALITY_PRESETS.balanced.maxRadius,
+          detailed: SSR_QUALITY_PRESETS.detailed.maxRadius
+        }
+      }
+    }
+  },
+  resources: ssrTargets,
+  passes: [
+    ssrTraceStep,
+    {kind: 'sample', module: ssrTemporal, inputs: ssrTemporalInputs, output: 'ssrHistory'},
+    {
+      kind: 'sample',
+      module: ssrDepthHistoryCopy,
+      inputs: {sourceTexture: 'previous'},
+      output: 'ssrHistoryDepth'
+    },
+    ...ssrDenoiseAndComposite
+  ],
+  variants: {
+    option: 'reprojection',
+    values: {
+      camera: {
+        resources: {
+          ...ssrTargets,
+          ssrHistoryDepth: {
             format: 'rgba8unorm',
             lifetime: 'history',
             initialize: {clearColor: [1, 1, 1, 1]}
-          }
-        : {
-            scale: [scale, scale],
-            format: 'rgba16float',
-            lifetime: 'history',
-            initialize: {clearColor: [1, 0, 0, 1]}
           },
-      ...(cameraHistory
-        ? {
-            ssrHistoryNormal: {
-              format: 'rgba8unorm',
-              lifetime: 'history',
-              initialize: {clearColor: [0.5, 0.5, 1, 1]}
-            }
+          ssrHistoryNormal: {
+            format: 'rgba8unorm',
+            lifetime: 'history',
+            initialize: {clearColor: [0.5, 0.5, 1, 1]}
           }
-        : {}),
-      ssrScratch: {scale: [scale, scale], format: 'rgba16float'},
-      ssrReflection: {scale: [scale, scale], format: 'rgba16float'}
-    },
-    passes: [
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssrTrace,
-        inputs: {sourceTexture: 'previous'},
-        output: 'ssrRaw',
-        uniforms: quality ? {sampleCount: quality.sampleCount} : undefined
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: cameraHistory ? ssrCameraTemporal : ssrTemporal,
-        inputs: {
-          sourceTexture: 'ssrRaw',
-          historyTexture: 'ssrHistory',
-          previousDepthTexture: 'ssrHistoryDepth',
-          ...(cameraHistory ? {previousNormalTexture: 'ssrHistoryNormal'} : {})
         },
-        output: 'ssrHistory',
-        uniforms: quality ? {historyWeight: quality.historyWeight} : undefined
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: cameraHistory ? ssrCameraDepthHistoryCopy : ssrDepthHistoryCopy,
-        inputs: {sourceTexture: 'previous'},
-        output: 'ssrHistoryDepth'
-      },
-      ...(cameraHistory
-        ? [
-            {
-              kind: 'fullscreen' as const,
-              shaderPass: ssrNormalHistoryCopy,
-              inputs: {sourceTexture: 'previous'},
-              output: 'ssrHistoryNormal'
-            }
-          ]
-        : []),
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssrSpatial,
-        inputs: {sourceTexture: 'ssrHistory'},
-        output: 'ssrScratch',
-        uniforms: {...spatialUniforms, direction: [1, 0]}
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssrSpatial,
-        inputs: {sourceTexture: 'ssrScratch'},
-        output: 'ssrReflection',
-        uniforms: {...spatialUniforms, direction: [0, 1]}
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssrComposite,
-        inputs: {sourceTexture: 'previous', reflectionTexture: 'ssrReflection'},
-        output: 'previous'
+        passes: [
+          ssrTraceStep,
+          {
+            kind: 'sample',
+            module: ssrCameraTemporal,
+            inputs: {...ssrTemporalInputs, previousNormalTexture: 'ssrHistoryNormal'},
+            output: 'ssrHistory'
+          },
+          {
+            kind: 'sample',
+            module: ssrCameraDepthHistoryCopy,
+            inputs: {sourceTexture: 'previous'},
+            output: 'ssrHistoryDepth'
+          },
+          {
+            kind: 'sample',
+            module: ssrNormalHistoryCopy,
+            inputs: {sourceTexture: 'previous'},
+            output: 'ssrHistoryNormal'
+          },
+          ...ssrDenoiseAndComposite
+        ]
       }
-    ]
-  };
-}
+    }
+  }
+} as const satisfies ConfigurableEffectDefinition<SSRCompositeShaderPassOptions>;

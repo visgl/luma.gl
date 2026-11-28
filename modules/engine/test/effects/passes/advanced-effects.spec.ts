@@ -52,7 +52,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'SSAO defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
-    resolveEffect(gtaoDefinition.configure()).renderTargets?.gtaoRaw.scale,
+    resolveEffect(resolveEffectOptions(gtaoDefinition)).renderTargets?.gtaoRaw.scale,
     'GTAO defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
@@ -60,7 +60,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'diffuse global illumination defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
-    resolveEffect(ssr.configure()).renderTargets?.ssrRaw.scale,
+    resolveEffect(resolveEffectOptions(ssr)).renderTargets?.ssrRaw.scale,
     'screen-space reflections default to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
@@ -82,7 +82,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'normal-texture mode consumes the external normal binding'
   ).toBe(undefined);
 
-  const gtao = resolveEffect(gtaoDefinition.configure({resolutionScale: 0.5}));
+  const gtao = resolveEffect(resolveEffectOptions(gtaoDefinition, {resolutionScale: 0.5}));
   expect(gtao.steps.length, 'GTAO evaluates, stabilizes, denoises, and composites').toBe(6);
   expect(gtao.renderTargets?.gtaoRaw.scale, 'GTAO honors scale').toEqual([0.5, 0.5]);
   expect(gtao.renderTargets?.gtaoHistory.lifetime, 'GTAO retains AO history').toBe('history');
@@ -107,7 +107,9 @@ it('advanced effects expose composable pipeline shapes', () => {
     'GTAO rotates and jitters horizon samples across animation frames'
   ).toBe(true);
 
-  const ambientOnlyGTAO = resolveEffect(gtaoDefinition.configure({composition: 'ambient-only'}));
+  const ambientOnlyGTAO = resolveEffect(
+    resolveEffectOptions(gtaoDefinition, {composition: 'ambient-only'})
+  );
   expect(
     ambientOnlyGTAO.steps[5].shaderPass,
     'ambient-only GTAO selects the composable ambient-light correction'
@@ -203,14 +205,14 @@ it('advanced effects expose composable pipeline shapes', () => {
     'temporal rejection compares stored linear depth directly'
   ).toBe(true);
 
-  const adaptiveExposure = resolveEffect(hdrAutoExposure.configure());
+  const adaptiveExposure = resolveEffect(resolveEffectOptions(hdrAutoExposure));
   const minimumScaleAdaptiveExposure = resolveEffect(
-    hdrAutoExposure.configure({
+    resolveEffectOptions(hdrAutoExposure, {
       meteringScale: 0.125
     })
   );
   const seededAdaptiveExposure = resolveEffect(
-    hdrAutoExposure.configure({
+    resolveEffectOptions(hdrAutoExposure, {
       initialExposure: 0.35
     })
   );
@@ -349,13 +351,15 @@ it('advanced effects expose composable pipeline shapes', () => {
     'depth reconstruction mode supplies a harmless fallback normal binding'
   ).toBe('previous');
 
-  const outlinePassDefinition = resolveEffect(outlines.configure({normalSource: 'normal-texture'}));
+  const outlinePassDefinition = resolveEffect(
+    resolveEffectOptions(outlines, {normalSource: 'normal-texture'})
+  );
   expect(outlinePassDefinition.steps[0].output, 'outlines compose into previous').toBe('previous');
   expect(outlines.name, 'outlines exposes a declarative configurable definition').toBe(
     'outlineCompositeShaderPass'
   );
   expect(
-    resolveEffect(outlines.configure({mode: 'image', quality: 'fast'})).name,
+    resolveEffect(resolveEffectOptions(outlines, {mode: 'image', quality: 'fast'})).name,
     'image outlines remain configurable through the declarative definition'
   ).toBe('imageOutlineCompositeShaderPass');
 
@@ -400,7 +404,7 @@ it('advanced effects expose composable pipeline shapes', () => {
 
   expect(depthAwareBlurCompositeShaderPass.steps.length, 'depth blur is separable').toBe(2);
   expect(resolveEffect(motionBlur).steps.length, 'motion blur is one stage').toBe(1);
-  const reflections = resolveEffect(ssr.configure({resolutionScale: 0.5}));
+  const reflections = resolveEffect(resolveEffectOptions(ssr, {resolutionScale: 0.5}));
   expect(reflections.steps.length, 'SSR traces, stabilizes, denoises twice, and composites').toBe(
     6
   );
@@ -799,12 +803,12 @@ it('advanced effects compose in order with existing effects', async () => {
   const mixedEffectStack = [
     brightnessContrast,
     resolveEffect(resolveEffectOptions(ssaoEffect, {normalSource: 'normal-texture'})),
-    resolveEffect(gtaoDefinition.configure()),
+    resolveEffect(resolveEffectOptions(gtaoDefinition)),
     resolveEffect(resolveEffectOptions(ssgi)),
-    resolveEffect(ssr.configure()),
-    resolveEffect(ssr.configure({reprojection: 'camera', quality: 'fast'})),
+    resolveEffect(resolveEffectOptions(ssr)),
+    resolveEffect(resolveEffectOptions(ssr, {reprojection: 'camera', quality: 'fast'})),
     resolveEffect(resolveEffectOptions(clusteredVolumetricLighting)),
-    resolveEffect(hdrAutoExposure.configure()),
+    resolveEffect(resolveEffectOptions(hdrAutoExposure)),
     resolveEffect(multiscaleBloomEffect),
     dofCompositeShaderPass,
     resolveEffect(taaDefinition),

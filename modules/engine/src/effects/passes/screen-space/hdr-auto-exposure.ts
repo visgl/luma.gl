@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  type ConfigurableEffectDefinition,
-  type EffectDefinition
-} from '../../../passes/effect-renderer';
+import {type ConfigurableEffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shaders';
 
@@ -261,9 +258,109 @@ fn hdrAutoExposureApply_sampleColor(
 >;
 
 /** Builds a logarithmic luminance pyramid, persistent adaptation, and HDR exposure resolve. */
+const hdrExposureOptionDefaults: Required<HDRAutoExposureCompositeShaderPassOptions> = {
+  meteringScale: 0.25,
+  initialExposure: 1
+};
+
 export const hdrAutoExposure = {
+  optionDefaults: hdrExposureOptionDefaults,
+  scaleResources: {
+    option: 'meteringScale',
+    minimum: 0.25,
+    targets: [
+      'hdrLuminanceQuarter',
+      'hdrLuminanceSixteenth',
+      'hdrLuminanceSixtyFourth',
+      'hdrLuminanceTwoFiftySixth',
+      'hdrLuminanceThousandth',
+      'hdrExposureHistory'
+    ],
+    factors: {
+      hdrLuminanceSixteenth: 1 / 4,
+      hdrLuminanceSixtyFourth: 1 / 16,
+      hdrLuminanceTwoFiftySixth: 1 / 64,
+      hdrLuminanceThousandth: 1 / 256,
+      hdrExposureHistory: 1 / 256
+    }
+  },
+  historyClearOptions: {hdrExposureHistory: {option: 'initialExposure', minimum: 0.0001}},
   name: 'hdrAutoExposureCompositeShaderPass',
-  configure: configureHDRAutoExposure
+  resources: {
+    hdrLuminanceQuarter: {
+      scale: [1, 1],
+      format: 'rgba16float'
+    },
+    hdrLuminanceSixteenth: {
+      scale: [1, 1],
+      format: 'rgba16float'
+    },
+    hdrLuminanceSixtyFourth: {
+      scale: [1, 1],
+      format: 'rgba16float'
+    },
+    hdrLuminanceTwoFiftySixth: {
+      scale: [1, 1],
+      format: 'rgba16float'
+    },
+    hdrLuminanceThousandth: {
+      scale: [1, 1],
+      format: 'rgba16float'
+    },
+    hdrExposureHistory: {
+      scale: [1, 1],
+      format: 'rgba16float',
+      lifetime: 'history',
+      initialize: {clearColor: [1, 1, 1, 1]}
+    }
+  },
+  passes: [
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrLuminanceExtract,
+      inputs: {sourceTexture: 'previous'},
+      output: 'hdrLuminanceQuarter'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrLuminanceReduce,
+      inputs: {sourceTexture: 'hdrLuminanceQuarter'},
+      output: 'hdrLuminanceSixteenth'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrLuminanceReduce,
+      inputs: {sourceTexture: 'hdrLuminanceSixteenth'},
+      output: 'hdrLuminanceSixtyFourth'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrLuminanceReduce,
+      inputs: {sourceTexture: 'hdrLuminanceSixtyFourth'},
+      output: 'hdrLuminanceTwoFiftySixth'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrLuminanceReduce,
+      inputs: {sourceTexture: 'hdrLuminanceTwoFiftySixth'},
+      output: 'hdrLuminanceThousandth'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrAutoExposureAdapt,
+      inputs: {
+        sourceTexture: 'hdrLuminanceThousandth',
+        historyTexture: 'hdrExposureHistory'
+      },
+      output: 'hdrExposureHistory'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: hdrAutoExposureApply,
+      inputs: {sourceTexture: 'previous', exposureTexture: 'hdrExposureHistory'},
+      output: 'previous'
+    }
+  ]
 } as const satisfies ConfigurableEffectDefinition<
   HDRAutoExposureCompositeShaderPassOptions,
   | 'hdrLuminanceQuarter'
@@ -273,100 +370,3 @@ export const hdrAutoExposure = {
   | 'hdrLuminanceThousandth'
   | 'hdrExposureHistory'
 >;
-
-function configureHDRAutoExposure(
-  options: HDRAutoExposureCompositeShaderPassOptions = {}
-): EffectDefinition<
-  | 'hdrLuminanceQuarter'
-  | 'hdrLuminanceSixteenth'
-  | 'hdrLuminanceSixtyFourth'
-  | 'hdrLuminanceTwoFiftySixth'
-  | 'hdrLuminanceThousandth'
-  | 'hdrExposureHistory'
-> {
-  const meteringScale = Math.max(options.meteringScale ?? 0.25, 0.25);
-  const initialExposure = Math.max(options.initialExposure ?? 1, 0.0001);
-  const sixteenthScale = meteringScale / 4;
-  const sixtyFourthScale = sixteenthScale / 4;
-  const twoFiftySixthScale = sixtyFourthScale / 4;
-  const thousandthScale = twoFiftySixthScale / 4;
-
-  return {
-    name: 'hdrAutoExposureCompositeShaderPass',
-    resources: {
-      hdrLuminanceQuarter: {
-        scale: [meteringScale, meteringScale],
-        format: 'rgba16float'
-      },
-      hdrLuminanceSixteenth: {
-        scale: [sixteenthScale, sixteenthScale],
-        format: 'rgba16float'
-      },
-      hdrLuminanceSixtyFourth: {
-        scale: [sixtyFourthScale, sixtyFourthScale],
-        format: 'rgba16float'
-      },
-      hdrLuminanceTwoFiftySixth: {
-        scale: [twoFiftySixthScale, twoFiftySixthScale],
-        format: 'rgba16float'
-      },
-      hdrLuminanceThousandth: {
-        scale: [thousandthScale, thousandthScale],
-        format: 'rgba16float'
-      },
-      hdrExposureHistory: {
-        scale: [thousandthScale, thousandthScale],
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [initialExposure, 1, 1, 1]}
-      }
-    },
-    passes: [
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrLuminanceExtract,
-        inputs: {sourceTexture: 'previous'},
-        output: 'hdrLuminanceQuarter'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrLuminanceReduce,
-        inputs: {sourceTexture: 'hdrLuminanceQuarter'},
-        output: 'hdrLuminanceSixteenth'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrLuminanceReduce,
-        inputs: {sourceTexture: 'hdrLuminanceSixteenth'},
-        output: 'hdrLuminanceSixtyFourth'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrLuminanceReduce,
-        inputs: {sourceTexture: 'hdrLuminanceSixtyFourth'},
-        output: 'hdrLuminanceTwoFiftySixth'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrLuminanceReduce,
-        inputs: {sourceTexture: 'hdrLuminanceTwoFiftySixth'},
-        output: 'hdrLuminanceThousandth'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrAutoExposureAdapt,
-        inputs: {
-          sourceTexture: 'hdrLuminanceThousandth',
-          historyTexture: 'hdrExposureHistory'
-        },
-        output: 'hdrExposureHistory'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: hdrAutoExposureApply,
-        inputs: {sourceTexture: 'previous', exposureTexture: 'hdrExposureHistory'},
-        output: 'previous'
-      }
-    ]
-  };
-}

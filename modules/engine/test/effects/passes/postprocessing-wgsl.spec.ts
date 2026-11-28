@@ -81,16 +81,16 @@ const PLATFORM_INFO = {
 
 const ADVANCED_SHADER_PASSES = [
   resolveEffect(resolveEffectOptions(ssaoEffect, {normalSource: 'normal-texture'})),
-  resolveEffect(gtao.configure()),
-  resolveEffect(gtao.configure({composition: 'ambient-only'})),
-  resolveEffect(hdrAutoExposure.configure()),
+  resolveEffect(resolveEffectOptions(gtao)),
+  resolveEffect(resolveEffectOptions(gtao, {composition: 'ambient-only'})),
+  resolveEffect(resolveEffectOptions(hdrAutoExposure)),
   resolveEffect(resolveEffectOptions(ssgi)),
   resolveEffect(resolveEffectOptions(clusteredVolumetricLighting)),
-  resolveEffect(outlines.configure({normalSource: 'normal-texture'})),
+  resolveEffect(resolveEffectOptions(outlines, {normalSource: 'normal-texture'})),
   resolveEffect(cameraReprojectionTaaDefinition),
   resolveEffect(taaDefinition),
   resolveEffect(motionBlur),
-  resolveEffect(ssr.configure()),
+  resolveEffect(resolveEffectOptions(ssr)),
   resolveEffect(resolveEffectOptions(volumetricFog)),
   resolveEffect(resolveEffectOptions(volumetricFog, {mode: 'height'}))
 ].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
