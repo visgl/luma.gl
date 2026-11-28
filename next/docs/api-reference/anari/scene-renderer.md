@@ -657,6 +657,20 @@ The render halo is `denoiseRadius + frames - 1`: guided filtering reads spatial 
 
 Breaking out of `for await`, calling iterator `return()`, or aborting releases export-owned GPU resources. Cancellation is checked between tiles/frames and after readback; it does not interrupt work already submitted to the GPU. Scene geometries and the device remain caller-owned.
 
+For linear HDR output, use `exportRayTracingRadiance(device, scene, options)`. It yields tightly packed little-endian RGBA16F tiles in row-major order. RGB contains the progressive radiance history before exposure, tone mapping, and display denoising. Alpha contains history confidence. Readback memory scales with tile size, including the progressive history halo.
+
+To get a floating-point image file, pass the complete stream to `encodeRayTracingRadiancePFM`:
+
+```
+const tiles = exportRayTracingRadiance(device, scene, {width, height, frames: 16});
+
+const file = await encodeRayTracingRadiancePFM(width, height, tiles);
+
+const blob = new Blob([file], {type: 'application/octet-stream'});
+```
+
+The encoder writes [bottom-up little-endian RGB PFM](https://netpbm.sourceforge.net/doc/pfm.html). It expands each RGB sample to float32 without changing the source precision and allocates the complete file in CPU memory.
+
 `iterateRayTracingImageTiles(width, height, tileSize, halo = 0)` exposes the lazy row-major tile plan. Each result contains interior `x`, `y`, `width`, `height` and padded `renderX`, `renderY`, `renderWidth`, `renderHeight`. Halo must be an integer from `0` to `257`.
 
 For custom offscreen pipelines, `RayTracingSceneRenderOptions.imageRegion` is `{offset: [x, y], fullSize: [width, height]}` in top-left full-image pixels. Its local target extent must lie within the full image. This mode forces full resolution and disables adaptive resolution and temporal reprojection. `samplingFrameIndex` optionally chooses the uint32 sampling sequence frame, independent of retained scheduling. Region changes reset accumulation; changing only the explicit sample frame advances sampling without clearing history. Default rendering omits both options and retains its existing behavior.
