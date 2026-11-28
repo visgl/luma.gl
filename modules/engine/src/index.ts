@@ -197,6 +197,7 @@ export type {
   ConfigurableEffectDefinition,
   EffectDefinition,
   EffectPass,
+  EffectRenderOptions,
   EffectRendererProps
 } from './passes/effect-renderer';
 export {configureEffect, EffectRenderer} from './passes/effect-renderer';

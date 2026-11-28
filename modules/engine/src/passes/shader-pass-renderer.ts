@@ -166,9 +166,19 @@ export class ShaderPassRenderer {
       return false;
     }
 
-    const framebuffer = this.device
-      .getDefaultCanvasContext()
-      .getCurrentFramebuffer({depthStencilFormat: false});
+    this.drawOutput(commandEncoder, outputTexture, null);
+    return true;
+  }
+
+  /** @internal Records presentation of a completed effect output. */
+  protected drawOutput(
+    commandEncoder: CommandEncoder,
+    outputTexture: Texture,
+    target: Framebuffer | null
+  ): void {
+    const framebuffer =
+      target ??
+      this.device.getDefaultCanvasContext().getCurrentFramebuffer({depthStencilFormat: false});
     // Prepare fullscreen presentation bindings before opening the render pass so WebGPU
     // uploads stay on the parent command encoder rather than the active render pass encoder.
     this.textureModel.setProps({backgroundTexture: outputTexture});
@@ -178,9 +188,11 @@ export class ShaderPassRenderer {
       framebuffer,
       clearDepth: false
     });
-    this.textureModel.draw(renderPass);
-    renderPass.end();
-    return true;
+    try {
+      this.textureModel.draw(renderPass);
+    } finally {
+      renderPass.end();
+    }
   }
 
   /** Runs the shaderPasses in sequence on the sourceTexture and returns a texture with the results.

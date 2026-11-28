@@ -243,3 +243,34 @@ determine the dispatch grid. The renderer checks WebGPU, storage-format
 support, binding limits, and workgroup dimensions. On other devices it runs
 the fragment sequence. Both paths should populate every resource the shared
 passes read.
+
+## Record a frame with EffectRenderer
+
+Use `render({sourceTexture, target: null})` to draw to the canvas. Supply a
+framebuffer as `target` to draw into it, or omit `target` to return the output
+texture. The returned texture is borrowed. A later draw, resize, or destruction
+can overwrite or invalidate it. Rendering records commands without submitting.
+Use `commandEncoder` to record into a caller-owned encoder on the same device.
+
+Set `resetHistory: true` on the first frame after a camera cut. Scene depth,
+normals, prepared light textures and buffers, and uniform values can change on
+each call.
+
+A filter can reference its shader module directly:
+
+```ts
+const sepiaEffect = {
+  name: 'sepia',
+  passes: [{kind: 'filter', module: sepia}]
+} as const satisfies EffectDefinition;
+
+const renderer = new EffectRenderer(device, {
+  effects: [
+    {effect: ssaoEffect, options: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+    {effect: sepiaEffect}
+  ]
+});
+```
+
+The sepia `amount` remains a shader uniform. SSAO resolves its target scales
+and normal-source pass sequence from its definition when the renderer is created.
