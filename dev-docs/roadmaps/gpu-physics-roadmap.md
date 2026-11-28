@@ -1033,3 +1033,7 @@ A fixed-base articulated tree can now discover contacts between its two spherica
 ### G9 indexed articulated contacts in a crowded workcell
 
 Named links accept local spheres, capsules and boxes, including shapes cooked from scenegraph paths. A GPU-refitted spatial index qualifies candidates against independently moving boxes. The compact contact solver warm-starts persistent pairs and exposes contact identities, reuse and overflow. The gripper lab includes a 64-part pickup, blocked forearm, stack delivery and 256-part scaling fixture. Remaining work includes multi-point link manifolds, additional counterpart shapes, several trees per world, floating bases, closed loops and qualification on additional adapters. See the [crowded-bin report](../benchmarks/robot-arm.md#crowded-bin).
+
+### G9 cooperative gantry
+
+Two independent fixed-base mechanisms now share a free payload through one articulated contact solve and one refitted counterpart index. The [two-arm gantry qualification](../benchmarks/two-arm-gantry.md) covers load sharing, fork-face persistence, transfer and set-down with 64 and 256 world parts. Remaining work includes floating bases, direct link-to-link collision, closed loops, broader counterpart shapes and additional GPU adapters.

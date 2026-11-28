@@ -16,6 +16,8 @@ import type {GPUArticulationTree} from './gpu-articulation-tree';
 /** Collider in link-local coordinates. Capsule axes follow local Y. */
 export type GPUArticulationCollider = {
   link: string;
+  /** Clip box faces to a patch of up to four contact rows. */
+  faceManifold?: boolean;
   position?: readonly [number, number, number];
   orientation?: readonly [number, number, number, number];
   shape: Extract<GPURigidBodyShape, {type: 'sphere' | 'capsule' | 'box'}>;
