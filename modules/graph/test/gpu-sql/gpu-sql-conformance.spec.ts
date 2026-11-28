@@ -8,7 +8,11 @@ import {
   makeGPUAnalyticsTableFromArrowTable
 } from '@luma.gl/graph/arrow';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {CompiledGPUDataFrameGlobalSort, GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
+import {
+  CompiledGPUDataFrameGlobalSort,
+  CompiledGPUDataFrameGroupedAggregation,
+  GPUDataFrame
+} from '@luma.gl/graph/gpu-dataframe';
 import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
 import {ABS, ACOS, ASIN, LN, LOG10, ROUND, SQRT} from '@math.gl/sql/math-functions';
 import {queryArrowSQL} from '@math.gl/sql/query';
@@ -163,6 +167,77 @@ test('sorts by hidden source and computed keys without publishing either key', a
   }
 });
 
+test.each([
+  'INNER',
+  'LEFT'
+] as const)('%s JOIN agrees with math.gl on right payloads, nulls, and joined arithmetic', async joinType => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const rightRows = makeSamples([5, 2, 4, 9], [null, 6, 3, 100]);
+  const right = new arrow.Table([
+    ...rightRows.slice(0, 1).batches,
+    ...rightRows.slice(1, 4).batches
+  ]);
+  const sql = `SELECT l.id AS id, r.score AS right_score,
+                        l.score + r.score AS combined
+                 FROM samples AS l ${joinType} JOIN payloads AS r ON l.id = r.id`;
+  const reference = queryArrowSQL(
+    sql,
+    new Map([
+      ['samples', samples],
+      ['payloads', right]
+    ])
+  );
+  const actual = await executeGPUQuery(device, samples, sql, undefined, right);
+  const rows = (table: arrow.Table) =>
+    Array.from(table, row => [row.id, row.right_score, row.combined]);
+  expect(rows(reference)).toEqual(
+    joinType === 'INNER'
+      ? [
+          [2, 6, 3.5],
+          [4, 3, 4.5],
+          [5, null, null]
+        ]
+      : [
+          [1, null, null],
+          [2, 6, 3.5],
+          [3, null, null],
+          [4, 3, 4.5],
+          [5, null, null],
+          [6, null, null]
+        ]
+  );
+  expect(rows(actual)).toEqual(rows(reference));
+  expect(actual.schema.fields.map(field => [field.name, String(field.type)])).toEqual(
+    reference.schema.fields.map(field => [field.name, String(field.type)])
+  );
+  expect(actual.batches.map(batch => batch.numRows)).toEqual(
+    joinType === 'INNER' ? [1, 2] : [3, 3]
+  );
+});
+
+test('GROUP BY agrees with math.gl on nullable keys and ordered pagination', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const sql = `SELECT score, COUNT(*) AS row_count, COUNT(score) AS known
+               FROM samples GROUP BY score
+               ORDER BY row_count DESC, score ASC NULLS LAST LIMIT 4 OFFSET 1`;
+  const reference = queryArrowSQL(sql, new Map([['samples', samples]]));
+  const actual = await executeGPUQuery(device, samples, sql);
+  const rows = (table: arrow.Table) =>
+    Array.from(table, row => [row.score, Number(row.row_count), Number(row.known)]);
+  expect(rows(reference)).toEqual([
+    [-2.5, 1, 1],
+    [-0.75, 1, 1],
+    [3.75, 1, 1],
+    [null, 1, 0]
+  ]);
+  expect(rows(actual)).toEqual(rows(reference));
+  expect(actual.schema.fields.map(field => field.name)).toEqual(
+    reference.schema.fields.map(field => field.name)
+  );
+});
+
 /** Builds a native Arrow table with stable input types and nullable scores. */
 function makeSamples(identifiers: number[], scores: (number | null)[]): arrow.Table {
   return arrow.tableFromArrays({
@@ -176,21 +251,33 @@ async function executeGPUQuery(
   device: NonNullable<Awaited<ReturnType<typeof getWebGPUTestDevice>>>,
   table: arrow.Table,
   sql: string,
-  parameters?: Record<string, number>
+  parameters?: Record<string, number>,
+  right?: arrow.Table
 ): Promise<arrow.Table> {
   const frame = new GPUDataFrame({
     ...makeGPUAnalyticsTableFromArrowTable(device, table),
     ownership: 'owned'
   });
+  let payloads: GPUDataFrame | undefined;
   try {
-    const query = new GPUSQLContext({samples: frame}).query(sql, {parameters});
+    if (right) {
+      payloads = new GPUDataFrame({
+        ...makeGPUAnalyticsTableFromArrowTable(device, right),
+        ownership: 'owned'
+      });
+    }
+    const query = new GPUSQLContext(payloads ? {samples: frame, payloads} : {samples: frame}).query(
+      sql,
+      {parameters}
+    );
     const result = query.compile(new GPUCommandGraph(device, {id: 'sql-conformance'}));
     try {
       const encoder = device.createCommandEncoder();
       result.encode(encoder);
       device.submit(encoder.finish());
       const selection =
-        result instanceof CompiledGPUDataFrameGlobalSort
+        result instanceof CompiledGPUDataFrameGlobalSort ||
+        (result instanceof CompiledGPUDataFrameGroupedAggregation && result.globalRowIndices)
           ? {
               globalRowIndices: result.globalRowIndices,
               globalSelectedCount: result.globalSelectedCount
@@ -199,12 +286,14 @@ async function executeGPUQuery(
       return await makeArrowTableFromGPUAnalyticsTable({
         table: result.table,
         validity: result.validity,
+        dictionaries: result.dictionaries,
         ...selection
       });
     } finally {
       result.destroy();
     }
   } finally {
+    payloads?.destroy();
     frame.destroy();
   }
 }
