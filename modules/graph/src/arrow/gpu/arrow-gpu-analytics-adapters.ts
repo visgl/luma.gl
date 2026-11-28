@@ -14,6 +14,7 @@ import {
   GPUTable,
   isGPUTableIndexColumnName,
   type GPUField,
+  type GPUTablePackBatchesOptions,
   type GPUTypeMap
 } from '@luma.gl/graph/gpu-tables';
 import {
@@ -30,11 +31,18 @@ import {
   type Uint32,
   type Utf8
 } from 'apache-arrow';
-import {getArrowFixedSizeListRowValidity} from './arrow-gpu-data';
+import {
+  getArrowDataBufferSource,
+  getArrowFixedSizeListRowValidity,
+  getArrowGPUDataReadbackMetadata,
+  type GPUDataReadbackMetadata
+} from './arrow-gpu-data';
 import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
 /** Supported scalar and categorical index formats. */
 type GPUAnalyticsScalarFormat = 'float32' | 'sint32' | 'uint32';
+/** Logical 32-bit values, dictionary indices, or flattened fixed-size-list components. */
+type GPUAnalyticsValues = Float32Array | Int32Array | Uint32Array;
 /** Packed scalar and fixed-width numeric row formats accepted by the Arrow adapter. */
 type GPUAnalyticsVectorFormat =
   | GPUAnalyticsScalarFormat
@@ -81,13 +89,25 @@ export type GPUAnalyticsTableFromArrowTableProps<T extends GPUTypeMap = GPUTypeM
   columns?: readonly (keyof T & string)[];
   /** Additional buffer properties; required storage and copy usage are always retained. */
   bufferProps?: GPUVectorBufferProps;
+  /**
+   * Uploads adjacent source record batches into shared per-column buffers instead of one buffer
+   * per source batch. `true` packs every source batch into one GPU record batch; `minBatchSize`
+   * greedily groups adjacent source batches until each group reaches that row count. Each source
+   * chunk is written directly at its byte offset, so packing needs no JavaScript concatenation,
+   * no GPU copy pass, and no transient second allocation. Validity sidecars follow the packed
+   * batches. `minBatchSize` is a lower target, not a size cap: source batches are never split,
+   * groups can overshoot, and the final group can be smaller. A packed group whose column bytes
+   * exceed `device.limits.maxStorageBufferBindingSize` throws before any GPU allocation.
+   * Defaults to `false`, which preserves every source record batch.
+   */
+  packBatches?: boolean | GPUTablePackBatchesOptions;
 };
 
 /** GPU table plus explicit analytical metadata retained outside generic GPU table storage. */
 export type GPUAnalyticsTableFromArrowTableResult<T extends GPUTypeMap = GPUTypeMap> = {
-  /** Existing generic GPU table primitives, preserving every source record batch. */
+  /** Existing generic GPU table primitives, preserving source record batches unless packed. */
   table: GPUTable<T>;
-  /** One source-row-aligned uint32 GPU validity vector for every nullable selected field. */
+  /** One batch-aligned uint32 GPU validity vector for every nullable selected field. */
   validity: Partial<Record<keyof T & string, GPUVector<'uint32'>>>;
   /** Explicit adapter-owned labels for selected UTF-8 dictionary columns. */
   dictionaries: Partial<Record<keyof T & string, GPUAnalyticsDictionary>>;
@@ -101,6 +121,8 @@ type PreparedGPUAnalyticsColumn = {
   nullable: boolean;
   format: GPUAnalyticsVectorFormat;
   chunks: Data[];
+  /** Validated logical values for each chunk, read before any GPU allocation. */
+  values: GPUAnalyticsValues[];
   validity: Uint32Array[];
   nullCounts: number[];
   dictionary?: GPUAnalyticsDictionary;
@@ -154,13 +176,24 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
       }
     }
 
+    const batchGroups = getGPUAnalyticsBatchGroups(table, options.packBatches);
+    validateGPUAnalyticsPackedBatchSizes(device, table, columns, batchGroups);
     let sourceRowIndexOffset = 0;
-    const batches = table.batches.map((recordBatch, sourceBatchIndex) => {
+    const batches = batchGroups.map(sourceBatchIndices => {
+      const recordBatches = sourceBatchIndices.map(batchIndex => table.batches[batchIndex]);
+      const numRows = recordBatches.reduce((rowCount, batch) => rowCount + batch.numRows, 0);
       const gpuData: Record<string, GPUData> = {};
 
       for (const column of columns) {
-        const sourceData = column.chunks[sourceBatchIndex];
-        const data = makeGPUAnalyticsData(device, sourceData, column.format, requiredBufferProps);
+        const data =
+          sourceBatchIndices.length === 1
+            ? makeGPUAnalyticsData(
+                device,
+                column.chunks[sourceBatchIndices[0]],
+                column.format,
+                requiredBufferProps
+              )
+            : makePackedGPUAnalyticsData(device, column, sourceBatchIndices, requiredBufferProps);
         allocatedData.push(data);
         gpuData[column.field.name] = data;
       }
@@ -168,16 +201,20 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
       const batch = new GPURecordBatch<T>({
         gpuData,
         fields: columns.map(column => makeGPUAnalyticsField(column)),
-        numRows: recordBatch.numRows,
-        metadata: new Map(recordBatch.schema.metadata),
-        sourceInfo: {
-          sourceBatchIndex,
-          sourceRowIndexOffset,
-          sourceRowCount: recordBatch.numRows
-        },
-        nullCount: recordBatch.nullCount
+        numRows,
+        metadata: new Map(recordBatches[0].schema.metadata),
+        // `null` marks a group spanning source batches, which has no single source identity.
+        sourceInfo:
+          sourceBatchIndices.length === 1
+            ? {
+                sourceBatchIndex: sourceBatchIndices[0],
+                sourceRowIndexOffset,
+                sourceRowCount: numRows
+              }
+            : null,
+        nullCount: recordBatches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
       });
-      sourceRowIndexOffset += recordBatch.numRows;
+      sourceRowIndexOffset += numRows;
       return batch;
     });
 
@@ -212,8 +249,12 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
         continue;
       }
 
-      const chunks = column.validity.map(values => {
-        const data = makeGPUAnalyticsValidityData(device, values, requiredBufferProps);
+      const chunks = batchGroups.map(sourceBatchIndices => {
+        const data = makeGPUAnalyticsValidityData(
+          device,
+          sourceBatchIndices.map(batchIndex => column.validity[batchIndex]),
+          requiredBufferProps
+        );
         allocatedValidityData.push(data);
         return data;
       });
@@ -255,6 +296,75 @@ function validateGPUAnalyticsBufferProps(bufferProps: GPUVectorBufferProps | und
   }
 }
 
+/** Returns adjacent source batch indices that share one output GPU record batch. */
+function getGPUAnalyticsBatchGroups(
+  table: Table,
+  packBatches: GPUAnalyticsTableFromArrowTableProps['packBatches']
+): number[][] {
+  const batchIndices = table.batches.map((_batch, batchIndex) => batchIndex);
+  if (!packBatches || batchIndices.length === 0) {
+    return batchIndices.map(batchIndex => [batchIndex]);
+  }
+  const minBatchSize = packBatches === true ? undefined : packBatches.minBatchSize;
+  if (minBatchSize === undefined) {
+    return [batchIndices];
+  }
+  if (!Number.isFinite(minBatchSize) || minBatchSize <= 0) {
+    throw new Error('GPU analytics packBatches.minBatchSize must be a positive number');
+  }
+
+  const batchGroups: number[][] = [];
+  let batchGroup: number[] = [];
+  let rowCount = 0;
+  for (const batchIndex of batchIndices) {
+    batchGroup.push(batchIndex);
+    rowCount += table.batches[batchIndex].numRows;
+    if (rowCount >= minBatchSize) {
+      batchGroups.push(batchGroup);
+      batchGroup = [];
+      rowCount = 0;
+    }
+  }
+  if (batchGroup.length > 0) {
+    batchGroups.push(batchGroup);
+  }
+  return batchGroups;
+}
+
+/**
+ * Rejects packed groups whose column bytes exceed one storage binding, before any allocation.
+ * Validity sidecars use 4 bytes per row, never more than their column, so they need no check.
+ * A zero limit means the device reports no storage binding limit (WebGL), so nothing is checked.
+ */
+function validateGPUAnalyticsPackedBatchSizes(
+  device: Device,
+  table: Table,
+  columns: PreparedGPUAnalyticsColumn[],
+  batchGroups: number[][]
+): void {
+  const maxBindingSize = device.limits.maxStorageBufferBindingSize;
+  if (!maxBindingSize) {
+    return;
+  }
+  for (const sourceBatchIndices of batchGroups) {
+    if (sourceBatchIndices.length === 1) {
+      continue;
+    }
+    const rowCount = sourceBatchIndices.reduce(
+      (total, batchIndex) => total + table.batches[batchIndex].numRows,
+      0
+    );
+    for (const column of columns) {
+      const byteLength = rowCount * getGPUVectorFormatInfo(column.format).byteLength;
+      if (byteLength > maxBindingSize) {
+        throw new Error(
+          `GPU analytics column "${column.field.name}" packs ${rowCount} rows into ${byteLength} bytes, above maxStorageBufferBindingSize (${maxBindingSize}); use a smaller packBatches.minBatchSize`
+        );
+      }
+    }
+  }
+}
+
 /** Validates every selected field, batch, bitmap, and dictionary before allocating GPU resources. */
 function prepareGPUAnalyticsColumns(
   table: Table,
@@ -290,6 +400,7 @@ function prepareGPUAnalyticsColumns(
         field.nullable || (DataType.isFixedSizeList(field.type) && field.type.children[0].nullable),
       format: getGPUAnalyticsVectorFormat(field.type, columnName),
       chunks: [],
+      values: [],
       validity: [],
       nullCounts: []
     };
@@ -329,6 +440,7 @@ function prepareGPUAnalyticsColumns(
       }
 
       column.chunks.push(data);
+      column.values.push(getGPUAnalyticsValues(data, columnName));
       column.validity.push(validity);
       column.nullCounts.push(nullCount);
     }
@@ -454,6 +566,22 @@ function validateGPUAnalyticsDictionaryIndices(
   }
 }
 
+/**
+ * Returns the logical values of one possibly sliced Arrow chunk, reading fixed-size-list
+ * components from the child data. Packed uploads advance each write offset by these bytes, so a
+ * short chunk would shift later chunks to the wrong rows; it is rejected here, before allocation.
+ */
+function getGPUAnalyticsValues(data: Data, columnName: string): GPUAnalyticsValues {
+  if (data.length === 0) {
+    return new Uint32Array(0);
+  }
+  try {
+    return getArrowDataBufferSource(data as Data<Float32 | Int32 | Uint32>) as GPUAnalyticsValues;
+  } catch {
+    throw new Error(`GPU analytics column "${columnName}" has truncated values`);
+  }
+}
+
 /** Verifies independently supplied record batches use the same category encoding. */
 function areGPUAnalyticsDictionariesEqual(
   first: GPUAnalyticsDictionary,
@@ -494,21 +622,185 @@ function makeGPUAnalyticsData(
   }
 }
 
-/** Stores row-aligned validity in a separate owned GPU buffer for each source record batch. */
+/**
+ * Writes adjacent Arrow chunks into one owned buffer at their row offsets.
+ *
+ * Every analytics component is 4 bytes wide, so each row (and each write offset) is a multiple of
+ * 4 bytes and satisfies WebGPU's 4-byte `writeBuffer` alignment without padding between chunks.
+ */
+function makePackedGPUAnalyticsData(
+  device: Device,
+  column: PreparedGPUAnalyticsColumn,
+  sourceBatchIndices: number[],
+  bufferProps: GPUVectorBufferProps
+): GPUData {
+  const sources = sourceBatchIndices.map(batchIndex => column.chunks[batchIndex]);
+  const validity = sourceBatchIndices.map(batchIndex => column.validity[batchIndex]);
+  const nullBitmap = makePackedGPUAnalyticsNullBitmap(validity);
+  const readbackMetadata = makePackedGPUAnalyticsReadbackMetadata(sources, nullBitmap);
+  const formatInfo = getGPUVectorFormatInfo(column.format);
+  const buffer = writePackedGPUAnalyticsBuffer(
+    device,
+    sourceBatchIndices.map(batchIndex => column.values[batchIndex]),
+    bufferProps
+  );
+  try {
+    return new GPUData({
+      buffer,
+      format: column.format,
+      length: sources.reduce((length, source) => length + source.length, 0),
+      stride: formatInfo.listSize ?? formatInfo.components,
+      byteStride: formatInfo.byteLength,
+      rowByteLength: formatInfo.byteLength,
+      dataType: sources[0].type,
+      ownsBuffer: true,
+      ...(readbackMetadata ? {readbackMetadata} : {}),
+      ...(nullBitmap ? {nullBitmap} : {})
+    });
+  } catch (error) {
+    buffer.destroy();
+    throw error;
+  }
+}
+
+/** Merges per-chunk row validity into one Arrow bitmap, or returns `undefined` without nulls. */
+function makePackedGPUAnalyticsNullBitmap(validity: Uint32Array[]): Uint8Array | undefined {
+  if (validity.every(values => values.every(Boolean))) {
+    return undefined;
+  }
+  return concatenateGPUAnalyticsBitmaps(
+    validity.map(values => {
+      const bitmap = new Uint8Array(Math.ceil(values.length / 8));
+      for (let rowIndex = 0; rowIndex < values.length; rowIndex++) {
+        if (values[rowIndex]) {
+          bitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+        }
+      }
+      return bitmap;
+    }),
+    validity.map(values => values.length)
+  );
+}
+
+/**
+ * Merges per-chunk readback metadata so generic `readArrowGPUDataAsync()` restores nulls for packed
+ * chunks exactly as it does for unpacked ones. Fixed-size lists keep separate parent and child
+ * bitmaps. Unpacked dictionary chunks carry no readback metadata, so dictionaries are skipped.
+ *
+ * Alternative: skip these CPU bitmaps and document that packed chunks carry nulls only in the
+ * validity sidecars read by `makeArrowTableFromGPUAnalyticsTable()`. Generic readback of packed
+ * chunks would then return zero-filled payloads where unpacked chunks return nulls.
+ */
+function makePackedGPUAnalyticsReadbackMetadata(
+  sources: Data[],
+  rowNullBitmap: Uint8Array | undefined
+): GPUDataReadbackMetadata | undefined {
+  const type = sources[0].type;
+  if (DataType.isDictionary(type)) {
+    return undefined;
+  }
+  if (!DataType.isFixedSizeList(type)) {
+    const nullCount = sources.reduce((total, source) => total + source.nullCount, 0);
+    return rowNullBitmap && nullCount > 0
+      ? {kind: 'numeric', nullCount, nullBitmap: rowNullBitmap}
+      : undefined;
+  }
+
+  type FixedSizeListMetadata = Extract<GPUDataReadbackMetadata, {kind: 'fixed-size-list'}>;
+  const metadata = sources.map(
+    source => getArrowGPUDataReadbackMetadata(source) as FixedSizeListMetadata | undefined
+  );
+  const nullCount = metadata.reduce((total, chunk) => total + (chunk?.nullCount ?? 0), 0);
+  const childNullCount = metadata.reduce((total, chunk) => total + (chunk?.childNullCount ?? 0), 0);
+  if (nullCount === 0 && childNullCount === 0) {
+    return undefined;
+  }
+  const rowCounts = sources.map(source => source.length);
+  return {
+    kind: 'fixed-size-list',
+    nullCount,
+    ...(nullCount > 0
+      ? {
+          nullBitmap: concatenateGPUAnalyticsBitmaps(
+            metadata.map(chunk => chunk?.nullBitmap),
+            rowCounts
+          )
+        }
+      : {}),
+    childNullCount,
+    ...(childNullCount > 0
+      ? {
+          childNullBitmap: concatenateGPUAnalyticsBitmaps(
+            metadata.map(chunk => chunk?.childNullBitmap),
+            rowCounts.map(rowCount => rowCount * type.listSize)
+          )
+        }
+      : {})
+  };
+}
+
+/** Concatenates chunk-local Arrow bitmaps; a missing bitmap marks all of its bits valid. */
+function concatenateGPUAnalyticsBitmaps(
+  bitmaps: (Uint8Array | undefined)[],
+  bitCounts: number[]
+): Uint8Array {
+  const totalBitCount = bitCounts.reduce((total, bitCount) => total + bitCount, 0);
+  const result = new Uint8Array(Math.ceil(totalBitCount / 8));
+  let targetBitIndex = 0;
+  for (const [chunkIndex, bitmap] of bitmaps.entries()) {
+    for (let bitIndex = 0; bitIndex < bitCounts[chunkIndex]; bitIndex++, targetBitIndex++) {
+      if (!bitmap || (bitmap[bitIndex >> 3] & (1 << (bitIndex & 7))) !== 0) {
+        result[targetBitIndex >> 3] |= 1 << (targetBitIndex & 7);
+      }
+    }
+  }
+  return result;
+}
+
+/** Stores row-aligned validity in a separate owned GPU buffer for each output record batch. */
 function makeGPUAnalyticsValidityData(
   device: Device,
-  validity: Uint32Array,
+  validity: Uint32Array[],
   bufferProps: GPUVectorBufferProps
 ): GPUData<'uint32'> {
-  const values = validity.length > 0 ? validity : new Uint32Array(1);
-  const buffer = device.createBuffer({...bufferProps, data: values});
+  const buffer =
+    validity.length === 1
+      ? device.createBuffer({
+          ...bufferProps,
+          data: validity[0].length > 0 ? validity[0] : new Uint32Array(1)
+        })
+      : writePackedGPUAnalyticsBuffer(device, validity, bufferProps);
   try {
     return new GPUData({
       buffer,
       format: 'uint32',
-      length: validity.length,
+      length: validity.reduce((length, values) => length + values.length, 0),
       ownsBuffer: true
     });
+  } catch (error) {
+    buffer.destroy();
+    throw error;
+  }
+}
+
+/** Allocates one bindable buffer and writes each 32-bit chunk after the previous one. */
+function writePackedGPUAnalyticsBuffer(
+  device: Device,
+  chunks: ArrayBufferView[],
+  bufferProps: GPUVectorBufferProps
+): Buffer {
+  const byteLength = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+  // Zero-row batches still need a bindable nonzero allocation.
+  const buffer = device.createBuffer({...bufferProps, byteLength: Math.max(byteLength, 4)});
+  try {
+    let byteOffset = 0;
+    for (const chunk of chunks) {
+      if (chunk.byteLength > 0) {
+        buffer.write(chunk, byteOffset);
+        byteOffset += chunk.byteLength;
+      }
+    }
+    return buffer;
   } catch (error) {
     buffer.destroy();
     throw error;

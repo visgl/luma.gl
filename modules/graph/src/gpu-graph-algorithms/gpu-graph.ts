@@ -21,7 +21,11 @@ export type GPUGraphAlgorithmsRecordBatchSourceInfo = {
 export type GPUGraphAlgorithmsRecordBatch = {
   numRows: number;
   gpuData: Record<string, GPUData>;
-  sourceInfo?: GPUGraphAlgorithmsRecordBatchSourceInfo;
+  /**
+   * Optional source-row identity retained for picking and row-level diagnostics. `null` marks a
+   * batch that packs rows from more than one source batch, so it has no single source identity.
+   */
+  sourceInfo?: GPUGraphAlgorithmsRecordBatchSourceInfo | null;
 };
 
 /** Minimal table interface consumed by {@link GPUGraphAlgorithmsData}. */

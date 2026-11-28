@@ -6,10 +6,13 @@ import {readFileSync} from 'node:fs';
 
 import {
   makeArrowTableFromGPUAnalyticsTable,
-  makeGPUAnalyticsTableFromArrowTable
+  makeGPUAnalyticsTableFromArrowTable,
+  readArrowGPUDataAsync
 } from '@luma.gl/graph/arrow';
+import {resolveArrowPickInfo} from '@luma.gl/engine/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
@@ -229,6 +232,433 @@ describe('makeGPUAnalyticsTableFromArrowTable source preservation', () => {
     createBuffer.mockRestore();
     destroyAnalyticsResult(schemaOnly);
     destroyAnalyticsResult(explicitEmpty);
+  });
+});
+
+describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
+  test('writes every source batch into one buffer per column at its row offset', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed'});
+    const source = createAnalyticsTable();
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const submit = vi.spyOn(device, 'submit');
+    const createCommandEncoder = vi.spyOn(device, 'createCommandEncoder');
+    const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches: true});
+
+    try {
+      expect(result.table.numRows).toBe(5);
+      expect(result.table.batches).toHaveLength(1);
+      expect(result.table.batches[0].sourceInfo, 'packed groups have no single source').toBeNull();
+      expect(result.table.batches[0].nullCount).toBe(
+        source.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
+      );
+      expect(result.table.batches[0].schema.metadata.get('batch')).toBe('0');
+      expect(result.table.schema.metadata.get('dataset')).toBe('taxi-rides');
+      expect(
+        result.table.schema.fields.map(field => [field.name, field.format, field.nullable])
+      ).toEqual([
+        ['fare', 'float32', true],
+        ['distance', 'sint32', false],
+        ['category', 'sint32', true],
+        ['zone', 'uint32', false]
+      ]);
+
+      expect(await readWords(result.table.gpuVectors['zone'])).toEqual([[7, 8, 9, 10, 11]]);
+      expect(await readWords(result.table.gpuVectors['distance'])).toEqual([[7, 8, 9, 10, 11]]);
+      // Null rows keep Arrow's zero-filled payload; validity carries nullness.
+      expect(await readFloats(result.table.gpuVectors['fare'])).toEqual([[0, 8, 0, 10, 11]]);
+      expect(await readWords(result.table.gpuVectors['category'])).toEqual([[1, 0, 2, 1, 0]]);
+      expect(await readWords(result.validity['fare']!)).toEqual([[0, 1, 0, 1, 1]]);
+      expect(await readWords(result.validity['category']!)).toEqual([[1, 0, 1, 0, 1]]);
+
+      // Four value columns plus two nullable validity sidecars, independent of source batch count.
+      expect(createBuffer).toHaveBeenCalledTimes(6);
+      expect(submit).not.toHaveBeenCalled();
+      expect(createCommandEncoder).not.toHaveBeenCalled();
+
+      expect(result.dictionaries['category']).toEqual({
+        values: ['economy', 'premium', 'business'],
+        ordered: true
+      });
+      expect(result.nullCounts['fare'], 'null counts stay in source-batch order').toEqual([
+        1, 0, 1
+      ]);
+      expect(
+        () => new GPUDataFrame({...result}),
+        'validity sidecars follow the packed batch topology'
+      ).not.toThrow();
+
+      const readback = await makeArrowTableFromGPUAnalyticsTable(result);
+      expect(readback.batches.map(batch => batch.numRows)).toEqual([5]);
+      expect(readback.getChild('fare')?.toArray()).toEqual(source.getChild('fare')?.toArray());
+      expect(Array.from(readback.getChild('category') ?? [])).toEqual(
+        Array.from(source.getChild('category') ?? [])
+      );
+
+      const fareData = await readArrowGPUDataAsync(result.table.gpuVectors['fare'].data[0]);
+      expect(
+        Array.from(new arrow.Vector([fareData])),
+        'generic readback restores nulls from the merged packed bitmap'
+      ).toEqual([null, 8, null, 10, 11]);
+      expect(result.table.gpuVectors['category'].data[0].readbackMetadata).toBeUndefined();
+      expect(result.table.gpuVectors['distance'].data[0].readbackMetadata).toBeUndefined();
+    } finally {
+      createBuffer.mockRestore();
+      submit.mockRestore();
+      createCommandEncoder.mockRestore();
+      destroyAnalyticsResult(result);
+    }
+  });
+
+  test('groups adjacent source batches until each reaches minBatchSize', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-min-batch-size'});
+    const result = makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable(), {
+      packBatches: {minBatchSize: 2}
+    });
+
+    try {
+      expect(result.table.batches.map(batch => batch.numRows)).toEqual([2, 3]);
+      expect(result.table.batches.map(batch => batch.sourceInfo)).toEqual([
+        {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+        null
+      ]);
+      expect(await readWords(result.table.gpuVectors['zone'])).toEqual([
+        [7, 8],
+        [9, 10, 11]
+      ]);
+      expect(await readWords(result.validity['fare']!)).toEqual([
+        [0, 1],
+        [0, 1, 1]
+      ]);
+      expect(() => new GPUDataFrame({...result})).not.toThrow();
+
+      const fareChunks = await Promise.all(
+        result.table.gpuVectors['fare'].data.map(data => readArrowGPUDataAsync(data))
+      );
+      expect(
+        fareChunks.map(data => Array.from(new arrow.Vector([data]))),
+        'packed and single-source chunks restore nulls the same way'
+      ).toEqual([
+        [null, 8],
+        [null, 10, 11]
+      ]);
+    } finally {
+      destroyAnalyticsResult(result);
+    }
+  });
+
+  test('reports only known source-local picking identities after packing', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-picking'});
+    const source = createAnalyticsTable();
+    const cases = [
+      {packBatches: false, batchIndices: [0, 0, 2, 2, 2], batchRowIndices: [0, 1, 0, 1, 2]},
+      {
+        packBatches: true,
+        batchIndices: [null, null, null, null, null],
+        batchRowIndices: [null, null, null, null, null]
+      },
+      {
+        packBatches: {minBatchSize: 2},
+        batchIndices: [0, 0, null, null, null],
+        batchRowIndices: [0, 1, null, null, null]
+      }
+    ];
+
+    for (const {packBatches, batchIndices, batchRowIndices} of cases) {
+      const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches});
+      try {
+        let rowIndex = 0;
+        for (const [batchIndex, batch] of result.table.batches.entries()) {
+          for (let batchRowIndex = 0; batchRowIndex < batch.numRows; batchRowIndex++, rowIndex++) {
+            const pickInfo = {batchIndex, objectIndex: rowIndex};
+            for (const pickingSource of [
+              result.table,
+              {table: result.table},
+              result.table.batches.map(sourceBatch => sourceBatch.sourceInfo)
+            ]) {
+              expect(resolveArrowPickInfo(pickInfo, pickingSource)).toEqual({
+                batchIndex: batchIndices[rowIndex],
+                rowIndex,
+                batchRowIndex: batchRowIndices[rowIndex]
+              });
+            }
+          }
+        }
+      } finally {
+        destroyAnalyticsResult(result);
+      }
+    }
+  });
+
+  test('keeps the raw picking batch index unless the picked batch is marked as packed', () => {
+    const pickInfo = {batchIndex: 2, objectIndex: 3};
+    const rawPickInfo = {batchIndex: 2, rowIndex: 3, batchRowIndex: null};
+    expect(resolveArrowPickInfo(pickInfo)).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [])).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [undefined, undefined, undefined])).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [undefined, undefined, null])).toEqual({
+      batchIndex: null,
+      rowIndex: 3,
+      batchRowIndex: null
+    });
+    expect(resolveArrowPickInfo({batchIndex: null, objectIndex: null}, [])).toEqual({
+      batchIndex: null,
+      rowIndex: null,
+      batchRowIndex: null
+    });
+  });
+
+  test('treats a null sourceInfos entry as packed in the object picking source', () => {
+    const pickInfo = {batchIndex: 2, objectIndex: 3};
+    const sourceInfo = {sourceBatchIndex: 5, sourceRowIndexOffset: 0, sourceRowCount: 4};
+    const table = {batches: [{}, {}, {sourceInfo}]} as unknown as Pick<GPUTable, 'batches'>;
+    const packedPickInfo = {batchIndex: null, rowIndex: 3, batchRowIndex: null};
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined, null]})).toEqual(
+      packedPickInfo
+    );
+    expect(
+      resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined, null], table})
+    ).toEqual(packedPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [], table})).toEqual({
+      batchIndex: 5,
+      rowIndex: 3,
+      batchRowIndex: 3
+    });
+    expect(resolveArrowPickInfo(pickInfo, {sourceInfos: [undefined, undefined]})).toEqual({
+      batchIndex: 2,
+      rowIndex: 3,
+      batchRowIndex: null
+    });
+  });
+
+  test('keeps the raw picking batch index for a GPUTable that never carried sourceInfo', () => {
+    const device = new NullDevice({id: 'arrow-analytics-picking-no-source-info'});
+    const makeBatch = () =>
+      new GPURecordBatch({
+        gpuData: {
+          value: new GPUData({
+            buffer: device.createBuffer({byteLength: 8}),
+            format: 'float32',
+            length: 2,
+            ownsBuffer: true
+          })
+        },
+        numRows: 2
+      });
+    const table = new GPUTable({batches: [makeBatch(), makeBatch()]});
+    try {
+      expect(resolveArrowPickInfo({batchIndex: 1, objectIndex: 3}, table).batchIndex).toBe(1);
+    } finally {
+      table.destroy();
+    }
+  });
+
+  test('reads back sliced multi-batch tables the same with and without packing', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-sliced'});
+    const schema = new arrow.Schema([new arrow.Field('value', new arrow.Float32(), true)]);
+    const vector = arrow.vectorFromArray(
+      [0, null, 2, 3, null, 5, 6, null, 8, 9],
+      new arrow.Float32()
+    );
+    const batches = [
+      [0, 3],
+      [3, 3],
+      [3, 7],
+      [7, 10]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: end - start,
+            children: [vector.slice(start, end).data[0]]
+          })
+        )
+    );
+    const source = new arrow.Table(schema, batches).slice(1, 9);
+
+    for (const packBatches of [false, true, {minBatchSize: 3}] as const) {
+      const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches});
+      try {
+        if (packBatches === true) {
+          // Sliced rows 1 to 8 put the nulls at packed rows 0, 3 and 6.
+          expect(result.table.batches[0].gpuData['value'].nullBitmap).toEqual(
+            new Uint8Array([0b10110110])
+          );
+        }
+        const readback = await makeArrowTableFromGPUAnalyticsTable(result);
+        expect(Array.from(readback.getChild('value') ?? []), JSON.stringify(packBatches)).toEqual(
+          Array.from(source.getChild('value') ?? [])
+        );
+      } finally {
+        destroyAnalyticsResult(result);
+      }
+    }
+  });
+
+  test('packs fixed-size-list columns with their row byte stride', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-fixed-size-list'});
+    const type = new arrow.FixedSizeList(3, new arrow.Field('item', new arrow.Float32(), true));
+    const vector = arrow
+      .vectorFromArray([[9, 9, 9], [1, 2, 3], [4, 5, 6], null, [7, null, 9], [10, 11, 12]], type)
+      .slice(1);
+    const schema = new arrow.Schema([new arrow.Field('position', type, true)]);
+    const batches = [
+      [0, 2],
+      [2, 2],
+      [2, 5]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: end - start,
+            children: [vector.slice(start, end).data[0]]
+          })
+        )
+    );
+    const source = new arrow.Table(schema, batches);
+    const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches: true});
+
+    try {
+      expect(result.table.batches.map(batch => batch.numRows)).toEqual([5]);
+      const positions = result.table.gpuVectors['position'];
+      expect(positions.format).toBe('float32x3');
+      expect(positions.data[0].byteStride).toBe(12);
+      expect(positions.data[0].buffer.byteLength).toBeGreaterThanOrEqual(5 * 12);
+      const bytes = await positions.data[0].buffer.readAsync(0, 5 * 12);
+      expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 15))).toEqual([
+        1, 2, 3, 4, 5, 6, 0, 0, 0, 7, 0, 9, 10, 11, 12
+      ]);
+      expect(await readWords(result.validity['position']!)).toEqual([[1, 1, 0, 0, 1]]);
+      expect(result.nullCounts['position']).toEqual([0, 0, 2]);
+
+      const readback = await makeArrowTableFromGPUAnalyticsTable(result);
+      const position = readback.getChild('position')!;
+      expect(Array.from(position.get(0))).toEqual([1, 2, 3]);
+      expect(Array.from(position.get(1))).toEqual([4, 5, 6]);
+      expect(position.get(2)).toBeNull();
+      expect(position.get(3)).toBeNull();
+      expect(Array.from(position.get(4))).toEqual([10, 11, 12]);
+
+      const packedData = await readArrowGPUDataAsync(positions.data[0]);
+      expect(
+        Array.from(new arrow.Vector([packedData]), row => (row ? Array.from(row) : row)),
+        'generic readback restores parent and child nulls from the merged packed bitmaps'
+      ).toEqual([[1, 2, 3], [4, 5, 6], null, [7, null, 9], [10, 11, 12]]);
+    } finally {
+      destroyAnalyticsResult(result);
+    }
+  });
+
+  test('rejects packed groups above maxStorageBufferBindingSize before allocating', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-binding-limit'});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const maxStorageBufferBindingSize = device.limits.maxStorageBufferBindingSize;
+    // Five packed 4-byte rows need 20 bytes; single-source batches are not checked.
+    device.limits.maxStorageBufferBindingSize = 16;
+    try {
+      expect(() =>
+        makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable(), {packBatches: true})
+      ).toThrow(
+        'GPU analytics column "fare" packs 5 rows into 20 bytes, above maxStorageBufferBindingSize (16)'
+      );
+      expect(createBuffer).not.toHaveBeenCalled();
+
+      const unpacked = makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable());
+      destroyAnalyticsResult(unpacked);
+    } finally {
+      device.limits.maxStorageBufferBindingSize = maxStorageBufferBindingSize;
+      createBuffer.mockRestore();
+    }
+  });
+
+  test('packs zero-row source batches into bindable storage', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-empty'});
+    const source = createAnalyticsTable();
+    const result = makeGPUAnalyticsTableFromArrowTable(
+      device,
+      new arrow.Table(source.schema, [source.batches[1], source.batches[1]]),
+      {packBatches: true}
+    );
+
+    try {
+      expect(result.table.batches.map(batch => batch.numRows)).toEqual([0]);
+      expect(result.table.gpuVectors['fare'].data[0].buffer.byteLength).toBeGreaterThanOrEqual(4);
+      expect(result.validity['fare']?.data[0].length).toBe(0);
+      expect(result.validity['fare']?.data[0].buffer.byteLength).toBeGreaterThanOrEqual(4);
+    } finally {
+      destroyAnalyticsResult(result);
+    }
+  });
+
+  test('rejects truncated numeric values before allocating GPU storage', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-truncated'});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const schema = new arrow.Schema([new arrow.Field('value', new arrow.Float32(), false)]);
+    const batches = [
+      // Four logical rows backed by only two values would shift the next chunk's rows.
+      arrow.makeData({type: new arrow.Float32(), length: 4, data: new Float32Array(2)}),
+      arrow.makeData({type: new arrow.Float32(), length: 2, data: new Float32Array([1, 2])})
+    ].map(
+      child =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: child.length,
+            children: [child]
+          })
+        )
+    );
+
+    expect(() =>
+      makeGPUAnalyticsTableFromArrowTable(device, new arrow.Table(schema, batches), {
+        packBatches: true
+      })
+    ).toThrow(/truncated values/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    createBuffer.mockRestore();
+  });
+
+  test('rejects invalid minBatchSize before allocating GPU storage', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-invalid'});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+
+    for (const minBatchSize of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() =>
+        makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable(), {
+          packBatches: {minBatchSize}
+        })
+      ).toThrow(/minBatchSize/);
+    }
+    expect(createBuffer).not.toHaveBeenCalled();
+    createBuffer.mockRestore();
+  });
+
+  test('destroys packed allocations if a later upload fails', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-cleanup'});
+    const allocatedBuffers: Buffer[] = [];
+    const createBuffer = device.createBuffer.bind(device);
+    const createBufferSpy = vi
+      .spyOn(device, 'createBuffer')
+      .mockImplementation((props: BufferProps) => {
+        if (allocatedBuffers.length === 5) {
+          throw new Error('injected packed upload failure');
+        }
+        const buffer = createBuffer(props);
+        allocatedBuffers.push(buffer);
+        return buffer;
+      });
+
+    expect(() =>
+      makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable(), {packBatches: true})
+    ).toThrow(/injected/i);
+    expect(allocatedBuffers).toHaveLength(5);
+    expect(allocatedBuffers.every(buffer => buffer.destroyed)).toBe(true);
+
+    createBufferSpy.mockRestore();
   });
 });
 
@@ -594,6 +1024,16 @@ async function readWords(vector: GPUVector): Promise<number[][]> {
       const bytes = await data.buffer.readAsync(data.byteOffset, data.length * data.byteStride);
       const values = new Uint32Array(bytes.buffer, bytes.byteOffset, data.length);
       return Array.from(values);
+    })
+  );
+}
+
+async function readFloats(vector: GPUVector): Promise<number[][]> {
+  return Promise.all(
+    vector.data.map(async data => {
+      if (data.length === 0) return [];
+      const bytes = await data.buffer.readAsync(data.byteOffset, data.length * data.byteStride);
+      return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, data.length));
     })
   );
 }

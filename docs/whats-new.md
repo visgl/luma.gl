@@ -37,6 +37,9 @@
   coordinate buffers. [GPU Project](./api-reference/experimental/gpu-project.md#inline-cartesian-rendering-and-cpu-picking)
 - **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
 
+- Arrow analytics uploads can pack small streamed record batches into one buffer per
+  column with `packBatches`. [GPU DataFrame operations](./api-reference/experimental/gpu-dataframe-operations.md#upload-arrow-data-or-borrow-an-existing-table)
+
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4

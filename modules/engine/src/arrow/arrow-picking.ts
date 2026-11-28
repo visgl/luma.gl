@@ -20,7 +20,7 @@ import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 
 /** Arrow row identity resolved from a picking pass. */
 export type ArrowPickingInfo = {
-  /** Zero-based source batch index, or `null` when nothing is picked. */
+  /** Zero-based source batch index, or `null` when nothing is picked or the mapping is unavailable. */
   batchIndex: number | null;
   /** Zero-based source row index, or `null` when nothing is picked. */
   rowIndex: number | null;
@@ -44,7 +44,10 @@ export type ArrowRowIndexGPUVectorOptions = ArrowRowIndexVectorOptions & {
   id?: string;
 };
 
-/** Source metadata used to resolve picked Arrow rows. */
+/**
+ * Source metadata used to resolve picked Arrow rows. A `null` entry marks a batch that packs several
+ * source batches; an `undefined` entry keeps the raw picking batch index.
+ */
 export type ArrowPickingSource =
   | {
       table?: Pick<GPUTable, 'batches'> | null;
@@ -165,7 +168,11 @@ export function makeArrowRecordBatchSourceInfo({
   return {sourceBatchIndex, sourceRowIndexOffset, sourceRowCount};
 }
 
-/** Resolves a generic PickingManager result into Arrow source row identity. */
+/**
+ * Resolves a generic PickingManager result into Arrow source row identity.
+ * Without source metadata for the picked batch, the raw picking batch index is retained. A batch
+ * whose `sourceInfo` is `null` packs several source batches, so only the global row index is known.
+ */
 export function resolveArrowPickInfo(
   pickInfo: PickInfo,
   source?: ArrowPickingSource | null
@@ -176,22 +183,25 @@ export function resolveArrowPickInfo(
 
   const sourceInfo = getArrowPickingSourceInfo(source, pickInfo.batchIndex);
   return {
-    batchIndex: sourceInfo?.sourceBatchIndex ?? pickInfo.batchIndex,
+    batchIndex: sourceInfo === null ? null : (sourceInfo?.sourceBatchIndex ?? pickInfo.batchIndex),
     rowIndex: pickInfo.objectIndex,
     batchRowIndex: getArrowBatchRowIndex(pickInfo.objectIndex, sourceInfo)
   };
 }
 
-/** Returns the source metadata for a picked render batch, when available. */
+/**
+ * Returns the source metadata for a picked render batch, when available. Returns `null` when the
+ * batch packs several source batches and has no single source identity.
+ */
 export function getArrowPickingSourceInfo(
   source: ArrowPickingSource | null | undefined,
   batchIndex: number
-): GPURecordBatchSourceInfo | undefined {
+): GPURecordBatchSourceInfo | null | undefined {
   if (!source) {
     return undefined;
   }
   if (Array.isArray(source)) {
-    return source[batchIndex] ?? undefined;
+    return source[batchIndex];
   }
   if ('batches' in source) {
     return source.batches[batchIndex]?.sourceInfo;
@@ -200,14 +210,16 @@ export function getArrowPickingSourceInfo(
     table?: Pick<GPUTable, 'batches'> | null;
     sourceInfos?: readonly (GPURecordBatchSourceInfo | null | undefined)[];
   };
-  return (
-    sourceObject.sourceInfos?.[batchIndex] ?? sourceObject.table?.batches[batchIndex]?.sourceInfo
-  );
+  // An explicit `null` entry marks a packed batch, so only `undefined` falls back to the table.
+  const sourceInfo = sourceObject.sourceInfos?.[batchIndex];
+  return sourceInfo !== undefined
+    ? sourceInfo
+    : sourceObject.table?.batches[batchIndex]?.sourceInfo;
 }
 
 function getArrowBatchRowIndex(
   rowIndex: number,
-  sourceInfo: GPURecordBatchSourceInfo | undefined
+  sourceInfo: GPURecordBatchSourceInfo | null | undefined
 ): number | null {
   if (!sourceInfo) {
     return null;

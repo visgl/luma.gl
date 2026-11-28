@@ -40,8 +40,11 @@ export type GPURecordBatchFromDataProps<T extends GPUTypeMap = GPUTypeMap> = {
   numRows?: number;
   /** Optional batch-level schema metadata. */
   metadata?: Map<string, string>;
-  /** Optional source-row identity retained for picking and row-level diagnostics. */
-  sourceInfo?: GPURecordBatchSourceInfo;
+  /**
+   * Optional source-row identity retained for picking and row-level diagnostics. `null` marks a
+   * batch that packs rows from more than one source batch, so it has no single source identity.
+   */
+  sourceInfo?: GPURecordBatchSourceInfo | null;
   /** Number of null rows in the generated GPU record batch. */
   nullCount?: number;
 };
@@ -63,8 +66,11 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   readonly bufferLayout: BufferLayout[] = [];
   /** One batch-local GPU data chunk keyed by shader/table column name. */
   readonly gpuData: Record<string, GPUData> = {};
-  /** Optional source-row identity retained from the producing table/stream. */
-  readonly sourceInfo?: GPURecordBatchSourceInfo;
+  /**
+   * Optional source-row identity retained from the producing table/stream. `null` marks a batch
+   * that packs rows from more than one source batch, so it has no single source identity.
+   */
+  readonly sourceInfo?: GPURecordBatchSourceInfo | null;
 
   /** Creates one immutable GPU record batch from named GPU data chunks. */
   constructor({
@@ -86,7 +92,7 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
       metadata: metadata ?? new Map()
     };
     this.numCols = resolvedFields.length;
-    this.sourceInfo = sourceInfo ? {...sourceInfo} : undefined;
+    this.sourceInfo = sourceInfo ? {...sourceInfo} : sourceInfo;
   }
 
   /** Destroys every owned GPU data chunk retained by this batch. */
