@@ -107,9 +107,25 @@ export class RobotArmScene {
       add('pedestal', 1, cube, graphite, [0, 0, 0.05], [0.15, 0.16, 0.46]);
       add('foot', 1, cube, steel, [0, 0, -0.35], [0.26, 0.26, 0.05]);
       add('turret', 2, sphere, steel, [0, 0, 0], [0.16, 0.16, 0.16]);
-      add('boom', 3, cube, enamel, [0, 0, 0], [0.7, 0.09, 0.085]);
-      add('palm', 3, cube, graphite, [0.7, 0, 0], [0.1, 0.46, 0.075]);
-      for (const body of [4, 5]) {
+      const telescoping = Boolean(workcell?.ring);
+      add(
+        'boom',
+        3,
+        cube,
+        enamel,
+        [telescoping ? -0.24 : 0, 0, 0],
+        [telescoping ? 0.46 : 0.7, 0.09, 0.085]
+      );
+      if (telescoping) add('extension', 4, cube, steel, [-0.3, 0, 0], [0.3, 0.066, 0.06]);
+      add(
+        'palm',
+        telescoping ? 4 : 3,
+        cube,
+        graphite,
+        [telescoping ? 0 : 0.7, 0, 0],
+        [0.1, 0.46, 0.075]
+      );
+      for (const body of telescoping ? [5, 6] : [4, 5]) {
         add('finger-' + body, body, cube, steel, [0, 0, 0.37], [0.046, 0.043, 0.37]);
         add('pad-' + body, body, sphere, graphite, [0, 0, 0], [0.095, 0.095, 0.095]);
         add('knuckle-' + body, body, sphere, enamel, [0, 0, 0.74], [0.095, 0.095, 0.095]);

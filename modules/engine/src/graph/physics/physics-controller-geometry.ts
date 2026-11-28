@@ -24,11 +24,12 @@ import {
   scaleRigidBodyShape
 } from '@luma.gl/graph/gpu-physics';
 import type {
+  GPUArticulationCollider,
   GPURigidBody,
   GPURigidBodyCollider,
   GPURigidBodyShape
 } from '@luma.gl/graph/gpu-physics';
-import type {PhysicsBodyOptions} from './physics-controller';
+import type {PhysicsBodyOptions, PhysicsNodeReference} from './physics-controller';
 import type {ScenegraphPhysicsScene} from './scenegraph-session';
 import {PhysicsGeometryNode} from './physics-scenegraph';
 import {makeRigidBodyJointsFromScenegraph} from './scenegraph-joints';
@@ -261,4 +262,35 @@ function makeGeometryCollider(
     shape = {type: 'triangle-mesh', geometry: makeTriangleMeshGeometry(vertices, indices)};
   } else shape = {type: 'convex-hull', geometry: makeConvexHullGeometry(vertices)};
   return {shape};
+}
+
+/** Cook descendants relative to each link's COM node. Nested link registrations start new bodies. */
+export function makeArticulationCollidersFromScenegraph(
+  scene: GroupNode,
+  links: readonly {
+    link: string;
+    node: PhysicsNodeReference;
+    collider?: PhysicsBodyOptions['collider'];
+  }[]
+): GPUArticulationCollider[] {
+  const definitions = new Map<ScenegraphNode, PhysicsBodyOptions>();
+  for (const {node: reference, collider} of links) {
+    const node = typeof reference === 'string' ? scene.findNode(reference) : reference;
+    if (!node || definitions.has(node)) throw new Error('Missing or duplicate articulation node');
+    definitions.set(node, {collider});
+  }
+  const {definition} = makePhysicsControllerScene(scene, definitions, {});
+  return [...definitions.keys()].flatMap((node, index) => {
+    const body = definition.world.bodies[definition.bodies.get(node)!];
+    return body.colliders!.map(({shape, position, orientation}) => {
+      const frame = {link: links[index].link, position, orientation};
+      if (
+        shape.type === 'sphere' ||
+        shape.type === 'box' ||
+        (shape.type === 'capsule' && shape.radiusTop === shape.radiusBottom)
+      )
+        return {...frame, shape};
+      throw new Error('Unsupported articulated collider shape');
+    });
+  });
 }

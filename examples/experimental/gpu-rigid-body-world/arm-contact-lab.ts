@@ -14,6 +14,7 @@ import {createRigidBodyPanel} from './info-box';
 import {makeArmContactTrial} from './robot-arm-contact';
 import {makeGripperTrial, GRIPPER_PHASES} from './gripper';
 import {enableGraspSweep} from './grasp-sweep';
+import {RING_PIECES} from './bin-workcell';
 import {RobotArmScene} from './robot-arm-scene';
 
 const gripper = document.body.dataset.lab === 'gripper';
@@ -36,16 +37,39 @@ if (slider && weight) {
   weight.value = mass + ' kg';
 }
 const scenario = document.querySelector<HTMLSelectElement>('#grasp-scenario');
-const binChoice = query.get('bin');
-const targetChoice = ['left', 'center', 'right', 'obstructed', 'drop'].indexOf(binChoice ?? '');
+const binChoice =
+  query.get('bin') ??
+  (!gripper || query.has('mass') || query.has('friction') || query.has('replay')
+    ? 'single'
+    : 'ring');
+const targetChoice = [
+  'left',
+  'center',
+  'right',
+  'obstructed',
+  'drop',
+  'crowded',
+  'gate',
+  'scale',
+  'stack'
+].indexOf(binChoice ?? '');
 const bin =
-  targetChoice >= 0
-    ? {
-        target: targetChoice >= 3 ? 1 : targetChoice,
-        obstructed: targetChoice === 3,
-        drop: targetChoice === 4
-      }
-    : undefined;
+  binChoice === 'ring'
+    ? {target: 0, ring: true}
+    : targetChoice >= 0
+      ? {
+          target: targetChoice >= 3 ? 1 : targetChoice,
+          obstructed: targetChoice === 3,
+          parts:
+            targetChoice >= 5 ? (targetChoice === 7 ? (256 as const) : (64 as const)) : undefined,
+          gate: targetChoice === 6,
+          drop: targetChoice === 4 || targetChoice === 8
+        }
+      : undefined;
+if (bin?.ring && slider) {
+  slider.labels![0].textContent = 'Load scale';
+  weight!.value = mass + '×';
+}
 if (scenario) {
   scenario.value = binChoice ?? 'single';
   scenario.onchange = () => {
@@ -94,7 +118,10 @@ try {
     const graph = await definition.compileAsync();
     const scene = new RobotArmScene(
       device,
-      {poseMatrices: world.poseMatrices, count: reduced ? (bin ? 4 : 5) : bodies.length},
+      {
+        poseMatrices: world.poseMatrices,
+        count: reduced ? (bin && pick ? pick.armBodyCount - 2 : 5) : bodies.length
+      },
       reduced ? bodies : undefined,
       gripper,
       pick?.workcell,
@@ -136,12 +163,13 @@ try {
     slider.disabled = false;
     cycle.disabled = false;
     slider.oninput = () => {
-      weight.value = slider.value + ' kg';
+      weight.value = slider.value + (bin?.ring ? '×' : ' kg');
     };
     slider.onchange = () => {
       requestedMass = slider.valueAsNumber;
       const url = new URL(location.href);
       url.searchParams.set('mass', slider.value);
+      if (bin?.ring) url.searchParams.set('bin', 'ring');
       history.replaceState(null, '', url);
       resetRequested = true;
       cycling = false;
@@ -154,6 +182,7 @@ try {
     grip.onchange = () => {
       const url = new URL(location.href);
       url.searchParams.set('friction', grip.value);
+      if (bin?.ring) url.searchParams.set('bin', 'ring');
       location.href = url.href;
     };
     selectPhase(0);
@@ -165,9 +194,12 @@ try {
   let last = performance.now(),
     accumulator = world.timeStep,
     lastReading = 0;
+  let pendingReading: Promise<void> | undefined;
+  const inFlight: Promise<void>[] = [];
   const frame = async (now: number) => {
     if (resetRequested) {
       resetRequested = false;
+      await Promise.all([...inFlight, pendingReading]);
       if (mass !== requestedMass) {
         mass = requestedMass;
         const previous = {pick, world, graph, scene};
@@ -187,7 +219,7 @@ try {
     }
     accumulator = Math.min(accumulator + (now - last) / 1000, 4 * world.timeStep);
     last = now;
-    if (cycling && pick && phaseSteps >= pick.travelSteps(phase) + 60) {
+    if (cycling && pick && phaseSteps >= pick.travelSteps(phase) + (bin?.ring ? 24 : 60)) {
       if (phase < phaseNames.length - 1) selectPhase(phase + 1);
       else {
         cycling = false;
@@ -216,26 +248,51 @@ try {
     ]);
     device.submit();
     panel.update();
-    if (now - lastReading > 250 && pick) {
-      const positions = await pick.positions();
-      output.value = `Payload ${mass} kg · Grip cap ${torque} N·m · height ${positions[4 + (bin?.target ?? 0)][2].toFixed(3)} m`;
+    if (!pendingReading && now - lastReading > 250) {
       lastReading = now;
-    } else if (now - lastReading > 250 && trial) {
-      const [height, status] = await Promise.all([
-        trial.payloadHeight(),
-        world.readSimulationDiagnostics()
-      ]);
-      if (!status.complete) throw new Error('Physics step failed');
-      output.value = `Payload ${height.toFixed(3)} m · Stop clearance ${(height - trial.seatHeight).toFixed(3)} m`;
-      if ('normalForce' in status) output.value += ` · ${Number(status.normalForce).toFixed(1)} N`;
-      lastReading = now;
+      const readTelemetry = async () => {
+        if (pick) {
+          const matrices = pick.binWorld?.poseMatrices ?? world.poseMatrices!;
+          const target = pick.targetIndex(phase);
+          const index = pick.binWorld ? 1 + target : pick.armBodyCount - (reduced ? 2 : 0) + target;
+          const [bytes, status] = await Promise.all([
+            matrices.readAsync((index * 16 + 14) * 4, 4),
+            bin?.parts && world instanceof GPUArticulationTree
+              ? world.readSimulationDiagnostics()
+              : undefined
+          ]);
+          const height = new Float32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+          output.value = `Payload ${Number((mass * (bin?.ring ? RING_PIECES[target].mass : 1)).toFixed(2))} kg · Grip cap ${torque} N·m · height ${height.toFixed(3)} m`;
+          if (status) {
+            output.value += ` · ${bin!.parts} parts · ${status.candidatePairs} candidate pairs · ${status.activeContacts} contacts · ${status.reusedContacts} reused`;
+            if (!status.complete) output.value += ' · Solver stopped';
+          }
+        } else if (trial) {
+          const [height, status] = await Promise.all([
+            trial.payloadHeight(),
+            world.readSimulationDiagnostics()
+          ]);
+          if (!status.complete) throw new Error('Physics step failed');
+          output.value = `Payload ${height.toFixed(3)} m · Stop clearance ${(height - trial.seatHeight).toFixed(3)} m`;
+          if ('normalForce' in status)
+            output.value += ` · ${Number(status.normalForce).toFixed(1)} N`;
+        }
+      };
+      pendingReading = readTelemetry()
+        .catch(error => {
+          output.value = String(error);
+        })
+        .finally(() => {
+          pendingReading = undefined;
+        });
     }
+    // Pipeline presentation and simulation, but cap queue depth on slower devices.
     const fence = device.createFence();
-    try {
-      await fence.signaled;
-    } finally {
+    const done = fence.signaled.finally(() => {
       fence.destroy();
-    }
+    });
+    inFlight.push(done);
+    if (inFlight.length === 2) await inFlight.shift();
     requestAnimationFrame(tick);
   };
   const tick = (now: number) => {

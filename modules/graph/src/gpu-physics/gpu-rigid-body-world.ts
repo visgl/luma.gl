@@ -1038,7 +1038,7 @@ export class GPURigidBodyWorld {
     // Coupled ordering currently supports one solid box per body in a small standalone world.
     if (
       articulation &&
-      (this.count > 16 ||
+      ((articulation.colliders ? this.count > 1024 : this.count > 16) ||
         this.colliders.length !== this.count ||
         this.colliders.some(
           (collider, index) =>
@@ -2174,7 +2174,15 @@ export class GPURigidBodyWorld {
           createExecutable(await createBoundKernelAsync(device, computationProps))
       });
       if (entryPoint === 'integrate' && articulation)
-        addArticulationWorldContacts(graph, this.id, articulation, this.count, bindings);
+        addArticulationWorldContacts(
+          graph,
+          this.id,
+          articulation,
+          articulation.colliders
+            ? getRigidBodyCastOrder(this.colliders, this.props.bodies).indices
+            : new Uint32Array(this.count),
+          bindings
+        );
     }
     continuous?.finish();
     triggers?.sample();

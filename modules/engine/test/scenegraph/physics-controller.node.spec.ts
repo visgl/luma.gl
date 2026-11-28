@@ -16,7 +16,10 @@ import {
   GPUVectorGeometry
 } from '@luma.gl/engine';
 import {PhysicsController, PhysicsGeometryNode} from '@luma.gl/engine/physics';
-import {makePhysicsControllerScene} from '../../src/graph/physics/physics-controller-geometry';
+import {
+  makePhysicsControllerScene,
+  makeArticulationCollidersFromScenegraph
+} from '../../src/graph/physics/physics-controller-geometry';
 import type {PhysicsBodyOptions} from '@luma.gl/engine/physics';
 
 test('physics paths resolve once to stable references and reject ambiguity before GPU setup', async () => {
@@ -302,4 +305,22 @@ test('a controller cannot replace or detach another producer on its scene', asyn
     await physics.destroy();
     device.destroy();
   }
+});
+
+test('cooks link-local collision geometry from paths and nested link nodes', () => {
+  const palm = new PhysicsGeometryNode({
+    id: 'palm',
+    geometry: new CubeGeometry(),
+    matrix: new Matrix4().translate([0.4, 0, 0]).scale([0.1, 0.3, 0.05])
+  });
+  const finger = new ScenegraphNode({id: 'finger'});
+  const wrist = new GroupNode({id: 'wrist', children: [palm, finger]});
+  const scene = new GroupNode({children: [wrist]});
+  const shapes = makeArticulationCollidersFromScenegraph(scene, [
+    {node: '/wrist', link: 'wrist'},
+    {node: finger, link: 'finger', collider: {type: 'sphere', radius: 0.1}}
+  ]);
+  expect(shapes).toHaveLength(2);
+  expect(shapes[0]).toMatchObject({link: 'wrist', shape: {type: 'box'}, position: [0.4, 0, 0]});
+  expect(shapes[1]).toMatchObject({link: 'finger', shape: {type: 'sphere', radius: 0.1}});
 });

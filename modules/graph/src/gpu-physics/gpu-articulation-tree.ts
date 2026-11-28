@@ -14,6 +14,7 @@ import {
   createBoundKernelAsync,
   type BoundKernel
 } from '../gpu-core/utils/bound-kernel';
+import type {GPUArticulationCollider} from './articulation-world-contacts';
 import {getArticulationTreeShader} from './articulation-tree-shader';
 
 type Vector = readonly [number, number, number];
@@ -24,13 +25,16 @@ export type GPUArticulationLink = {
   parent: number;
   parentAnchor: Vector;
   childAnchor: Vector;
-  /** Unit revolute axis in the parent frame. Omit for a welded attachment. */
+  /** A slider translates along its axis. The default is a revolute joint. */
+  jointType?: 'revolute' | 'prismatic';
+  /** Unit joint axis in the parent frame. Omit for a welded attachment. */
   axis?: Vector;
   /** Child-to-parent orientation at zero angle. */
   restOrientation?: readonly [number, number, number, number];
   mass: number;
   /** Principal moments about the COM in the child frame. */
   inertia: Vector;
+  /** Initial joint coordinate in radians for a hinge or meters for a slider. */
   angle?: number;
   speed?: number;
 };
@@ -112,6 +116,7 @@ export class GPUArticulationTree {
     for (const [index, link] of this.links.entries()) {
       if (
         !link.id ||
+        (link.jointType === 'prismatic' && !link.axis) ||
         this.indices.has(link.id) ||
         !Number.isInteger(link.parent) ||
         link.parent < -1 ||
@@ -161,19 +166,51 @@ export class GPUArticulationTree {
     coupling?: {
       boxes: GraphBufferHandle;
       count: number;
-      pads: GPUArticulationPayload['pads'];
+      pads?: GPUArticulationPayload['pads'];
+      colliders?: readonly GPUArticulationCollider[];
       friction: number;
     }
   ) {
+    const colliders = coupling?.colliders;
+    const packedColliders = colliders?.flatMap(
+      ({link, shape, position = [0, 0, 0], orientation = [0, 0, 0, 1]}) => {
+        const dimensions =
+          shape.type === 'box'
+            ? [...shape.halfExtents]
+            : shape.type === 'capsule'
+              ? [shape.radiusTop, shape.height / 2, 0]
+              : [shape.radius, 0, 0];
+        if (
+          !this.indices.has(link) ||
+          (shape.type === 'capsule' && shape.radiusTop !== shape.radiusBottom) ||
+          ![...position, ...orientation, ...dimensions].every(Number.isFinite) ||
+          Math.abs(Math.hypot(...orientation) - 1) > 1e-5 ||
+          dimensions[0] <= 0 ||
+          dimensions[1] < 0 ||
+          (shape.type === 'box' && (dimensions[1] <= 0 || dimensions[2] <= 0))
+        )
+          throw new Error('Invalid link collider');
+        return [
+          ...position,
+          this.indices.get(link)!,
+          ...orientation,
+          ...dimensions,
+          shape.type === 'sphere' ? 0 : shape.type === 'capsule' ? 1 : 2
+        ];
+      }
+    );
     if (
       coupling &&
       (this.payload ||
         this.contact ||
-        coupling.pads.length !== 2 ||
-        coupling.pads[0].link === coupling.pads[1].link ||
+        (colliders
+          ? colliders.length === 0 || colliders.length > 16
+          : !coupling.pads ||
+            coupling.pads.length !== 2 ||
+            coupling.pads[0].link === coupling.pads[1].link) ||
         !Number.isFinite(coupling.friction) ||
         coupling.friction < 0 ||
-        coupling.pads.some(
+        coupling.pads?.some(
           pad => !this.indices.has(pad.link) || !Number.isFinite(pad.radius) || pad.radius <= 0
         ))
     )
@@ -190,7 +227,7 @@ export class GPUArticulationTree {
           ...link.parentAnchor,
           link.parent,
           ...link.childAnchor,
-          0,
+          Number(link.jointType === 'prismatic'),
           ...(link.axis ?? [0, 0, 0]),
           link.mass,
           ...link.inertia,
@@ -201,7 +238,7 @@ export class GPUArticulationTree {
       new Float32Array(this.links.length * 4),
       new Float32Array(this.links.flatMap(link => [link.angle ?? 0, link.speed ?? 0, 0, 0])),
       poses,
-      new Uint32Array(4),
+      new Uint32Array(colliders ? 8 + 24 * 12 : 4),
       new Float32Array([
         ...this.base,
         0,
@@ -231,7 +268,8 @@ export class GPUArticulationTree {
                 coupling.friction,
                 0,
                 0,
-                ...coupling.pads.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0])
+                ...(packedColliders ??
+                  coupling.pads!.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0]))
               ]
             : [])
       ])
@@ -280,7 +318,9 @@ export class GPUArticulationTree {
           Boolean(this.contact),
           this.publishMatrices,
           Boolean(this.payload),
-          coupling?.count ?? 0
+          coupling?.count ?? 0,
+          colliders?.length ?? 0,
+          this.links.some(link => link.jointType === 'prismatic')
         ),
         shaderLayout
       };
@@ -314,22 +354,38 @@ export class GPUArticulationTree {
     this.initialState();
   }
 
-  private driveIndex(id: string) {
+  private driveIndex(id: string, kind: 'revolute' | 'prismatic' = 'revolute') {
     const index = this.indices.get(id);
     if (this.destroyed || !this.buffers.length || index === undefined || !this.links[index].axis)
-      throw new Error('Inactive or missing revolute drive');
+      throw new Error('Inactive or missing joint drive');
+    if ((this.links[index].jointType ?? 'revolute') !== kind)
+      throw new Error('Unexpected joint type');
     return index;
   }
 
   /** Update the named revolute drive between submitted steps. */
   setDrive(id: string, drive: GPUArticulationDrive) {
     const index = this.driveIndex(id);
-    const values = new Float32Array([
-      drive.angle,
-      drive.stiffness,
-      drive.damping,
-      drive.maximumTorque
-    ]);
+    this.writeDrive(index, drive.angle, drive.stiffness, drive.damping, drive.maximumTorque);
+  }
+
+  /** Drive a slider in meters with a spring in N/m, damping in N·s/m and a force limit in newtons. */
+  setLinearDrive(
+    id: string,
+    drive: {position: number; stiffness: number; damping: number; maximumForce: number}
+  ) {
+    const index = this.driveIndex(id, 'prismatic');
+    this.writeDrive(index, drive.position, drive.stiffness, drive.damping, drive.maximumForce);
+  }
+
+  private writeDrive(
+    index: number,
+    target: number,
+    stiffness: number,
+    damping: number,
+    maximum: number
+  ) {
+    const values = new Float32Array([target, stiffness, damping, maximum]);
     if (!values.every(Number.isFinite) || values.slice(1).some(value => value < 0))
       throw new Error('Invalid articulation drive');
     this.buffers[1].write(values, index * 16);
@@ -337,7 +393,15 @@ export class GPUArticulationTree {
 
   /** Signed motor torque during the most recently accepted step. */
   async readTorque(id: string) {
-    const index = this.driveIndex(id);
+    return this.readEffort(this.driveIndex(id));
+  }
+
+  /** Signed slider motor force in newtons during the most recently accepted step. */
+  async readForce(id: string) {
+    return this.readEffort(this.driveIndex(id, 'prismatic'));
+  }
+
+  private async readEffort(index: number) {
     const bytes = await this.buffers[2].readAsync(index * 16 + 8, 4);
     return new DataView(bytes.buffer, bytes.byteOffset, 4).getFloat32(0, true);
   }
@@ -359,10 +423,22 @@ export class GPUArticulationTree {
   /** Numerical failure latches and preserves the last accepted state. */
   async readSimulationDiagnostics() {
     const bytes = await this.buffers[4].readAsync();
-    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
     return {
       steps: values[0],
       complete: values[1] === 0,
+      ...(values.length > 4
+        ? {
+            candidatePairs: values[4],
+            activeContacts: values[5],
+            contactPairs: Array.from({length: values[5]}, (_, index) => ({
+              body: values[8 + index * 12],
+              collider: values[9 + index * 12]
+            })),
+            contactOverflow: values[6] !== 0,
+            reusedContacts: values[7]
+          }
+        : {}),
       ...(this.worldContacts ? {padContactMasks: [values[2], values[3]]} : {}),
       ...(this.contact
         ? {normalForce: new DataView(bytes.buffer, bytes.byteOffset).getFloat32(8, true)}
