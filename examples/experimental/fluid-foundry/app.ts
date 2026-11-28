@@ -11,14 +11,15 @@ import {
   Texture
 } from '@luma.gl/core';
 import {
+  configureEffect,
   AnimationLoopTemplate,
   Computation,
   Model,
   ShaderInputs,
-  ShaderPassRenderer,
+  EffectRenderer,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/graph/experimental-simulation';
 import type {ShaderModule} from '@luma.gl/shaders';
 import {FLUID_FOUNDRY_INFO_HTML} from './app-ui';
@@ -91,7 +92,7 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
   readonly nozzleEmitterUniformBuffer: Buffer;
   readonly densityModel: Model;
   readonly compositeModel: Model;
-  readonly postprocessingRenderer: ShaderPassRenderer;
+  readonly postprocessingRenderer: EffectRenderer;
   readonly densityTarget: DensityTarget;
   readonly densitySampler: Sampler;
   readonly particleCount: number;
@@ -201,10 +202,10 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
       },
       colorAttachmentFormats: ['rgba16float']
     });
-    this.postprocessingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [
-        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.68}),
-        toneMapping
+    this.postprocessingRenderer = new EffectRenderer(device, {
+      effects: [
+        configureEffect(hdrBloom, {colorFormat: 'rgba16float', resolutionScale: 0.68}),
+        toneMappingEffect
       ],
       colorFormat: 'rgba16float'
     });

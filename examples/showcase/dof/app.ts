@@ -23,9 +23,9 @@ import {
   loadImageBitmap,
   MaterialFactory,
   ModelNode,
-  ShaderPassRenderer
+  EffectRenderer
 } from '@luma.gl/engine';
-import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
+import {depthOfField} from '@luma.gl/engine/effects';
 import {pbrMaterial, type LightingProps, type ShaderModule} from '@luma.gl/shaders';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
@@ -193,7 +193,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneModel: GPUTableModel;
   sceneTable: GPUTable;
   cubeTexture: DynamicTexture;
-  shaderPassRenderer: ShaderPassRenderer;
+  shaderPassRenderer: EffectRenderer;
 
   instanceModelMatrices = new Float32Array(NUM_CUBES * INSTANCE_MODEL_MATRIX_COMPONENT_COUNT);
   cubeTransforms: CubeTransform[] = [];
@@ -289,8 +289,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       )
     });
 
-    this.shaderPassRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [dofCompositeShaderPass]
+    this.shaderPassRenderer = new EffectRenderer(device, {
+      effects: [depthOfField]
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'dof-settings',

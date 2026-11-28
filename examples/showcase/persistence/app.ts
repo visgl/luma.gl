@@ -4,7 +4,7 @@
 
 import type {NumericArray} from '@math.gl/core/types';
 import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
-import {persistenceEffect} from '@luma.gl/engine/effects';
+import {persistence} from '@luma.gl/engine/effects';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -14,7 +14,7 @@ import {
   makeRandomGenerator,
   loadImageBitmap,
   BackgroundTextureModel,
-  ShaderPassRenderer
+  EffectRenderer
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core/matrix';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
@@ -51,13 +51,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly electronInstanceData = new Float32Array(ELECTRON_COUNT * 16);
 
   mainFramebuffer: Framebuffer;
-  clearedPersistenceFramebuffer: Framebuffer;
   accumulatedTextureModel: BackgroundTextureModel;
   currentSceneTextureModel: BackgroundTextureModel;
-  persistenceRenderers: [ShaderPassRenderer, ShaderPassRenderer];
-  persistenceRendererIndex = 0;
-  previousPersistenceTexture: Texture | null = null;
-  persistenceFramebufferSize: [number, number] | null = null;
+  persistenceRenderer: EffectRenderer;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -107,13 +103,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       depthStencilAttachment: 'depth24plus'
     });
 
-    this.clearedPersistenceFramebuffer = device.createFramebuffer({
-      width,
-      height,
-      colorAttachments: [
-        createOffscreenColorAttachment(device, 'persistence-framebuffer-reset-color', width, height)
-      ]
-    });
     this.accumulatedTextureModel = this.createCompositeTextureModel(
       device,
       this.mainFramebuffer.colorAttachments[0].texture
@@ -122,10 +111,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device,
       this.mainFramebuffer.colorAttachments[0].texture
     );
-    this.persistenceRenderers = [
-      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]}),
-      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]})
-    ];
+    this.persistenceRenderer = new EffectRenderer(device, {effects: [persistence]});
 
     const dt = 0.0125;
 
@@ -167,11 +153,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.nucleonInstances.destroy();
 
     this.mainFramebuffer.destroy();
-    this.clearedPersistenceFramebuffer.destroy();
     this.accumulatedTextureModel.destroy();
     this.currentSceneTextureModel.destroy();
-    this.persistenceRenderers[0].destroy();
-    this.persistenceRenderers[1].destroy();
+    this.persistenceRenderer.destroy();
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
@@ -179,22 +163,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
-    const needsPersistenceReset =
-      !this.persistenceFramebufferSize ||
-      this.persistenceFramebufferSize[0] !== width ||
-      this.persistenceFramebufferSize[1] !== height;
-
     this.mainFramebuffer.resize({width, height});
-    this.clearedPersistenceFramebuffer.resize({width, height});
-    this.persistenceRenderers[0].resize([width, height]);
-    this.persistenceRenderers[1].resize([width, height]);
-
-    if (needsPersistenceReset) {
-      this.clearPersistenceFramebuffer(device);
-      this.previousPersistenceTexture = null;
-      this.persistenceRendererIndex = 0;
-      this.persistenceFramebufferSize = [width, height];
-    }
+    this.persistenceRenderer.resize([width, height]);
 
     const viewMatrix = new Matrix4().lookAt({eye: camera});
     const viewProjectionMatrix = new Matrix4()
@@ -219,24 +189,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     drawPBRScene(this.scene, mainRenderPass, viewProjectionMatrix, camera, lighting);
     mainRenderPass.end();
 
-    const currentPersistenceRenderer = this.persistenceRenderers[this.persistenceRendererIndex];
-    const persistenceTexture =
-      this.previousPersistenceTexture ||
-      this.clearedPersistenceFramebuffer.colorAttachments[0].texture;
-    // Alternate renderer instances so the history texture is never sampled from the same
-    // internal render target that will be written this frame.
-    const accumulatedTexture = currentPersistenceRenderer.renderToTexture({
-      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture,
-      bindings: {
-        persistenceTexture
-      }
+    const accumulatedTexture = this.persistenceRenderer.renderToTexture({
+      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture
     });
     if (!accumulatedTexture) {
       return;
     }
-
-    this.previousPersistenceTexture = accumulatedTexture;
-    this.persistenceRendererIndex = 1 - this.persistenceRendererIndex;
 
     // Stage all fullscreen texture bindings before opening the screen render pass so WebGPU
     // does not need to update bind groups while an encoder is locked to a render pass.
@@ -261,16 +219,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.accumulatedTextureModel.draw(screenRenderPass);
     this.currentSceneTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
-  }
-
-  clearPersistenceFramebuffer(device: AnimationProps['device']) {
-    const renderPass = device.beginRenderPass({
-      framebuffer: this.clearedPersistenceFramebuffer,
-      clearColor: [0, 0, 0, 0],
-      clearDepth: false,
-      clearStencil: false
-    });
-    renderPass.end();
   }
 
   /** Creates the alpha-blended fullscreen model used for persistence and live-scene overlays. */

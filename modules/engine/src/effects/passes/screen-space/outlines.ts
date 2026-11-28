@@ -220,6 +220,7 @@ vec4 imageOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
+/** @deprecated Use `outlines` with `EffectRenderer`. */
 export function createOutlineCompositeShaderPass(
   options: OutlineCompositeShaderPassOptions = {}
 ): CompositeShaderPass {

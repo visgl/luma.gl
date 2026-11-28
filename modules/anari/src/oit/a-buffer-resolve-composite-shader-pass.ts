@@ -185,6 +185,7 @@ export const aBufferResolveEffect = {
   }
 } as const satisfies ConfigurableEffectDefinition<ABufferResolveCompositeShaderPassOptions, never>;
 
+/** @deprecated Use `aBufferResolveEffect` with `EffectRenderer`. */
 export function createABufferResolveCompositeShaderPass(
   options: ABufferResolveCompositeShaderPassOptions
 ): CompositeShaderPass {

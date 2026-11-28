@@ -762,12 +762,15 @@ function configureSSR(options: SSRCompositeShaderPassOptions = {}): EffectDefini
   };
 }
 
+/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
 export function createSSRCompositeShaderPass(
   options: SSRCompositeShaderPassOptions & {reprojection: 'camera'}
 ): CompositeShaderPass<SSRRenderTarget | 'ssrHistoryNormal'>;
+/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
 export function createSSRCompositeShaderPass(
   options?: SSRCompositeShaderPassOptions
 ): CompositeShaderPass<SSRRenderTarget>;
+/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
 export function createSSRCompositeShaderPass(
   options: SSRCompositeShaderPassOptions = {}
 ): CompositeShaderPass {

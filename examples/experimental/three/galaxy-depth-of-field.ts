@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device, type Texture, type TextureFormat} from '@luma.gl/core';
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bokehDof} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {bokehDofEffect} from '@luma.gl/engine/effects';
 import {ExternalTexture, type Texture as ThreeTexture, type WebGPURenderer} from 'three/webgpu';
 
 // The example pins Three r187. Keep its private native-texture lookup at this adapter boundary.
@@ -12,7 +12,7 @@ type TextureBackend = {get(texture: ThreeTexture): {texture: GPUTexture}};
 /** Run the existing luma DOF pass on borrowed Three textures, on the same GPU queue. */
 export class GalaxyDepthOfField {
   readonly output = new ExternalTexture();
-  private readonly passes: ShaderPassRenderer;
+  private readonly passes: EffectRenderer;
   private readonly backend: TextureBackend;
   private source?: Texture;
   private depth?: Texture;
@@ -25,9 +25,9 @@ export class GalaxyDepthOfField {
   ) {
     this.backend = renderer.backend as unknown as TextureBackend;
     this.output.flipY = false;
-    this.passes = new ShaderPassRenderer(device, {
+    this.passes = new EffectRenderer(device, {
       // Keep HDR starlight through the existing pass's scratch target as well.
-      shaderPasses: [bokehDof],
+      effects: [bokehDofEffect],
       colorFormat: 'rgba16float',
       flipY: true
     });

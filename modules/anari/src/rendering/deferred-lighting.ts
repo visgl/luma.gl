@@ -306,6 +306,7 @@ export const deferredLightingEffect = {
   ]
 } as const satisfies EffectDefinition<never>;
 
+/** @deprecated Use `deferredLightingEffect` with `EffectRenderer`. */
 export function createDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {
     name: deferredLightingEffect.name,

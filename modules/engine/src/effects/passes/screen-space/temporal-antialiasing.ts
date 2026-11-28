@@ -128,6 +128,7 @@ export const taa = {
   ]
 } as const satisfies EffectDefinition<'taaHistoryColor' | 'taaHistoryDepth'>;
 
+/** @deprecated Use `taa` with `EffectRenderer`. */
 export function createTAACompositeShaderPass() {
   return resolveEffect(taa);
 }

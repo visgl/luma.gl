@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, Texture} from '@luma.gl/core';
-import {AnimationLoopTemplate, ShaderPassRenderer, type AnimationProps} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  EffectRenderer,
+  type AnimationProps,
+  type EffectDefinition
+} from '@luma.gl/engine';
 import type {ShaderPass} from '@luma.gl/shaders';
 import type {
   Panel,
@@ -68,9 +73,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly shaderPassMap: Record<string, ShaderPass>;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
-  readonly originalShaderPassRenderer: ShaderPassRenderer;
+  readonly originalEffectRenderer: EffectRenderer;
   effectValuesByName: Record<string, EffectState>;
-  shaderPassRenderer!: ShaderPassRenderer;
+  shaderPassRenderer!: EffectRenderer;
   selectedLookName: LookName = DEFAULT_LOOK_NAME;
   activePassNames: string[] = [];
   motionEnabled = true;
@@ -115,10 +120,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
-    this.originalShaderPassRenderer = new ShaderPassRenderer(this.device, {
-      shaderPasses: [kineticScenePass]
+    this.originalEffectRenderer = new EffectRenderer(this.device, {
+      effects: [makeEffect(kineticScenePass)]
     });
-    this.setShaderPasses(this.getActiveShaderPasses());
+    this.setEffects(this.getActiveEffects());
   }
 
   onFinalize(): void {
@@ -126,7 +131,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels.finalize();
     this.sourceTexture.destroy();
     this.shaderPassRenderer?.destroy();
-    this.originalShaderPassRenderer.destroy();
+    this.originalEffectRenderer.destroy();
   }
 
   onRender({time}: AnimationProps): void {
@@ -144,9 +149,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       Math.max(Math.round(drawingBufferWidth * resolutionScale), 1),
       Math.max(Math.round(drawingBufferHeight * resolutionScale), 1)
     ]);
-    this.originalShaderPassRenderer.resize([drawingBufferWidth, drawingBufferHeight]);
+    this.originalEffectRenderer.resize([drawingBufferWidth, drawingBufferHeight]);
     const activeRenderer = this.comparisonOriginal
-      ? this.originalShaderPassRenderer
+      ? this.originalEffectRenderer
       : this.shaderPassRenderer;
     activeRenderer.renderToScreen({
       sourceTexture: this.sourceTexture,
@@ -160,7 +165,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.activePassNames = [...look.passNames];
     this.applyLookValues(look);
     this.comparisonOriginal = false;
-    this.setShaderPasses(this.getActiveShaderPasses());
+    this.setEffects(this.getActiveEffects());
     this.syncPanels(restoreFocus ? `[data-look-name="${lookName}"]` : undefined);
   }
 
@@ -196,9 +201,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.comparisonOriginal = showOriginal;
   }
 
-  setShaderPasses(shaderPasses: ShaderPass[]): void {
+  setEffects(effects: EffectDefinition[]): void {
     this.shaderPassRenderer?.destroy();
-    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {shaderPasses});
+    this.shaderPassRenderer = new EffectRenderer(this.device, {effects});
   }
 
   private setActivePassNames(nextPassNames: string[], focusSelector?: string): void {
@@ -210,15 +215,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (this.activePassNames.length === 0) {
       this.comparisonOriginal = false;
     }
-    this.setShaderPasses(this.getActiveShaderPasses());
+    this.setEffects(this.getActiveEffects());
     this.syncPanels(focusSelector);
   }
 
-  private getActiveShaderPasses(): ShaderPass[] {
+  private getActiveEffects(): EffectDefinition[] {
     const effectPasses = this.activePassNames
       .map(passName => this.shaderPassMap[passName])
       .filter((shaderPass): shaderPass is ShaderPass => Boolean(shaderPass));
-    return [kineticScenePass, ...effectPasses];
+    return [kineticScenePass, ...effectPasses].map(makeEffect);
   }
 
   private makeActiveUniforms(): Record<string, EffectState> {
@@ -737,4 +742,12 @@ function getControlBounds(
       : Math.max(Number(((max - min) / 200).toFixed(4)), 0.001);
 
   return {min, max, step};
+}
+
+function makeEffect(shaderPass: ShaderPass): EffectDefinition<never> {
+  return {
+    name: shaderPass.name,
+    resources: {},
+    passes: [{kind: 'fullscreen', shaderPass}]
+  };
 }

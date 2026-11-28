@@ -85,6 +85,7 @@ function configureContactShadow(
   };
 }
 
+/** @deprecated Use `contactShadows` with `EffectRenderer`. */
 export function createContactShadowCompositeShaderPass(
   options: ContactShadowCompositeShaderPassOptions = {}
 ): CompositeShaderPass<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {

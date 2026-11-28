@@ -593,6 +593,7 @@ function configureGTAO(
   };
 }
 
+/** @deprecated Use `gtao` with `EffectRenderer`. */
 export function createGTAOCompositeShaderPass(
   options: GTAOCompositeShaderPassOptions = {}
 ): CompositeShaderPass<

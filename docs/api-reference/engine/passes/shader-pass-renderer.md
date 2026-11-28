@@ -15,6 +15,11 @@ model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
 
 <BloomExample embedded showStats={false} />
 
+For new fullscreen effects, use an `EffectDefinition` with `EffectRenderer`.
+The [declarative effects guide](../../../api-guide/shaders/declarative-effects.md)
+covers resource declarations, pass routing, and configuration. Existing
+`ShaderPassRenderer` and `CompositeShaderPass` callers remain supported.
+
 ## Usage
 
 ```typescript

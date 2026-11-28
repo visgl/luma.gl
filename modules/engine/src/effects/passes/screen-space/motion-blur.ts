@@ -61,6 +61,7 @@ export const motionBlur = {
   passes: [{kind: 'fullscreen', shaderPass: motionBlurPass, output: 'previous'}]
 } as const satisfies EffectDefinition<never>;
 
+/** @deprecated Use `motionBlur` with `EffectRenderer`. */
 export function createMotionBlurCompositeShaderPass() {
   return resolveEffect<never>(motionBlur);
 }

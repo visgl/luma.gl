@@ -871,9 +871,9 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
  * Extracts bright pixels at half resolution, successively downsamples and blurs them, and
  * composites the multiscale glow over the preceding effect output.
  */
-export const bloomCompositeShaderPass = {
+export const multiscaleBloomEffect = {
   name: 'bloomCompositeShaderPass',
-  renderTargets: {
+  resources: {
     extractHalf: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
     blurHalfScratch: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
     blurHalf: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
@@ -884,60 +884,70 @@ export const bloomCompositeShaderPass = {
     blurEighthScratch: {scale: [0.125, 0.125], sampler: BLOOM_TARGET_SAMPLER},
     blurEighth: {scale: [0.125, 0.125], sampler: BLOOM_TARGET_SAMPLER}
   },
-  steps: [
+  passes: [
     {
+      kind: 'fullscreen',
       shaderPass: bloomExtractPass,
       inputs: {sourceTexture: 'previous'},
       output: 'extractHalf',
       uniforms: {threshold: 0.8}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'extractHalf'},
       output: 'blurHalfScratch',
       uniforms: {radius: 8, delta: [1, 0]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'blurHalfScratch'},
       output: 'blurHalf',
       uniforms: {radius: 8, delta: [0, 1]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomDownsamplePass,
       inputs: {sourceTexture: 'extractHalf'},
       output: 'extractQuarter'
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'extractQuarter'},
       output: 'blurQuarterScratch',
       uniforms: {radius: 8, delta: [1, 0]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'blurQuarterScratch'},
       output: 'blurQuarter',
       uniforms: {radius: 8, delta: [0, 1]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomDownsamplePass,
       inputs: {sourceTexture: 'extractQuarter'},
       output: 'extractEighth'
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'extractEighth'},
       output: 'blurEighthScratch',
       uniforms: {radius: 8, delta: [1, 0]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomBlurPass,
       inputs: {sourceTexture: 'blurEighthScratch'},
       output: 'blurEighth',
       uniforms: {radius: 8, delta: [0, 1]}
     },
     {
+      kind: 'fullscreen',
       shaderPass: bloomCompositePass,
       inputs: {
         sourceTexture: 'previous',
@@ -949,6 +959,13 @@ export const bloomCompositeShaderPass = {
       uniforms: {intensity: 1}
     }
   ]
+} as const satisfies EffectDefinition<BloomTargetName>;
+
+/** @deprecated Use `multiscaleBloomEffect` with `EffectRenderer`. */
+export const bloomCompositeShaderPass = {
+  name: multiscaleBloomEffect.name,
+  renderTargets: multiscaleBloomEffect.resources,
+  steps: multiscaleBloomEffect.passes
 } as const satisfies CompositeShaderPass<BloomTargetName>;
 
 const bloomLowExtractionUniforms = {
@@ -1139,6 +1156,7 @@ function toBloomEffectPass(step: CompositeShaderPassStep): EffectPass {
 }
 
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
+/** @deprecated Use `hdrBloom` with `EffectRenderer`. */
 export function createBloomCompositeShaderPass(
   options: BloomCompositeShaderPassOptions = {}
 ): CompositeShaderPass {

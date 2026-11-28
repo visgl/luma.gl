@@ -349,6 +349,7 @@ export const clusteredDeferredLightingEffect = {
   ]
 } as const satisfies EffectDefinition<never>;
 
+/** @deprecated Use `clusteredDeferredLightingEffect` with `EffectRenderer`. */
 export function createClusteredDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {
     name: clusteredDeferredLightingEffect.name,

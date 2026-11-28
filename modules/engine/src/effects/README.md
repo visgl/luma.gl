@@ -105,12 +105,12 @@ The existing deck.gl `PostProcessEffect` accepts shader-pass modules rather than
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {configureEffect, EffectRenderer} from '@luma.gl/engine';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [
-    createBloomCompositeShaderPass({
+const renderer = new EffectRenderer(device, {
+  effects: [
+    configureEffect(hdrBloom, {
       quality: 'high',
       threshold: 0.8,
       exposure: 1,
@@ -133,7 +133,7 @@ const renderer = new ShaderPassRenderer(device, {
         dirtIntensity: 0.4
       }
     }),
-    toneMapping
+    toneMappingEffect
   ]
 });
 

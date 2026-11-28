@@ -4,7 +4,8 @@
 
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
 import {clusteredDeferredLighting} from '@luma.gl/anari';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {EffectDefinition} from '@luma.gl/engine';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
 import {
   LIGHTSTORM_LIGHTNING_RETURN_STROKE_DELAY_SECONDS,
@@ -109,21 +110,23 @@ fn lightstormDeferredComposite_sampleColor(
 >;
 
 /** Preserves Lightstorm's authored HDR fog and emissive energy under clustered deferred light. */
-export function createLightstormDeferredLightingCompositeShaderPass(
+export function makeLightstormDeferredLightingEffect(
   colorFormat: TextureFormatColor
-): CompositeShaderPass<'deferredLighting'> {
+): EffectDefinition<'deferredLighting'> {
   return {
     name: 'lightstormDeferredLightingCompositeShaderPass',
-    renderTargets: {
+    resources: {
       deferredLighting: {format: colorFormat}
     },
-    steps: [
+    passes: [
       {
+        kind: 'fullscreen',
         shaderPass: clusteredDeferredLighting,
         inputs: {sourceTexture: 'original'},
         output: 'deferredLighting'
       },
       {
+        kind: 'fullscreen',
         shaderPass: lightstormDeferredComposite,
         inputs: {
           sourceTexture: 'deferredLighting',

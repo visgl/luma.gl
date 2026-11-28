@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Sampler, Texture} from '@luma.gl/core';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {EffectDefinition} from '@luma.gl/engine';
+import type {ShaderModule, ShaderPass} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumberArray3} from '@math.gl/core/types';
 
@@ -626,15 +627,15 @@ fn volumetricFireComposite_sampleColor(
   VolumetricFireCompositeBindings
 >;
 
-export function createVolumetricFireCompositeCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: 'volumetricFireCompositeCompositeShaderPass',
-    steps: [
-      {
-        shaderPass: volumetricFireComposite,
-        inputs: {sourceTexture: 'previous'},
-        output: 'previous'
-      }
-    ]
-  };
-}
+export const volumetricFireCompositeEffect = {
+  name: 'volumetricFireCompositeCompositeShaderPass',
+  resources: {},
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: volumetricFireComposite,
+      inputs: {sourceTexture: 'previous'},
+      output: 'previous'
+    }
+  ]
+} as const satisfies EffectDefinition<never>;

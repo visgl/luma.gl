@@ -3,16 +3,17 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@luma.gl/core';
-import {bloom, createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {bloomEffect, hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 import {
+  type EffectDefinition,
+  configureEffect,
   AnimationLoopTemplate,
   type AnimationProps,
   ClipSpace,
   ShaderInputs,
-  ShaderPassRenderer
+  EffectRenderer
 } from '@luma.gl/engine';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/graph/gpu-effects';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -71,7 +72,6 @@ type BloomSettings = {
   spectralSpread: number;
   animate: boolean;
 };
-type ShaderPassLike = ShaderPass | CompositeShaderPass;
 
 const DEFAULT_SETTINGS: BloomSettings = {
   technique: 'Multiscale HDR',
@@ -128,7 +128,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
   settings: BloomSettings = {...DEFAULT_SETTINGS};
-  shaderPassRenderer!: ShaderPassRenderer;
+  shaderPassRenderer!: EffectRenderer;
   convolutionBloom?: GPUConvolutionBloom;
   convolutionOutputTexture?: Texture;
 
@@ -166,7 +166,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
-    this.setShaderPasses(this.getShaderPasses());
+    this.setEffects(this.getEffects());
   }
 
   onFinalize(): void {
@@ -228,25 +228,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  setShaderPasses(shaderPasses: ShaderPassLike[]): void {
+  setEffects(effects: EffectDefinition[]): void {
     this.shaderPassRenderer?.destroy();
     this.destroyConvolutionBloom();
-    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
-      shaderPasses,
+    this.shaderPassRenderer = new EffectRenderer(this.device, {
+      effects,
       colorFormat: this.colorFormat
     });
   }
 
-  getShaderPasses(): ShaderPassLike[] {
-    const shaderPasses: ShaderPassLike[] = [];
+  getEffects(): EffectDefinition[] {
+    const effects: EffectDefinition[] = [];
     if (
       this.settings.technique === 'Multiscale HDR' ||
       (this.settings.technique === 'FFT Convolution' &&
         !this.getConvolutionSupport(this.sceneFramebuffer.width, this.sceneFramebuffer.height)
           .supported)
     ) {
-      shaderPasses.push(
-        createBloomCompositeShaderPass({
+      effects.push(
+        configureEffect(hdrBloom, {
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
           exposure: this.settings.exposure,
@@ -281,12 +281,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         })
       );
     } else if (this.settings.technique === 'Compact') {
-      shaderPasses.push(bloom);
+      effects.push(bloomEffect);
     }
     if (this.colorFormat === 'rgba16float' && this.device.preferredColorFormat !== 'rgba16float') {
-      shaderPasses.push(toneMapping);
+      effects.push(toneMappingEffect);
     }
-    return shaderPasses;
+    return effects;
   }
 
   getRenderUniforms(): Record<string, Record<string, unknown>> | undefined {
@@ -504,7 +504,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       animate:
         typeof settings['animate'] === 'boolean' ? settings['animate'] : this.settings.animate
     };
-    this.setShaderPasses(this.getShaderPasses());
+    this.setEffects(this.getEffects());
     this.panels.setPanel(this.makePanel());
   };
 

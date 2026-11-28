@@ -237,6 +237,7 @@ export const cameraReprojectionTaa = {
   'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
 >;
 
+/** @deprecated Use `cameraReprojectionTaa` with `EffectRenderer`. */
 export function createCameraReprojectionTAACompositeShaderPass() {
   return resolveEffect(cameraReprojectionTaa);
 }
