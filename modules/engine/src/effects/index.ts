@@ -249,3 +249,5 @@ export {hdrAutoExposure} from './passes/screen-space/hdr-auto-exposure';
 export {clusteredVolumetricLighting} from './passes/screen-space/clustered-volumetric-lighting';
 export {volumetricFog} from './passes/screen-space/volumetric-fog';
 export {contactShadows} from '../lighting/contact-shadow-composite';
+
+export type {TemporalFrameJitter, TemporalJitter} from './passes/screen-space/temporal-frame';
