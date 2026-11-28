@@ -7,7 +7,9 @@ export type TemporalJitter = [number, number];
 
 /** Current and previous projection jitter for same-resolution temporal resolves. */
 export type TemporalFrameJitter = {
+  /** Current frame projection offset in top-left UV units at render resolution. */
   currentJitter: TemporalJitter;
+  /** Previous frame projection offset in top-left UV units at render resolution. */
   previousJitter: TemporalJitter;
 };
 
