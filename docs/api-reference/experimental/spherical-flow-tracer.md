@@ -47,7 +47,7 @@ physical-time interpolation. At a completed resident endpoint, call
 ## Bounded execution and ownership
 
 `advance(duration)` and `continue()` each submit a bounded batch of dense dispatches and read
-all counters together (36 bytes per dispatch). Set `dispatchesPerReadback` to an
+all counters together (36 bytes per dense dispatch or 44 per persistent dispatch). Set `dispatchesPerReadback` to an
 integer from 1 to 32. It defaults to 1. Idle dispatches in the batch preserve state. They return `ScientificFlowTraceResult`,
 including statuses, accepted/rejected work, pending slots, committed/target clocks,
 the actual graph encoding and optional GPU compute duration. No particle-state
@@ -66,12 +66,16 @@ to 1e30 seconds and clips the final accepted step to the expiration age.
 | `previous` | State before the latest advance/continue call |
 | `diagnostics` | Request elapsed seconds, proposed timestep, `ScientificParticleStatus`, last accepted timestep |
 
-The spherical tracer uses dense scheduling. Larger batches reduce synchronization
-frequency at the cost of more dense dispatches after a horizon completes.
+Dense scheduling is the default. Set `scheduling: 'persistent'` to scan stable slots
+once per horizon, then use indirect dispatches over unfinished particles. The
+queues add `8 * (particleCount + 1) + 36` bytes of GPU storage. The initialization
+scan is excluded from integration-slot and workgroup counters. Both modes capture
+previous positions once per call.
 
 ## Inspection and qualification
 
-`commandGraph` exposes `reset-spherical-counters` and `trace-sphere-rk45`. Register
+The dense graph exposes `reset-spherical-counters` and `trace-sphere-rk45`.
+The persistent graph adds queue preparation, conditional initialization and indirect integration. Register
 it with the graph inspector and record `result.encoding` for each call. Execute
 through `advance()`/`continue()`; direct graph encoding bypasses request lifecycle.
 GPU time covers integration, excluding counter readback and trail rendering.

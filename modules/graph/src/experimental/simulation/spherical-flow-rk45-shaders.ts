@@ -29,15 +29,25 @@ SOFTWARE.
 import {SPHERICAL_FLOW_SAMPLING} from './spherical-flow-sampling-shaders';
 
 /** Embedded RKF45 in Cartesian directions; error is physical chord distance on the sphere. */
-export const SPHERICAL_FLOW_RK45 = /* wgsl */ `
+export function makeSphericalFlowRK45Shader(persistent: boolean): string {
+  return /* wgsl */ `
 struct Parameters {integration: vec4f, limits: vec4f, temporal: vec4f, counters: vec4u};
 @group(0) @binding(0) var<uniform> parameters: Parameters;
 @group(0) @binding(1) var<storage, read_write> particles: array<vec4f>;
-@group(0) @binding(2) var<storage, read_write> previous: array<vec4f>;
+${persistent ? '' : '@group(0) @binding(2) var<storage, read_write> previous: array<vec4f>;'}
 @group(0) @binding(3) var velocityField: texture_2d<f32>;
 @group(0) @binding(4) var nextVelocityField: texture_2d<f32>;
 @group(0) @binding(5) var<storage, read_write> diagnostics: array<vec4f>;
 @group(0) @binding(6) var<storage, read_write> statistics: array<atomic<u32>>;
+${
+  persistent
+    ? `
+@group(0) @binding(7) var<storage, read> activeIndices: array<u32>;
+@group(0) @binding(8) var<storage, read_write> survivorIndices: array<atomic<u32>>;
+@group(0) @binding(9) var<storage, read_write> survivorArguments: array<atomic<u32>>;
+`
+    : ''
+}
 ${SPHERICAL_FLOW_SAMPLING}
 fn fraction(elapsed: f32) -> f32 {
   return mix(parameters.temporal.x, parameters.temporal.y, clamp(elapsed / max(parameters.temporal.z, 1e-30), 0.0, 1.0));
@@ -63,10 +73,19 @@ fn trial(position: vec3f, elapsed: f32, deltaTime: f32) -> Trial {
 }
 @compute @workgroup_size(128)
 fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  ${
+    persistent
+      ? `
+  if (invocation.x >= activeIndices[0]) {return;}
+  let index = activeIndices[invocation.x + 1u];
+  `
+      : `
   let index = invocation.x;
   if (index >= parameters.counters.x) {return;}
+  `
+  }
   var particle = particles[index];
-  if (parameters.counters.w != 0u) {previous[index] = particle;}
+  ${persistent ? '' : 'if (parameters.counters.w != 0u) {previous[index] = particle;}'}
   var state = diagnostics[index];
   if (parameters.counters.z != 0u) {state.x = 0.0;}
   let startingAge = particle.w;
@@ -102,9 +121,23 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   }
   particles[index] = particle;
   diagnostics[index] = state;
-  atomicAdd(&statistics[u32(state.z)], 1u);
+  ${
+    persistent
+      ? `
+  if (state.z != 0.0) {
+    atomicSub(&statistics[0], 1u);
+    atomicAdd(&statistics[u32(state.z)], 1u);
+  } else if (state.x < parameters.temporal.z) {
+    let slot = atomicAdd(&survivorIndices[0], 1u);
+    atomicStore(&survivorIndices[slot + 1u], index);
+    atomicMax(&survivorArguments[0], slot / 128u + 1u);
+  }
+  `
+      : 'atomicAdd(&statistics[u32(state.z)], 1u);'
+  }
   if (state.z == 0.0 && state.x < parameters.temporal.z) {atomicAdd(&statistics[6], 1u);}
   atomicAdd(&statistics[7], accepted);
   atomicAdd(&statistics[8], rejected);
 }
 `;
+}

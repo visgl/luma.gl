@@ -277,6 +277,7 @@ struct View {size: vec4f, options: vec4f};
               ...sphericalProps,
               tolerance: controls.settings.tolerance,
               maximumAttempts: 16,
+              scheduling: controls.settings.scheduling === 'persistent' ? 'persistent' : 'dense',
               dispatchesPerReadback: controls.settings.dispatchesPerReadback
             })
           : new SphericalFlowGraph(device, {
@@ -343,6 +344,26 @@ struct View {size: vec4f, options: vec4f};
     historyWidth = 0;
     resizeHistory();
   }
+  // Opt-in fixed-work measurement through the normal globe frame loop.
+  const requestedBenchmark = new URLSearchParams(location.search).get('benchmarkScheduling');
+  const benchmarkMode =
+    requestedBenchmark === 'dense' || requestedBenchmark === 'persistent'
+      ? requestedBenchmark
+      : undefined;
+  const benchmarkFrames: number[] = [];
+  let benchmarkFrame = 0;
+  let benchmarkPreviousFrame = 0;
+  if (benchmarkMode === 'dense' || benchmarkMode === 'persistent') {
+    Object.assign(controls.settings, {
+      field: 'spherical',
+      integrator: 'rk45',
+      scheduling: benchmarkMode,
+      dispatchesPerReadback: 16,
+      particleCount: 65536,
+      paused: false,
+      timeScale: 1
+    });
+  }
   restart();
   let frames = 0;
   let lastReport = performance.now();
@@ -358,7 +379,7 @@ struct View {size: vec4f, options: vec4f};
       }
       // Discard long background-tab gaps; normal playback follows elapsed wall time.
       const frameSeconds = Math.min(0.1, Math.max(0, (now - previousFrame) / 1000));
-      let deltaTime = frameSeconds * controls.settings.timeScale;
+      let deltaTime = benchmarkMode ? 1 / 30 : frameSeconds * controls.settings.timeScale;
       previousFrame = now;
       resizeHistory();
       controls.redraw();
@@ -498,6 +519,30 @@ struct View {size: vec4f, options: vec4f};
       }
       screen.end();
       device.submit();
+      if (benchmarkMode) {
+        benchmarkFrame++;
+        if (benchmarkFrame > 60) benchmarkFrames.push(now - benchmarkPreviousFrame);
+        benchmarkPreviousFrame = now;
+        if (benchmarkFrames.length === 180) {
+          const sorted = [...benchmarkFrames].sort((left, right) => left - right);
+          const report = document.createElement('pre');
+          report.id = 'globe-benchmark-result';
+          report.textContent = JSON.stringify({
+            scheduling: benchmarkMode,
+            width: canvas.width,
+            height: canvas.height,
+            particleCount: activeCount,
+            time: graph.time,
+            queuedTime,
+            meanMilliseconds: sorted.reduce((total, value) => total + value, 0) / sorted.length,
+            medianMilliseconds: sorted[90],
+            p95Milliseconds: sorted[170],
+            frameMilliseconds: benchmarkFrames
+          });
+          document.body.append(report);
+          return;
+        }
+      }
       frames++;
       if (now - lastReport > 500) {
         status.textContent = `${activeCount.toLocaleString()} particles · ${Math.round((frames * 1000) / (now - lastReport))} fps · ${activeIntegrator.toUpperCase()}${activeField === 'weather' ? ' · synthetic winds · drag to rotate' : ''}${controls.settings.paused ? ' · paused' : ''}`;

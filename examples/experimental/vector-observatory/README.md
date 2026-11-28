@@ -27,7 +27,7 @@ domain, purple means missing data, and red means tolerance/numerical failure.
 Reseed starts a new release. Tolerance controls integration error, not interpolation
 or total trajectory error.
 
-RK45 performs one bounded dispatch per frame, reads nine counters (36 bytes), and
+RK45 submits one bounded batch per frame, reads the batch counters, and
 shows pending particles plus queued simulation time when work falls behind.
 Particle positions stay on the GPU. The clock advances only when a requested
 horizon completes; particles can have different intermediate times while pending.
@@ -189,4 +189,30 @@ Cartesian RK45 offers **Persistent · survivors**, which initializes a queue onc
 per requested horizon and carries unfinished stable IDs through bounded continuation.
 Graph/Trace show the skipped initialization pass on later dispatches.
 The spherical preset now also offers RK45 with a physical local-error tolerance,
-Diagnostics and Graph/Trace while retaining great-circle trails. The batch control applies to spherical RK45 as well. Spherical scheduling is dense.
+Diagnostics and Graph/Trace while retaining great-circle trails. The spherical preset supports dense and persistent scheduling and the same batch control.
+
+
+### Globe whole-frame comparison
+
+Open the example with `?benchmarkScheduling=dense` or
+`?benchmarkScheduling=persistent`. The benchmark sets 65,536 particles, RK45 and
+16 dispatches per readback. The ordinary globe loop advances the same fixed
+simulation time in both modes. After 60 warm-up frames the page records 180
+animation-frame intervals, including solver synchronization, trail history, globe
+rendering and browser frame pacing. The page prints a JSON report and stops.
+
+Measured on the same Mac in the in-app browser at 2560 × 1440 on November 28, 2026.
+Runs were sequential in dense/persistent/persistent/dense order. Each completed
+8 seconds of simulation with negligible queued time.
+
+| Run | Mean frame (ms) | Median (ms) | p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Dense 1 | 16.66 | 16.70 | 17.60 |
+| Persistent 1 | 16.67 | 16.70 | 17.60 |
+| Persistent 2 | 16.67 | 16.70 | 17.60 |
+| Dense 2 | 16.85 | 16.70 | 17.70 |
+
+The mean ratio is about 1.005×. Both modes ran near 60 FPS, so the experiment
+shows no meaningful whole-frame speedup at this workload. Frame pacing can hide
+GPU headroom below the display interval. A heavier workload or an uncapped GPU
+completion measurement would be needed to quantify that headroom.

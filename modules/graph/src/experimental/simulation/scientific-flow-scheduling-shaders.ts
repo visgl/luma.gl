@@ -1,12 +1,13 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Compact pending stable IDs and construct a GPU-only indirect dispatch record. */
-export function makeScientificFlowSchedulingShader(persistent: boolean): string {
+export function makeScientificFlowSchedulingShader(persistent: boolean, spherical = false): string {
   return /* wgsl */ `
 struct Parameters {
-  domain: vec4<f32>, integration: vec4<f32>, counters: vec4<u32>, temporal: vec4<f32>
+  ${spherical ? 'integration: vec4<f32>, limits: vec4<f32>, temporal: vec4<f32>, counters: vec4<u32>' : 'domain: vec4<f32>, integration: vec4<f32>, counters: vec4<u32>, temporal: vec4<f32>'}
 };
 @group(0) @binding(0) var<uniform> parameters: Parameters;
 @group(0) @binding(1) var<storage, read> particles: array<vec4<f32>>;
@@ -20,9 +21,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let index = invocation.x;
   if (index >= parameters.counters.x) {return;}
   // Lifecycle applies to every stable slot, even if it is absent from the queue.
-  if ((parameters.counters.w & 2u) != 0u) {previous[index] = particles[index];}
+  if (!${spherical} && (parameters.counters.w & 2u) != 0u) {previous[index] = particles[index];}
   var state = diagnostics[index];
-  if ((parameters.counters.w & 1u) != 0u) {
+  if ((parameters.counters.${spherical ? 'z' : 'w'} & 1u) != 0u) {
     state.x = 0.0;
     diagnostics[index] = state;
   }
