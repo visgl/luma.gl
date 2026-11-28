@@ -136,8 +136,8 @@ include those copies and readback. Public particle slots remain stable and queue
 order remains unspecified. Treat borrowed output/diagnostic buffers as read-only
 while the tracer owns a request; external edits invalidate its survivor queue.
 [Matched-error measurements](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/advection-survivor-scheduling.md)
-show a 1.45× end-to-end speedup over dense scheduling in the batched sparse fixture;
-single-dispatch results are inconclusive.
+show a 2.57× end-to-end speedup in the repeat (1.45× initially) over dense scheduling
+in the batched sparse fixture; single-dispatch results vary across runs.
 
 ## Graph inspection and tracing
 

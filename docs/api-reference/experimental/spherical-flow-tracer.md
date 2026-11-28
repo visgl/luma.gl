@@ -85,3 +85,8 @@ error. Separate sampled solid-body rotations cross both poles and the seam and
 qualify grid refinement at fixed tolerance. Temporal tests use the exact integral
 of linearly changing velocity and a physical lifetime endpoint. These are
 manufactured-field checks, not observational or multi-hardware qualification.
+
+The [accuracy/cost benchmark](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/spherical-rk45-cost.md)
+reports actual trajectory error separately from local tolerance. Tightening tolerance
+from 1e-3 to 1e-7 reduced error from 8.49e-5 to 2.21e-7 on the manufactured field,
+while mean end-to-end tracing time increased from 1.20 to 5.37 ms for 4,096 particles.

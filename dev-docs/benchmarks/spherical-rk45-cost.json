@@ -1,0 +1,130 @@
+{
+  "benchmark": "SPHERICAL_RK45_ACCURACY_COST",
+  "device": {
+    "type": "webgpu",
+    "vendor": "apple",
+    "renderer": "",
+    "version": "",
+    "gpu": "apple",
+    "gpuType": "unknown",
+    "gpuBackend": "unknown",
+    "gpuArchitecture": "metal-3",
+    "fallback": false,
+    "featureLevel": "max",
+    "subgroupMinSize": 32,
+    "subgroupMaxSize": 32,
+    "shadingLanguage": "wgsl",
+    "shadingLanguageVersion": 100
+  },
+  "particleCount": 4096,
+  "durationSeconds": 2,
+  "radius": 1,
+  "grid": [
+    3,
+    3
+  ],
+  "field": "constant world velocity (0,0,1), projected into tangent plane",
+  "reference": "x=sech(t), y=0, z=tanh(t); no spatial interpolation error",
+  "wallTimeIncludes": "encoding, submission, counters and optional timing readback; excludes allocation, final particle readback and rendering",
+  "samples": [
+    {
+      "tolerance": 1e-07,
+      "calls": 7,
+      "acceptedSteps": 65536,
+      "rejectedSteps": 36864,
+      "maximumError": 2.214135043435962e-07,
+      "gpuMilliseconds": 0.596488,
+      "wallMilliseconds": 5,
+      "counterReadbackBytes": 252,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 1e-05,
+      "calls": 2,
+      "acceptedSteps": 24576,
+      "rejectedSteps": 8192,
+      "maximumError": 4.6467029432709736e-06,
+      "gpuMilliseconds": 0.18237199999999998,
+      "wallMilliseconds": 1.5999999940395355,
+      "counterReadbackBytes": 72,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 0.001,
+      "calls": 1,
+      "acceptedSteps": 12288,
+      "rejectedSteps": 0,
+      "maximumError": 8.49151502460355e-05,
+      "gpuMilliseconds": 0.081124,
+      "wallMilliseconds": 1.199999988079071,
+      "counterReadbackBytes": 36,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 0.001,
+      "calls": 1,
+      "acceptedSteps": 12288,
+      "rejectedSteps": 0,
+      "maximumError": 8.49151502460355e-05,
+      "gpuMilliseconds": 0.081332,
+      "wallMilliseconds": 1.5,
+      "counterReadbackBytes": 36,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 1e-05,
+      "calls": 2,
+      "acceptedSteps": 24576,
+      "rejectedSteps": 8192,
+      "maximumError": 4.6467029432709736e-06,
+      "gpuMilliseconds": 0.18712299999999998,
+      "wallMilliseconds": 2,
+      "counterReadbackBytes": 72,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 1e-07,
+      "calls": 7,
+      "acceptedSteps": 65536,
+      "rejectedSteps": 36864,
+      "maximumError": 2.214135043435962e-07,
+      "gpuMilliseconds": 0.5970319999999999,
+      "wallMilliseconds": 5.199999988079071,
+      "counterReadbackBytes": 252,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 1e-07,
+      "calls": 7,
+      "acceptedSteps": 65536,
+      "rejectedSteps": 36864,
+      "maximumError": 2.214135043435962e-07,
+      "gpuMilliseconds": 0.5979490000000001,
+      "wallMilliseconds": 5.9000000059604645,
+      "counterReadbackBytes": 252,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 1e-05,
+      "calls": 2,
+      "acceptedSteps": 24576,
+      "rejectedSteps": 8192,
+      "maximumError": 4.6467029432709736e-06,
+      "gpuMilliseconds": 0.181664,
+      "wallMilliseconds": 1.5999999940395355,
+      "counterReadbackBytes": 72,
+      "particleStateBytes": 196608
+    },
+    {
+      "tolerance": 0.001,
+      "calls": 1,
+      "acceptedSteps": 12288,
+      "rejectedSteps": 0,
+      "maximumError": 8.49151502460355e-05,
+      "gpuMilliseconds": 0.080291,
+      "wallMilliseconds": 0.9000000059604645,
+      "counterReadbackBytes": 36,
+      "particleStateBytes": 196608
+    }
+  ]
+}

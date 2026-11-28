@@ -1,7 +1,7 @@
 # Persistent survivor queue measurements
 
 Native Apple WebGPU (`metal-3`), measured on 2026-11-27 on a shared host.
-[Raw samples](advection-survivor-scheduling.json) retain adapter metadata, accuracy,
+[Repeat samples](advection-survivor-scheduling.json) retain adapter metadata, accuracy,
 work, memory, GPU time and end-to-end wall time. Each variant discards one warmup
 and retains five samples, alternating forward/reverse scheduling and batch order.
 
@@ -13,23 +13,31 @@ matched accepted/rejected integration work.
 
 | Active fraction | Batch | Dense wall ms | Full-scan active wall ms | Persistent wall ms | Dense / persistent |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 100% | 1 | 155.04 | 167.32 | 148.86 | 1.04× |
-| 100% | 16 | 48.86 | 56.38 | 35.76 | 1.37× |
-| 1/64 | 1 | 135.60 | 149.26 | 130.08 | 1.04× |
-| 1/64 | 16 | 36.14 | 53.80 | 24.92 | 1.45× |
+| 100% | 1 | 65.62 | 85.98 | 61.18 | 1.07× |
+| 100% | 16 | 37.74 | 47.78 | 23.82 | 1.58× |
+| 1/64 | 1 | 80.42 | 77.90 | 54.26 | 1.48× |
+| 1/64 | 16 | 38.28 | 40.82 | 14.92 | 2.57× |
 
 **The batched sparse case shows an end-to-end improvement**, not just fewer GPU
-workgroups: persistent samples span 20.40–29.10 ms versus 30.90–40.40 ms dense.
-Its mean is 31% below dense and 54% below full-scan active scheduling. Compute time
-also drops from 12.44 ms dense / 20.16 ms active to 2.75 ms persistent. Dense and
+workgroups: persistent samples span 13.60–17.90 ms versus 33.40–42.20 ms dense.
+Its mean is 61% below dense and 63% below full-scan active scheduling (2.74×). Compute
+time also drops from 25.24 ms dense / 25.27 ms active to 3.26 ms persistent. Dense and
 persistent launch 40,960 and 1,024 integration workgroups respectively; persistent
 adds one full-slot initialization scan instead of 80 repeated scans.
 
-The fully active batched mean improves too, but its samples overlap. Single-dispatch
-wall samples are noisy and overlap substantially; the approximately 4% mean
-improvement does not establish a clear benefit. Dense remains the default. These
-five samples on one adapter are evidence for this fixture, not a universal speedup.
-No comparison mixes measurements from the previous PR with this run.
+The fully active batched mean improves too, but its samples overlap. The sparse
+single-dispatch repeat also improves, while fully active single-dispatch samples
+overlap. Dense remains the default: these five samples on one adapter are evidence
+for this fixture, not a universal speedup.
+
+This repeat ran after this worktree's build, Node and GPU suites finished and its
+animated preview closed. Other activity on the shared host was not controlled.
+The [initial run](advection-survivor-scheduling-initial.json), which overlapped local
+validation, measured 36.14 / 53.80 / 24.92 ms for sparse batch-16 dense / active /
+persistent (1.45× over dense). Both runs show an end-to-end benefit in that case,
+but their differing absolute timings and single-dispatch results demonstrate host
+variability. Comparisons above use only matched variants within the repeat, not
+measurements from the previous PR or a mixture of runs.
 
 Wall time includes initialization, survivor maintenance, queue resets, full previous
 state copies, encoding, submission, counter synchronization and optional timing
