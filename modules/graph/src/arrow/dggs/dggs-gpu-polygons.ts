@@ -489,9 +489,31 @@ function getDggsCellPathExtractionSource(
   encoding: DggsCellEncoding,
   coordinateFormat: DggsCellPathCoordinateFormat
 ): string {
-  const boundaryFunction = getDggsBoundaryFunction(encoding, coordinateFormat);
   const cellPolygonPointCount = getDggsCellPolygonPointCount(encoding);
   const pathValueType = coordinateFormat === 'fp64-split' ? 'vec4f' : 'vec2f';
+  const boundaryFunction = getDggsBoundaryFunction(encoding, coordinateFormat);
+  const packBoundaryPoint = (point: string) =>
+    coordinateFormat === 'fp64-split' ? `dggs_boundary_point_to_fp64_split(${point})` : point;
+  const writePath =
+    encoding === 'h3'
+      ? /* wgsl */ `
+  let boundary = dggs_h3_prepare_boundary(cellKey);
+  let firstPoint = ${packBoundaryPoint('dggs_h3_project_boundary_vertex(boundary, 0u)')};
+  dggsCellPathValues[pathStart] = firstPoint;
+  for (var pointIndex = 1u; pointIndex < 6u; pointIndex += 1u) {
+    dggsCellPathValues[pathStart + pointIndex] =
+      ${packBoundaryPoint('dggs_h3_project_boundary_vertex(boundary, pointIndex)')};
+  }
+  dggsCellPathValues[pathStart + 6u] = firstPoint;`
+      : /* wgsl */ `
+  var pointIndex = 0u;
+  loop {
+    if (pointIndex >= ${cellPolygonPointCount}u) {
+      break;
+    }
+    dggsCellPathValues[pathStart + pointIndex] = ${boundaryFunction}(cellKey, pointIndex);
+    pointIndex += 1u;
+  }`;
   return /* wgsl */ `\
 @group(0) @binding(0) var<storage, read> dggsCellKeys : array<vec2u>;
 @group(0) @binding(1) var<storage, read> dggsCellExtractionConfig : array<u32>;
@@ -506,14 +528,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId : vec3u) {
 
   let cellKey = dggs_u64_from_little_endian_words(dggsCellKeys[cellIndex]);
   let pathStart = cellIndex * ${cellPolygonPointCount}u;
-  var pointIndex = 0u;
-  loop {
-    if (pointIndex >= ${cellPolygonPointCount}u) {
-      break;
-    }
-    dggsCellPathValues[pathStart + pointIndex] = ${boundaryFunction}(cellKey, pointIndex);
-    pointIndex += 1u;
-  }
+${writePath}
 }
 `;
 }

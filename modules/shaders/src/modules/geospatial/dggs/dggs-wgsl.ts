@@ -249,9 +249,9 @@ struct DggsH3FaceIJKOverage {
   overage : u32,
 };
 
-struct DggsH3BoundaryVertex {
+struct DggsH3Boundary {
+  coords : array<vec3i, 6>,
   face : u32,
-  coord : vec3i,
   resolution : u32,
   valid : u32,
 };
@@ -1820,10 +1820,11 @@ fn dggs_h3_get_boundary_center_face_ijk(index: vec2u) -> DggsH3FaceIJK {
   return faceIJK;
 }
 
-fn dggs_h3_get_boundary_vertex(index: vec2u, vertexIndex: u32) -> DggsH3BoundaryVertex {
+fn dggs_h3_prepare_boundary(index: vec2u) -> DggsH3Boundary {
+  var boundary: DggsH3Boundary;
   let center = dggs_h3_get_boundary_center_face_ijk(index);
   if (center.valid == 0u) {
-    return DggsH3BoundaryVertex(0u, vec3i(0), 0u, 0u);
+    return boundary;
   }
 
   let cellResolution = dggs_h3_get_resolution(index);
@@ -1834,30 +1835,22 @@ fn dggs_h3_get_boundary_vertex(index: vec2u, vertexIndex: u32) -> DggsH3Boundary
     adjustedResolution += 1u;
   }
 
-  let vertexCoord = dggs_h3_ijk_normalize(
-    centerCoord + dggs_h3_get_vertex_offset(cellResolution, vertexIndex)
-  );
   let maximumDimension = dggs_h3_get_max_dim_by_cii_resolution(adjustedResolution) * 3;
-  let vertexDimension = vertexCoord.x + vertexCoord.y + vertexCoord.z;
-  if (vertexDimension >= maximumDimension) {
-    return DggsH3BoundaryVertex(center.face, vertexCoord, adjustedResolution, 0u);
+  for (var vertexIndex = 0u; vertexIndex < 6u; vertexIndex += 1u) {
+    let vertexCoord = dggs_h3_ijk_normalize(
+      centerCoord + dggs_h3_get_vertex_offset(cellResolution, vertexIndex)
+    );
+    let vertexDimension = vertexCoord.x + vertexCoord.y + vertexCoord.z;
+    if (vertexDimension >= maximumDimension) {
+      return boundary;
+    }
+    boundary.coords[vertexIndex] = vertexCoord;
   }
 
-  return DggsH3BoundaryVertex(center.face, vertexCoord, adjustedResolution, 1u);
-}
-
-fn dggs_h3_is_single_face_boundary(index: vec2u) -> bool {
-  var vertexIndex = 0u;
-  loop {
-    if (vertexIndex >= 6u) {
-      break;
-    }
-    if (dggs_h3_get_boundary_vertex(index, vertexIndex).valid == 0u) {
-      return false;
-    }
-    vertexIndex += 1u;
-  }
-  return true;
+  boundary.face = center.face;
+  boundary.resolution = adjustedResolution;
+  boundary.valid = 1u;
+  return boundary;
 }
 
 fn dggs_h3_ijk_to_hex2d(coord: vec3i) -> vec2f {
@@ -1979,14 +1972,17 @@ fn dggs_h3_hex2d_to_lnglat(point: vec2f, face: u32, resolution: u32, substrate: 
   );
 }
 
-fn dggs_h3_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
-  if (!dggs_h3_is_single_face_boundary(index)) {
+fn dggs_h3_project_boundary_vertex(boundary: DggsH3Boundary, vertexIndex: u32) -> vec2f {
+  if (boundary.valid == 0u) {
     return vec2f(0.0);
   }
 
-  let vertex = dggs_h3_get_boundary_vertex(index, vertexIndex % 6u);
-  let hexPoint = dggs_h3_ijk_to_hex2d(vertex.coord);
-  return dggs_h3_hex2d_to_lnglat(hexPoint, vertex.face, vertex.resolution, true);
+  let hexPoint = dggs_h3_ijk_to_hex2d(boundary.coords[vertexIndex]);
+  return dggs_h3_hex2d_to_lnglat(hexPoint, boundary.face, boundary.resolution, true);
+}
+
+fn dggs_h3_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
+  return dggs_h3_project_boundary_vertex(dggs_h3_prepare_boundary(index), vertexIndex % 6u);
 }
 
 fn dggs_h3_get_boundary_point_fp64_split(index: vec2u, vertexIndex: u32) -> vec4f {

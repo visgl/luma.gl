@@ -43,13 +43,25 @@ Draws, picking, and other vendors remain unmeasured.
 LUMA_TEST_BROWSER_BENCHMARKS=true yarn exec vitest run --project headless --reporter=verbose h3-boundary-resident-benchmark
 ```
 
-## Follow-up
+## H3 decode once per cell
 
-Start with the existing H3 shader. The extraction loop calls the boundary point
-function for each corner and closure. That function checks all six corners and
-reconstructs cell coordinates again. Hoist cell decoding, substrate setup and
-boundary classification to one invocation per cell. Write the first corner
-again for closure. Re-run the resident benchmark before adding a compaction pass.
+The extraction kernel now decodes and validates a single-face H3 boundary once per
+cell, projects six corners and copies the first projected point to close the path.
+The same Apple WebGPU adapter and benchmark provided a fresh baseline and two
+optimized runs. Each entry is a median in milliseconds.
+
+| Cells | Original GPU | Optimized GPU | Optimized repeat | CPU plus upload, optimized runs |
+| ---: | ---: | ---: | ---: | ---: |
+| 16,384 | 51.2 | 13.2 | 12.9 | 29.6 / 29.4 |
+| 131,072 | 325.3 | 22.5 | 21.5 | 228.3 / 238.7 |
+
+This is a 3.9–4.0× improvement for 16K cells and a 14.5–15.1× improvement
+for 131K cells. The CPU baseline also varied across runs. This capture measures
+the existing supported single-face, resolution-9 batch and ends at a queue fence.
+The boundary parity suite checks regular and unsupported inputs in both output
+layouts, including a Class III cell.
+
+## Follow-up
 
 A shared resident boundary contributor in `gpu-dggs` could borrow packed keys,
 emit vertices and a count or mask, and preserve source chunks. The family
