@@ -68,7 +68,8 @@ export {
   bloomCompositeShaderPass,
   bloomLow,
   createBloomCompositeShaderPass,
-  hdrBloom
+  hdrBloom,
+  multiscaleBloomEffect
 } from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export type {
   DofProps,

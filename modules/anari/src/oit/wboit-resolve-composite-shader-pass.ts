@@ -78,6 +78,7 @@ export const wboitResolveEffect = {
   ]
 } as const satisfies EffectDefinition<never>;
 
+/** @deprecated Use `wboitResolveEffect` with `EffectRenderer`. */
 export function createWBOITResolveCompositeShaderPass(): CompositeShaderPass {
   return {name: wboitResolveEffect.name, steps: wboitResolveEffect.passes.map(pass => ({...pass}))};
 }

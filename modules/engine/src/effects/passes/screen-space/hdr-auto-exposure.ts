@@ -372,6 +372,7 @@ function configureHDRAutoExposure(
   };
 }
 
+/** @deprecated Use `hdrAutoExposure` with `EffectRenderer`. */
 export function createHDRAutoExposureCompositeShaderPass(
   options: HDRAutoExposureCompositeShaderPassOptions = {}
 ): CompositeShaderPass<

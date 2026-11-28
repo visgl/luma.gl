@@ -3,11 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {
-  bloomCompositeShaderPass,
-  createCameraReprojectionTAACompositeShaderPass
-} from '@luma.gl/engine/effects';
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {multiscaleBloomEffect, cameraReprojectionTaa} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
 import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from './renderers';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumericArray} from '@math.gl/core/types';
@@ -29,8 +26,8 @@ type FrameResources = {
   framebuffer: Framebuffer | null;
   colorTexture: Texture | null;
   depthTexture: Texture | null;
-  bloomRenderer: ShaderPassRenderer | null;
-  temporalAntialiasingRenderer: ShaderPassRenderer | null;
+  bloomRenderer: EffectRenderer | null;
+  temporalAntialiasingRenderer: EffectRenderer | null;
   temporalAntialiasingState: TemporalAntialiasingState;
 };
 
@@ -271,16 +268,16 @@ export class ANARIRenderingRuntime implements ANARIRendererRuntime {
     return frameResources.depthTexture;
   }
 
-  private getBloomRenderer(frameResources: FrameResources): ShaderPassRenderer {
-    frameResources.bloomRenderer ||= new ShaderPassRenderer(this.device, {
-      shaderPasses: [bloomCompositeShaderPass]
+  private getBloomRenderer(frameResources: FrameResources): EffectRenderer {
+    frameResources.bloomRenderer ||= new EffectRenderer(this.device, {
+      effects: [multiscaleBloomEffect]
     });
     return frameResources.bloomRenderer;
   }
 
-  private getTemporalAntialiasingRenderer(frameResources: FrameResources): ShaderPassRenderer {
-    frameResources.temporalAntialiasingRenderer ||= new ShaderPassRenderer(this.device, {
-      shaderPasses: [createCameraReprojectionTAACompositeShaderPass()],
+  private getTemporalAntialiasingRenderer(frameResources: FrameResources): EffectRenderer {
+    frameResources.temporalAntialiasingRenderer ||= new EffectRenderer(this.device, {
+      effects: [cameraReprojectionTaa],
       colorFormat: 'rgba16float'
     });
     return frameResources.temporalAntialiasingRenderer;

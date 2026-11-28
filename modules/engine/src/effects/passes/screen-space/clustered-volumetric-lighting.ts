@@ -806,6 +806,7 @@ function configureClusteredVolumetricLighting(
   };
 }
 
+/** @deprecated Use `clusteredVolumetricLighting` with `EffectRenderer`. */
 export function createClusteredVolumetricLightingCompositeShaderPass(
   options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
 ): CompositeShaderPass<

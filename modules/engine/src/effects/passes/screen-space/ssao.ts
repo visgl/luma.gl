@@ -114,6 +114,7 @@ export const ssaoEffect = {
   'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'
 >;
 
+/** @deprecated Use `ssaoEffect` with `EffectRenderer`. */
 export function createSSAOCompositeShaderPass(options: SSAOCompositeShaderPassOptions = {}) {
   return resolveEffect(ssaoEffect.configure(options));
 }

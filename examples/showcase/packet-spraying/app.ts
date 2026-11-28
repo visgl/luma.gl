@@ -10,13 +10,11 @@ import type {
   RenderPipelineParameters,
   TextureFormatColor
 } from '@luma.gl/core';
-import {
-  bloomCompositeShaderPass,
-  createBloomCompositeShaderPass,
-  toneMapping
-} from '@luma.gl/engine/effects';
+import {multiscaleBloomEffect, hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
+  type EffectDefinition,
+  configureEffect,
   AnimationLoopTemplate,
   colorPicking,
   CubeGeometry,
@@ -26,7 +24,7 @@ import {
   ModelNode,
   OrbitControls,
   PickingManager,
-  ShaderPassRenderer,
+  EffectRenderer,
   ShaderInputs,
   SphereGeometry,
   TruncatedConeGeometry
@@ -66,7 +64,7 @@ import {
   wboit,
   wboitPlugin
 } from '@luma.gl/anari';
-import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shaders';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
@@ -552,7 +550,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly sceneColorFormat: TextureFormatColor;
   readonly sceneFramebuffer: Framebuffer;
   readonly glassBackfaceFramebuffer: Framebuffer;
-  readonly postprocessingRenderer: ShaderPassRenderer;
+  readonly postprocessingRenderer: EffectRenderer;
   readonly aBufferRenderer: ABufferRenderer | null;
   readonly weightedBlendedRenderer: WBOITRenderer | null;
   sceneTexture: Texture;
@@ -842,8 +840,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       depthStencilAttachment: 'depth24plus'
     });
     this.environmentTexture = makeStudioEnvironmentTexture(device);
-    this.postprocessingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [makeBloomPipeline(this.sceneColorFormat, this.renderProfile), toneMapping],
+    this.postprocessingRenderer = new EffectRenderer(device, {
+      effects: [makeBloomPipeline(this.sceneColorFormat, this.renderProfile), toneMappingEffect],
       colorFormat: this.sceneColorFormat
     });
 
@@ -3741,20 +3739,20 @@ function makeBalancedEmissionColor(color: Color, alpha: number): Color {
 function makeBloomPipeline(
   colorFormat: TextureFormatColor,
   renderProfile: NetworkRenderProfile
-): CompositeShaderPass {
+): EffectDefinition {
   const bloomPipeline = renderProfile.handheld
-    ? createBloomCompositeShaderPass({
+    ? configureEffect(hdrBloom, {
         blurAlgorithm: 'dual-kawase',
         colorFormat,
         quality: renderProfile.bloomQuality,
         resolutionScale: renderProfile.bloomResolutionScale
       })
-    : bloomCompositeShaderPass;
+    : multiscaleBloomEffect;
 
   return {
     ...bloomPipeline,
-    renderTargets: Object.fromEntries(
-      Object.entries(bloomPipeline.renderTargets ?? {}).map(([targetName, renderTarget]) => [
+    resources: Object.fromEntries(
+      Object.entries(bloomPipeline.resources).map(([targetName, renderTarget]) => [
         targetName,
         {...renderTarget, format: colorFormat}
       ])

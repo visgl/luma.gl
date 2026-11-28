@@ -4,7 +4,7 @@
 
 import type {NumericArray} from '@math.gl/core/types';
 import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
-import {persistenceEffect} from '@luma.gl/engine/effects';
+import {persistence} from '@luma.gl/engine/effects';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -14,7 +14,7 @@ import {
   makeRandomGenerator,
   loadImageBitmap,
   BackgroundTextureModel,
-  ShaderPassRenderer
+  EffectRenderer
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core/matrix';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
@@ -54,7 +54,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   clearedPersistenceFramebuffer: Framebuffer;
   accumulatedTextureModel: BackgroundTextureModel;
   currentSceneTextureModel: BackgroundTextureModel;
-  persistenceRenderers: [ShaderPassRenderer, ShaderPassRenderer];
+  persistenceRenderers: [EffectRenderer, EffectRenderer];
   persistenceRendererIndex = 0;
   previousPersistenceTexture: Texture | null = null;
   persistenceFramebufferSize: [number, number] | null = null;
@@ -123,8 +123,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.mainFramebuffer.colorAttachments[0].texture
     );
     this.persistenceRenderers = [
-      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]}),
-      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]})
+      new EffectRenderer(device, {effects: [persistence]}),
+      new EffectRenderer(device, {effects: [persistence]})
     ];
 
     const dt = 0.0125;

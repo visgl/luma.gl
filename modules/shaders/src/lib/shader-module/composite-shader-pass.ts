@@ -37,7 +37,10 @@ export type CompositeShaderPassComputeOptimization<TargetNameT extends string = 
   workgroupSize: readonly [number, number];
 };
 
-/** Declarative composition of shader passes with owned targets and optional compute execution. */
+/**
+ * Composition format accepted by ShaderPassRenderer. Use EffectDefinition from
+ * @luma.gl/engine to author new fullscreen effect chains.
+ */
 export type CompositeShaderPass<TargetNameT extends string = string> = {
   name: string;
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;

@@ -608,6 +608,7 @@ function configureSSGI(
   };
 }
 
+/** @deprecated Use `ssgi` with `EffectRenderer`. */
 export function createSSGICompositeShaderPass(
   options: SSGICompositeShaderPassOptions = {}
 ): CompositeShaderPass<

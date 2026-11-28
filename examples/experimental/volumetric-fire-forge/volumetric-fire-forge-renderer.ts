@@ -10,8 +10,8 @@ import {
   type Sampler,
   Texture
 } from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
-import {CubeGeometry, Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
+import {configureEffect, CubeGeometry, Model, ShaderInputs, EffectRenderer} from '@luma.gl/engine';
 import type {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumberArray3} from '@math.gl/core/types';
@@ -20,7 +20,7 @@ import {
   VOLUMETRIC_FIRE_FORGE_VOLUME_BOUNDS
 } from './volumetric-fire-forge-scene';
 import {
-  createVolumetricFireCompositeCompositeShaderPass,
+  volumetricFireCompositeEffect,
   forgeSceneUniforms,
   FORGE_SCENE_SHADER,
   getVolumetricFireDebugMode,
@@ -63,8 +63,8 @@ export class VolumetricFireForgeRenderer {
   readonly device: Device;
   readonly sceneColorFormat: 'rgba8unorm' | 'rgba16float';
   readonly sceneModel: Model;
-  readonly volumeRenderer: ShaderPassRenderer;
-  readonly postprocessingRenderer: ShaderPassRenderer;
+  readonly volumeRenderer: EffectRenderer;
+  readonly postprocessingRenderer: EffectRenderer;
   readonly volumeSampler: Sampler;
 
   sceneFramebuffer: Framebuffer;
@@ -85,9 +85,9 @@ export class VolumetricFireForgeRenderer {
     let sceneTargets: SceneTargets | undefined;
     const instanceBuffers: Buffer[] = [];
     let sceneModel: Model | undefined;
-    let volumeRenderer: ShaderPassRenderer | undefined;
+    let volumeRenderer: EffectRenderer | undefined;
     let volumeSampler: Sampler | undefined;
-    let postprocessingRenderer: ShaderPassRenderer | undefined;
+    let postprocessingRenderer: EffectRenderer | undefined;
     try {
       sceneTargets = createSceneTargets(
         device,
@@ -137,8 +137,8 @@ export class VolumetricFireForgeRenderer {
           depthWriteEnabled: true
         }
       });
-      volumeRenderer = new ShaderPassRenderer(device, {
-        shaderPasses: [createVolumetricFireCompositeCompositeShaderPass()],
+      volumeRenderer = new EffectRenderer(device, {
+        effects: [volumetricFireCompositeEffect],
         colorFormat: this.sceneColorFormat
       });
       volumeSampler = device.createSampler({
@@ -149,10 +149,10 @@ export class VolumetricFireForgeRenderer {
         addressModeV: 'clamp-to-edge',
         addressModeW: 'clamp-to-edge'
       });
-      postprocessingRenderer = new ShaderPassRenderer(device, {
-        shaderPasses: [
-          createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
-          toneMapping
+      postprocessingRenderer = new EffectRenderer(device, {
+        effects: [
+          configureEffect(hdrBloom, {colorFormat: this.sceneColorFormat}),
+          toneMappingEffect
         ],
         colorFormat: this.sceneColorFormat
       });

@@ -111,6 +111,7 @@ function configureVolumetricFog(): EffectDefinition<'fogHistory'> {
   };
 }
 
+/** @deprecated Use `volumetricFog` with `EffectRenderer`. */
 export function createVolumetricFogCompositeShaderPass(
   options: VolumetricFogCompositeShaderPassOptions = {}
 ): CompositeShaderPass<'fogHistory'> {

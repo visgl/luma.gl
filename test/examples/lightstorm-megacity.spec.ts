@@ -5,13 +5,13 @@
 import {describe, expect, test} from 'vitest';
 import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {CubeGeometry, Model, ShaderPassRenderer} from '@luma.gl/engine';
+import {CubeGeometry, Model, EffectRenderer} from '@luma.gl/engine';
 import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/anari';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core/matrix';
 import LightstormMegacityAnimationLoopTemplate from '../../examples/showcase/lightstorm-megacity/app';
 import {
-  createLightstormDeferredLightingCompositeShaderPass,
+  makeLightstormDeferredLightingEffect,
   LIGHTSTORM_LIGHT_MARKER_SHADER,
   LIGHTSTORM_RENDER_SHADER
 } from '../../examples/showcase/lightstorm-megacity/lightstorm-shaders';
@@ -288,8 +288,8 @@ describe('Lightstorm Megacity', () => {
         maxLightCount: 1
       });
       resourcesToDestroy.push(clusteredLightGrid);
-      const deferredLightingRenderer = new ShaderPassRenderer(device, {
-        shaderPasses: [createLightstormDeferredLightingCompositeShaderPass('rgba8unorm')],
+      const deferredLightingRenderer = new EffectRenderer(device, {
+        effects: [makeLightstormDeferredLightingEffect('rgba8unorm')],
         colorFormat: 'rgba8unorm'
       });
       resourcesToDestroy.push(deferredLightingRenderer);
