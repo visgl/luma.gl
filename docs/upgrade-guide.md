@@ -39,6 +39,12 @@ Use hyphenated projection subpaths such as
   offset by the index element size. Use `firstVertex` for non-indexed draws.
 - If application code draws a model’s retained pipeline directly, pass the model’s
   current draw parameters. Calls through `Model.draw()` do this automatically.
+- On WebGL, luma.gl now owns the uniform block binding points of the `WebGLProgram`
+  behind a render pipeline. A draw assigns a binding point only when it differs from
+  the one luma.gl last assigned, so it no longer undoes changes that application code
+  made through `renderPipeline.handle`. Code that calls `gl.uniformBlockBinding()` on
+  a luma.gl program must call `renderPipeline.invalidateUniformBlockBindings()`
+  afterwards. See [WebGL uniform block binding points](/docs/api-reference/core/resources/render-pipeline#webgl-uniform-block-binding-points).
 
 - Built-in `create…CompositeShaderPass` effect factories are deprecated. Use the
   corresponding definition with `EffectRenderer`, passing configuration inline

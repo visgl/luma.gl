@@ -48,6 +48,40 @@ void main() {
 }
 `;
 
+const VS_FULLSCREEN = /* glsl */ `\
+#version 300 es
+
+const vec2 POSITIONS[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+
+void main() {
+  gl_Position = vec4(POSITIONS[gl_VertexID], 0.0, 1.0);
+}
+`;
+
+const FS_BLOCK_COLORS = /* glsl */ `\
+#version 300 es
+precision highp float;
+layout(std140) uniform;
+
+uniform BlockA {
+  float valueA;
+} blockA;
+
+uniform BlockB {
+  float valueB;
+} blockB;
+
+uniform BlockC {
+  float valueC;
+} blockC;
+
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(blockA.valueA, blockB.valueB, blockC.valueC, 1.0);
+}
+`;
+
 const VS_MIXED_SAMPLERS = /* glsl */ `\
 #version 300 es
 
@@ -135,7 +169,7 @@ async function createThreeBlockPipeline() {
   return {device, gl: device.gl, renderPipeline, linkStatus, draw, destroy};
 }
 
-it('WEBGLRenderPipeline looks up uniform block indices once and assigns binding points at each draw', async () => {
+it('WEBGLRenderPipeline looks up uniform block indices once and skips unchanged binding points', async () => {
   const {gl, linkStatus, draw, destroy} = await createThreeBlockPipeline();
   expect(linkStatus, 'render pipeline linked successfully').toBe('success');
   if (linkStatus !== 'success') {
@@ -161,13 +195,13 @@ it('WEBGLRenderPipeline looks up uniform block indices once and assigns binding 
       calls.filter(call => call.startsWith('index')),
       'block indices looked up on the first draw'
     ).toHaveLength(3);
+    expect(
+      calls.filter(call => call.startsWith('binding')),
+      'binding points assigned on the first draw'
+    ).toEqual(['binding 0', 'binding 1', 'binding 2']);
     calls.length = 0;
     draw();
-    expect(calls, 'indices are cached, binding points are assigned again').toEqual([
-      'binding 0',
-      'binding 1',
-      'binding 2'
-    ]);
+    expect(calls, 'unchanged draws neither look up indices nor assign binding points').toEqual([]);
   } finally {
     gl.getUniformBlockIndex = getUniformBlockIndex;
     gl.uniformBlockBinding = uniformBlockBinding;
@@ -175,7 +209,7 @@ it('WEBGLRenderPipeline looks up uniform block indices once and assigns binding 
   }
 });
 
-it('WEBGLRenderPipeline restores uniform block bindings changed through the program handle', async () => {
+it('WEBGLRenderPipeline#invalidateUniformBlockBindings restores bindings changed through the program handle', async () => {
   const {gl, renderPipeline, linkStatus, draw, destroy} = await createThreeBlockPipeline();
   expect(linkStatus, 'render pipeline linked successfully').toBe('success');
   if (linkStatus !== 'success') {
@@ -202,14 +236,104 @@ it('WEBGLRenderPipeline restores uniform block bindings changed through the prog
     for (const [bindingPoint, name] of blockNames.entries()) {
       gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, name), 5 + bindingPoint);
     }
-    expect(getBindingPoints(), 'application assigned its own binding points').toEqual([5, 6, 7]);
-
     draw();
-    expect(getBindingPoints(), 'the next draw restores the layout binding points').toEqual([
+    expect(
+      getBindingPoints(),
+      'luma.gl owns the binding points: it does not read back changes made through the handle'
+    ).toEqual([5, 6, 7]);
+
+    renderPipeline.invalidateUniformBlockBindings();
+    draw();
+    expect(getBindingPoints(), 'the draw after invalidation restores the layout').toEqual([
       0, 1, 2
     ]);
   } finally {
     destroy();
+  }
+});
+
+it('WEBGLRenderPipeline assigns correct binding points when pipelines share a program with different binding orders', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const vs = device.createShader({stage: 'vertex', source: VS_FULLSCREEN});
+  const fs = device.createShader({stage: 'fragment', source: FS_BLOCK_COLORS});
+  const pipelineA = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+  const linkStatus = await waitForLinkStatus(pipelineA);
+  // Shares the WebGLProgram of pipelineA, as PipelineFactory does for pipelines with the same shaders
+  const pipelineB = device.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    _sharedRenderPipeline: pipelineA.sharedRenderPipeline!
+  });
+  // pipelineB assigns binding points to the blocks in the reverse order
+  pipelineB.shaderLayout = {
+    ...pipelineB.shaderLayout,
+    bindings: [...pipelineB.shaderLayout.bindings].reverse()
+  };
+
+  const buffers = [0.2, 0.6, 1].map(value =>
+    device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([value, 0, 0, 0])})
+  );
+  const bindings = {BlockA: buffers[0], BlockB: buffers[1], BlockC: buffers[2]};
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const vertexArray = device.createVertexArray({
+    shaderLayout: pipelineA.shaderLayout,
+    bufferLayout: []
+  });
+  const program = pipelineA.handle;
+  const getBindingPoints = () =>
+    ['BlockA', 'BlockB', 'BlockC'].map(name =>
+      gl.getActiveUniformBlockParameter(
+        program,
+        gl.getUniformBlockIndex(program, name),
+        GL.UNIFORM_BLOCK_BINDING
+      )
+    );
+
+  const drawAndReadPixel = (renderPipeline: typeof pipelineA) => {
+    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    renderPass.setPipeline(renderPipeline);
+    renderPass.setBindings(bindings);
+    renderPass.setVertexArray(vertexArray);
+    expect(renderPass.draw({vertexCount: 3}), 'draw succeeded').toBe(true);
+    renderPass.end();
+    const pixel = device.readPixelsToArrayWebGL(framebuffer, {sourceWidth: 1, sourceHeight: 1});
+    return Array.from(pixel.slice(0, 4));
+  };
+
+  try {
+    expect(linkStatus, 'render pipeline linked successfully').toBe('success');
+    expect(pipelineB.handle, 'the pipelines share one program').toBe(program);
+    if (linkStatus !== 'success') {
+      return;
+    }
+
+    for (const round of [1, 2]) {
+      const pixelA = drawAndReadPixel(pipelineA);
+      expect(getBindingPoints(), `round ${round}: pipelineA binding points`).toEqual([0, 1, 2]);
+      expect(pixelA, `round ${round}: pipelineA reads each block from its buffer`).toEqual([
+        51, 153, 255, 255
+      ]);
+
+      const pixelB = drawAndReadPixel(pipelineB);
+      expect(getBindingPoints(), `round ${round}: pipelineB binding points`).toEqual([2, 1, 0]);
+      expect(pixelB, `round ${round}: pipelineB reads each block from its buffer`).toEqual([
+        51, 153, 255, 255
+      ]);
+    }
+  } finally {
+    vertexArray.destroy();
+    framebuffer.destroy();
+    for (const buffer of buffers) buffer.destroy();
+    pipelineB.destroy();
+    pipelineA.destroy();
+    vs.destroy();
+    fs.destroy();
   }
 });
 
