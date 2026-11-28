@@ -52,6 +52,20 @@ while camera-only and lighting-only frames reuse the retained TLAS. Transform-on
 retained-permutation gather/refit graph; topology changes and periodic refreshes use the full Morton
 build graph.
 
+Set `separateLobeHistories: true` with `transportMode: 'pbr'` to accumulate diffuse
+and view-dependent radiance independently. Each path contribution is separated
+at the first interaction. Specular reflection, sheen, clearcoat, and dielectric
+transport use the specular history. Diffuse transport, primary emission, and the
+background use the diffuse history. During camera or rigid instance motion, specular history starts fresh while
+diffuse history still uses identity, depth, normal, and
+neighborhood checks. The layers are summed in linear HDR for presentation and
+readback. The composed history reports the lower confidence of the two layers.
+
+The option adds 32 bytes per internal pixel for the two double-buffered lobe
+layers. Sparse ray batches carry both layers forward, and resize or a scene
+history reset invalidates both layers together. The default uses one combined
+history.
+
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Retained triangle morph targets update positions and normals

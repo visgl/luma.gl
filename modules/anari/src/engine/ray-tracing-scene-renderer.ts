@@ -54,6 +54,7 @@ import {
   RAY_OPAQUE_ALPHA_MODE,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   getRayTracingMomentShader,
+  getSplitRayTracingHistoryShader,
   RAY_TRACING_SCENE_SHADER,
   RAY_TRACING_IRRADIANCE_SHADER,
   RAY_TRACING_PICK_SHADER,
@@ -505,6 +506,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   denoiseRadius?: 0 | 1 | 2;
   /** Retains log-luminance moments for variance-guided spatial filtering. */
   varianceGuidance?: boolean;
+  /** Track first-interface diffuse and specular radiance independently in PBR transport. */
+  separateLobeHistories?: boolean;
   /** Presentation diagnostics; defaults to color. */
   debugView?: RayTracingDebugView;
   /** Diffuse legacy transport or opt-in opaque metallic/roughness transport. */
@@ -659,6 +662,7 @@ type RayTracingPresentationOptions = {
 type RayTracingShaderOptions = {
   /** Whether the trace graph retains luminance moments. */
   trackMoments: boolean;
+  separateLobeHistories: boolean;
   /** Whether the color pipeline computes alpha-mask footprints. */
   filteredCutouts: boolean;
   /** Whether analytic shadow rays support thin transmission. */
@@ -850,6 +854,8 @@ export class RayTracingSceneRenderer {
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const shaderOptions: RayTracingShaderOptions = {
+      separateLobeHistories:
+        options.transportMode === 'pbr' && options.separateLobeHistories === true,
       trackMoments: options.varianceGuidance === true || options.debugView === 'variance',
       filteredCutouts: options.filteredCutouts === true,
       transmissiveShadows: options.transmissiveShadows === true,
@@ -968,12 +974,20 @@ export class RayTracingSceneRenderer {
       const environmentMapChanged = resources.environmentMap !== options.environmentMap;
       const lightsChanged = resources.lightRevision !== lightRevision || environmentMapChanged;
       if (environmentMapChanged) resources.historyNeedsReset = true;
+      // A split diffuse history can reuse primary guides for a rigid pose update.
+      // Other edits still invalidate the full path integral.
+      const reprojectSplitPose =
+        shaderOptions.separateLobeHistories &&
+        (options.temporalReprojection ?? true) &&
+        transformChanged &&
+        !topology &&
+        getPrimitiveRevision(options, resources.transformRevision) === resources.primitiveRevision;
       // Primary-hit reprojection cannot validate illumination from secondary surfaces.
       if (
         ((options.maxBounces ?? 0) > 0 ||
           options.emitterSampling ||
           shaderOptions.environmentLighting) &&
-        (primitiveChanged || lightsChanged)
+        ((primitiveChanged && !reprojectSplitPose) || lightsChanged)
       ) {
         resources.historyNeedsReset = true;
       }
@@ -1206,6 +1220,7 @@ export class RayTracingSceneRenderer {
     );
     if (
       resources.shaderOptions.trackMoments !== shaderOptions.trackMoments ||
+      resources.shaderOptions.separateLobeHistories !== shaderOptions.separateLobeHistories ||
       resources.displayWidth !== displayWidth ||
       resources.displayHeight !== displayHeight ||
       resources.internalWidth !== internalDimensions.width ||
@@ -1514,18 +1529,25 @@ export class RayTracingSceneRenderer {
    * Snapshots remain valid across subsequent renders and frame destruction.
    */
   /** Reads the latest submitted internal color history without tone mapping or denoising. */
-  async readRadiance(frameIdentifier: string): Promise<ANARIFrameRadiance | null> {
+  async readRadiance(
+    frameIdentifier: string,
+    lobe?: 'diffuse' | 'specular'
+  ): Promise<ANARIFrameRadiance | null> {
     const resources = this.frames.get(frameIdentifier);
-    if (!resources) return null;
+    if (!resources || (lobe && !resources.shaderOptions.separateLobeHistories)) return null;
     const texture = resources.colorHistory.previousTexture;
     const {width, height} = texture;
-    const layout = texture.computeMemoryLayout({width, height});
+    const layer = resources.shaderOptions.separateLobeHistories
+      ? {diffuse: 0, specular: 1, composite: 2}[lobe ?? 'composite']
+      : 0;
+    const readOptions = {width, height, z: layer};
+    const layout = texture.computeMemoryLayout(readOptions);
     const buffer = this.device.createBuffer({
       byteLength: layout.byteLength,
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
     try {
-      texture.readBuffer({width, height}, buffer);
+      texture.readBuffer(readOptions, buffer);
       const bytes = await buffer.readAsync();
       const rowBytes = width * 8;
       const data = new Uint8Array(rowBytes * height);
@@ -1937,7 +1959,9 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       'history',
       internalDimensions.width,
-      internalDimensions.height
+      internalDimensions.height,
+      'rgba16float',
+      props.shaderOptions.separateLobeHistories
     );
     const metadataHistory = this.createTextureHistory(
       frameIdentifier,
@@ -2106,7 +2130,9 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       'history',
       internalWidth,
-      internalHeight
+      internalHeight,
+      'rgba16float',
+      shaderOptions.separateLobeHistories
     );
     resources.metadataHistory = this.createTextureHistory(
       frameIdentifier,
@@ -2190,13 +2216,15 @@ export class RayTracingSceneRenderer {
     suffix: string,
     width: number,
     height: number,
-    format: TextureFormatColor = 'rgba16float'
+    format: TextureFormatColor = 'rgba16float',
+    separateLobes = false
   ): GPUTextureHistory {
     return new GPUTextureHistory(this.device, {
       id: `${frameIdentifier}-ray-tracing-${suffix}`,
       width,
       height,
       format,
+      ...(separateLobes ? {dimension: '2d-array', depth: 3} : {}),
       usage: Texture.SAMPLE | Texture.STORAGE | (suffix === 'history' ? Texture.COPY_SRC : 0)
     });
   }
@@ -3427,9 +3455,15 @@ export class RayTracingSceneRenderer {
         Math.floor(props.blasTriangleIdsBuffer.byteLength / Uint32Array.BYTES_PER_ELEMENT)
       )
     );
+    const splitHistory = props.shaderOptions.separateLobeHistories;
+    const colorDimension = splitHistory ? ('2d-array' as const) : ('2d' as const);
+    const specializeHistory = (source: string) =>
+      splitHistory ? getSplitRayTracingHistoryShader(source) : source;
     const history = graph.importTexture(
       {
         id: 'history',
+        dimension: colorDimension,
+        depth: splitHistory ? 3 : 1,
         format: 'rgba16float',
         width: props.internalWidth,
         height: props.internalHeight,
@@ -3450,6 +3484,8 @@ export class RayTracingSceneRenderer {
     const output = graph.importTexture(
       {
         id: 'output',
+        dimension: colorDimension,
+        depth: splitHistory ? 3 : 1,
         format: 'rgba16float',
         width: props.internalWidth,
         height: props.internalHeight,
@@ -3471,6 +3507,10 @@ export class RayTracingSceneRenderer {
     const historyMetadataView = graph.createTextureView(historyMetadata);
     const outputView = graph.createTextureView(output);
     const outputMetadataView = graph.createTextureView(outputMetadata);
+
+    const compositeView = splitHistory
+      ? graph.createTextureView(output, {dimension: '2d', baseArrayLayer: 2, arrayLayerCount: 1})
+      : outputView;
 
     /** Imports a role of the optional ping-pong moments as a sampled/storage view. */
     const importMomentView = (id: string, texture: Texture) =>
@@ -3534,14 +3574,17 @@ export class RayTracingSceneRenderer {
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: `${props.frameIdentifier}-ray-tracing-history-carry-computation`,
-          source: momentViews
-            ? getRayTracingMomentShader(RAY_TRACING_HISTORY_CARRY_SHADER, true)
-            : RAY_TRACING_HISTORY_CARRY_SHADER,
+          source: specializeHistory(
+            momentViews
+              ? getRayTracingMomentShader(RAY_TRACING_HISTORY_CARRY_SHADER, true)
+              : RAY_TRACING_HISTORY_CARRY_SHADER
+          ),
           shaderLayout: {
             bindings: [
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {
                 name: 'historyImage',
+                viewDimension: colorDimension,
                 type: 'texture',
                 group: 0,
                 location: 1,
@@ -3556,6 +3599,7 @@ export class RayTracingSceneRenderer {
               },
               {
                 name: 'outputImage',
+                viewDimension: colorDimension,
                 type: 'storage',
                 group: 0,
                 location: 3,
@@ -3626,9 +3670,10 @@ export class RayTracingSceneRenderer {
           id: `${props.frameIdentifier}-ray-tracing-computation`,
           // Avoid compiling the transport and sampling paths the frame cannot use.
           source: getRayMaterialTextureShader(
-            (momentViews
-              ? getRayTracingMomentShader(RAY_TRACING_SCENE_SHADER)
-              : RAY_TRACING_SCENE_SHADER
+            specializeHistory(
+              momentViews
+                ? getRayTracingMomentShader(RAY_TRACING_SCENE_SHADER)
+                : RAY_TRACING_SCENE_SHADER
             )
               .replace(
                 '/* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u',
@@ -3674,6 +3719,7 @@ export class RayTracingSceneRenderer {
               {name: 'blasTriangleIds', type: 'read-only-storage', group: 0, location: 8},
               {
                 name: 'historyImage',
+                viewDimension: colorDimension,
                 type: 'texture',
                 group: 0,
                 location: 9,
@@ -3688,6 +3734,7 @@ export class RayTracingSceneRenderer {
               },
               {
                 name: 'outputImage',
+                viewDimension: colorDimension,
                 type: 'storage',
                 group: 0,
                 location: 11,
@@ -3748,7 +3795,7 @@ export class RayTracingSceneRenderer {
     graph.addRenderPass({
       id: `${props.frameIdentifier}-present-ray-tracing`,
       resources: [
-        {texture: outputView, usage: 'sampled'},
+        {texture: compositeView, usage: 'sampled'},
         ...(presentMoments ? [{texture: momentViews.output, usage: 'sampled' as const}] : []),
         ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
           ? [{texture: outputMetadataView, usage: 'sampled' as const}]
@@ -3815,7 +3862,7 @@ export class RayTracingSceneRenderer {
           }),
           encode: ({renderPass, getTextureView}) => {
             model.setBindings({
-              image: getTextureView(outputView),
+              image: getTextureView(compositeView),
               ...(presentMoments ? {momentsImage: getTextureView(momentViews.output)} : {}),
               ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
                 ? {metadata: getTextureView(outputMetadataView)}
@@ -4130,7 +4177,8 @@ function getRenderRevision(
       options.emitterSampling === true ||
       Boolean(options.environmentMap || options.environmentRadiance?.some(channel => channel > 0)));
   const cameraRevision =
-    (options.temporalReprojection ?? true) && !reflectiveTransport
+    (options.temporalReprojection ?? true) &&
+    (!reflectiveTransport || options.separateLobeHistories)
       ? undefined
       : [Array.from(inverseViewProjection), Array.from(options.camera.position)];
   return JSON.stringify([
@@ -5012,9 +5060,13 @@ function getRayTracingMemoryStatistics(
     resources.bvhCountBuffer,
     resources.bvhOverflowBuffer
   ].reduce((total, buffer) => total + buffer.byteLength, 0);
-  // Two double-buffered rgba16float histories, eight bytes per pixel per texture.
+  // Double-buffered metadata, composite color, optional lobes, and optional moments.
   const historyTextureBytes =
-    resources.internalWidth * resources.internalHeight * (resources.momentHistory ? 48 : 32);
+    resources.internalWidth *
+    resources.internalHeight *
+    (32 +
+      (resources.momentHistory ? 16 : 0) +
+      (resources.shaderOptions.separateLobeHistories ? 32 : 0));
   const graphTransientBytes = [
     resources.topologyGraph,
     resources.meshRefitGraph,
