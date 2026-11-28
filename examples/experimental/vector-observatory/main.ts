@@ -280,7 +280,9 @@ struct View {size: vec4f, options: vec4f};
         ...fields,
         positions,
         tolerance: controls.settings.tolerance,
-        maximumAttempts: 16
+        maximumAttempts: 16,
+        scheduling: controls.settings.scheduling,
+        dispatchesPerReadback: controls.settings.dispatchesPerReadback
       });
     } else {
       graph = new ScientificFlowGraph(device, {
@@ -368,7 +370,9 @@ struct View {size: vec4f, options: vec4f};
               queuedTime -= deltaTime;
               traceResult = await graph.advance(deltaTime);
             }
-            controls.diagnostics.record(graph.commandGraph, traceResult.encoding);
+            /** Every dispatch in the batch contributes a separate inspectable trace. */
+            for (const encoding of traceResult.encodings)
+              controls.diagnostics.record(graph.commandGraph, encoding);
           } else {
             const substeps = Math.max(
               1,

@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {EffectRenderer} from '../src/passes/effect-renderer';
-import {bloomLow, hdrBloom, sepiaEffect, ssaoEffect, volumetricFog} from '../src/effects';
+import {bloomLow, hdrBloom, sepiaEffect, ssaoEffect, ssr, volumetricFog} from '../src/effects';
 
 /** Compile-time checks for heterogeneous inline effect configurations. */
 export function checkEffectRendererOptions(device: Device): void {
@@ -14,6 +14,7 @@ export function checkEffectRendererOptions(device: Device): void {
       {effect: sepiaEffect},
       bloomLow,
       {effect: volumetricFog, options: {mode: 'height'}},
+      {effect: ssr, options: {quality: 'detailed', reprojection: 'camera'}},
       {effect: volumetricFog},
       {effect: hdrBloom, options: {quality: 'ultra'}}
     ]

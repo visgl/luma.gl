@@ -14,7 +14,8 @@ import {
   type ScientificFlowFieldProps,
   type ScientificFlowInput
 } from './scientific-flow-field';
-import {SCIENTIFIC_FLOW_RK45} from './scientific-flow-rk45-shaders';
+import {makeScientificFlowRK45Shader} from './scientific-flow-rk45-shaders';
+import {SCIENTIFIC_FLOW_SCHEDULING} from './scientific-flow-scheduling-shaders';
 
 /** Stable values stored in diagnostics.z; particle identity is its buffer index. */
 export enum ScientificParticleStatus {
@@ -43,6 +44,8 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
   maximumAttempts?: number;
   /** Fixed dispatches submitted before one counter readback (1–32). Default 1 retains interactive behavior. */
   dispatchesPerReadback?: number;
+  /** Opt-in GPU queue and indirect integration; dense remains the default. */
+  scheduling?: 'dense' | 'active';
 };
 
 export type ScientificFlowTraceResult = {
@@ -56,6 +59,10 @@ export type ScientificFlowTraceResult = {
   dispatchCount: number;
   /** Bytes in the single counter readback; never particle state. */
   counterReadbackBytes: number;
+  /** Particle slots scheduled for integration across this batch; excludes queue scans. */
+  scheduledParticles: number;
+  /** Integration workgroups actually launched across this batch; excludes queue scans. */
+  integrationWorkgroups: number;
   isContinuation: boolean;
   /** Requested horizon, including while individual particles are still catching up. */
   targetTime: number;
@@ -101,6 +108,16 @@ export class ScientificFlowTracer {
   private readonly batchStatistics: Buffer;
   /** Bounded batch size; completed particles skip subsequent trials. */
   private readonly dispatchesPerReadback: number;
+  /** Optional stable-ID queue; the first word stores its populated length. */
+  private readonly activeIndices?: Buffer;
+  /** Optional three-word indirect integration command. */
+  private readonly dispatchArguments?: Buffer;
+  /** Constant [0, 1, 1] command used to reset the indirect workgroup count. */
+  private readonly emptyDispatchArguments?: Buffer;
+  /** Optional GPU queue builder, kept separate from expensive integration. */
+  private readonly schedulingKernel?: Kernel;
+  /** Counter snapshot stride, including queue telemetry only in active mode. */
+  private readonly statisticsByteLength: number;
   private readonly statistics: Buffer;
   private readonly emptyStatistics: Buffer;
   private dispatchIndex = 0;
@@ -124,6 +141,13 @@ export class ScientificFlowTracer {
   constructor(device: Device, props: ScientificFlowTracerProps) {
     assert(device.type === 'webgpu'); // Adaptive scientific tracing requires WebGPU.
     this.device = device;
+    // Only the two explicit scheduling contracts are supported.
+    assert(
+      props.scheduling === undefined ||
+        props.scheduling === 'dense' ||
+        props.scheduling === 'active'
+    );
+    this.statisticsByteLength = props.scheduling === 'active' ? 44 : 36;
     this.fieldOptions = {
       bounds: props.bounds,
       coordinates: props.coordinates,
@@ -221,19 +245,58 @@ export class ScientificFlowTracer {
       this.batchStatistics = own(
         device.createBuffer({
           id: 'scientific-tracer-batch-statistics',
-          byteLength: 36 * this.dispatchesPerReadback,
+          byteLength: this.statisticsByteLength * this.dispatchesPerReadback,
           usage: Buffer.COPY_SRC | Buffer.COPY_DST
         })
       );
+      if (props.scheduling === 'active') {
+        this.activeIndices = own(
+          device.createBuffer({
+            id: 'scientific-tracer-active-indices',
+            byteLength: (this.particleCount + 1) * 4,
+            usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        );
+        this.dispatchArguments = own(
+          device.createBuffer({
+            id: 'scientific-tracer-dispatch-arguments',
+            byteLength: 12,
+            usage: Buffer.STORAGE | Buffer.INDIRECT | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        );
+        this.emptyDispatchArguments = makeBuffer(
+          'scientific-tracer-empty-dispatch',
+          new Uint32Array([0, 1, 1])
+        );
+        this.schedulingKernel = own(
+          new Kernel(device, {
+            id: 'scientific-tracer-schedule',
+            source: SCIENTIFIC_FLOW_SCHEDULING,
+            shaderLayout: {
+              bindings: [
+                {name: 'parameters', type: 'uniform', group: 0, location: 0},
+                {name: 'particles', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'previous', type: 'storage', group: 0, location: 2},
+                {name: 'diagnostics', type: 'storage', group: 0, location: 3},
+                {name: 'statistics', type: 'storage', group: 0, location: 4},
+                {name: 'activeIndices', type: 'storage', group: 0, location: 5},
+                {name: 'dispatchArguments', type: 'storage', group: 0, location: 6}
+              ]
+            }
+          })
+        );
+      }
       this.kernel = own(
         new Kernel(device, {
           id: 'scientific-tracer-rk45',
-          source: SCIENTIFIC_FLOW_RK45,
+          source: makeScientificFlowRK45Shader(Boolean(this.activeIndices)),
           shaderLayout: {
             bindings: [
               {name: 'parameters', type: 'uniform', group: 0, location: 0},
               {name: 'particles', type: 'storage', group: 0, location: 1},
-              {name: 'previous', type: 'storage', group: 0, location: 2},
+              ...(this.activeIndices
+                ? []
+                : [{name: 'previous', type: 'storage' as const, group: 0, location: 2}]),
               {
                 name: 'velocityField',
                 type: 'texture',
@@ -249,7 +312,17 @@ export class ScientificFlowTracer {
                 sampleType: 'unfilterable-float'
               },
               {name: 'diagnostics', type: 'storage', group: 0, location: 5},
-              {name: 'statistics', type: 'storage', group: 0, location: 6}
+              {name: 'statistics', type: 'storage', group: 0, location: 6},
+              ...(this.activeIndices
+                ? [
+                    {
+                      name: 'activeIndices',
+                      type: 'read-only-storage' as const,
+                      group: 0,
+                      location: 7
+                    }
+                  ]
+                : [])
             ]
           }
         })
@@ -257,7 +330,10 @@ export class ScientificFlowTracer {
       this.commandGraph = own(this.makeCommandGraph());
       if (device.features.has('timestamp-query'))
         this.queries = own(
-          device.createQuerySet({type: 'timestamp', count: 2 * this.dispatchesPerReadback})
+          device.createQuerySet({
+            type: 'timestamp',
+            count: (this.activeIndices ? 4 : 2) * this.dispatchesPerReadback
+          })
         );
     } catch (error) {
       for (const resource of owned.reverse()) resource.destroy();
@@ -327,6 +403,10 @@ export class ScientificFlowTracer {
     this.destroyed = true;
     this.commandGraph.destroy();
     this.kernel.destroy();
+    this.schedulingKernel?.destroy();
+    this.activeIndices?.destroy();
+    this.dispatchArguments?.destroy();
+    this.emptyDispatchArguments?.destroy();
     this.queries?.destroy();
     for (const buffer of [
       this.output,
@@ -355,6 +435,16 @@ export class ScientificFlowTracer {
     const statistics = importBuffer(this.statistics);
     const emptyStatistics = importBuffer(this.emptyStatistics);
     const parameters = importBuffer(this.uniforms);
+    /** Optional compact queue imported once into the inspected graph. */
+    const activeIndices = this.activeIndices ? importBuffer(this.activeIndices) : undefined;
+    /** GPU-written dispatch record consumed by the integration pass. */
+    const dispatchArguments = this.dispatchArguments
+      ? importBuffer(this.dispatchArguments)
+      : undefined;
+    /** Immutable reset command for an empty queue. */
+    const emptyDispatchArguments = this.emptyDispatchArguments
+      ? importBuffer(this.emptyDispatchArguments)
+      : undefined;
     const descriptor = {
       width: this.currentField.texture.width,
       height: this.currentField.texture.height,
@@ -385,15 +475,82 @@ export class ScientificFlowTracer {
           })
       })
     });
+    if (activeIndices && dispatchArguments && emptyDispatchArguments) {
+      graph.addCopyPass({
+        id: 'reset-active-queue',
+        description: 'Reset queue length and indirect workgroups without a CPU readback.',
+        workload: {
+          operation: 'ResetActiveQueue',
+          commandCount: 2,
+          readByteLength: 16,
+          writeByteLength: 16
+        },
+        resources: [
+          {buffer: emptyDispatchArguments, usage: 'copy-source'},
+          {buffer: activeIndices, usage: 'copy-destination'},
+          {buffer: dispatchArguments, usage: 'copy-destination'}
+        ],
+        compile: () => ({
+          encode: ({commandEncoder, getBuffer}) => {
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyDispatchArguments),
+              destinationBuffer: getBuffer(activeIndices),
+              size: 4
+            });
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(emptyDispatchArguments),
+              destinationBuffer: getBuffer(dispatchArguments),
+              size: 12
+            });
+          }
+        })
+      });
+      graph.addComputePass({
+        id: 'compact-active-particles',
+        description: 'Scan stable slots, apply lifecycle changes and queue unfinished particles.',
+        resources: [
+          {buffer: parameters, usage: 'uniform'},
+          {buffer: particles, usage: 'storage-read'},
+          {buffer: previous, usage: 'storage-write'},
+          {buffer: diagnostics, usage: 'storage-read-write'},
+          {buffer: statistics, usage: 'storage-read-write'},
+          {buffer: activeIndices, usage: 'storage-read-write'},
+          {buffer: dispatchArguments, usage: 'storage-read-write'}
+        ],
+        workload: {
+          operation: 'CompactActiveParticles',
+          commandCount: 1,
+          maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+          maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+        },
+        compile: () => ({
+          encode: ({computePass, getBuffer}) =>
+            this.schedulingKernel!.dispatch(computePass, {
+              x: Math.ceil(this.particleCount / 128),
+              bindings: {
+                parameters: getBuffer(parameters),
+                particles: getBuffer(particles),
+                previous: getBuffer(previous),
+                diagnostics: getBuffer(diagnostics),
+                statistics: getBuffer(statistics),
+                activeIndices: getBuffer(activeIndices),
+                dispatchArguments: getBuffer(dispatchArguments)
+              }
+            })
+        })
+      });
+    }
     graph.addComputePass({
       id: 'trace-particles-rk45',
       description: 'Bounded RKF45 trials with persistent particle progress and stopping reasons.',
       resources: [
         {buffer: parameters, usage: 'uniform'},
         {buffer: particles, usage: 'storage-read-write'},
-        {buffer: previous, usage: 'storage-write'},
+        ...(activeIndices ? [] : [{buffer: previous, usage: 'storage-write' as const}]),
         {buffer: diagnostics, usage: 'storage-read-write'},
         {buffer: statistics, usage: 'storage-read-write'},
+        ...(activeIndices ? [{buffer: activeIndices, usage: 'storage-read' as const}] : []),
+        ...(dispatchArguments ? [{buffer: dispatchArguments, usage: 'indirect' as const}] : []),
         {texture: velocity, usage: 'sampled'},
         {texture: nextVelocity, usage: 'sampled'}
       ],
@@ -404,19 +561,27 @@ export class ScientificFlowTracer {
         maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
       },
       compile: () => ({
-        encode: ({computePass, getBuffer, getTexture}) =>
-          this.kernel.dispatch(computePass, {
-            x: Math.ceil(this.particleCount / 128),
-            bindings: {
-              parameters: getBuffer(parameters),
-              particles: getBuffer(particles),
-              previous: getBuffer(previous),
-              velocityField: getTexture(velocity),
-              nextVelocityField: getTexture(nextVelocity),
-              diagnostics: getBuffer(diagnostics),
-              statistics: getBuffer(statistics)
-            }
-          })
+        encode: ({computePass, getBuffer, getTexture}) => {
+          /** Bind stable particle storage regardless of queue order. */
+          const bindings = {
+            parameters: getBuffer(parameters),
+            particles: getBuffer(particles),
+            ...(activeIndices ? {} : {previous: getBuffer(previous)}),
+            velocityField: getTexture(velocity),
+            nextVelocityField: getTexture(nextVelocity),
+            diagnostics: getBuffer(diagnostics),
+            statistics: getBuffer(statistics),
+            ...(activeIndices ? {activeIndices: getBuffer(activeIndices)} : {})
+          };
+          if (dispatchArguments) {
+            this.kernel.dispatchIndirect(computePass, {
+              indirectBuffer: getBuffer(dispatchArguments),
+              bindings
+            });
+          } else {
+            this.kernel.dispatch(computePass, {x: Math.ceil(this.particleCount / 128), bindings});
+          }
+        }
       })
     });
     return graph.compile();
@@ -492,9 +657,23 @@ export class ScientificFlowTracer {
         encoder.copyBufferToBuffer({
           sourceBuffer: this.statistics,
           destinationBuffer: this.batchStatistics,
-          destinationOffset: batchIndex * 36,
+          destinationOffset: batchIndex * this.statisticsByteLength,
           size: 36
         });
+        if (this.activeIndices && this.dispatchArguments) {
+          encoder.copyBufferToBuffer({
+            sourceBuffer: this.activeIndices,
+            destinationBuffer: this.batchStatistics,
+            destinationOffset: batchIndex * this.statisticsByteLength + 36,
+            size: 4
+          });
+          encoder.copyBufferToBuffer({
+            sourceBuffer: this.dispatchArguments,
+            destinationBuffer: this.batchStatistics,
+            destinationOffset: batchIndex * this.statisticsByteLength + 40,
+            size: 4
+          });
+        }
       }
       this.device.submit(encoder.finish());
       this.dispatchIndex += this.dispatchesPerReadback;
@@ -503,18 +682,30 @@ export class ScientificFlowTracer {
       const batchCounts = new Uint32Array(
         result.buffer,
         result.byteOffset,
-        9 * this.dispatchesPerReadback
+        (this.statisticsByteLength / 4) * this.dispatchesPerReadback
       );
       /** Final statuses only; earlier statuses would double-count particle slots. */
-      const counts = batchCounts.subarray(batchCounts.length - 9);
+      const counts = batchCounts.subarray(batchCounts.length - this.statisticsByteLength / 4);
       /** Accepted steps summed over the complete batch, including idle tails. */
       let acceptedSteps = 0;
       /** Rejected trials summed over the complete batch. */
       let rejectedSteps = 0;
+      /** Integration slots summed over the batch, separate from compaction scans. */
+      let scheduledParticles = 0;
+      /** Actual integration workgroups, including padded lanes. */
+      let integrationWorkgroups = 0;
       /** Dispatch cursor within the fixed per-readback batch. */
       for (let batchIndex = 0; batchIndex < this.dispatchesPerReadback; batchIndex++) {
-        acceptedSteps += batchCounts[batchIndex * 9 + 7];
-        rejectedSteps += batchCounts[batchIndex * 9 + 8];
+        /** Offset of this dispatch's counter snapshot. */
+        const counterOffset = (batchIndex * this.statisticsByteLength) / 4;
+        acceptedSteps += batchCounts[counterOffset + 7];
+        rejectedSteps += batchCounts[counterOffset + 8];
+        scheduledParticles += this.activeIndices
+          ? batchCounts[counterOffset + 9]
+          : this.particleCount;
+        integrationWorkgroups += this.activeIndices
+          ? batchCounts[counterOffset + 10]
+          : Math.ceil(this.particleCount / 128);
       }
       /** Per-encoding timestamp reports, read only after batch submission. */
       const timings = await Promise.all(encodings.map(encoding => encoding.readTimings()));
@@ -542,6 +733,8 @@ export class ScientificFlowTracer {
         encodings,
         dispatchCount: this.dispatchesPerReadback,
         counterReadbackBytes: this.batchStatistics.byteLength,
+        scheduledParticles,
+        integrationWorkgroups,
         dispatchIndex: this.dispatchIndex,
         isContinuation: !first,
         targetTime,
