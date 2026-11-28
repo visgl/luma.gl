@@ -209,3 +209,31 @@ The gripper lab authors each workpiece as a scenegraph node with its own dimensi
 Give a piece its own material when its finish needs to change independently. Its physics body, joint targets and pickup sequence work the same way.
 
 The ring arm has a sliding carriage between its boom and fingers. Set a tree link’s `jointType` to `'prismatic'` and supply a unit axis in the parent frame. For example, `tree.setLinearDrive('slide', {position: -0.44, stiffness: 1000, damping: 60, maximumForce: 80})` commands 44 cm of retraction from the authored pose. Both fingers travel with the carriage, and friction carries the grasped piece. Read the signed motor force in newtons with `tree.readForce('slide')`. The crowded-bin scenario uses the same scenegraph and materials for all 64 bodies.
+
+### Two mechanisms supporting one body[​](#two-mechanisms-supporting-one-body "Direct link to Two mechanisms supporting one body")
+
+Use `GPUArticulationTree.fromRoots` when separately anchored mechanisms touch the same free rigid body. Give each root its world-space base and its own parent indices. Link IDs must be unique across the group. Register the group with the world once so both forks query the same refitted box index and solve against the same beam velocity and spin.
+
+```
+const gantry = GPUArticulationTree.fromRoots([leftStation, rightStation], {timeStep: 1 / 120});
+
+world.addToGraph(graph, {
+
+  tree: gantry,
+
+  colliders: ['left-fork', 'right-fork'].map(link => ({
+
+    link,
+
+    shape: {type: 'box', halfExtents: [0.095, 0.21, 0.045]},
+
+    faceManifold: true
+
+  })),
+
+  friction: 0.9
+
+});
+```
+
+A clipped box face contributes up to four contact points. Edge contacts contribute one. To display a support force, sum the vertical components of `contactImpulses` for the matching `contactPairs` and divide by the physics timestep. Check `complete` before interpreting the result. The group supports up to 16 links, 16 registered colliders and 24 active contact rows. Direct collision between two articulation links is outside this profile.
