@@ -16,11 +16,11 @@ export type FlowTrajectoryFrame = {
 
 /** Explicit CPU readback of one retained frame. The particle array is independent of GPU storage. */
 export type FlowTrajectorySnapshot = FlowTrajectoryFrame & {
-  /** Interleaved normalized x/y, age and generation, in stable particle-index order. */
+  /** Interleaved four-float records in stable particle-index order; xy/age/generation or spherical xyz/age. */
   particles: Float32Array;
 };
 
-/** Fixed-memory GPU ring of normalized x/y, age and generation particle snapshots. */
+/** Fixed-memory GPU ring of four-float particle snapshots; record layout is preserved unchanged. */
 export class FlowTrajectoryHistory {
   /** Owned storage buffer; renderers may borrow it until destroy(). */
   readonly buffer: Buffer;

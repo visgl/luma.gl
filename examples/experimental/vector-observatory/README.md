@@ -154,3 +154,13 @@ time. The separate **Pole-crossing globe · spherical** preset uses equal-area s
 and Cartesian RK2/RK4 transport with Graph/Trace inspection. It is an illustrative
 evolving rotation, not observed weather. See the [spherical API](../../../docs/api-reference/experimental/spherical-flow-graph.md)
 for units, seam/pole conventions, ownership and qualification limits.
+
+The spherical preset draws Cartesian history as four-piece great-circle ribbons,
+with no longitude-atlas seam or pole-segment cutoff. Its at-most-24-frame GPU ring
+uses `particleCount × capacity × 16` bytes (24 MiB at 65536 particles); capacity is
+reduced to fit the device storage-binding limit. Rendering selects at most 8192
+stable slots. Capture cadence follows the requested persistence in simulation
+seconds; frame rate limits how densely it can sample. Long frame gaps therefore
+produce approximate short arcs, not reconstructed solver paths. Antipodal arcs
+are omitted. Pausing retains trails and permits camera rotation. Tests render
+pole/seam crossings after ring wrap and verify back-face occlusion.

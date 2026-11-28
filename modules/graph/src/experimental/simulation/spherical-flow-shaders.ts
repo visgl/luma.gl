@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {SPHERICAL_FLOW_SAMPLING} from './spherical-flow-sampling-shaders';
+
 /** Normalize RK stages in Cartesian space and sample world-vector snapshots on the sphere. */
 export const SPHERICAL_FLOW_SHADER = /* wgsl */ `
 struct Parameters {integration: vec4f, counts: vec4u};
@@ -10,20 +12,7 @@ struct Parameters {integration: vec4f, counts: vec4u};
 @group(0) @binding(2) var<storage, read_write> next: array<vec4f>;
 @group(0) @binding(3) var velocityField: texture_2d<f32>;
 @group(0) @binding(4) var nextVelocityField: texture_2d<f32>;
-const PI: f32 = 3.141592653589793;
-fn sampleSnapshot(field: texture_2d<f32>, position: vec3f) -> vec3f {
-  // Longitude is immaterial at an exact pole: all samples there are identical.
-  var longitude = 0.0;
-  if (dot(position.xy, position.xy) > 1e-20) {longitude = atan2(position.y, position.x);}
-  let coordinates = vec2f(fract(longitude / (2.0 * PI) + 0.5), 0.5 + asin(clamp(position.z, -1.0, 1.0)) / PI);
-  let dimensions = vec2i(textureDimensions(field));
-  let grid = coordinates * vec2f(dimensions - 1);
-  let lower = vec2i(floor(grid));
-  let upper = min(lower + 1, dimensions - 1);
-  let fraction = fract(grid);
-  return mix(mix(textureLoad(field, lower, 0).xyz, textureLoad(field, vec2i(upper.x, lower.y), 0).xyz, fraction.x),
-    mix(textureLoad(field, vec2i(lower.x, upper.y), 0).xyz, textureLoad(field, upper, 0).xyz, fraction.x), fraction.y);
-}
+${SPHERICAL_FLOW_SAMPLING}
 fn derivative(position: vec3f, fraction: f32) -> vec3f {
   let normal = normalize(position);
   let velocity = mix(sampleSnapshot(velocityField, normal), sampleSnapshot(nextVelocityField, normal), fraction);

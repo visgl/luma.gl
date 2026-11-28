@@ -6,6 +6,7 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model, loadImageBitmap} from '@luma.gl/engine';
 import earthTextureUrl from '../../showcase/globe/earth.jpg';
 import {GLOBE_PRESENTATION} from './globe';
+import {SphericalTrails} from './spherical-trails';
 import {
   SphericalFlowGraph,
   ScientificFlowGraph,
@@ -37,10 +38,6 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   if (instance >= particleCount) {wrapOffset = select(-1.0, 1.0, previous[index].x < 0.5);}
   var particle = current[index];
   var before = previous[index];
-  if (view.options.z > 1.5) {
-    particle = vec4f(atan2(particle.y, particle.x) / 6.28318530718 + 0.5, asin(clamp(particle.z, -1.0, 1.0)) / 3.14159265359 + 0.5, particle.w, 1);
-    before = vec4f(atan2(before.y, before.x) / 6.28318530718 + 0.5, asin(clamp(before.z, -1.0, 1.0)) / 3.14159265359 + 0.5, before.w, 1);
-  }
   if (instance >= particleCount) {wrapOffset = select(-1.0, 1.0, before.x < 0.5);}
   var displacement = particle.xy - before.xy;
   if (view.options.z > 0.5) {displacement.x -= round(displacement.x);}
@@ -53,7 +50,7 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   var output: Vertex;
   let center = before.xy + displacement * corner.x + vec2f(wrapOffset, 0);
   output.position = vec4f((center - 0.5) * extent + normal * corner.y * view.size.z / view.size.xy, 0, 1);
-  if (particle.z < 0.0 || particle.w != before.w || (view.options.z > 1.5 && abs(displacement.x) > 0.25)) {output.position = vec4f(3,3,0,1);}
+  if (particle.z < 0.0 || particle.w != before.w) {output.position = vec4f(3,3,0,1);}
   let cold = mix(vec3f(0.05,0.16,0.42),vec3f(0.07,0.8,0.85),smoothstep(0.0,0.15,velocity));
   output.color = mix(cold,vec3f(1.0,0.68,0.3),smoothstep(0.15,0.3,velocity));
   if (view.options.y > 0.5) {
@@ -209,6 +206,8 @@ struct View {size: vec4f, options: vec4f};
   let graphSamples = 0;
   let traceResult: ScientificFlowTraceResult | undefined;
   let particles: Model;
+  /** GPU history for the spherical preset, independent of the screen atlas. */
+  let sphericalTrails: SphericalTrails | undefined;
   const controls = new ObservatoryControlPanel(
     element<HTMLElement>('observatory-panels'),
     restart => {
@@ -238,6 +237,8 @@ struct View {size: vec4f, options: vec4f};
     controls.resetGraphDiagnostics();
     graphSamples = 0;
     particles?.destroy();
+    sphericalTrails?.destroy();
+    sphericalTrails = undefined;
     graph?.destroy();
     snapshotEnd = 0.25;
     previousFrame = performance.now();
@@ -265,6 +266,8 @@ struct View {size: vec4f, options: vec4f};
         radius: 1,
         integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
       });
+      sphericalTrails = new SphericalTrails(device, activeCount);
+      sphericalTrails.capture(graph.output, graph.time, controls.settings.trailPersistence);
     } else if (activeIntegrator === 'rk45') {
       const positions = new Float32Array(activeCount * 2);
       const side = Math.ceil(Math.sqrt(activeCount));
@@ -300,9 +303,7 @@ struct View {size: vec4f, options: vec4f};
       id: 'scientific-flow-streaks',
       source,
       vertexCount: 6,
-      instanceCount:
-        controls.settings.particleCount *
-        (activeField === 'weather' || activeField === 'spherical' ? 2 : 1),
+      instanceCount: controls.settings.particleCount * (activeField === 'weather' ? 2 : 1),
       shaderLayout: {
         attributes: [],
         bindings: [
@@ -417,7 +418,7 @@ struct View {size: vec4f, options: vec4f};
           });
           const pass = device.beginRenderPass({framebuffer: history, clearColor: false});
           if (firstSegment) fade.draw(pass);
-          particles.draw(pass);
+          if (!sphericalTrails) particles.draw(pass);
           pass.end();
           // Submit this segment before the next advance reuses its state and uniform buffers.
           device.submit();
@@ -445,8 +446,23 @@ struct View {size: vec4f, options: vec4f};
           0
         ])
       );
+      const sphericalDuration =
+        controls.settings.trailPersistence * Math.max(controls.settings.timeScale, 0.01);
+      sphericalTrails?.capture(graph.output, graph.time, sphericalDuration);
       const screen = device.beginRenderPass({clearColor: [0.018, 0.035, 0.055, 1]});
       present.draw(screen);
+      if (sphericalTrails) {
+        sphericalTrails.draw(screen, {
+          width: canvas.width,
+          height: canvas.height,
+          longitude: globeLongitude,
+          latitude: globeLatitude,
+          time: graph.time,
+          duration: sphericalDuration,
+          widthPixels: controls.settings.streakWidth,
+          exposure: controls.settings.exposure
+        });
+      }
       screen.end();
       device.submit();
       frames++;
@@ -482,6 +498,7 @@ struct View {size: vec4f, options: vec4f};
       void (currentFrame ?? Promise.resolve()).then(() => {
         controls.destroy();
         particles.destroy();
+        sphericalTrails?.destroy();
         graph.destroy();
         view.destroy();
         fade.destroy();
