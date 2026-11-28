@@ -48,12 +48,12 @@ test.each([
       [[1, 2]],
       new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32()))
     ),
-    error: /float32 -> float32x2/
+    error: /"height" value format changed: float32 -> float32x2/
   },
   {
     first: arrow.vectorFromArray([1], new arrow.Float32()),
     second: arrow.vectorFromArray([2], new arrow.Float64()),
-    error: /missing -> float32/
+    error: /"height" residual format changed: missing -> float32/
   }
 ])('Arrow column stream rejects a format or companion change and releases its outputs', async ({
   first,
@@ -63,7 +63,7 @@ test.each([
   const device = new NullDevice({});
   const createBuffer = vi.spyOn(device, 'createBuffer');
   try {
-    const stream = convertArrowColumnsToGPUVectors(device, [first, second]);
+    const stream = convertArrowColumnsToGPUVectors(device, [first, second], {name: 'height'});
     const firstResult = (await stream.next()).value;
     await expect(stream.next()).rejects.toThrow(error);
     expect(createBuffer.mock.results[0].value.destroyed).toBe(false);

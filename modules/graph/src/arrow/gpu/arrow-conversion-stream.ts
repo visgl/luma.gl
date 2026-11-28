@@ -35,21 +35,6 @@ export async function* convertArrowStream<Source, Result extends {destroy(): voi
   }
 }
 
-/** Checks a stable output shape, including optional companion vectors. */
-export function validateArrowStreamFormats(
-  expected: Map<string, string | undefined>,
-  formats: Record<string, string | undefined>
-): void {
-  for (const [name, format] of Object.entries(formats)) {
-    if (expected.has(name) && expected.get(name) !== format) {
-      throw new Error(
-        `Arrow stream column "${name}" format changed: ${expected.get(name) ?? 'missing'} -> ${format ?? 'missing'}`
-      );
-    }
-    expected.set(name, format);
-  }
-}
-
 /** Pulls one batch at a time, allowing abort to interrupt a stalled next(). */
 export async function* iterateSource<Source>(
   source: ArrowConversionSource<Source>,

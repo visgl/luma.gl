@@ -15,7 +15,6 @@ import {
 import type {ArrowRecordBatchConversionSource} from './arrow-gpu-table-conversion';
 import {
   convertArrowStream,
-  validateArrowStreamFormats,
   type ArrowConversionSource,
   type ArrowConversionStreamOptions
 } from './arrow-conversion-stream';
@@ -80,7 +79,7 @@ export async function* convertArrowColumnsToGPUVectors(
   columnOptions: ArrowColumnStreamOptions = {},
   options: ArrowConversionStreamOptions = {}
 ): AsyncGenerator<PreparedArrowGPUColumnChunk> {
-  const formats = new Map<string, string | undefined>();
+  const formats = new Map<string, ArrowColumnFormats>();
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
   yield* convertArrowStream(
@@ -91,7 +90,7 @@ export async function* convertArrowColumnsToGPUVectors(
       sourceRowIndexOffset
     }),
     (prepared, vector) => {
-      validateColumnFormats(formats, '', prepared);
+      validateColumnFormats(formats, columnOptions.name ?? 'column', prepared);
       sourceBatchIndex++;
       sourceRowIndexOffset += vector.length;
     },
@@ -114,7 +113,7 @@ export async function* convertArrowRecordBatchesToGPUColumns(
   if (!columns.length || names.size !== columns.length || names.has('')) {
     throw new Error('Arrow columns require unique non-empty names');
   }
-  const formats = new Map<string, string | undefined>();
+  const formats = new Map<string, ArrowColumnFormats>();
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
   yield* convertArrowStream(
@@ -160,14 +159,34 @@ export async function* convertArrowRecordBatchesToGPUColumns(
   );
 }
 
+/** GPU formats for a column and its optional companion vectors. */
+type ArrowColumnFormats = {
+  value: string;
+  residual?: string;
+  validity?: string;
+};
+
+/** Checks that subsequent chunks keep the first chunk's formats and companion vectors. */
 function validateColumnFormats(
-  formats: Map<string, string | undefined>,
+  formats: Map<string, ArrowColumnFormats>,
   name: string,
   column: PreparedArrowColumnGPUVector
 ): void {
-  validateArrowStreamFormats(formats, {
-    [JSON.stringify([name, 'value'])]: column.vector.format,
-    [JSON.stringify([name, 'residual'])]: column.residualVector?.format,
-    [JSON.stringify([name, 'validity'])]: column.validityVector?.format
-  });
+  const actual = {
+    value: column.vector.format,
+    residual: column.residualVector?.format,
+    validity: column.validityVector?.format
+  };
+  const expected = formats.get(name);
+  if (!expected) {
+    formats.set(name, actual);
+    return;
+  }
+  for (const kind of ['value', 'residual', 'validity'] as const) {
+    if (expected[kind] !== actual[kind]) {
+      throw new Error(
+        `Arrow stream column "${name}" ${kind} format changed: ${expected[kind] ?? 'missing'} -> ${actual[kind] ?? 'missing'}`
+      );
+    }
+  }
 }
