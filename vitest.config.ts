@@ -148,6 +148,7 @@ const nodeCoveragePatterns = [
 const browserBenchmarkTestPatterns = [
   'modules/deck-gpu-layers/test/gpu-projected-point-performance.spec.ts',
   'modules/engine/test/lighting/ambient-occlusion-benchmark.spec.ts',
+  'modules/graph/test/arrow/h3-boundary-resident-benchmark.spec.ts',
   'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
   'modules/graph/test/gpu-sql/gpu-join-projection-benchmark.spec.ts',
   'modules/engine/test/lighting/indirect-convergence.spec.ts',
