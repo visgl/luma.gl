@@ -56,7 +56,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'GTAO defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
-    resolveEffect(ssgi.configure()).renderTargets?.ssgiRaw.scale,
+    resolveEffect(resolveEffectOptions(ssgi)).renderTargets?.ssgiRaw.scale,
     'diffuse global illumination defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
@@ -64,7 +64,8 @@ it('advanced effects expose composable pipeline shapes', () => {
     'screen-space reflections default to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
   expect(
-    resolveEffect(clusteredVolumetricLighting.configure()).renderTargets?.clusteredVolumeRaw.scale,
+    resolveEffect(resolveEffectOptions(clusteredVolumetricLighting)).renderTargets
+      ?.clusteredVolumeRaw.scale,
     'clustered volumetric lighting defaults to full-resolution intermediate framebuffers'
   ).toEqual([1, 1]);
 
@@ -118,7 +119,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'ambient-only composition explicitly consumes the isolated ambient contribution'
   ).toBe(true);
 
-  const globalIllumination = resolveEffect(ssgi.configure({resolutionScale: 0.5}));
+  const globalIllumination = resolveEffect(resolveEffectOptions(ssgi, {resolutionScale: 0.5}));
   expect(
     globalIllumination.steps.length,
     'SSGI traces, stabilizes, denoises twice, and composites diffuse bounce'
@@ -145,7 +146,7 @@ it('advanced effects expose composable pipeline shapes', () => {
   ).toBe('mat4x4<f32>');
 
   const volumetricLighting = resolveEffect(
-    clusteredVolumetricLighting.configure({
+    resolveEffectOptions(clusteredVolumetricLighting, {
       resolutionScale: 0.4
     })
   );
@@ -392,7 +393,7 @@ it('advanced effects expose composable pipeline shapes', () => {
     'camera-reprojection TAA validates each bilinear history tap against depth'
   ).toBe(true);
 
-  const fog = resolveEffect(volumetricFog.configure());
+  const fog = resolveEffect(resolveEffectOptions(volumetricFog));
   expect(fog.renderTargets?.fogHistory.initialize, 'fog history starts from source').toBe(
     'original'
   );
@@ -799,10 +800,10 @@ it('advanced effects compose in order with existing effects', async () => {
     brightnessContrast,
     resolveEffect(resolveEffectOptions(ssaoEffect, {normalSource: 'normal-texture'})),
     resolveEffect(gtaoDefinition.configure()),
-    resolveEffect(ssgi.configure()),
+    resolveEffect(resolveEffectOptions(ssgi)),
     resolveEffect(ssr.configure()),
     resolveEffect(ssr.configure({reprojection: 'camera', quality: 'fast'})),
-    resolveEffect(clusteredVolumetricLighting.configure()),
+    resolveEffect(resolveEffectOptions(clusteredVolumetricLighting)),
     resolveEffect(hdrAutoExposure.configure()),
     resolveEffect(multiscaleBloomEffect),
     dofCompositeShaderPass,

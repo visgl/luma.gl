@@ -271,3 +271,17 @@ const renderer = new EffectRenderer(device, {
 
 The sepia `amount` remains a shader uniform. SSAO resolves its target scales
 and normal-source pass sequence from its definition when the renderer is created.
+
+### Share a resolution option or select a variant
+
+Use `optionDefaults` to give construction options default values. Use
+`scaleResources` when several targets should follow one resolution option.
+SSGI and clustered volumetric lighting use this to keep their evaluation,
+history, and filter textures at the same relative size.
+
+Use `variants` when an option selects a different set of passes or resources.
+Each value replaces the listed fields for that instance. A value without an
+entry uses the base definition. For example, `volumetricFog` uses screen-space
+passes and a history texture by default. With `{effect: volumetricFog, options:
+{mode: 'height'}}`, it uses the analytic height-fog pass and allocates no fog
+history texture.

@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  type ConfigurableEffectDefinition,
-  type EffectDefinition
-} from '../../../passes/effect-renderer';
+import {type ConfigurableEffectDefinition} from '../../../passes/effect-renderer';
 import type {ShaderPass} from '@luma.gl/shaders';
 import {copyPass} from './copy-pass';
 import {heightFog} from './height-fog';
@@ -82,30 +79,27 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export const volumetricFog = {
-  name: 'volumetricFogCompositeShaderPass',
-  configure(options = {}): EffectDefinition {
-    return options.mode === 'height' ? heightFog : configureVolumetricFog();
-  }
-} as const satisfies ConfigurableEffectDefinition<VolumetricFogCompositeShaderPassOptions>;
+const volumetricFogOptionDefaults: Required<VolumetricFogCompositeShaderPassOptions> = {
+  mode: 'screen-space'
+};
 
-function configureVolumetricFog(): EffectDefinition<'fogHistory'> {
-  return {
-    name: 'volumetricFogCompositeShaderPass',
-    resources: {fogHistory: {lifetime: 'history', initialize: 'original'}},
-    passes: [
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: volumetricFogPass,
-        inputs: {sourceTexture: 'previous', historyTexture: 'fogHistory'},
-        output: 'fogHistory'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: copyPass,
-        inputs: {sourceTexture: 'fogHistory'},
-        output: 'previous'
-      }
-    ]
-  };
-}
+export const volumetricFog = {
+  optionDefaults: volumetricFogOptionDefaults,
+  variants: {option: 'mode', values: {height: heightFog}},
+  name: 'volumetricFogCompositeShaderPass',
+  resources: {fogHistory: {lifetime: 'history', initialize: 'original'}},
+  passes: [
+    {
+      kind: 'fullscreen',
+      shaderPass: volumetricFogPass,
+      inputs: {sourceTexture: 'previous', historyTexture: 'fogHistory'},
+      output: 'fogHistory'
+    },
+    {
+      kind: 'fullscreen',
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'fogHistory'},
+      output: 'previous'
+    }
+  ]
+} as const satisfies ConfigurableEffectDefinition<VolumetricFogCompositeShaderPassOptions>;

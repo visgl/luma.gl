@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  type ConfigurableEffectDefinition,
-  type EffectDefinition
-} from '../../../passes/effect-renderer';
+import {type ConfigurableEffectDefinition} from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
@@ -526,83 +523,78 @@ fn ssgiComposite_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<Partial<SSGICompositeUniforms>, SSGICompositeUniforms>;
 
+const ssgiOptionDefaults: Required<SSGICompositeShaderPassOptions> = {resolutionScale: 1};
+
 /** Creates a hemisphere-traced, temporally stabilized screen-space diffuse GI pipeline. */
 export const ssgi = {
+  optionDefaults: ssgiOptionDefaults,
+  scaleResources: {
+    option: 'resolutionScale',
+    targets: ['ssgiRaw', 'ssgiHistory', 'ssgiHistoryDepth', 'ssgiScratch', 'ssgiIndirect']
+  },
   name: 'ssgiCompositeShaderPass',
-  configure: configureSSGI
+  resources: {
+    ssgiRaw: {scale: [1, 1], format: 'rgba16float'},
+    ssgiHistory: {
+      scale: [1, 1],
+      format: 'rgba16float',
+      lifetime: 'history',
+      initialize: {clearColor: [0, 0, 0, 0]}
+    },
+    ssgiHistoryDepth: {
+      scale: [1, 1],
+      format: 'rgba16float',
+      lifetime: 'history',
+      initialize: {clearColor: [1, 0, 0, 1]}
+    },
+    ssgiScratch: {scale: [1, 1], format: 'rgba16float'},
+    ssgiIndirect: {scale: [1, 1], format: 'rgba16float'}
+  },
+  passes: [
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiTrace,
+      inputs: {sourceTexture: 'previous'},
+      output: 'ssgiRaw'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiTemporal,
+      inputs: {
+        sourceTexture: 'ssgiRaw',
+        historyTexture: 'ssgiHistory',
+        previousDepthTexture: 'ssgiHistoryDepth'
+      },
+      output: 'ssgiHistory'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiDepthHistoryCopy,
+      inputs: {sourceTexture: 'previous'},
+      output: 'ssgiHistoryDepth'
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiSpatial,
+      inputs: {sourceTexture: 'ssgiHistory'},
+      output: 'ssgiScratch',
+      uniforms: {direction: [1, 0]}
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiSpatial,
+      inputs: {sourceTexture: 'ssgiScratch'},
+      output: 'ssgiIndirect',
+      uniforms: {direction: [0, 1]}
+    },
+    {
+      kind: 'fullscreen' as const,
+      shaderPass: ssgiComposite,
+      inputs: {sourceTexture: 'previous', indirectLightingTexture: 'ssgiIndirect'},
+      output: 'previous'
+    }
+  ]
 } as const satisfies ConfigurableEffectDefinition<
   SSGICompositeShaderPassOptions,
   'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
 >;
-
-function configureSSGI(
-  options: SSGICompositeShaderPassOptions = {}
-): EffectDefinition<
-  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
-> {
-  const scale = options.resolutionScale ?? 1;
-  return {
-    name: 'ssgiCompositeShaderPass',
-    resources: {
-      ssgiRaw: {scale: [scale, scale], format: 'rgba16float'},
-      ssgiHistory: {
-        scale: [scale, scale],
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [0, 0, 0, 0]}
-      },
-      ssgiHistoryDepth: {
-        scale: [scale, scale],
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [1, 0, 0, 1]}
-      },
-      ssgiScratch: {scale: [scale, scale], format: 'rgba16float'},
-      ssgiIndirect: {scale: [scale, scale], format: 'rgba16float'}
-    },
-    passes: [
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiTrace,
-        inputs: {sourceTexture: 'previous'},
-        output: 'ssgiRaw'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiTemporal,
-        inputs: {
-          sourceTexture: 'ssgiRaw',
-          historyTexture: 'ssgiHistory',
-          previousDepthTexture: 'ssgiHistoryDepth'
-        },
-        output: 'ssgiHistory'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiDepthHistoryCopy,
-        inputs: {sourceTexture: 'previous'},
-        output: 'ssgiHistoryDepth'
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiSpatial,
-        inputs: {sourceTexture: 'ssgiHistory'},
-        output: 'ssgiScratch',
-        uniforms: {direction: [1, 0]}
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiSpatial,
-        inputs: {sourceTexture: 'ssgiScratch'},
-        output: 'ssgiIndirect',
-        uniforms: {direction: [0, 1]}
-      },
-      {
-        kind: 'fullscreen' as const,
-        shaderPass: ssgiComposite,
-        inputs: {sourceTexture: 'previous', indirectLightingTexture: 'ssgiIndirect'},
-        output: 'previous'
-      }
-    ]
-  };
-}

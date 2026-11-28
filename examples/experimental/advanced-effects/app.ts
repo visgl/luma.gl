@@ -581,7 +581,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     type Options =
       | NonNullable<Parameters<typeof contactShadows.configure>[0]>
       | NonNullable<Parameters<typeof ssr.configure>[0]>
-      | NonNullable<Parameters<typeof volumetricFog.configure>[0]>
+      | Partial<typeof volumetricFog.optionDefaults>
       | NonNullable<Parameters<typeof outlines.configure>[0]>
       | Partial<typeof ssaoEffect.optionDefaults>;
     const pipelines: EffectRendererProps<readonly Options[]>['effects'][number][] = [];
