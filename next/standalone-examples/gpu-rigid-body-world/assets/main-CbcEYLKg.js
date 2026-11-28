@@ -1,4 +1,4 @@
-import{A as e,D as t,E as n,M as r,N as i,O as a,T as o,_ as s,a as c,b as l,c as u,d,f,i as p,j as m,k as h,l as g,m as _,n as v,o as y,p as b,r as x,s as S,t as ee,u as C,v as te,x as w,y as ne}from"./robot-arm-scene-DxjZ_FAC.js";import{E as T,V as E,z as D}from"./wgsl-interface-scan-BeLN4x0P.js";var O={name:`pbrEnvironmentFilter`,bindingLayout:[{name:`pbrEnvironmentFilter`,group:0},{name:`pbrEnvironmentSource`,group:0}],fs:`layout(std140) uniform pbrEnvironmentFilterUniforms {
+import{A as e,D as t,E as n,M as r,N as i,O as a,T as o,_ as s,a as c,b as l,c as u,d,f,i as p,j as m,k as h,l as g,m as _,n as v,o as y,p as b,r as x,s as S,t as ee,u as C,v as te,x as w,y as ne}from"./robot-arm-scene-BstYuBJJ.js";import{E as T,V as E,z as D}from"./wgsl-interface-scan-BeLN4x0P.js";var O={name:`pbrEnvironmentFilter`,bindingLayout:[{name:`pbrEnvironmentFilter`,group:0},{name:`pbrEnvironmentSource`,group:0}],fs:`layout(std140) uniform pbrEnvironmentFilterUniforms {
   int face;
   float roughness;
   int mode;
