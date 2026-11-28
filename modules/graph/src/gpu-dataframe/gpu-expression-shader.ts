@@ -465,23 +465,36 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'cos':
       case 'tan':
       case 'atan':
-      case 'exp': {
+      case 'exp':
+      case 'degrees':
+      case 'radians': {
         const operand = this.emit(operandNode, this.inferFormat(operandNode) ?? 'float32');
         if (operand.format !== 'float32') {
           throw new Error('GPUDataFrame transcendental functions require Float32 input');
         }
         const value = operand.value;
-        const domain =
-          operator === 'sqrt'
-            ? `${value} >= 0.0`
-            : operator === 'ln' || operator === 'log10'
-              ? `${value} > 0.0`
-              : operator === 'asin' || operator === 'acos'
-                ? `abs(${value}) <= 1.0`
-                : operator === 'exp'
-                  ? // The next Float32 input at this boundary is above log(maxFloat32).
-                    `${value} < 88.72283935546875`
-                  : 'true';
+        let domain = 'true';
+        switch (operator) {
+          case 'sqrt':
+            domain = `${value} >= 0.0`;
+            break;
+          case 'ln':
+          case 'log10':
+            domain = `${value} > 0.0`;
+            break;
+          case 'asin':
+          case 'acos':
+            domain = `abs(${value}) <= 1.0`;
+            break;
+          case 'exp':
+            // This Float32 input is above log(maxFloat32).
+            domain = `${value} < 88.72283935546875`;
+            break;
+          case 'degrees':
+            // This Float32 magnitude times the conversion factor exceeds maxFloat32.
+            domain = `abs(${value}) < 5.939047643243774e36`;
+            break;
+        }
         const valid = `(${operand.valid} && (bitcast<u32>(${value}) & 0x7fffffffu) < 0x7f800000u && (${domain}))`;
         const input = `select(1.0, ${value}, ${valid})`;
         const result =
@@ -494,7 +507,8 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'floor':
       case 'ceiling':
       case 'round':
-      case 'trunc': {
+      case 'trunc':
+      case 'sign': {
         const format = this.inferFormat(operandNode) ?? 'float32';
         if (
           (format !== 'float32' && format !== 'sint32' && format !== 'uint32') ||
@@ -503,7 +517,15 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
           throw new Error('GPUDataFrame scalar function requires a supported numeric format');
         }
         const operand = this.emit(operandNode, format);
-        if (format !== 'float32') {
+        if (operator === 'sign' && format === 'uint32') {
+          return this.addValue(
+            format,
+            `select(0u, 1u, ${operand.value} != 0u)`,
+            operand.valid,
+            operand.nullable
+          );
+        }
+        if (format !== 'float32' && operator !== 'sign') {
           return operand;
         }
         const value = operand.value;

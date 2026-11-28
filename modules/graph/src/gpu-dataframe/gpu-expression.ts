@@ -37,7 +37,10 @@ const scalarFunctions = [
   'cos',
   'tan',
   'atan',
-  'exp'
+  'exp',
+  'degrees',
+  'radians',
+  'sign'
 ] as const;
 
 /** Numeric functions supported by GPU DataFrame expressions. */
