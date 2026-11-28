@@ -369,6 +369,30 @@ type ANARIPickResult = {
 
 Picking uses the runtime that last rendered the frame, even if a different renderer has since been committed. Background, out-of-bounds or non-finite coordinates, unrendered/destroyed frames, and frames last rendered by a built-in raster renderer return `null`. Intersections use the ray renderer's opaque geometry semantics. Scalar and textured alpha masks exclude below-cutoff intersections. Picking skips fully transparent blend layers and returns the nearest layer with nonzero coverage. It does not follow refracted paths. The experimental `SelectionOutline` overlay draws visible selected placement boundaries. Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
+### `exportTiles(options, format?)`[​](#exporttilesoptions-format "Direct link to exporttilesoptions-format")
+
+Export a still from a ray-traced frame using its current committed world, camera, and renderer. Export has its own accumulation history and can run before the first preview render. Keep the frame and scene inputs alive and unchanged until the iterator finishes. For a camera with an explicit aspect, match the output aspect to preserve proportions. Without an explicit aspect, the projection uses the requested output dimensions.
+
+```
+import {encodeRayTracingImagePNG} from '@luma.gl/anari';
+
+
+
+const options = {width: 1920, height: 1080, tileSize: 512, frames: 16};
+
+const png = await encodeRayTracingImagePNG(
+
+  options.width,
+
+  options.height,
+
+  frame.exportTiles(options)
+
+);
+```
+
+The PNG encoder expects sRGB RGBA8 tiles and allocates a full-size CPU canvas. Pass `'rgba16float'` to `exportTiles` to get linear HDR tiles for `encodeRayTracingRadiancePFM`. Both formats support an `AbortSignal` in the export options. Closing the iterator releases the export resources.
+
 ### `readRadiance()`[​](#readradiance "Direct link to readradiance")
 
 After submitting a ray-traced frame, call `await frame.readRadiance()` to read the internal-resolution color history before tone mapping, denoising and upscaling. The returned `ANARIFrameRadiance` has `width`, `height` and tightly packed little-endian RGBA16F `data` in top-left row order. RGB includes the renderer's exposure. Alpha contains sample-history metadata. Unsupported renderers and frames without history return `null`.

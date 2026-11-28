@@ -873,11 +873,11 @@ function shouldUseVolumetricPipeline(settings: DeferredRenderingSettings): boole
 
 function createRenderer(device: Device, settings: DeferredRenderingSettings): EffectRenderer {
   type Options =
-    | NonNullable<Parameters<typeof gtao.configure>[0]>
+    | Partial<typeof gtao.optionDefaults>
     | Partial<typeof ssgi.optionDefaults>
-    | NonNullable<Parameters<typeof ssr.configure>[0]>
+    | Partial<typeof ssr.optionDefaults>
     | Partial<typeof clusteredVolumetricLighting.optionDefaults>
-    | NonNullable<Parameters<typeof hdrAutoExposure.configure>[0]>
+    | Partial<typeof hdrAutoExposure.optionDefaults>
     | NonNullable<Parameters<typeof hdrBloom.configure>[0]>;
   const effects: EffectRendererProps<readonly Options[]>['effects'] = [
     clusteredDeferredLightingEffect,

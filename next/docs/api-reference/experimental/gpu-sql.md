@@ -58,7 +58,7 @@ The execution boundary is explicit: Arrow input → GPU dataframe execution → 
 
 ## Supported grammar[​](#supported-grammar "Direct link to Supported grammar")
 
-`SQRT`, `LN`, `LOG10`, `ASIN`, and `ACOS` accept Float32 inputs. Square root requires a nonnegative value, logarithms require a positive value, and inverse sine and cosine accept the interval \[-1, 1]. Invalid domains and non-finite inputs produce null in GPU SQL. Angles are in radians.
+`SQRT`, `LN`, `LOG10`, `ASIN`, and `ACOS` accept Float32 inputs. Square root requires a nonnegative value, logarithms require a positive value, and inverse sine and cosine accept the interval \[-1, 1]. Invalid domains and non-finite inputs produce null in GPU SQL. `SIN`, `COS`, `TAN`, `ATAN`, and `EXP` also accept Float32 inputs and return null for non-finite inputs. `EXP` returns null when its result would overflow Float32. Angles are in radians.
 
 `CAST` supports scalar Float32, Int32, and Uint32 results. Float-to-integer casts truncate toward zero and clamp out-of-range finite values to the target limits. Null and non-finite inputs produce null when converting from Float32 to an integer.
 

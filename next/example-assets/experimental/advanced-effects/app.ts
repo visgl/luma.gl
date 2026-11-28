@@ -579,10 +579,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private createRenderer(): EffectRenderer {
     const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
     type Options =
-      | NonNullable<Parameters<typeof contactShadows.configure>[0]>
-      | NonNullable<Parameters<typeof ssr.configure>[0]>
+      | Partial<typeof contactShadows.optionDefaults>
+      | Partial<typeof ssr.optionDefaults>
       | Partial<typeof volumetricFog.optionDefaults>
-      | NonNullable<Parameters<typeof outlines.configure>[0]>
+      | Partial<typeof outlines.optionDefaults>
       | Partial<typeof ssaoEffect.optionDefaults>;
     const pipelines: EffectRendererProps<readonly Options[]>['effects'][number][] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);

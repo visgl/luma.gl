@@ -44,11 +44,21 @@ Computation uses float32. A non-finite calculation or an increment too small to 
 
 ## Bounded work and clocks[​](#bounded-work-and-clocks "Direct link to Bounded work and clocks")
 
-Each awaited `advance()` or `continue()` submits `dispatchesPerReadback` dispatches (default 1, range 1–32), each with at most `maximumAttempts` trials per particle (default 32, range 1–256). Rejected trials consume that budget. A batch is submitted without waiting for CPU counters between dispatches. Completed particles skip later trials, but every dispatch still launches all particle slots; this is not active compaction. Use small batches for responsiveness and larger ones for long traces. `complete: false` means work remains for the same requested horizon. Resume with `continue()` before starting another request or rotating a snapshot. Calls must not overlap. Await the current call before destroying resources.
+Each awaited `advance()` or `continue()` submits `dispatchesPerReadback` dispatches (default 1, range 1–32), each with at most `maximumAttempts` trials per particle (default 32, range 1–256). Rejected trials consume that budget. A batch is submitted without waiting for CPU counters between dispatches. Completed particles skip later trials. The default `scheduling: 'dense'` launches all particle slots; opt-in `scheduling: 'active'` compacts unfinished slots on the GPU before indirect integration. Use small batches for responsiveness and larger ones for long traces. `complete: false` means work remains for the same requested horizon. Resume with `continue()` before starting another request or rotating a snapshot. Calls must not overlap. Await the current call before destroying resources.
 
 The committed `time` stays unchanged while a request is pending. Individual GPU particles may be at different intermediate times until completion. Stopped particles retain their earlier ages even after the horizon commits. Completion means every particle reached the horizon **or explicitly stopped**; inspect status counts to distinguish these outcomes. `remainingTime` bounds the next request for a time-dependent field. Stationary fields have no interval bound.
 
-Each call reads one contiguous counter snapshot of `36 * dispatchesPerReadback` bytes, never particle positions. `counterReadbackBytes` reports that size. `pending` and status counts describe the last dispatch; `acceptedSteps` and `rejectedSteps` sum all work in the batch, including rejected trials. The fixed batch may contain idle tail dispatches after an early completion. `previous` retains the state before the whole call, so idle tails do not erase the rendered segment. It cannot commit the CPU horizon until readback finishes. If the device enables `timestamp-query`, `gpuMilliseconds` sums compute-pass durations across the batch; it excludes readback latency and rendering. A submission/readback failure disables further advancement of that tracer; destroy it and create a new instance.
+Each call reads one contiguous counter snapshot of `36 * dispatchesPerReadback` bytes in dense mode, or `44 * dispatchesPerReadback` in active mode, never particle positions. `counterReadbackBytes` reports that size. `pending` and status counts describe the last dispatch; `acceptedSteps` and `rejectedSteps` sum all work in the batch, including rejected trials. The fixed batch may contain idle tail dispatches after an early completion. `previous` retains the state before the whole call, so idle tails do not erase the rendered segment. It cannot commit the CPU horizon until readback finishes. If the device enables `timestamp-query`, `gpuMilliseconds` sums all compute-pass durations across the batch, including active queue scans; it excludes readback latency and rendering. A submission/readback failure disables further advancement of that tracer; destroy it and create a new instance.
+
+## GPU active scheduling[​](#gpu-active-scheduling "Direct link to GPU active scheduling")
+
+Set `scheduling: 'active'` to build a compact queue of unfinished particle indices before each integration dispatch. The GPU writes the indirect workgroup count; an empty queue launches zero integration workgroups. Queue order is unspecified, but `output`, `previous`, `diagnostics` and trajectory-history slots never move. The queue has at most `particleCount` entries and is rebuilt for every dispatch. New requests reset elapsed progress and each call captures `previous` for **all** slots, including stopped ones. Status totals still cover the whole allocation.
+
+`scheduledParticles` reports slots sent to the integration kernel over the batch; `integrationWorkgroups` reports its actual workgroups, including padded lanes. Neither count includes the full-allocation compaction scan. In dense mode these are `particleCount * dispatchCount` and `ceil(particleCount / 128) * dispatchCount`. The two active-mode telemetry words share the existing single counter readback.
+
+Active mode adds `4 * (particleCount + 1) + 24` bytes for the queue and indirect/reset commands, plus eight staging bytes per batch dispatch. It adds a scan, reset copies, a compute pass and timestamp snapshots. Dense remains the default: avoiding idle integration lanes does **not** guarantee a lower end-to-end cost. Compare matched fields, tolerances and batches using the benchmark described below. The checked-in [Apple WebGPU measurements](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/advection-active-scheduling.md) reduce sparse integration workgroups but show higher end-to-end time in the inexpensive uniform field.
+
+The active graph adds `reset-active-queue` and `compact-active-particles` between counter reset and integration. The scan has explicit read/write dependencies; the integration node declares the queue as storage-read and the command as indirect. Graph/Trace expose both compute passes, while Diagnostics reports scheduled slots, workgroups and readback bytes. No CPU particle-state readback controls scheduling.
 
 ## Graph inspection and tracing[​](#graph-inspection-and-tracing "Direct link to Graph inspection and tracing")
 
@@ -64,7 +74,7 @@ const report = await result.encoding.readTimings();
 // report.nodes contains reset CPU cost and adaptive compute CPU/GPU timings.
 ```
 
-GPU timing uses immutable per-encoding timestamp snapshots, so later dispatches can reuse the query set without changing an earlier report. Without timestamp support, CPU encoding and resource inspection remain available. Copy nodes have CPU timing only. `gpuMilliseconds` measures the adaptive compute pass, excluding counter readback and trail rendering. Resource previews are explicit, additional GPU readbacks of current allocations, not historical snapshots of particle data; read them before destroying the tracer or rotating away their field textures.
+GPU timing uses immutable per-encoding timestamp snapshots, so later dispatches can reuse the query set without changing an earlier report. Without timestamp support, CPU encoding and resource inspection remain available. Copy nodes have CPU timing only. `gpuMilliseconds` measures compaction and adaptive compute passes, excluding counter readback and trail rendering. Resource previews are explicit, additional GPU readbacks of current allocations, not historical snapshots of particle data; read them before destroying the tracer or rotating away their field textures.
 
 Vector Observatory's Graph and Trace tabs show this graph for RK45 as well as RK2/RK4. They sample every 60 encodings and clear on reseed or integrator changes. Diagnostics shows the dispatch number, continuation state, target horizon, work counts and particle outcomes.
 
@@ -75,7 +85,7 @@ Particle index is stable identity. There is no automatic respawn. `lifetime` def
 | Buffer        | Four float32 values per particle                                                  |
 | ------------- | --------------------------------------------------------------------------------- |
 | `output`      | Normalized x, normalized y, age in seconds, generation (always 1)                 |
-| `previous`    | State at the start of the most recent dispatch                                    |
+| `previous`    | State at the start of the most recent advance/continue batch                      |
 | `diagnostics` | Elapsed seconds in the current request, proposed step, status, last accepted step |
 
 `ScientificParticleStatus` exports these stable numeric values:
@@ -91,7 +101,7 @@ Particle index is stable identity. There is no automatic respawn. `lifetime` def
 
 ## Qualification and example[​](#qualification-and-example "Direct link to Qualification and example")
 
-Vector Observatory offers RK45, tolerance selection, accepted-step coloring, status coloring and stopped-particle markers. Adaptive mode performs one bounded dispatch per animation frame and displays pending particles and queued simulation time. Work can lag behind wall time; the clock shows only committed simulation time.
+Vector Observatory offers RK45, tolerance selection, accepted-step coloring, status coloring and stopped-particle markers. Adaptive mode offers dense/active scheduling and 1/4/16-dispatch batches, submitting one bounded batch per animation frame and displays pending particles and queued simulation time. Work can lag behind wall time; the clock shows only committed simulation time.
 
 GPU tests cover analytic rotation and convergence, geographic units, temporal snapshot rotation, physical-hour requests, dispatch-budget independence, missing samples, domain exit, lifetime and numerical/tolerance failures. Run the opt-in accuracy/cost benchmark with:
 

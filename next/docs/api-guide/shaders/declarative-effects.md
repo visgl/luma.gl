@@ -67,7 +67,7 @@ Use `bloomEffect` for the simple image filter and `bloomLow` for the HDR pyramid
 
 ## Configure an effect[​](#configure-an-effect "Direct link to Configure an effect")
 
-Use `{effect, configuration}` for settings that affect resources or pass order when building the stack. The renderer resolves the definition once at construction. Keep animated controls in the render call's `uniforms` so they can change without reallocating those resources.
+Set an effect entry’s `options` field for settings that affect resources or pass order. The renderer resolves the definition once at construction. Keep animated controls in the render call’s `uniforms` so they can change without reallocating those resources.
 
 ```
 import {EffectRenderer} from '@luma.gl/engine';
@@ -115,6 +115,14 @@ A `SceneCapturePassDefinition` names a framebuffer, declares attachment clear an
 * `aBufferCapturePass` resets the head pointers and scissor before drawing a slice. The renderer resolves that slice before reusing its buffers.
 
 Preparation and draw hooks let the scene supply view-specific models and bindings. The capture outputs remain available to the existing shadow sampling and fullscreen resolve stages.
+
+## Produce visibility textures for lighting[​](#produce-visibility-textures-for-lighting "Direct link to Produce visibility textures for lighting")
+
+`ambientOcclusionVisibilityEffect` and `contactShadowVisibilityEffect` in `@luma.gl/engine/lighting` generate visibility for a later lighting pass. Each effect traces visibility and filters it in two directions using depth and normals. The final output is a visibility texture that can be sampled from its red channel.
+
+For scene lighting, use `AmbientOcclusionPass` or `ContactShadowPass` to size the renderer from the inputs, set the camera uniforms, and get a borrowed RGBA8 texture. Callers own the depth and normal textures. The pass owns its output and may overwrite it on the next render. Ambient occlusion requires WebGPU unless its mode is `none`, which returns a white texture.
+
+To run either definition directly, configure it in `EffectRenderer`, set `colorFormat: 'rgba8unorm'`, and call `renderToTexture` with camera uniforms, the normal texture as the source, and `depthTexture` and `normalTexture` bindings. Run visibility generation before the lighting pass that samples it.
 
 ## Resolve scene buffers[​](#resolve-scene-buffers "Direct link to Resolve scene buffers")
 
@@ -262,3 +270,9 @@ The sepia `amount` remains a shader uniform. SSAO resolves its target scales and
 Use `optionDefaults` to give construction options default values. Use `scaleResources` when several targets should follow one resolution option. SSGI and clustered volumetric lighting use this to keep their evaluation, history, and filter textures at the same relative size.
 
 Use `variants` when an option selects a different set of passes or resources. Each value replaces the listed fields for that instance. A value without an entry uses the base definition. For example, `volumetricFog` uses screen-space passes and a history texture by default. Set the effect's `mode` option to `'height'` to use the analytic pass without allocating a fog history texture.
+
+### Apply presets and initialize history[​](#apply-presets-and-initialize-history "Direct link to Apply presets and initialize history")
+
+An option can supply a scale or a uniform default directly, or select a value from a table. For SSR, an explicit `resolutionScale` takes precedence over the quality preset. The camera reprojection variant allocates full-resolution normal and depth history while the reflection buffers use the selected scale.
+
+HDR auto exposure uses fixed scale factors for the luminance reduction levels. Its history descriptor seeds the exposure value from `initialExposure` after creation, resize, or history reset. Per-frame uniforms still control adaptation and override construction-time uniform defaults.

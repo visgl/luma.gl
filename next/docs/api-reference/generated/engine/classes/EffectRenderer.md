@@ -1,6 +1,6 @@
 # Class: EffectRenderer\<Options>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:198](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L198)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:281](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L281)
 
 Runs a chain of reusable fullscreen effects for a single device.
 
@@ -22,7 +22,7 @@ Resize to the desired output size before rendering. Supply scene textures and pe
 
 > **new EffectRenderer**<`Options`>(`device`, `__namedParameters`): `EffectRenderer`<`Options`>
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L201)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:284](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L284)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -184,7 +184,7 @@ Records the shader-pass chain into a caller-owned command encoder. The encoder m
 
 > **render**(`options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L221)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:304](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L304)
 
 Records a frame and returns a borrowed texture, or whether presentation was recorded.
 
@@ -202,7 +202,7 @@ Records a frame and returns a borrowed texture, or whether presentation was reco
 
 > **render**(`options`): `boolean`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:222](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L222)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:305](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L305)
 
 Records a frame and returns a borrowed texture, or whether presentation was recorded.
 
@@ -220,7 +220,7 @@ Records a frame and returns a borrowed texture, or whether presentation was reco
 
 > **render**(`options`): `boolean` | `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L223)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:306](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L306)
 
 Records a frame and returns a borrowed texture, or whether presentation was recorded.
 

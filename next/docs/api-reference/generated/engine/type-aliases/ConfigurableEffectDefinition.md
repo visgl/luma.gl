@@ -2,7 +2,7 @@
 
 > **ConfigurableEffectDefinition**<`Options`, `TargetName`> = { `name`: `string`; `configure`: [`EffectDefinition`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectDefinition.md)<`TargetName`>; } | [`EffectDefinition`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/EffectDefinition.md)<`TargetName`> & `object`
 
-Defined in: [modules/engine/src/passes/effect-renderer.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L83)
+Defined in: [modules/engine/src/passes/effect-renderer.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/effect-renderer.ts#L92)
 
 A reusable effect whose resource descriptors or pass sequence depend on options. Configure it when constructing the stack or when topology changes. Per-frame uniforms and external textures are supplied to the renderer separately.
 
