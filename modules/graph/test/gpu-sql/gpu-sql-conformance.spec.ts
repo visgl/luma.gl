@@ -138,11 +138,7 @@ test.each(domainFunctions)('$name agrees on valid inputs and writes null for inv
   const result = output.getChild('result');
   expect(result?.type).toBeInstanceOf(arrow.Float32);
   for (const index of [0, 1]) {
-    const actual = result?.get(index);
-    expect(typeof actual).toBe('number');
-    expect(Math.abs(actual - reference.getChild('result')?.get(index))).toBeLessThanOrEqual(
-      tolerance
-    );
+    expect(result?.get(index)).toBeCloseTo(reference.getChild('result')?.get(index), 5);
   }
   expect(result?.get(2)).toBeNull();
   expect(result?.get(3)).toBeNull();
