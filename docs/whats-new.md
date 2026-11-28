@@ -34,6 +34,8 @@
 - GPU weighted shortest paths stop on the GPU once converged, continue past 1,024 rounds with
   `run()`, and read their sources from caller-owned `seeds`, so a new source compiles nothing.
   [Weighted routes](./api-reference/experimental/gpu-graph-traversal.md#find-least-cost-routes-with-gpugraphalgorithmssinglesourceshortestpath)
+- `Model` can draw from a caller-owned WebGPU indirect draw record with no CPU readback.
+  [Indirect draws](./api-reference/engine/model.md#setindirectbufferindirectbuffer-buffer--null-indirectoffset-number-void)
 
 - WebGPU Cartesian point rendering and CPU picking share a prepared CRS transform. The GPU
   subtracts the destination origin before narrowing to float32 and draws directly from borrowed

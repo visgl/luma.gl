@@ -9,6 +9,7 @@ import './utils/buffer-layout-order.spec';
 
 // model etc
 import './lib/model.spec';
+import './lib/model-indirect.spec';
 import './lib/animation-loop.spec';
 import './lib/picking-manager.spec';
 import './lib/picking-modules.node.spec';
