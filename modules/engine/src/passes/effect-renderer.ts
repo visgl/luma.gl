@@ -239,6 +239,20 @@ function lowerEffectPass<TargetName extends string>(
   return {...routing, shaderPass: {...module, passes: [{action: kind}]}};
 }
 
+/** Ordered effect definitions and their individually typed construction options. */
+export type EffectEntries<Options extends readonly unknown[]> = {
+  readonly [Index in keyof Options]:
+    | EffectDefinition
+    | {
+        effect: ConfigurableEffectDefinition<Options[Index]>;
+        options?: NoInfer<Options[Index]>;
+      }
+    | {
+        effect: EffectDefinition & {configure?: never; optionDefaults?: never};
+        options?: never;
+      };
+};
+
 export type EffectRendererProps<Options extends readonly unknown[] = readonly unknown[]> = Omit<
   ShaderPassRendererProps,
   'shaderPasses'
@@ -248,18 +262,7 @@ export type EffectRendererProps<Options extends readonly unknown[] = readonly un
    * Configure reusable effects inline by supplying their definition and options.
    * Each configuration is checked against the options declared by its effect.
    */
-  effects: {
-    readonly [Index in keyof Options]:
-      | EffectDefinition
-      | {
-          effect: ConfigurableEffectDefinition<Options[Index]>;
-          options?: NoInfer<Options[Index]>;
-        }
-      | {
-          effect: EffectDefinition & {configure?: never; optionDefaults?: never};
-          options?: never;
-        };
-  };
+  effects: EffectEntries<Options>;
 };
 
 /** Inputs and destination for a single effects frame. */
@@ -269,6 +272,22 @@ export type EffectRenderOptions = ShaderPassRendererRenderOptions & {
   /** Defaults to the device encoder. The renderer records work without submitting it. */
   commandEncoder?: CommandEncoder;
 };
+
+/** @internal Normalizes the public effect entries for either executor. */
+export function resolveEffectEntries<Options extends readonly unknown[]>(
+  effects: EffectEntries<Options>
+): CompositeShaderPass[] {
+  return effects.map(entry => {
+    if (!('effect' in entry)) return resolveEffect(entry);
+    const {effect} = entry;
+    if (('configure' in effect && effect.configure) || 'optionDefaults' in effect) {
+      return resolveEffect(
+        resolveEffectOptions(effect as ConfigurableEffectDefinition<Options[number]>, entry.options)
+      );
+    }
+    return resolveEffect(effect);
+  });
+}
 
 /**
  * Runs a chain of reusable fullscreen effects for a single device.
@@ -284,19 +303,7 @@ export class EffectRenderer<
   constructor(device: Device, {effects, ...props}: EffectRendererProps<Options>) {
     super(device, {
       ...props,
-      shaderPasses: effects.map(entry => {
-        if (!('effect' in entry)) return resolveEffect(entry);
-        const {effect} = entry;
-        if (('configure' in effect && effect.configure) || 'optionDefaults' in effect) {
-          return resolveEffect(
-            resolveEffectOptions(
-              effect as ConfigurableEffectDefinition<Options[number]>,
-              entry.options
-            )
-          );
-        }
-        return resolveEffect(effect);
-      })
+      shaderPasses: resolveEffectEntries(effects)
     });
   }
 

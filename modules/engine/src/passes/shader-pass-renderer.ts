@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding, BindingDeclaration, CommandEncoder, TextureFormatColor} from '@luma.gl/core';
+import type {
+  Binding,
+  BindingDeclaration,
+  CommandEncoder,
+  ComputePass,
+  TextureFormat,
+  TextureFormatColor,
+  TextureView
+} from '@luma.gl/core';
 import {Buffer, Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
@@ -27,13 +35,18 @@ type ShaderPassLike = ShaderPass | CompositeShaderPass;
 type ComputeStage = Omit<CompositeShaderPassComputeOptimization, 'replacedPasses'>;
 type ShaderSubPass = NonNullable<ShaderPass['passes']>[0];
 
-type EffectiveSubPass = {
+/** @internal One resolved fullscreen draw, before GPU objects are constructed. */
+export type PlannedFullscreenPass = {
   ownerName: string;
   shaderPass: ShaderPass;
-  subPassRenderer: SubPassRenderer;
+  subPass: ShaderSubPass;
   inputs?: Partial<Record<string, ShaderPassInputSource<string>>>;
   output?: 'previous' | string;
   uniforms?: Record<string, unknown>;
+};
+
+type EffectiveSubPass = Omit<PlannedFullscreenPass, 'subPass'> & {
+  subPassRenderer: SubPassRenderer;
 };
 
 type ManagedRenderTarget = {
@@ -326,7 +339,7 @@ class PassRenderer {
   passDefinition: ShaderPassLike;
   renderTargets: Record<string, ManagedRenderTarget>;
   subPassExecutions: EffectiveSubPass[];
-  computeRenderer?: CompositeShaderPassComputeRenderer;
+  computeRenderer?: FullscreenComputePass;
 
   constructor(
     device: Device,
@@ -341,39 +354,29 @@ class PassRenderer {
     if (isCompositeShaderPass(passDefinition)) {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
-      const compute = passDefinition.initialPasses
-        ? passDefinition.initialPasses.compute
-        : passDefinition.compute;
-      if (compute && supportsComputeOptimization(device, passDefinition)) {
-        this.computeRenderer = new CompositeShaderPassComputeRenderer(
+      const {compute, passes} = planFullscreenPasses(device, passDefinition);
+      if (compute) {
+        this.computeRenderer = new FullscreenComputePass(
           device,
           compute,
-          this.renderTargets,
-          shaderInputs
+          Object.fromEntries(
+            Object.entries(this.renderTargets).map(([name, target]) => [
+              name,
+              target.texture.format
+            ])
+          )
         );
       }
-      const executableSteps = passDefinition.initialPasses
-        ? [
-            ...(this.computeRenderer ? [] : passDefinition.initialPasses.fragment),
-            ...passDefinition.steps
-          ]
-        : this.computeRenderer
-          ? passDefinition.steps.filter(
-              step => !passDefinition.compute!.replacedPasses.includes(step.shaderPass.name)
-            )
-          : passDefinition.steps;
-      this.subPassExecutions = executableSteps.flatMap(step =>
-        this.createStepExecutions(passDefinition, step, flipY)
-      );
+      this.subPassExecutions = this.createPassExecutions(passes, flipY);
       return;
     }
 
     validateShaderPassDoesNotOwnRenderTargets(passDefinition, passDefinition.name);
     this.renderTargets = {};
-    this.subPassExecutions = this.createPassExecutions(passDefinition, {
-      ownerName: passDefinition.name,
+    this.subPassExecutions = this.createPassExecutions(
+      planShaderSubpasses(passDefinition, passDefinition.name),
       flipY
-    });
+    );
   }
 
   destroy() {
@@ -402,8 +405,23 @@ class PassRenderer {
       options.originalTexture,
       options.previousTexture
     );
-    this.computeRenderer.encode(options.commandEncoder, sourceTexture, options.runtimeUniforms);
-    for (const targetName of Object.values(this.computeRenderer.optimization.outputs)) {
+    const {optimization} = this.computeRenderer;
+    const outputs = Object.fromEntries(
+      Object.entries(optimization.outputs).map(([binding, targetName]) => [
+        binding,
+        this.renderTargets[targetName].texture.view
+      ])
+    );
+    this.computeRenderer.prepare(options.commandEncoder, sourceTexture.view, outputs, {
+      ...this.shaderInputs.getUniformValues()[optimization.uniformModule],
+      ...optimization.uniforms,
+      ...options.runtimeUniforms[optimization.uniformModule]
+    });
+    const target = this.renderTargets[Object.values(optimization.outputs)[0]].texture;
+    const pass = options.commandEncoder.beginComputePass({id: optimization.name});
+    this.computeRenderer.dispatch(pass, target.width, target.height);
+    pass.end();
+    for (const targetName of Object.values(optimization.outputs)) {
       this.markTargetWritten(targetName);
     }
   }
@@ -537,52 +555,15 @@ class PassRenderer {
     return resolvedBindings;
   }
 
-  private createStepExecutions(
-    compositeShaderPass: CompositeShaderPass,
-    step: CompositeShaderPass['steps'][number],
+  private createPassExecutions(
+    passes: PlannedFullscreenPass[],
     flipY: boolean
   ): EffectiveSubPass[] {
-    validateShaderPassDoesNotOwnRenderTargets(
-      step.shaderPass,
-      `${compositeShaderPass.name}/${step.shaderPass.name}`
-    );
-
-    return this.createPassExecutions(step.shaderPass, {
-      ownerName: `${compositeShaderPass.name}/${step.shaderPass.name}`,
-      firstInputs: step.inputs,
-      lastOutput: step.output,
-      uniformOverrides: step.uniforms,
-      flipY
-    });
-  }
-
-  private createPassExecutions(
-    shaderPass: ShaderPass,
-    options: {
-      ownerName: string;
-      firstInputs?: Partial<Record<string, ShaderPassInputSource<string>>>;
-      lastOutput?: 'previous' | string;
-      uniformOverrides?: Record<string, unknown>;
-      flipY: boolean;
-    }
-  ): EffectiveSubPass[] {
-    const subPasses = shaderPass.passes || [];
-    return subPasses.map((subPass, index) => {
-      const isFirstSubPass = index === 0;
-      const isLastSubPass = index === subPasses.length - 1;
-      const inputs =
-        isFirstSubPass && options.firstInputs !== undefined ? options.firstInputs : subPass.inputs;
-      const output =
-        isLastSubPass && options.lastOutput !== undefined ? options.lastOutput : subPass.output;
-      validateSubPassRouting(options.ownerName, inputs, output, this.renderTargets);
-
+    return passes.map(({subPass, ...pass}) => {
+      validateSubPassRouting(pass.ownerName, pass.inputs, pass.output, this.renderTargets);
       return {
-        ownerName: options.ownerName,
-        shaderPass,
-        subPassRenderer: new SubPassRenderer(this.device, shaderPass, subPass, options.flipY),
-        inputs,
-        output,
-        uniforms: mergeUniforms(options.uniformOverrides, subPass.uniforms)
+        ...pass,
+        subPassRenderer: new SubPassRenderer(this.device, pass.shaderPass, subPass, flipY)
       };
     });
   }
@@ -612,24 +593,19 @@ class PassRenderer {
   }
 }
 
-/** Executes one optional WebGPU compute replacement before the remaining fragment passes. */
-class CompositeShaderPassComputeRenderer {
+/** @internal Shared executable for a fused fullscreen compute stage. */
+export class FullscreenComputePass {
   readonly optimization: ComputeStage;
 
-  private readonly renderTargets: Record<string, ManagedRenderTarget>;
-  private readonly shaderInputs: ShaderInputs;
   private readonly computation: Computation;
   private readonly parameterBuffer: Buffer;
 
   constructor(
     device: Device,
     optimization: ComputeStage,
-    renderTargets: Record<string, ManagedRenderTarget>,
-    shaderInputs: ShaderInputs
+    outputFormats: Record<string, TextureFormat>
   ) {
     this.optimization = optimization;
-    this.renderTargets = renderTargets;
-    this.shaderInputs = shaderInputs;
     this.parameterBuffer = device.createBuffer({
       id: `${optimization.name}-parameters`,
       byteLength: Math.max(Math.ceil(optimization.uniformNames.length / 4) * 16, 16),
@@ -642,7 +618,7 @@ class CompositeShaderPassComputeRenderer {
         group: 0,
         location: outputIndex + 2,
         access: 'write-only',
-        format: renderTargets[targetName].texture.format
+        format: outputFormats[targetName]
       })
     );
     try {
@@ -669,16 +645,13 @@ class CompositeShaderPassComputeRenderer {
     }
   }
 
-  encode(
+  /** Binds the current graph or renderer resources and records its uniform upload. */
+  prepare(
     commandEncoder: CommandEncoder,
-    sourceTexture: Texture,
-    runtimeUniforms: Record<string, Record<string, unknown>>
+    source: TextureView,
+    outputs: Record<string, TextureView>,
+    effectiveUniforms: Record<string, unknown>
   ): void {
-    const effectiveUniforms = {
-      ...(this.shaderInputs.getUniformValues()[this.optimization.uniformModule] || {}),
-      ...this.optimization.uniforms,
-      ...(runtimeUniforms[this.optimization.uniformModule] || {})
-    };
     const uniformValues = new Float32Array(
       Math.max(Math.ceil(this.optimization.uniformNames.length / 4) * 4, 4)
     );
@@ -686,27 +659,27 @@ class CompositeShaderPassComputeRenderer {
       const value = effectiveUniforms[uniformName];
       uniformValues[uniformIndex] = typeof value === 'number' ? value : 0;
     }
-    this.parameterBuffer.write(uniformValues);
-
-    const outputEntries = Object.entries(this.optimization.outputs);
-    const bindings: Record<string, Binding> = {
+    this.parameterBuffer.device.writeBufferViaCommandEncoder(
+      commandEncoder,
+      this.parameterBuffer,
+      uniformValues
+    );
+    this.computation.setBindings({
       [this.optimization.uniformBinding]: this.parameterBuffer,
-      sourceTexture: sourceTexture.view
-    };
-    for (const [bindingName, targetName] of outputEntries) {
-      bindings[bindingName] = this.renderTargets[targetName].texture.view;
-    }
-    this.computation.setBindings(bindings);
+      sourceTexture: source,
+      ...outputs
+    });
     this.computation.predraw(commandEncoder);
-    const dispatchTarget = this.renderTargets[outputEntries[0][1]].texture;
-    const computePass = commandEncoder.beginComputePass({id: this.optimization.name});
+  }
+
+  /** Dispatches against the dimensions of the first declared storage output. */
+  dispatch(pass: ComputePass, width: number, height: number): void {
     this.computation.dispatch(
-      computePass,
-      Math.ceil(dispatchTarget.width / this.optimization.workgroupSize[0]),
-      Math.ceil(dispatchTarget.height / this.optimization.workgroupSize[1]),
+      pass,
+      Math.ceil(width / this.optimization.workgroupSize[0]),
+      Math.ceil(height / this.optimization.workgroupSize[1]),
       1
     );
-    computePass.end();
   }
 
   destroy(): void {
@@ -715,14 +688,15 @@ class CompositeShaderPassComputeRenderer {
   }
 }
 
-/** Renders a single subpass of a `ShaderPass`. */
-class SubPassRenderer {
+/** @internal Shared fullscreen draw executable. */
+export class SubPassRenderer {
   model: ClipSpace;
   shaderPass: ShaderPass;
   subPass: ShaderSubPass;
   flipY: boolean;
 
   constructor(device: Device, shaderPass: ShaderPass, subPass: ShaderSubPass, flipY: boolean) {
+    initializeShaderModule(shaderPass);
     this.shaderPass = shaderPass;
     this.subPass = subPass;
     this.flipY = flipY;
@@ -775,6 +749,52 @@ class SubPassRenderer {
   }
 }
 
+/** @internal Resolves compute selection and fullscreen draw routing for both executors. */
+export function planFullscreenPasses(
+  device: Device,
+  effect: CompositeShaderPass,
+  options: {allowCompute?: boolean; colorFormat?: TextureFormatColor} = {}
+): {compute?: ComputeStage; passes: PlannedFullscreenPass[]} {
+  const fallback = effect.initialPasses?.fragment ?? [];
+  const compute =
+    options.allowCompute !== false &&
+    supportsComputeOptimization(device, effect, options.colorFormat)
+      ? effect.initialPasses
+        ? effect.initialPasses.compute
+        : effect.compute
+      : undefined;
+  const steps = effect.initialPasses
+    ? [...(compute ? [] : fallback), ...effect.steps]
+    : compute
+      ? effect.steps.filter(step => !effect.compute!.replacedPasses.includes(step.shaderPass.name))
+      : effect.steps;
+  return {
+    compute,
+    passes: steps.flatMap(step => {
+      const ownerName = effect.name + '/' + step.shaderPass.name;
+      validateShaderPassDoesNotOwnRenderTargets(step.shaderPass, ownerName);
+      return planShaderSubpasses(step.shaderPass, ownerName, step);
+    })
+  };
+}
+
+/** Applies step-level routing to the first input and last output of a shader pass. */
+function planShaderSubpasses(
+  shaderPass: ShaderPass,
+  ownerName: string,
+  step?: CompositeShaderPass['steps'][number]
+): PlannedFullscreenPass[] {
+  const subPasses = shaderPass.passes ?? [];
+  return subPasses.map((subPass, index) => ({
+    ownerName,
+    shaderPass,
+    subPass,
+    inputs: (index === 0 ? step?.inputs : undefined) ?? subPass.inputs,
+    output: (index === subPasses.length - 1 ? step?.output : undefined) ?? subPass.output,
+    uniforms: mergeUniforms(step?.uniforms, subPass.uniforms)
+  }));
+}
+
 function getExecutableShaderPasses(shaderPasses: ShaderPassLike[]): ShaderPass[] {
   return shaderPasses.flatMap(shaderPass =>
     isCompositeShaderPass(shaderPass)
@@ -792,7 +812,8 @@ function isCompositeShaderPass(shaderPass: ShaderPassLike): shaderPass is Compos
 /** @internal Returns whether a composite pass's optional compute path is valid for this device. */
 export function supportsComputeOptimization(
   device: Device,
-  compositeShaderPass: CompositeShaderPass
+  compositeShaderPass: CompositeShaderPass,
+  colorFormat: TextureFormatColor = device.preferredColorFormat
 ): boolean {
   const optimization = compositeShaderPass.initialPasses
     ? compositeShaderPass.initialPasses.compute
@@ -818,7 +839,7 @@ export function supportsComputeOptimization(
     if (!target?.storage) {
       return false;
     }
-    const format = target.format || device.preferredColorFormat;
+    const format = target.format || colorFormat;
     return device.getTextureFormatCapabilities(format).store;
   });
 }
@@ -1121,9 +1142,10 @@ function getSeedFramebuffer(
   return swapFramebuffers.current;
 }
 
-function calculateTextureScale(
-  sourceTexture: Texture,
-  outputTexture: Texture
+/** @internal Computes the texture coordinate scale for differing source and output aspects. */
+export function calculateTextureScale(
+  sourceTexture: Pick<Texture, 'width' | 'height'>,
+  outputTexture: Pick<Texture, 'width' | 'height'>
 ): [scaleX: number, scaleY: number] {
   const sourceAspect = sourceTexture.width / sourceTexture.height;
   const outputAspect = outputTexture.width / outputTexture.height;

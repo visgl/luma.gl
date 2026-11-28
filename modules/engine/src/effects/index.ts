@@ -252,3 +252,13 @@ export {contactShadows} from '../lighting/contact-shadow-composite';
 
 export type {TemporalFrameJitter, TemporalJitter} from './passes/screen-space/temporal-frame';
 export * from './temporal-upscale/index';
+
+export {
+  GPUEffectOperation,
+  createEffectRenderOperation,
+  effectOperationLowering
+} from './graph/gpu-effect-operation';
+export type {
+  EffectRenderOperationProps,
+  GPUEffectOperationProps
+} from './graph/gpu-effect-operation';
