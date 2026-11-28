@@ -69,6 +69,7 @@ export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact
 
 export {
   ClusteredLightGrid,
+  clusteredLightGridPipeline,
   CLUSTERED_POINT_LIGHT_LAYOUT,
   MAX_CLUSTERED_POINT_LIGHTS,
   DEFAULT_CLUSTER_DIMENSIONS,

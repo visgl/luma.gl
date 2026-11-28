@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {encodeComputePipeline, type ComputePipelineDefinition} from '@luma.gl/graph/gpu-effects';
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import {assert, Buffer} from '@luma.gl/core';
 import {Computation} from '../compute/computation';
@@ -67,6 +68,64 @@ export type ClusteredLightGridUniforms = {
   clusterNearPlane: number;
   clusterFarPlane: number;
 };
+
+type ClusteredLightGridResources = {
+  pointLights: Buffer;
+  clusterLightBitMask: Buffer;
+  clusteredLightGrid: Buffer;
+  clusterLightCounts: Buffer;
+  clusterLightIndices: Buffer;
+};
+
+type ClusteredLightGridDispatchState = {
+  clusterCount: number;
+  lightWordCount: number;
+  pointLightCount: number;
+};
+
+/** Clears the mask, bins light spheres, and compacts the lists for lighting consumers. */
+export const clusteredLightGridPipeline = {
+  name: 'clustered-light-grid',
+  passes: [
+    {
+      kind: 'compute',
+      name: 'build',
+      dispatches: [
+        {
+          kernel: 'clear',
+          bindings: {clusterLightBitMask: 'clusterLightBitMask'},
+          workgroups: ({clusterCount, lightWordCount}) => [
+            Math.ceil((clusterCount * lightWordCount) / CLUSTER_WORKGROUP_SIZE)
+          ]
+        },
+        {
+          kernel: 'bin',
+          bindings: {
+            pointLights: 'pointLights',
+            clusterLightBitMask: 'clusterLightBitMask',
+            clusteredLightGrid: 'clusteredLightGrid'
+          },
+          workgroups: ({pointLightCount}) => [
+            Math.max(1, Math.ceil(pointLightCount / CLUSTER_WORKGROUP_SIZE))
+          ]
+        },
+        {
+          kernel: 'compact',
+          bindings: {
+            clusterLightBitMask: 'clusterLightBitMask',
+            clusterLightCounts: 'clusterLightCounts',
+            clusterLightIndices: 'clusterLightIndices'
+          },
+          workgroups: ({clusterCount}) => [Math.ceil(clusterCount / CLUSTER_WORKGROUP_SIZE)]
+        }
+      ]
+    }
+  ]
+} as const satisfies ComputePipelineDefinition<
+  ClusteredLightGridResources,
+  'clear' | 'bin' | 'compact',
+  ClusteredLightGridDispatchState
+>;
 
 /**
  * Builds fixed-capacity screen/depth light lists entirely on WebGPU.
@@ -143,7 +202,6 @@ export class ClusteredLightGrid {
         bindings: [{name: 'clusterLightBitMask', type: 'storage', group: 0, location: 0}]
       }
     });
-    this.clearComputation.setBindings({clusterLightBitMask: this.clusterLightBitMask});
 
     this.binningComputation = new Computation(device, {
       id: `${this.id}-bin`,
@@ -189,36 +247,35 @@ export class ClusteredLightGrid {
     this.depthRange = [options.nearPlane, options.farPlane];
     this.activePointLightCount = options.pointLightCount;
     this.uniformBuffer.write(makeClusteredLightGridUniformData(options));
-    this.binningComputation.setBindings({
-      pointLights: options.pointLights,
-      clusterLightBitMask: this.clusterLightBitMask,
-      clusteredLightGrid: this.uniformBuffer
+    const computations = {
+      clear: this.clearComputation,
+      bin: this.binningComputation,
+      compact: this.compactComputation
+    };
+    encodeComputePipeline(clusteredLightGridPipeline, {
+      commandEncoder,
+      id: this.id,
+      resources: {
+        pointLights: options.pointLights,
+        clusterLightBitMask: this.clusterLightBitMask,
+        clusteredLightGrid: this.uniformBuffer,
+        clusterLightCounts: this.clusterLightCounts,
+        clusterLightIndices: this.clusterLightIndices
+      },
+      frame: {
+        clusterCount: this.clusterCount,
+        lightWordCount: getLightWordCount(this.maxLightCount),
+        pointLightCount: options.pointLightCount
+      },
+      prepare: (kernel, bindings) => {
+        const computation = computations[kernel];
+        computation.setBindings(bindings);
+        computation.predraw(commandEncoder);
+      },
+      dispatch: (kernel, computePass, _bindings, workgroups) => {
+        computations[kernel].dispatch(computePass, ...workgroups);
+      }
     });
-    this.compactComputation.setBindings({
-      clusterLightBitMask: this.clusterLightBitMask,
-      clusterLightCounts: this.clusterLightCounts,
-      clusterLightIndices: this.clusterLightIndices
-    });
-    this.clearComputation.predraw(commandEncoder);
-    this.binningComputation.predraw(commandEncoder);
-    this.compactComputation.predraw(commandEncoder);
-
-    const computePass = commandEncoder.beginComputePass({id: `${this.id}-build`});
-    this.clearComputation.dispatch(
-      computePass,
-      Math.ceil(
-        (this.clusterCount * getLightWordCount(this.maxLightCount)) / CLUSTER_WORKGROUP_SIZE
-      )
-    );
-    this.binningComputation.dispatch(
-      computePass,
-      Math.max(1, Math.ceil(options.pointLightCount / CLUSTER_WORKGROUP_SIZE))
-    );
-    this.compactComputation.dispatch(
-      computePass,
-      Math.ceil(this.clusterCount / CLUSTER_WORKGROUP_SIZE)
-    );
-    computePass.end();
   }
 
   /** Returns the storage bindings available to lighting consumers. */

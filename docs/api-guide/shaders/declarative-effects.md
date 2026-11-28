@@ -108,6 +108,26 @@ definition for analytic fog with frame uniforms, or configure
 `volumetricFog` with `{mode: 'height'}`. Selection outlines sample a
 caller-provided `selectionTexture` mask.
 
+## Run compute pipelines
+
+A `ComputePipelineDefinition` is an ordered list of compute passes and reusable
+GPU operations. Each compute pass lists its kernels, maps shader binding names
+to named resources, and calculates dispatch dimensions from frame state.
+`encodeComputePipeline` resolves those bindings and records the passes into
+the caller's command encoder. Keep buffer and texture allocation in the
+renderer that owns them.
+
+`GPUConvolutionBloom` executes `fftBloomPipeline` from
+`@luma.gl/graph/gpu-effects`. The definition makes highlight extraction,
+forward FFT, spectral multiplication, inverse FFT, and HDR composition
+explicit. The optical kernel transform runs only when its cached spectrum
+needs updating. FFTs reuse their existing compiled command graphs.
+
+`ClusteredLightGrid` executes `clusteredLightGridPipeline` from
+`@luma.gl/engine/lighting`. Its clear, bin, and compact dispatches share one
+compute pass. Deferred and volumetric lighting continue to consume the resulting
+light counts and indices through the grid's bindings.
+
 ## Resolve scene buffers
 
 ANARI exposes fullscreen definitions for deferred direct lighting, ambient
