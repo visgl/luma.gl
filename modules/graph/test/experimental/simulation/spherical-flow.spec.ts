@@ -233,3 +233,32 @@ it('splits long advances and permits the timestep division roundoff', async cont
     graph.destroy();
   }
 });
+
+it('finishes a multi-dispatch snapshot horizon with accepted endpoint roundoff', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const endTime = 122.91;
+  const graph = new SphericalFlowGraph(device, {
+    input: makeRotation(9, 5, 0),
+    nextInput: makeRotation(9, 5, 0),
+    timeRange: [0, endTime],
+    positions: new Float32Array([1, 0, 0]),
+    radius: 1,
+    maximumTimeStep: 0.03
+  });
+  try {
+    const initial = graph.output;
+    expect(() => graph.advance(endTime + 1)).toThrow();
+    expect(graph.output).toBe(initial);
+    expect(graph.time).toBe(0);
+    graph.advance(endTime * (1 + 5e-13));
+    expect(graph.time).toBe(endTime);
+    expect(graph.remainingTime).toBe(0);
+    const bytes = await graph.output.readAsync();
+    const values = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+    expect(Array.from(values.slice(0, 3))).toEqual([1, 0, 0]);
+    expect(values[3]).toBeCloseTo(endTime, 3);
+  } finally {
+    graph.destroy();
+  }
+});

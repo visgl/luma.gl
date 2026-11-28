@@ -289,14 +289,17 @@ export class SphericalFlowGraph {
     assert(
       Number.isFinite(duration) && duration >= 0 && duration <= this.remainingTime * (1 + 1e-12)
     );
-    const substeps = Math.max(1, Math.ceil(duration / this.maximumTimeStep));
+    // Accepted horizon roundoff must not be amplified by a small final batch.
+    const boundedDuration = Math.min(duration, this.remainingTime);
+    const substeps = Math.max(1, Math.ceil(boundedDuration / this.maximumTimeStep));
     // A safe integer keeps the bounded-dispatch loop progressing exactly.
     assert(Number.isSafeInteger(substeps));
-    const deltaTime = duration / substeps;
+    const deltaTime = boundedDuration / substeps;
     for (let completed = 0; completed < substeps; ) {
       const batchSteps = Math.min(4096, substeps - completed);
       const encoder = this.device.createCommandEncoder();
-      this.record(encoder, deltaTime, batchSteps);
+      // Clock subtraction can round the last remainder below its nominal duration.
+      this.record(encoder, Math.min(deltaTime, this.remainingTime / batchSteps), batchSteps);
       this.device.submit(encoder.finish());
       completed += batchSteps;
     }
