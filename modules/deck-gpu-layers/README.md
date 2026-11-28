@@ -267,11 +267,31 @@ picking when either endpoint is invalid. Picks report the original table row, ph
 batch index, and row within that batch. Pre-segment longer paths and supply `getFeatureIndex(segmentRow)` to attach the original
 feature index to a pick.
 
-The table and H3 adapters share a fixed map frame and expose retained, chunk-aligned
-position and validity vectors. They borrow input buffers and own projected outputs and
-compute resources. Run `updateChunks()` before attaching the layers. After an in-place
-GPU write, call `updateChunks([batchIndex])` on each changed endpoint or point source.
-Build a new source if you replace the input buffers or change the table topology or map
-frame. Detach the layers and finish queued work before destroying the source. Camera
-changes and picks reuse the output. Table projection submits one dispatch per selected
-batch. H3 pairing remains opt-in on supported adapters. Inline projection stays deferred.
+### Materialized projection contract
+
+`MaterializedProjectionSource` is the shared owner contract for Cartesian H3, map H3,
+and resident XY sources. `MaterializedMapProjectionSource` adds a fixed Web Mercator
+anchor. Layers consume the borrowed `MaterializedProjectionOutput` or the existing
+`MaterializedMapPointSource` draw shape. Pick metadata may use the fixed CPU transform
+for a selected row when the caller supplies that row's original coordinates.
+
+- **Ownership and topology.** Sources borrow input storage and own projected vectors and
+  compute resources. Physical chunk indices, including empty chunks, remain stable. Build
+  a new source to replace buffers, change chunk boundaries or change the render frame.
+- **Precision and validity.** Origin-relative positions are `float32x2` in render units.
+  H3 uses GPU-computed float32 cell centers. The table path accepts packed binary64 XY.
+  The chunk-aligned `uint32` mask defines validity. A zero mask leaves the position
+  unspecified and suppresses rendering and picking.
+- **Submission and reuse.** Submit producer writes to the same device before calling
+  `updateChunks()`. Initialize populated output before drawing. Omit indices to update
+  all nonempty chunks. Duplicate indices coalesce, empty selections submit nothing, and
+  an invalid index rejects the entire request. Outputs retain their descriptors and buffers
+  across updates. Camera changes and picks reuse these outputs.
+- **Destruction.** Detach consumers and finish queued work before calling `destroy()`.
+  Repeated destruction is safe. Updates after destruction throw. The caller releases the
+  borrowed inputs when they are no longer in use.
+
+Resident XY projection emits one dispatch per selected nonempty batch. H3 may pair
+adjacent dirty chunks when explicitly enabled on an adapter with at least nine storage
+bindings. Inline projection stays deferred. H3 cell-center generation belongs to
+`@luma.gl/graph/gpu-h3`. The Deck H3 sources compose it with coordinate projection.

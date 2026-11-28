@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {WEB_MERCATOR_EARTH_RADIUS} from '@luma.gl/graph/gpu-project';
 import {prepareCRSProjection, ProjectionRenderTransform} from '@luma.gl/graph/gpu-project-crs';
+import type {
+  MaterializedProjectionOutput,
+  MaterializedProjectionSource
+} from './materialized-projection-source';
 
 /** Inputs for a fixed 2D Web Mercator frame, in the input CRS's XY convention. */
 export type MaterializedMapFrameOptions = Pick<
@@ -24,12 +27,11 @@ export type MaterializedMapFrame = {
 };
 
 /** Retained render inputs. Layers borrow these vectors and never schedule or own projection. */
-export type MaterializedMapPointSource = MaterializedMapFrame & {
-  /** Local render positions in physical source chunk order. */
-  readonly positions: GPUVector<'float32x2'>;
-  /** Per-row validity sharing the positions' physical chunk layout. */
-  readonly validity: GPUVector<'uint32'>;
-};
+export type MaterializedMapPointSource = MaterializedMapFrame & MaterializedProjectionOutput;
+
+/** Owns a retained projection source with a fixed Web Mercator common-space anchor. */
+export type MaterializedMapProjectionSource = MaterializedMapPointSource &
+  MaterializedProjectionSource;
 
 /** Prepares a fixed, origin-relative Web Mercator frame in Deck common units. */
 export function prepareMaterializedMapFrame({

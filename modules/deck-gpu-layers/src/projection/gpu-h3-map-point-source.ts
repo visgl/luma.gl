@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import {WEB_MERCATOR_MAX_LATITUDE, type ProjectionBounds} from '@luma.gl/graph/gpu-project';
 import {
   prepareMaterializedMapFrame,
-  type MaterializedMapPointSource
+  type MaterializedMapProjectionSource
 } from './materialized-map-frame';
 import {
   GPUH3ProjectedPointSource,
@@ -24,7 +24,7 @@ export type GPUH3MapPointSourceProps = Omit<GPUH3ProjectedPointSourceProps, 'tra
 /** Materializes resident H3 centers relative to a stable 2D Web Mercator common-space origin. */
 export class GPUH3MapPointSource
   extends GPUH3ProjectedPointSource
-  implements MaterializedMapPointSource
+  implements MaterializedMapProjectionSource
 {
   /** Absolute Deck common-space position of the local frame's origin at ground level. */
   readonly commonOrigin: readonly [number, number, number];

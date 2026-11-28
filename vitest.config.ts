@@ -11,7 +11,7 @@ const excludePatterns = [
   '**/*.disabled.*',
   // Keep the Cartesian projection regression active while the legacy Deck suites are excluded.
   'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
-  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-materialized-map-point-layer|gpu-resident-table-map|gpu-h3-map-point-source.node|gpu-projected-point-performance).spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/!(gpu-projected-point-layer|gpu-projected-point-layer.node|gpu-materialized-point-layer|gpu-materialized-map-point-layer|gpu-resident-table-map|gpu-h3-map-point-source.node|materialized-projection-contract.node|gpu-projected-point-performance).spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -135,6 +135,7 @@ const nodeCoverageNativePatterns = [
   'modules/graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/graph/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/materialized-projection-contract.node.spec.{ts,js}',
   'modules/graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
   'modules/graph/test/gpu-sql/gpu-sql.node.spec.{ts,js}'
 ];
