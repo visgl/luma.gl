@@ -11,6 +11,9 @@ import {
   type GPURigidBodyJoint
 } from '@luma.gl/graph/gpu-physics';
 
+import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+
+import {BIN_ANGLES, BIN_DESTINATION, makeBinWorkcell, type BinScenario} from './bin-workcell';
 export const GRIPPER_PHASES = ['Open', 'Grip', 'Lift', 'Carry', 'Lower', 'Release'] as const;
 export const DESTINATION_ANGLE = 1;
 export const REACH = 1.4;
@@ -21,7 +24,13 @@ export function makeGripperTrial(
   reduced: boolean,
   friction = 0.9,
   publish = false,
-  options: {mass?: number; torque?: number; id?: string} = {}
+  options: {
+    mass?: number;
+    torque?: number;
+    id?: string;
+    bin?: BinScenario;
+    carrySteps?: number;
+  } = {}
 ) {
   const base: Vector = [0, 0, 0.98];
   const box: Vector = [0.19, 0.2, 0.24];
@@ -119,24 +128,65 @@ export function makeGripperTrial(
     friction: 1,
     restitution: 0
   });
+  const bin = options.bin;
+  const sourceAngle = bin ? BIN_ANGLES[bin.target] : 0;
+  const destination = bin ? BIN_DESTINATION : DESTINATION_ANGLE;
+  if (bin) {
+    if (sourceAngle === undefined) throw new RangeError('Invalid bin target');
+    links[0].angle = sourceAngle;
+    const rotation: [number, number, number, number] = [
+      0,
+      0,
+      Math.sin(sourceAngle / 2),
+      Math.cos(sourceAngle / 2)
+    ];
+    for (const body of bodies.slice(2, 6)) {
+      const [x, y, z] = body.position;
+      body.position = [
+        x * Math.cos(sourceAngle) - y * Math.sin(sourceAngle),
+        x * Math.sin(sourceAngle) + y * Math.cos(sourceAngle),
+        z
+      ];
+      body.orientation = rotation;
+    }
+  }
+  const workcell = bin ? makeBinWorkcell(bin, REACH, options.mass ?? 1) : undefined;
+  if (workcell) {
+    bodies[0] = workcell.bodies[0];
+    bodies.splice(6, 1, ...workcell.bodies.slice(1));
+  }
+  const pads = [
+    {link: 'left', radius: padRadius},
+    {link: 'right', radius: padRadius}
+  ] as const;
+  const binWorld =
+    bin && reduced
+      ? new GPURigidBodyWorld({
+          id: 'bin-counterparts',
+          bodies: [bodies[0], ...bodies.slice(6)],
+          gravity: [0, 0, -9.81],
+          timeStep: 1 / 120,
+          iterations: 8,
+          publishPoses: publish
+        })
+      : undefined;
   const world = reduced
     ? new GPUArticulationTree({
         base,
         id: options.id,
         links,
         publishMatrices: publish,
-        payload: {
-          mass: options.mass ?? 1,
-          position,
-          halfExtents: box,
-          pads: [
-            {link: 'left', radius: padRadius},
-            {link: 'right', radius: padRadius}
-          ],
-          friction,
-          supportFriction: 0.65,
-          supportHeight: 0
-        }
+        payload: bin
+          ? undefined
+          : {
+              mass: options.mass ?? 1,
+              position,
+              halfExtents: box,
+              pads,
+              friction,
+              supportFriction: 0.65,
+              supportHeight: 0
+            }
       })
     : new GPURigidBodyWorld({
         bodies,
@@ -147,19 +197,44 @@ export function makeGripperTrial(
         gravity: [0, 0, -9.81],
         publishPoses: publish
       });
+  const liftAngle = bin ? -0.55 : -0.38;
+  const travelSteps = (phase: number) =>
+    phase === 3
+      ? (options.carrySteps ??
+        (bin ? 4 * Math.ceil(40 * Math.abs(destination - sourceAngle)) : 120))
+      : 120;
+  const phaseNames =
+    bin && !bin.drop && !bin.obstructed
+      ? [...GRIPPER_PHASES, 'Regrip', 'Raise again']
+      : [...GRIPPER_PHASES];
+  if (bin?.drop) {
+    phaseNames[4] = 'Drop';
+    phaseNames[5] = 'Settle';
+  }
   const phases = [
-    [0, -0.024, 0],
-    [0, -0.024, 0.36],
-    [0, -0.38, 0.36],
-    [DESTINATION_ANGLE, -0.38, 0.36],
-    [DESTINATION_ANGLE, -0.024, 0.36],
-    [DESTINATION_ANGLE, -0.024, 0]
+    [sourceAngle, -0.024, 0],
+    [sourceAngle, -0.024, 0.36],
+    [sourceAngle, liftAngle, 0.36],
+    [destination, liftAngle, 0.36],
+    [destination, bin?.drop ? liftAngle : -0.024, bin?.drop ? 0 : 0.36],
+    [destination, bin?.drop ? liftAngle : -0.024, 0],
+    [destination, -0.024, 0.36],
+    [destination, liftAngle, 0.36]
   ];
   return {
     world,
     bodies,
+    binWorld,
+    workcell,
+    phaseNames,
+    travelSteps,
+    addToGraph<P>(graph: GPUCommandGraph<P>) {
+      if (binWorld && world instanceof GPUArticulationTree)
+        binWorld.addToGraph(graph, {tree: world, pads, friction: friction ** 2});
+      else world.addToGraph(graph);
+    },
     command(phase: number, step = 0) {
-      const fraction = Math.min(1, step / 120);
+      const fraction = Math.min(1, step / travelSteps(phase));
       const blend = fraction * fraction * (3 - 2 * fraction);
       const [yaw, pitch, grip] = phases[phase].map(
         (goal, index) =>
@@ -177,7 +252,8 @@ export function makeGripperTrial(
     },
     async positions() {
       const states = await world.readState();
-      return states.slice(reduced ? 0 : 2).map(state => state.position);
+      const external = binWorld ? (await binWorld.readState()).slice(1) : [];
+      return [...states.slice(reduced ? 0 : 2), ...external].map(state => state.position);
     }
   };
 }

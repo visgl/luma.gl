@@ -59,6 +59,7 @@ async function runGraspSweep(device: Device, status: HTMLOutputElement, results:
           link.href =
             './gripper.html?' +
             new URLSearchParams({
+              replay: '1',
               mass: String(mass),
               torque: String(torque),
               friction: String(friction)

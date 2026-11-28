@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type ShaderLayout, type Binding, type BindingDeclaration} from '@luma.gl/core';
-import type {GPUCommandGraph, GraphBufferUse} from '../gpu-core/gpu-command-graph';
+import type {
+  GPUCommandGraph,
+  GraphBufferUse,
+  GraphBufferHandle
+} from '../gpu-core/gpu-command-graph';
 import type {GPUCommandGraphComputeExecutable} from '../gpu-core/gpu-command-graph-types';
 import {
   createBoundKernel,
@@ -74,6 +78,8 @@ export class GPUArticulationTree {
   get poseMatrices() {
     return this.buffers[6] ?? null;
   }
+  private initialState?: () => void;
+  private worldContacts = false;
   private destroyed = false;
 
   constructor(props: {
@@ -150,7 +156,28 @@ export class GPUArticulationTree {
   }
 
   /** Register one simulation step. The output pose buffer uses four vec4s per link: COM, quaternion, velocity, spin. */
-  addToGraph<P>(graph: GPUCommandGraph<P>) {
+  addToGraph<P>(
+    graph: GPUCommandGraph<P>,
+    coupling?: {
+      boxes: GraphBufferHandle;
+      count: number;
+      pads: GPUArticulationPayload['pads'];
+      friction: number;
+    }
+  ) {
+    if (
+      coupling &&
+      (this.payload ||
+        this.contact ||
+        coupling.pads.length !== 2 ||
+        coupling.pads[0].link === coupling.pads[1].link ||
+        !Number.isFinite(coupling.friction) ||
+        coupling.friction < 0 ||
+        coupling.pads.some(
+          pad => !this.indices.has(pad.link) || !Number.isFinite(pad.radius) || pad.radius <= 0
+        ))
+    )
+      throw new Error('Invalid world contact pads');
     if (this.destroyed || this.buffers.length)
       throw new Error('Inactive or already registered articulation');
     const names = ['links', 'drives', 'coordinates', 'poses', 'counters', 'settings'];
@@ -194,7 +221,19 @@ export class GPUArticulationTree {
               0,
               ...this.payload.pads.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0])
             ]
-          : [])
+          : coupling
+            ? [
+                0,
+                0,
+                0,
+                0,
+                0,
+                coupling.friction,
+                0,
+                0,
+                ...coupling.pads.flatMap(pad => [this.indices.get(pad.link)!, pad.radius, 0, 0])
+              ]
+            : [])
       ])
     ];
     if (this.publishMatrices) {
@@ -213,6 +252,15 @@ export class GPUArticulationTree {
         this.buffers.push(buffer);
         return graph.importBuffer({id: buffer.id, byteLength: buffer.byteLength, usage}, buffer);
       });
+      this.initialState = () => {
+        for (const index of [1, 2, 3, 4]) this.buffers[index].write(data[index]);
+        if (this.publishMatrices) this.buffers[6].write(data[6]);
+      };
+      if (coupling) {
+        this.worldContacts = true;
+        names.push('boxes');
+        handles.push(coupling.boxes);
+      }
       const resources: GraphBufferUse[] = handles.map((buffer, index) => ({
         buffer,
         usage: index === 5 ? 'uniform' : index < 2 ? 'storage-read' : 'storage-read-write'
@@ -231,7 +279,8 @@ export class GPUArticulationTree {
           this.links.length,
           Boolean(this.contact),
           this.publishMatrices,
-          Boolean(this.payload)
+          Boolean(this.payload),
+          coupling?.count ?? 0
         ),
         shaderLayout
       };
@@ -257,6 +306,12 @@ export class GPUArticulationTree {
       this.destroy();
       throw error;
     }
+  }
+
+  /** Restore initial drives, joint coordinates, payload and diagnostics between steps. */
+  reset(): void {
+    if (!this.initialState) throw new Error('Inactive articulation');
+    this.initialState();
   }
 
   private driveIndex(id: string) {
@@ -304,16 +359,18 @@ export class GPUArticulationTree {
   /** Numerical failure latches and preserves the last accepted state. */
   async readSimulationDiagnostics() {
     const bytes = await this.buffers[4].readAsync();
-    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 2);
+    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
     return {
       steps: values[0],
       complete: values[1] === 0,
+      ...(this.worldContacts ? {padContactMasks: [values[2], values[3]]} : {}),
       ...(this.contact
         ? {normalForce: new DataView(bytes.buffer, bytes.byteOffset).getFloat32(8, true)}
         : {})
     };
   }
   destroy() {
+    this.initialState = undefined;
     this.destroyed = true;
     for (const buffer of this.buffers) buffer.destroy();
     this.buffers.length = 0;

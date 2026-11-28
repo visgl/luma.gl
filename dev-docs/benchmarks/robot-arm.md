@@ -83,3 +83,17 @@ A trial earns **placed** if it completes all 1,080 fixed steps, lifts and carrie
 Each tree owns its state and contributes a dispatch per step. Four steps for all trials share an encoder, submission and completion fence. The reported world-steps per second includes drive writes and fenced simulation work and excludes compilation, rendering and phase-end readbacks. The sweep shares the live 3D lab’s device, so rendering can affect measured throughput.
 
 In the standalone Apple WebGPU baseline, the graph processed 3,042 world-steps/s. Four of 18 workpieces met the placement gates. Both 0.5 and 1 kg placed at 32 N·m with friction 0.35 and 0.9. All zero-friction controls missed. The 3 kg, 32 N·m, 0.9 trial lifted to 0.69 m but missed the destination by 0.85 m.
+
+### Bin picking
+
+Run `node scripts/physics/benchmark-gripper.mjs http://127.0.0.1:5335/ --bin` against the local gripper lab. Both lanes use the same one-kilogram boxes, tray, finger geometry and drive trajectory. The reduced tree exchanges impulses with an eight-iteration world. The ordered solver uses 64 iterations for the arm and all counterparts together. Each timing includes drive updates, encoding, submission and a completion fence. Each simulated step represents 1/120 s.
+
+| Apple WebGPU fixture | Reduced p95 | Ordered p95 | Outcome |
+| --- | ---: | ---: | --- |
+| Center pickup | 3.3 ms | 25.1 ms | Both placed and lifted the same block again. Landing errors were 2.1 and 6.9 cm respectively. |
+| 3.5 cm offset pickup | 3.7 ms | 23.5 ms | Both placed and regrasped. Maximum radial slip was 1.8 and 3.7 cm respectively. |
+| Frictionless center pickup | 3.7 ms | 25.9 ms | Both left the selected block on the bench. |
+| Split grip | 4.2 ms | 25.1 ms | The reduced solver identified a different block under each fingertip. The ordered benchmark records trajectories only. |
+| Drop onto another block | 3.8 ms | 26.6 ms | The reduced load settled at 0.671 m on its neighbor. The ordered load rolled out of the tray and off the bench. |
+
+All five reduced cases stayed within the 8.33 ms physics-step budget on this adapter. The rendered center scenario separately recorded a 16.7 ms median and 17.7 ms p95 browser animation-frame interval over 180 callbacks during a cycle. The single-workpiece reference rerun measured 2.2 ms and 14.7 ms p95 for reduced and ordered with rubber pads. The ordered drop remains an open quality gap. The benchmark exits with a failure code when a scenario misses its quality gates. [Raw bin-picking measurements](./bin-picking-apple.json).

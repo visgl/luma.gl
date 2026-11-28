@@ -171,3 +171,5 @@ export {
   type GPUArticulationPayload,
   type GPUArticulationDrive
 } from './gpu-articulation-tree';
+
+export type {GPUArticulationWorldContact} from './articulation-world-contacts';

@@ -1025,3 +1025,7 @@ package advances the G10 throughput gate; it does not claim unrestricted large-w
 A fixed-base tree can squeeze and carry one freely rotating box using two spherical pads with Coulomb friction. The benchmark compares the reduced-coordinate and ordered formulations at 120 Hz and includes a zero-pad-friction control. See the [pick-and-place qualification](../benchmarks/robot-arm.md#two-finger-pick-and-place). General manifold discovery, arbitrary payload geometry, multiple free counterparts, floating bases and loop closure remain open.
 
 The [grasp parameter sweep](../benchmarks/robot-arm.md#grasp-parameter-sweep) batches 18 independent G9 trees into a G10 graph-level throughput experiment with per-trial 3D replay. Fusing the dispatches and qualifying additional adapters remain open.
+
+### G9 bin picking with independent rigid bodies
+
+A fixed-base articulated tree can now discover contacts between its two spherical pads and a small world of independently rotating boxes. The Bin Picking workcell shares authored scene geometry between the ordered reference and the coupled solver. Its regression cases cover contact identity, a split grip, release onto another block, and regrasp. Broader contact shapes, spatial candidate generation, coupling several trees, floating bases and loop closure remain open.

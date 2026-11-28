@@ -210,3 +210,67 @@ it('keeps light and heavy grasp trials independent in one graph', async context 
     for (const {world} of trials) world.destroy();
   }
 });
+
+it.for([
+  'center',
+  'split',
+  'drop'
+] as const)('discovers box identities through pad contact in the %s bin', async (scenario, context) => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const trial = makeGripperTrial(true, 0.9, true, {
+    bin: {target: 1, obstructed: scenario === 'split', drop: scenario === 'drop'}
+  });
+  const definition = new GPUCommandGraph(device);
+  trial.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    let totalSteps = 0;
+    for (let phase = 0; phase < trial.phaseNames.length; phase++) {
+      const travel = trial.travelSteps(phase);
+      for (let step = 0; step < travel + 60; step += 4) {
+        if (step <= travel) trial.command(phase, step);
+        const encoder = device.createCommandEncoder();
+        for (let substep = 0; substep < 4; substep++)
+          graph.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+      }
+      totalSteps += travel + 60;
+      const state = await trial.world.readSimulationDiagnostics();
+      expect(state).toMatchObject({steps: totalSteps, complete: true});
+      const blocks = (await trial.positions()).slice(4, 7);
+      if (phase === 1)
+        expect(state).toMatchObject({padContactMasks: scenario === 'split' ? [2, 4] : [4, 4]});
+      if (phase === 2 && scenario !== 'split') expect(blocks[1][2]).toBeGreaterThan(0.58);
+      if (phase === 5) {
+        expect(state).toMatchObject({padContactMasks: [0, 0]});
+        if (scenario === 'drop') {
+          expect(blocks[1][2]).toBeGreaterThan(blocks[2][2] + 0.3);
+          expect(blocks[1][2]).toBeLessThan(0.8);
+        }
+        if (scenario === 'center') {
+          expect(
+            Math.hypot(blocks[1][0] - REACH * Math.cos(1.65), blocks[1][1] - REACH * Math.sin(1.65))
+          ).toBeLessThan(0.25);
+          expect(Math.abs(blocks[1][2] - 0.24)).toBeLessThan(0.06);
+        }
+      }
+      if (phase === 7) {
+        expect(state).toMatchObject({padContactMasks: [4, 4]});
+        expect(blocks[1][2]).toBeGreaterThan(0.58);
+        const bytes = await trial.binWorld!.poseMatrices!.readAsync(2 * 64, 64);
+        expect([...new Float32Array(bytes.buffer, bytes.byteOffset, 16).slice(12, 15)]).toEqual(
+          blocks[1]
+        );
+      }
+    }
+    expect(await trial.binWorld!.readSimulationDiagnostics()).toMatchObject({
+      complete: true,
+      steps: totalSteps
+    });
+  } finally {
+    graph.destroy();
+    trial.world.destroy();
+    trial.binWorld!.destroy();
+  }
+});
