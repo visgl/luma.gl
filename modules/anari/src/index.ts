@@ -44,6 +44,8 @@ export type {
   ANARIPickResult,
   ANARIRayTracingGraphStageStatistics,
   ANARIRayTracingGraphStatistics,
+  ANARIRayGraphTimings,
+  ANARIRayTraversalCounters,
   ANARIRendererParameters,
   ANARIRayTracingEnvironmentMap,
   ANARIRendererSubtype,

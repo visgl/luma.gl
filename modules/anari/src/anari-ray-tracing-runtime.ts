@@ -88,6 +88,7 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       denoiseRadius: renderer.getParameter('denoiseRadius'),
       varianceGuidance: renderer.getParameter('varianceGuidance'),
       separateLobeHistories: renderer.getParameter('separateLobeHistories'),
+      sampleTraversal: renderer.getParameter('sampleTraversal'),
       debugView: renderer.getParameter('debugView'),
       maxBounces: renderer.getParameter('maxBounces'),
       transportMode: renderer.getParameter('transportMode'),

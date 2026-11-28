@@ -122,6 +122,23 @@ it('preserves stationary HDR and confidence with split histories through sparse 
     for (let offset = 6; offset < samples.byteLength; offset += 8) {
       expect(fromHalfFloat(samples.getUint16(offset, true))).toBe(1);
     }
+    const uninstrumented = renderer.render(scene);
+    device.submit();
+    expect(uninstrumented.rayTracing?.readTraversalCounters).toBeUndefined();
+    const measured = renderer.render({
+      ...scene,
+      sampleTraversal: true,
+      separateLobeHistories: true
+    });
+    device.submit();
+    const counters = await measured.rayTracing?.readTraversalCounters?.();
+    expect(counters).toMatchObject({sampledPixels: 4, primaryRays: 4, guideRays: 4});
+    expect(counters?.tlasNodes).toBeGreaterThan(0);
+    expect(counters?.shadowRays).toBeGreaterThan(0);
+    expect(counters?.continuationRays).toBeGreaterThan(0);
+    renderer.render(scene);
+    device.submit();
+    expect(await measured.rayTracing?.readTraversalCounters?.()).toBeNull();
     expect(reportError).not.toHaveBeenCalled();
   } finally {
     renderer.destroy();

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ANARIFrameStatistics} from '../anari-types';
 import {
   assert,
   Buffer,
@@ -241,12 +242,17 @@ export type SceneRenderStatistics = {
     memory?: {
       sceneBufferBytes: number;
       historyTextureBytes: number;
+      traversalCounterBytes?: number;
       graphTransientBytes: number;
       totalBytes: number;
     };
 
     /** Optional synchronous graph-stage diagnostics; never submits, waits, or reads back. */
     graph?: RayTracingGraphStatistics;
+    readGraphTimings?: NonNullable<ANARIFrameStatistics['rayTracing']>['readGraphTimings'];
+    readTraversalCounters?: NonNullable<
+      ANARIFrameStatistics['rayTracing']
+    >['readTraversalCounters'];
   };
 };
 

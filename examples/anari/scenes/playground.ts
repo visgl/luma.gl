@@ -3,6 +3,8 @@ import {GPUCommandGraphSubmissionPacer} from '@luma.gl/graph/gpu-core';
 import {submitPacedRayFrame} from './ray-submission-pacing';
 import {
   ANARIDevice,
+  type ANARIFrameStatistics,
+  type ANARIRayGraphTimings,
   type ANARIRendererParameters,
   type ANARIRendererSubtype,
   type ANARIVector3
@@ -69,6 +71,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   /** Whether the capture harness requested optional GPU timestamps. */
   private captureGpuTiming = false;
   /** GPU durations recorded for each encoded frame of the current capture. */
+  private captureGraphTimings: Promise<ANARIRayGraphTimings | null>[] = [];
+  private readCaptureTraversal?: NonNullable<
+    ANARIFrameStatistics['rayTracing']
+  >['readTraversalCounters'];
   private captureGpuTimes: Promise<number | null>[] = [];
   /** Suspends rendering until the requested capture asset has loaded. */
 
@@ -227,6 +233,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         maxBounces <= 8
       )
         sceneDescription.renderer.maxBounces = maxBounces;
+      if (parameters.has('sampleTraversal')) sceneDescription.renderer.sampleTraversal = true;
       const separateLobeHistories = parameters.get('separateLobeHistories');
       if (separateLobeHistories === '1') sceneDescription.renderer.separateLobeHistories = true;
       const varianceGuidance = parameters.get('varianceGuidance');
@@ -294,7 +301,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.captureGpuTiming = parameters.has('captureGpuTiming') && Boolean(this.captureFrameLimit);
     if (this.captureGpuTiming) {
       Object.assign(this.canvas, {
-        readCaptureGpuTimes: () => Promise.all(this.captureGpuTimes)
+        readCaptureGpuTimes: () => Promise.all(this.captureGpuTimes),
+        readCaptureGraphTimings: () => Promise.all(this.captureGraphTimings)
+      });
+    }
+    if (parameters.has('sampleTraversal') && this.captureFrameLimit) {
+      Object.assign(this.canvas, {
+        readCaptureTraversal: () => this.readCaptureTraversal?.() ?? null
       });
     }
     if (parameters.has('captureRadiance') && this.captureFrameLimit) {
@@ -418,6 +431,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         : undefined;
     if (timedFrame && this.captureGpuTiming) this.captureGpuTimes.push(timedFrame.gpuTime);
     const statistics = timedFrame?.result ?? scene.frame.render();
+    if (this.captureGpuTiming) {
+      this.captureGraphTimings.push(
+        statistics.rayTracing?.readGraphTimings?.().catch(() => null) ?? Promise.resolve(null)
+      );
+    }
+    this.readCaptureTraversal = statistics.rayTracing?.readTraversalCounters;
     if (timedFrame && measureLiveBudget)
       this.rayBatchBudget.observe(statistics.rayTracing, timedFrame.gpuTime);
     this.refinementSamples = statistics.rayTracing?.accumulatedSamples ?? 0;
@@ -936,6 +955,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (this.captureFrameLimit) {
         this.renderedFrameCount = 0;
         this.captureGpuTimes = [];
+        this.captureGraphTimings = [];
+        this.readCaptureTraversal = undefined;
       }
     } catch {
       this.applyEditorScene();

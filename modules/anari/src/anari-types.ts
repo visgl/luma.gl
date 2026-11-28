@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUCommandGraphTimingReport} from '@luma.gl/graph/gpu-core';
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray9, TypedArray} from '@math.gl/core/types';
 import type {
@@ -292,6 +293,8 @@ export type ANARIRendererParameters = {
   varianceGuidance?: boolean;
   /** Opt into independent diffuse and specular PBR accumulation histories. */
   separateLobeHistories?: boolean;
+  /** Collect sampled traversal counters for diagnostics. */
+  sampleTraversal?: boolean;
   /** Presentation diagnostics for ray tracing. */
   debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history' | 'variance';
   /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
@@ -365,6 +368,28 @@ export type ANARIRayTracingGraphStatistics = ANARIRayTracingGraphStageStatistics
   trace: ANARIRayTracingGraphStageStatistics;
 };
 
+/** Raw results from one lane of each 8×8 ray-trace dispatch tile. Counts are not scaled. */
+export type ANARIRayTraversalCounters = {
+  sampledPixels: number;
+  primaryRays: number;
+  guideRays: number;
+  shadowRays: number;
+  continuationRays: number;
+  tlasNodes: number;
+  blasNodes: number;
+  triangleTests: number;
+};
+
+/** GPU Graph node timings for the stages encoded in one ray-tracing frame. */
+export type ANARIRayGraphTimings = {
+  topology?: GPUCommandGraphTimingReport;
+  /** Whether the topology stage rebuilt or refit the bottom-level hierarchy. */
+  topologyUpdate?: 'build' | 'refit';
+  acceleration?: GPUCommandGraphTimingReport;
+  refit?: GPUCommandGraphTimingReport;
+  trace: GPUCommandGraphTimingReport;
+};
+
 export type ANARIFrameStatistics = {
   surfaceCount: number;
   instanceCount: number;
@@ -381,11 +406,16 @@ export type ANARIFrameStatistics = {
     memory?: {
       sceneBufferBytes: number;
       historyTextureBytes: number;
+      traversalCounterBytes?: number;
       graphTransientBytes: number;
       totalBytes: number;
     };
 
     graph?: ANARIRayTracingGraphStatistics;
+    /** Read pass timings after submission when the caller encodes with GPU timestamp profiling. */
+    readGraphTimings?: () => Promise<ANARIRayGraphTimings>;
+    /** Read raw sampled counts after submission and before encoding the next frame. */
+    readTraversalCounters?: () => Promise<ANARIRayTraversalCounters | null>;
   };
 };
 
