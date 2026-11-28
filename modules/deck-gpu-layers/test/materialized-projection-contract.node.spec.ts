@@ -13,9 +13,12 @@ import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
 import {expect, it, vi} from 'vitest';
 
+/** Shared geographic test region in the source CRS. */
 const bounds = [-123, 37, -122, 38] as const;
+/** Midpoint used as the stable local render origin. */
 const sourceOrigin = [-122.5, 37.5] as const;
 
+/** Allocates caller-owned packed inputs with the requested physical chunk lengths. */
 function makeInput<Format extends 'uint32x2' | 'uint32x4'>(
   device: Device,
   format: Format,
@@ -42,6 +45,7 @@ function makeInput<Format extends 'uint32x2' | 'uint32x4'>(
   });
 }
 
+/** Creates the H3 fixture and exposes its borrowed buffers for ownership assertions. */
 function makeH3Source(device: Device, lengths: number[]) {
   const cells = makeInput(device, 'uint32x2', lengths);
   return {
@@ -51,6 +55,7 @@ function makeH3Source(device: Device, lengths: number[]) {
   };
 }
 
+/** Creates the resident XY fixture and exposes its borrowed buffers for ownership assertions. */
 function makeTableSource(device: Device, lengths: number[]) {
   const coordinates = makeInput(device, 'uint32x4', lengths);
   const table = new GPUTable({vectors: {input: coordinates}});
