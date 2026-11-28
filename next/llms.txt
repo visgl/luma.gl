@@ -816,7 +816,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: DirectionalLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/DirectionalLightModel.md): Defined in22
 - [Class: DynamicBuffer](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicBuffer.md): Defined in45
 - [Class: DynamicTexture](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture.md): Defined in37
-- [Class: EffectRenderer<Options>](https://luma.gl/next/docs/api-reference/generated/engine/classes/EffectRenderer.md): Defined in281
+- [Class: EffectRenderer<Options>](https://luma.gl/next/docs/api-reference/generated/engine/classes/EffectRenderer.md): Defined in300
 - [Class: Geometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/Geometry.md): Defined in20
 - [Class: GeometryNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GeometryNode.md): Defined in12
 - [Class: GPUGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUGeometry.md): Defined in39
@@ -845,7 +845,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: ScenegraphNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md): Defined in31
 - [Class: SceneMetadata](https://luma.gl/next/docs/api-reference/generated/engine/classes/SceneMetadata.md): Defined in6
 - [Class: ShaderInputs<ShaderPropsT>](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md): Defined in42
-- [Class: ShaderPassRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md): Defined in90
+- [Class: ShaderPassRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md): Defined in103
 - [Class: SkinController](https://luma.gl/next/docs/api-reference/generated/engine/classes/SkinController.md): Defined in33
 - [Class: SphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/SphereGeometry.md): Defined in71
 - [Class: SpotLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/SpotLightModel.md): Defined in22

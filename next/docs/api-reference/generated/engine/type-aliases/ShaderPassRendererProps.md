@@ -2,7 +2,7 @@
 
 > **ShaderPassRendererProps** = `object`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L53)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L66)
 
 Construction props for [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md).
 
@@ -12,7 +12,7 @@ Construction props for [ShaderPassRenderer](https://luma.gl/next/docs/api-refere
 
 > `optional` **colorFormat?**: `TextureFormatColor`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L59)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L72)
 
 Format of the shared previous-chain textures. Defaults to the canvas-preferred format.
 
@@ -22,7 +22,7 @@ Format of the shared previous-chain textures. Defaults to the canvas-preferred f
 
 > `optional` **flipY?**: `boolean`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L61)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L74)
 
 Flip source and presentation sampling vertically. Defaults to true on WebGPU.
 
@@ -32,7 +32,7 @@ Flip source and presentation sampling vertically. Defaults to true on WebGPU.
 
 > `optional` **shaderInputs?**: [`ShaderInputs`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md)
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L57)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:70](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L70)
 
 Optional typed ShaderInputs object for setting uniforms
 
@@ -42,6 +42,6 @@ Optional typed ShaderInputs object for setting uniforms
 
 > **shaderPasses**: `ShaderPassLike`\[]
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L55)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L68)
 
 List of ShaderPasses or CompositeShaderPasses to apply to the sourceTexture

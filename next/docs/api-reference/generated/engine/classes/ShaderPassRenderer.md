@@ -1,6 +1,6 @@
 # Class: ShaderPassRenderer
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L90)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L103)
 
 Runs one or more shader passes against a source texture.
 
@@ -22,7 +22,7 @@ Per-draw `uniforms` and `bindings` passed to `renderToTexture()` or `renderToScr
 
 > **new ShaderPassRenderer**(`device`, `props`): `ShaderPassRenderer`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L97)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L110)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:97](https://githu
 
 > **device**: `Device`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L91)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L104)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:91](https://githu
 
 > **passRenderers**: `PassRenderer`\[]
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L93)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L106)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:93](https://githu
 
 > **shaderInputs**: [`ShaderInputs`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md)
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L92)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L105)
 
 ***
 
@@ -68,7 +68,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:92](https://githu
 
 > **swapFramebuffers**: [`SwapFramebuffers`](https://luma.gl/next/docs/api-reference/generated/engine/classes/SwapFramebuffers.md)
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L94)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L107)
 
 ***
 
@@ -76,7 +76,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:94](https://githu
 
 > **textureModel**: [`BackgroundTextureModel`](https://luma.gl/next/docs/api-reference/generated/engine/classes/BackgroundTextureModel.md)
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L95)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L108)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -84,7 +84,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:95](https://githu
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L128)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L141)
 
 Destroys resources created by this ShaderPassRenderer
 
@@ -98,7 +98,7 @@ Destroys resources created by this ShaderPassRenderer
 
 > **encodeToScreen**(`commandEncoder`, `options`): `boolean`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:160](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L160)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L173)
 
 Records the shader-pass chain and presentation into a caller-owned command encoder. The encoder must belong to this renderer's device and have no active pass. This method does not finish or submit the encoder.
 
@@ -122,7 +122,7 @@ Records the shader-pass chain and presentation into a caller-owned command encod
 
 > **encodeToTexture**(`commandEncoder`, `options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:210](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L210)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L223)
 
 Records the shader-pass chain into a caller-owned command encoder. The encoder must belong to this renderer's device and have no active pass. This method does not finish or submit the encoder.
 
@@ -146,7 +146,7 @@ Records the shader-pass chain into a caller-owned command encoder. The encoder m
 
 > **renderToScreen**(`options`): `boolean`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L151)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L164)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -164,7 +164,7 @@ Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:151](https://gith
 
 > **renderToTexture**(`options`): `Texture` | `null`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L201)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L214)
 
 Runs the shaderPasses in sequence on the sourceTexture and returns a texture with the results.
 
@@ -186,7 +186,7 @@ null if the the sourceTexture has not yet been loaded
 
 > **resetHistory**(): `void`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L145)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L158)
 
 Invalidates persistent composite-pass targets without destroying their allocations.
 
@@ -200,7 +200,7 @@ Invalidates persistent composite-pass targets without destroying their allocatio
 
 > **resize**(`size?`): `void`
 
-Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L136)
+Defined in: [modules/engine/src/passes/shader-pass-renderer.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/passes/shader-pass-renderer.ts#L149)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
