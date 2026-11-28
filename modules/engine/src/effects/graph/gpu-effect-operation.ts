@@ -327,9 +327,6 @@ function buildEffectNodes(
     for (const [passIndex, pass] of passes.entries()) {
       const name = pass.output ?? 'previous';
       const last = planIndex === plans.length - 1 && passIndex === passes.length - 1;
-      const destination =
-        name === 'previous' ? (last ? output : createTarget('previous')) : targets[name];
-      if (!destination) throw new Error(effect.name + ': unknown output ' + name);
       const bindings: Record<string, Target> = {sourceTexture: previous};
       for (const [binding, target] of Object.entries(sharedBindings)) {
         if (
@@ -342,12 +339,25 @@ function buildEffectNodes(
       for (const [binding, value] of Object.entries(pass.inputs ?? {sourceTexture: 'previous'})) {
         if (value) bindings[binding] = resolve(value);
       }
+      const outputIsSampled = Object.values(bindings).some(
+        binding => binding.view.texture === output.view.texture
+      );
+      const destination =
+        name === 'previous'
+          ? last && !outputIsSampled
+            ? output
+            : createTarget('previous')
+          : targets[name];
+      if (!destination) throw new Error(effect.name + ': unknown output ' + name);
       emitRender(pass, bindings, destination, flipY);
       written.add(destination.view);
       if (name === 'previous') previous = destination;
     }
   }
-  if (previous !== output) emitRender(copy, {sourceTexture: previous}, output, flipY);
+  if (previous.view !== output.view) {
+    // A final copy preserves the stored orientation, independent of effect coordinates.
+    emitRender(copy, {sourceTexture: previous}, output, graph.device.type === 'webgpu');
+  }
   return nodes;
 
   function createTarget(name: string, spec: ShaderPassRenderTarget = {}): Target {

@@ -19,7 +19,8 @@ import {
 it.each([
   {downsample: 'auto', flipY: true},
   {downsample: 'render', flipY: true},
-  {downsample: 'auto', flipY: false}
+  {downsample: 'auto', flipY: false},
+  {downsample: 'empty', flipY: false}
 ] as const)('matches EffectRenderer for $downsample downsampling and flipY=$flipY', async ({
   downsample,
   flipY
@@ -42,16 +43,19 @@ it.each([
     width,
     height,
     data,
-    usage: Texture.SAMPLE | Texture.COPY_DST
+    usage: Texture.SAMPLE | Texture.COPY_SRC | Texture.COPY_DST
   });
   const bloomOptions = {
     colorFormat: 'rgba8unorm',
     quality: 'low',
     radius: 1,
-    downsample,
+    downsample: downsample === 'empty' ? 'render' : downsample,
     reuseRenderTargets: true
   } as const;
-  const effects = [sepiaEffect, {effect: hdrBloom, options: bloomOptions}] as const;
+  const effects =
+    downsample === 'empty'
+      ? ([] as const)
+      : ([sepiaEffect, {effect: hdrBloom, options: bloomOptions}] as const);
   const renderer = new EffectRenderer(device, {effects, colorFormat: 'rgba8unorm', flipY});
   renderer.resize([width, height]);
 
@@ -125,22 +129,27 @@ it.each([
   }
 });
 
-it('runs compatible effects in GPUSimpleGraph on WebGL', async context => {
+it.each([
+  false,
+  true
+])('runs compatible effects in GPUSimpleGraph on WebGL (in place=%s)', async (inPlace, context) => {
   const device = await getWebGLTestDevice();
   if (!device) return context.skip();
   const source = device.createTexture({
     width: 1,
     height: 1,
     format: 'rgba8unorm',
-    usage: Texture.SAMPLE | Texture.COPY_DST,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
     data: new Uint8Array([255, 0, 0, 255])
   });
-  const target = device.createTexture({
-    width: 1,
-    height: 1,
-    format: 'rgba8unorm',
-    usage: Texture.RENDER | Texture.COPY_SRC
-  });
+  const target = inPlace
+    ? source
+    : device.createTexture({
+        width: 1,
+        height: 1,
+        format: 'rgba8unorm',
+        usage: Texture.RENDER | Texture.COPY_SRC
+      });
   const graph = new GPUSimpleGraph(device);
   graph.addRenderOperation(
     createEffectRenderOperation({
@@ -177,7 +186,7 @@ it('runs compatible effects in GPUSimpleGraph on WebGL', async context => {
     compiled.destroy();
     expect(source.destroyed).toBe(false);
     expect(target.destroyed).toBe(false);
-    target.destroy();
+    if (!inPlace) target.destroy();
     source.destroy();
   }
 });
