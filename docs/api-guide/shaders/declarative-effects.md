@@ -74,9 +74,9 @@ shared color chain between them.
 
 ## Configure an effect
 
-Use `{effect, configuration}` for settings that affect resources or pass order
-when building the stack. The renderer resolves the definition once at construction. Keep animated controls in the render call's
-`uniforms` so they can change without reallocating those resources.
+Set an effect entry’s `options` field for settings that affect resources or pass
+order. The renderer resolves the definition once at construction. Keep animated
+controls in the render call’s `uniforms` so they can change without reallocating those resources.
 
 ```ts
 import {EffectRenderer} from '@luma.gl/engine';
@@ -318,3 +318,15 @@ Each value replaces the listed fields for that instance. A value without an
 entry uses the base definition. For example, `volumetricFog` uses screen-space
 passes and a history texture by default. Set the effect's `mode` option to
 `'height'` to use the analytic pass without allocating a fog history texture.
+
+### Apply presets and initialize history
+
+An option can supply a scale or a uniform default directly, or select a value
+from a table. For SSR, an explicit `resolutionScale` takes precedence over the
+quality preset. The camera reprojection variant allocates full-resolution
+normal and depth history while the reflection buffers use the selected scale.
+
+HDR auto exposure uses fixed scale factors for the luminance reduction levels.
+Its history descriptor seeds the exposure value from `initialExposure` after
+creation, resize, or history reset. Per-frame uniforms still control adaptation
+and override construction-time uniform defaults.

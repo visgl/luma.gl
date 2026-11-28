@@ -71,18 +71,9 @@ vec4 selectionOutline_sampleColor(sampler2D sourceTexture, vec2 sourceSize, vec2
 /** Selection mask outline with optional color and thickness defaults. */
 export const selectionOutlineEffect = {
   name: 'selectionOutline',
-  configure(options = {}) {
-    return {
-      name: 'selectionOutline',
-      resources: {},
-      passes: [
-        {
-          kind: 'fullscreen',
-          shaderPass: selectionOutline,
-          uniforms: {...selectionOutline.defaultUniforms, ...options},
-          output: 'previous'
-        }
-      ]
-    };
-  }
+  optionDefaults: selectionOutline.defaultUniforms,
+  optionUniforms: {
+    selectionOutline: {color: {option: 'color'}, thickness: {option: 'thickness'}}
+  },
+  passes: [{kind: 'sample', module: selectionOutline, output: 'previous'}]
 } as const satisfies ConfigurableEffectDefinition<SelectionOutlineProps, never>;

@@ -86,7 +86,7 @@ export class ContactShadowPass {
   constructor(device: Device, props: ContactShadowPassProps = {}) {
     this.device = device;
     this.renderer = new EffectRenderer(device, {
-      effects: [{effect: contactShadowVisibilityEffect, configuration: props}],
+      effects: [{effect: contactShadowVisibilityEffect, options: props}],
       colorFormat: 'rgba8unorm'
     });
   }

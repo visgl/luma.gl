@@ -110,9 +110,7 @@ export class AmbientOcclusionPass {
       return;
     }
     this.renderer = new EffectRenderer(device, {
-      effects: [
-        {effect: ambientOcclusionVisibilityEffect, configuration: {...props, mode: this.mode}}
-      ],
+      effects: [{effect: ambientOcclusionVisibilityEffect, options: {...props, mode: this.mode}}],
       colorFormat: 'rgba8unorm'
     });
   }
