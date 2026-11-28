@@ -181,6 +181,33 @@ it('reports sampled traversal counts from the submitted frame', async () => {
     expect(counters?.tlasNodes).toBeGreaterThan(0);
     expect(counters?.shadowRays).toBeGreaterThan(0);
     expect(counters?.continuationRays).toBeGreaterThan(0);
+    const withoutGuides = {...scene, temporalReprojection: false, rayBatchPhaseCount: 4 as const};
+    const first = renderer.render(withoutGuides);
+    device.submit();
+    expect(await first.rayTracing?.readTraversalCounters?.()).toMatchObject({
+      sampledPixels: 4,
+      guideRays: 0
+    });
+    const sparse = renderer.render(withoutGuides);
+    device.submit();
+    expect(await sparse.rayTracing?.readTraversalCounters?.()).toMatchObject({
+      sampledPixels: 2,
+      guideRays: 0
+    });
+    // Switching to an identity view must populate every guide before it can reuse them.
+    const identity = {...withoutGuides, debugView: 'identity' as const};
+    const firstIdentity = renderer.render(identity);
+    device.submit();
+    expect(await firstIdentity.rayTracing?.readTraversalCounters?.()).toMatchObject({
+      sampledPixels: 4,
+      guideRays: 4
+    });
+    const cachedIdentity = renderer.render(identity);
+    device.submit();
+    expect(await cachedIdentity.rayTracing?.readTraversalCounters?.()).toMatchObject({
+      sampledPixels: 2,
+      guideRays: 0
+    });
     renderer.destroyFrame(scene.id);
     expect(await measured.rayTracing?.readTraversalCounters?.()).toBeNull();
   } finally {

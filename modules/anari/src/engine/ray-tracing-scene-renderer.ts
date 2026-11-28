@@ -50,6 +50,7 @@ import {GPUTextureHistory} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {
   getRayTracingScenePresentationShader,
+  rayTracingPresentationUsesGuides,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_BLEND_ALPHA_MODE,
   RAY_OPAQUE_ALPHA_MODE,
@@ -752,6 +753,8 @@ type RayTracingFrameResources = {
   previousViewProjection: Matrix4;
   previousCameraPosition: readonly number[];
   historyNeedsReset: boolean;
+  /** Whether every internal pixel has guide metadata from the preceding frame. */
+  hasGuideHistory: boolean;
   topologyNeedsUpdate: boolean;
   accelerationUpdateMode: RayTracingAccelerationUpdateMode;
   refitsSinceMortonRebuild: number;
@@ -1292,6 +1295,28 @@ export class RayTracingSceneRenderer {
         resources.phaseCount = options.rayBatchPhaseCount;
       }
     }
+    const needsTemporalGuides = progressive && temporalReprojection;
+    const needsGuides =
+      needsTemporalGuides ||
+      rayTracingPresentationUsesGuides(presentation.denoiseRadius, presentation.debugView);
+    // If a display guide is enabled after color-only sampling, fill every guide
+    // pixel before presentation. Color history remains valid.
+    if (needsGuides && !resources.hasGuideHistory) {
+      resources.phaseCount = 1;
+      resources.phaseIndex = 0;
+    }
+    const needsGuideHitForStationaryHistory =
+      needsTemporalGuides &&
+      !(
+        shaderOptions.separateLobeHistories ||
+        (shaderOptions.pbrTransport && shaderOptions.hasBounces)
+      );
+    const reuseGuides =
+      stationaryBatch &&
+      resources.hasGuideHistory &&
+      !resources.historyNeedsReset &&
+      !needsGuideHitForStationaryHistory;
+    const guideMode = needsGuides ? (reuseGuides ? 2 : 1) : 0;
     const activePhaseCount = resources.historyNeedsReset ? 1 : resources.phaseCount;
     const activePhaseIndex = resources.historyNeedsReset
       ? 0
@@ -1302,6 +1327,7 @@ export class RayTracingSceneRenderer {
         options,
         inverseViewProjection,
         stationaryScene: stationaryBatch,
+        guideMode,
         previousViewProjection: resources.previousViewProjection,
         previousCameraPosition: resources.previousCameraPosition,
         displayWidth,
@@ -1386,6 +1412,10 @@ export class RayTracingSceneRenderer {
     resources.previousViewProjection = new Matrix4(viewProjection);
     resources.previousCameraPosition = Array.from(options.camera.position);
     resources.historyNeedsReset = false;
+    // A partial update during motion carries some guides from the old pose.
+    // Require a complete refresh before those guides can be reused.
+    resources.hasGuideHistory =
+      needsGuides && (activePhaseCount === 1 || (stationaryBatch && resources.hasGuideHistory));
     resources.phaseIndex = (activePhaseIndex + 1) % resources.phaseCount;
     resources.frameIndex++;
     resources.accumulatedFrameCount = progressive ? accumulatedFrameCount + 1 : 0;
@@ -2138,6 +2168,7 @@ export class RayTracingSceneRenderer {
       previousViewProjection: new Matrix4(props.viewProjection),
       previousCameraPosition: Array.from(props.cameraPosition),
       historyNeedsReset: true,
+      hasGuideHistory: false,
       topologyNeedsUpdate: true,
       meshRefitsSinceRebuild: 0,
       accelerationUpdateMode: 'rebuild',
@@ -3617,12 +3648,21 @@ export class RayTracingSceneRenderer {
             }
           ] as const)
         : [];
+    const usesPresentationGuides = rayTracingPresentationUsesGuides(
+      props.presentation.denoiseRadius,
+      props.presentation.debugView
+    );
     const presentMoments =
       momentViews &&
       (props.presentation.denoiseRadius > 0 || props.presentation.debugView === 'variance');
 
     graph.addComputePass({
       id: `${props.frameIdentifier}-carry-ray-tracing-history`,
+      condition: {
+        id: 'sparse-history-carry',
+        source: 'cpu',
+        evaluate: parameters => parameters.carryWidth > 0
+      },
       resources: [
         {buffer: uniforms, usage: 'uniform'},
         {texture: historyView, usage: 'sampled'},
@@ -3680,9 +3720,6 @@ export class RayTracingSceneRenderer {
         });
         return {
           encode: ({computePass, getBuffer, getTextureView, parameters}) => {
-            if (parameters.carryWidth === 0) {
-              return;
-            }
             computation.setBindings({
               uniforms: getBuffer(uniforms),
               historyImage: getTextureView(historyView),
@@ -3886,7 +3923,7 @@ export class RayTracingSceneRenderer {
       resources: [
         {texture: compositeView, usage: 'sampled'},
         ...(presentMoments ? [{texture: momentViews.output, usage: 'sampled' as const}] : []),
-        ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
+        ...(usesPresentationGuides
           ? [{texture: outputMetadataView, usage: 'sampled' as const}]
           : [])
       ],
@@ -3926,7 +3963,7 @@ export class RayTracingSceneRenderer {
                     }
                   ]
                 : []),
-              ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
+              ...(usesPresentationGuides
                 ? [
                     {
                       name: 'metadata',
@@ -3953,9 +3990,7 @@ export class RayTracingSceneRenderer {
             model.setBindings({
               image: getTextureView(compositeView),
               ...(presentMoments ? {momentsImage: getTextureView(momentViews.output)} : {}),
-              ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
-                ? {metadata: getTextureView(outputMetadataView)}
-                : {})
+              ...(usesPresentationGuides ? {metadata: getTextureView(outputMetadataView)} : {})
             });
             model.draw(renderPass);
           },
@@ -4801,6 +4836,7 @@ function makeUniformData(props: {
   inverseViewProjection: Matrix4;
   /** Whether the camera, transforms and lights match the preceding frame. */
   stationaryScene: boolean;
+  guideMode: number;
   previousViewProjection: Matrix4;
   previousCameraPosition: readonly number[];
   displayWidth: number;
@@ -4834,6 +4870,7 @@ function makeUniformData(props: {
   data[82] = Math.max(0, environmentRadiance?.[2] ?? 0);
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
+  unsignedData[86] = props.guideMode;
   unsignedData[90] = Number(props.options.roughDielectricTransmission ?? false);
   unsignedData[91] = Number(props.stationaryScene);
   unsignedData[88] = Number(props.options.filteredCutouts ?? false);

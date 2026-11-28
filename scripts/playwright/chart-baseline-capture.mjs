@@ -17,6 +17,7 @@ const {values} = parseArgs({options: {
   'linear-hdr': {type: 'boolean'},
   'gpu-timing': {type: 'boolean'},
   'sample-traversal': {type: 'boolean'},
+  'batch-phases': {type: 'string'},
   'compare-emitters': {type: 'boolean'},
   'compare-reconstruction': {type: 'boolean'},
   'compare-motion': {type: 'boolean'},
@@ -89,6 +90,14 @@ if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('rendere
 if (values['linear-hdr'] && (values.renderer !== 'raytrace' || values.view !== 'color')) {
   throw new Error('Linear HDR capture requires the raytrace color view');
 }
+const batchPhases = values['batch-phases'] === undefined ? undefined : Number(values['batch-phases']);
+if (batchPhases !== undefined && (
+  ![1, 2, 4, 8].includes(batchPhases) || values.renderer !== 'raytrace' ||
+  compareMotion || values.motion ||
+  frameCounts.some(frames => (frames - 1) % batchPhases !== 0)
+)) {
+  throw new Error('Batch comparison requires a static raytrace preset and a full initial frame followed by complete sweeps');
+}
 const compareEmitters = values['compare-emitters'];
 const compareReconstruction = values['compare-reconstruction'];
 const gpuTiming = compareMotion || compareEmitters || compareReconstruction || values['gpu-timing'];
@@ -124,6 +133,7 @@ if (compareMotion && (
 const linearHdr = compareMotion || values['linear-hdr'];
 const url = new URL(values.url);
 if (gpuTiming) url.searchParams.set('captureGpuTiming', '1');
+if (batchPhases !== undefined) url.searchParams.set('batchPhases', String(batchPhases));
 if (values['sample-traversal']) url.searchParams.set('sampleTraversal', '1');
 if (linearHdr) {
   url.searchParams.set('captureRadiance', '1');
@@ -335,6 +345,11 @@ async function captureFrameCount(browser, output, frames, poseReference) {
     if (compareMotion && !poseReference && metadata.accumulatedSamples !== samplesAtPose) {
       throw new Error('The stationary reference did not accumulate its full sample budget');
     }
+    const expectedBatchSamples = batchPhases === undefined ? undefined
+      : Math.min(history, (1 + (frames - 1) / batchPhases) * metadata.scene.renderer.samplesPerPixel);
+    if (expectedBatchSamples !== undefined && metadata.accumulatedSamples !== expectedBatchSamples) {
+      throw new Error(`Expected ${expectedBatchSamples} completed samples, got ${metadata.accumulatedSamples}`);
+    }
     let comparison;
     let radianceSize;
     let historyConfidence;
@@ -355,7 +370,7 @@ async function captureFrameCount(browser, output, frames, poseReference) {
     }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
     await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed: captureSeed, frames, viewport: [width, height],
-      gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, graphTimings, traversalCounters, motionTimeSeconds,
+      gpuTimeMilliseconds, gpuTimeAtPoseMilliseconds, samplesAtPose, frameGpuTimes, frameGpuTiming, graphTimings, traversalCounters, batchPhases, motionTimeSeconds,
       comparisonSpace: linearHdr ? 'linear-hdr' : 'display-rgb', radianceSize, historyConfidence,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
       note: 'Elapsed time includes startup and output readback; GPU pass timestamps exclude browser startup, screenshots and readback. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));

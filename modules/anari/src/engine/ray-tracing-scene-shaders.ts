@@ -26,7 +26,7 @@ struct RayTracingUniforms {
   imageRegion: vec4<u32>,
   emitters: vec4<u32>,
   environmentRadiance: vec4<f32>,
-  environmentMap: vec4<u32>,
+  environmentMap: vec4<u32>, // Width, height, guide mode, reserved.
   visibility: vec4<u32>,
 };
 
@@ -161,7 +161,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 
   let pixel = vec2<i32>(i32(pixelX), i32(invocation.y));
   textureStore(outputImage, pixel, textureLoad(historyImage, pixel, 0));
-  textureStore(outputMetadata, pixel, textureLoad(historyMetadata, pixel, 0));
+  if (uniforms.environmentMap.z != 0u) {
+    textureStore(outputMetadata, pixel, textureLoad(historyMetadata, pixel, 0));
+  }
   /* MOMENT_CARRY */
 }
 `;
@@ -2590,9 +2592,14 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   }
 
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
-  if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.y++; }
-  let guideRay = makeGuideCameraRay(pixel);
-  let guideHit = intersectScene(guideRay, RAY_INFINITY);
+  let guideMode = uniforms.environmentMap.z;
+  var guideRay: Ray;
+  var guideHit: RayHit;
+  if (guideMode == 1u) {
+    if (SAMPLE_TRAVERSAL && traversalSampled) { rayCounts.y++; }
+    guideRay = makeGuideCameraRay(pixel);
+    guideHit = intersectScene(guideRay, RAY_INFINITY);
+  }
   var accumulatedColor = vec3<f32>(0.0);
   var accumulatedSpecular = vec3<f32>(0.0);
   /* MOMENT_INITIALIZE */
@@ -2642,19 +2649,23 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     specularSampleCount = min(specularHistory.sampleCount + f32(sampleCount), getHistorySampleLimit());
     specular = mix(specularHistory.color, specular, min(f32(sampleCount) / specularSampleCount, 1.0));
   }
-  let guideHitPosition = guideRay.origin +
-    guideRay.direction * min(guideHit.distance, 65504.0);
-  let metadata = select(
-    vec4<f32>(0.0),
-    vec4<f32>(
-      encodeRayNormal(guideHit.normal),
-      min(distance(guideHitPosition, uniforms.cameraPosition.xyz), 65504.0),
-      encodeRayPrimitiveIdentifier(guideHit.primitiveIndex)
-    ),
-    guideHit.distance < RAY_INFINITY
-  );
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
-  textureStore(outputMetadata, vec2<i32>(pixel), metadata);
+  if (guideMode == 2u) {
+    textureStore(outputMetadata, vec2<i32>(pixel), textureLoad(historyMetadata, vec2<i32>(pixel), 0));
+  } else if (guideMode == 1u) {
+    let guideHitPosition = guideRay.origin +
+      guideRay.direction * min(guideHit.distance, 65504.0);
+    let metadata = select(
+      vec4<f32>(0.0),
+      vec4<f32>(
+        encodeRayNormal(guideHit.normal),
+        min(distance(guideHitPosition, uniforms.cameraPosition.xyz), 65504.0),
+        encodeRayPrimitiveIdentifier(guideHit.primitiveIndex)
+      ),
+      guideHit.distance < RAY_INFINITY
+    );
+    textureStore(outputMetadata, vec2<i32>(pixel), metadata);
+  }
   /* MOMENT_STORE */
   /* TRAVERSAL_STORE */
 }
@@ -2834,6 +2845,18 @@ export type RayTracingPresentationOptions = {
 };
 
 /** Resolves retained ray radiance with attachment-aware, canonical PBR color management. */
+export function rayTracingPresentationUsesGuides(
+  denoiseRadius: number,
+  debugView: RayTracingDebugView
+): boolean {
+  return (
+    denoiseRadius > 0 ||
+    debugView === 'normal' ||
+    debugView === 'cameraDistance' ||
+    debugView === 'identity'
+  );
+}
+
 export function getRayTracingScenePresentationShader(
   options: RayTracingPresentationOptions | boolean
 ): string {
@@ -2842,7 +2865,7 @@ export function getRayTracingScenePresentationShader(
 
   const denoiseRadius = typeof options === 'boolean' ? 0 : (options.denoiseRadius ?? 0);
   const debugView = typeof options === 'boolean' ? 'color' : (options.debugView ?? 'color');
-  const useMetadata = denoiseRadius > 0 || debugView !== 'color';
+  const useMetadata = rayTracingPresentationUsesGuides(denoiseRadius, debugView);
   const useMoments =
     debugView === 'variance' ||
     (typeof options !== 'boolean' && options.varianceGuidance && denoiseRadius > 0);

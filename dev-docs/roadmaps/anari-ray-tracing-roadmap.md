@@ -129,6 +129,11 @@ scene on an integrated GPU and a discrete GPU before choosing numeric targets.
 P1 now exposes per-pass timing reports and opt-in sampled traversal counters through
 the capture harness. The multi-device baseline and numeric targets remain open.
 
+P2 skips guide traversal and guide metadata traffic when no pass consumes the
+guides. Stationary frames reuse valid guide metadata when history can use
+same-pixel radiance. Full batches skip the sparse carry pass. The capture
+harness supports fixed batch phase counts and checks completed samples.
+
 The submission budget controller manages latency by pacing ray batches. Compare
 it at matched sample counts before attributing any throughput gain to it.
 
