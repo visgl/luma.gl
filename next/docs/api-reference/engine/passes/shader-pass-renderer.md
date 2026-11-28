@@ -28,6 +28,8 @@ s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
+For new fullscreen effects, use an `EffectDefinition` with `EffectRenderer`. The [declarative effects guide](https://luma.gl/next/docs/api-guide/shaders/declarative-effects.md) covers resource declarations, pass routing, and configuration. Existing `ShaderPassRenderer` and `CompositeShaderPass` callers remain supported.
+
 ## Usage[​](#usage "Direct link to Usage")
 
 ```

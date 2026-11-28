@@ -5,31 +5,28 @@
 import {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
+  type EffectDefinition,
+  configureEffect,
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
   OrbitControls,
   ShaderInputs,
-  ShaderPassRenderer
+  EffectRenderer
 } from '@luma.gl/engine';
 import {
-  createMotionBlurCompositeShaderPass,
-  createOutlineCompositeShaderPass,
-  createSSAOCompositeShaderPass,
-  createSSRCompositeShaderPass,
-  createTAACompositeShaderPass,
-  createVolumetricFogCompositeShaderPass,
-  depthAwareBlurCompositeShaderPass
+  motionBlur,
+  outlines,
+  ssaoEffect,
+  ssr,
+  taa,
+  volumetricFog,
+  depthAwareBlurEffect
 } from '@luma.gl/engine/effects';
 import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
-import {
-  createContactShadowCompositeShaderPass,
-  GBuffer,
-  shadow,
-  ShadowMapRenderer,
-  type ShadowShaderProps
-} from '@luma.gl/anari';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import {contactShadows} from '@luma.gl/engine/lighting';
+import {GBuffer, shadow, ShadowMapRenderer, type ShadowShaderProps} from '@luma.gl/anari';
+import type {ShaderModule, ShaderPass} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core/matrix';
 import {type NumberArray3} from '@math.gl/core/types';
 import {
@@ -237,16 +234,18 @@ const cityUniforms: ShaderModule<CityUniforms> = {
 
 const {CITY_SHADER, displayPass} = getShaderSources();
 
-const displayPipeline: CompositeShaderPass = {
+const displayPipeline = {
   name: 'advancedEffectsDisplayPipeline',
-  steps: [
+  resources: {},
+  passes: [
     {
+      kind: 'fullscreen',
       shaderPass: displayPass,
       inputs: {sourceTexture: 'previous'},
       output: 'previous'
     }
   ]
-};
+} as const satisfies EffectDefinition<never>;
 
 class VisualizationCityModel {
   readonly model: Model;
@@ -327,7 +326,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly comparisonSplitter: ComparisonSplitter | null;
   readonly orbitControls: OrbitControls | null;
   sceneGBuffer: GBuffer;
-  renderer: ShaderPassRenderer;
+  renderer: EffectRenderer;
   settings: AdvancedEffectsSettings = {...DEFAULT_SETTINGS};
   previousTime = 0;
   previousViewProjectionMatrix = new Matrix4();
@@ -577,40 +576,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sceneGBuffer.destroy();
   }
 
-  private createRenderer(): ShaderPassRenderer {
+  private createRenderer(): EffectRenderer {
     const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
-    const pipelines: CompositeShaderPass[] = [];
+    const pipelines: EffectDefinition[] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);
     if (this.settings.contactShadowsEnabled) {
-      pipelines.push(
-        createContactShadowCompositeShaderPass({quality: this.settings.shadowQuality})
-      );
+      pipelines.push(configureEffect(contactShadows, {quality: this.settings.shadowQuality}));
     }
     if (!shadowDebugView && this.settings.ssaoEnabled) {
       pipelines.push(
-        createSSAOCompositeShaderPass({normalSource: 'normal-texture', resolutionScale: scale})
+        configureEffect(ssaoEffect, {normalSource: 'normal-texture', resolutionScale: scale})
       );
     }
     if (!shadowDebugView && this.settings.depthBlurEnabled) {
-      pipelines.push(depthAwareBlurCompositeShaderPass);
+      pipelines.push(depthAwareBlurEffect);
     }
     if (!shadowDebugView && this.settings.ssrEnabled) {
-      pipelines.push(createSSRCompositeShaderPass({resolutionScale: scale}));
+      pipelines.push(configureEffect(ssr, {resolutionScale: scale}));
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(createVolumetricFogCompositeShaderPass({mode: this.settings.fogMode}));
+      pipelines.push(configureEffect(volumetricFog, {mode: this.settings.fogMode}));
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
-      pipelines.push(createOutlineCompositeShaderPass({normalSource: 'normal-texture'}));
+      pipelines.push(configureEffect(outlines, {normalSource: 'normal-texture'}));
     }
     if (!shadowDebugView && this.settings.taaEnabled) {
-      pipelines.push(createTAACompositeShaderPass());
+      pipelines.push(taa);
     }
     if (!shadowDebugView && this.settings.motionBlurEnabled) {
-      pipelines.push(createMotionBlurCompositeShaderPass());
+      pipelines.push(motionBlur);
     }
     pipelines.push(displayPipeline);
-    return new ShaderPassRenderer(this.device, {shaderPasses: pipelines, flipY: true});
+    return new EffectRenderer(this.device, {effects: pipelines, flipY: true});
   }
 
   private rebuildRenderer(): void {

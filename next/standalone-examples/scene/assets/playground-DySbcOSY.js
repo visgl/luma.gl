@@ -1,5 +1,5 @@
 const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./jsonMode-DLTRvnjc.js","./editor.api-Bn1_62v3.js","./rolldown-runtime-DK3Fl9T5.js","./editor-CJEeZjoM.css"])))=>i.map(i=>d[i]);
-import{C as e,S as t,_ as n,a as r,b as i,c as a,d as o,f as s,g as c,h as l,i as u,l as d,m as f,n as p,o as m,p as h,r as ee,s as g,t as te,u as ne,v as _,x as v,y as re}from"./usd-samples-BmLnk_5z.js";import{F as y,L as ie,g as ae}from"./buffer-layout-utils-Db1eZwfH.js";import{b as oe}from"./gltf-loader-types-dJC2BVPL.js";import{t as se}from"./preload-helper-HclGiUj8.js";import{t as ce}from"./glb-writer-C8l5M6L9.js";import{a as le,i as ue,n as de,o as fe,r as pe,s as me,t as he}from"./editor.api-Bn1_62v3.js";var ge=`
+import{C as e,S as t,_ as n,a as r,b as i,c as a,d as o,f as s,g as c,h as l,i as u,l as d,m as f,n as p,o as m,p as h,r as ee,s as g,t as te,u as ne,v as _,x as v,y as re}from"./usd-samples-BvxwNtkC.js";import{F as y,L as ie,g as ae}from"./buffer-layout-utils-Db1eZwfH.js";import{b as oe}from"./gltf-loader-types-dJC2BVPL.js";import{t as se}from"./preload-helper-HclGiUj8.js";import{t as ce}from"./glb-writer-C8l5M6L9.js";import{a as le,i as ue,n as de,o as fe,r as pe,s as me,t as he}from"./editor.api-Bn1_62v3.js";var ge=`
 struct OutlineUniforms {
   color: vec4<f32>,
   selectedIdentifier: u32,

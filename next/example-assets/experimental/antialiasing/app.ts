@@ -4,15 +4,9 @@
 
 import type {Framebuffer, Sampler, SamplerProps, Texture, TextureView} from '@luma.gl/core';
 import {Texture as TextureResource, UniformStore} from '@luma.gl/core';
-import {fxaa} from '@luma.gl/engine/effects';
+import {fxaaEffect} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
-import {
-  AnimationLoopTemplate,
-  ClipSpace,
-  Geometry,
-  Model,
-  ShaderPassRenderer
-} from '@luma.gl/engine';
+import {AnimationLoopTemplate, ClipSpace, Geometry, Model, EffectRenderer} from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
 import type {ShaderModule} from '@luma.gl/shaders';
@@ -116,7 +110,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
   private readonly comparisonModel: ClipSpace;
   private readonly uniformStore: UniformStore<{app: AppUniforms}>;
   private readonly comparisonUniformStore: UniformStore<{comparison: ComparisonUniforms}>;
-  private readonly fxaaRenderer: ShaderPassRenderer;
+  private readonly fxaaRenderer: EffectRenderer;
   private readonly linearSampler: Sampler;
   private readonly checkerTextures: Record<TextureSamplingMode, DynamicTexture>;
   private readonly settingsPanel: ExampleSettingsPanelManager;
@@ -165,7 +159,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
         techniqueTexture: this.checkerTextures.Nearest
       }
     });
-    this.fxaaRenderer = new ShaderPassRenderer(device, {shaderPasses: [fxaa]});
+    this.fxaaRenderer = new EffectRenderer(device, {effects: [fxaaEffect]});
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'antialiasing-settings',
       schema: makeSettingsSchema(),

@@ -4,9 +4,9 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
+import {configureEffect, AnimationLoopTemplate, Model, EffectRenderer} from '@luma.gl/engine';
 import {
   type CompiledGPUCommandGraph,
   DrawCommandBuffer,
@@ -212,7 +212,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   readonly model: Model;
   readonly pickingModel: Model;
   readonly uniformBuffer: Buffer;
-  readonly postprocessingRenderer: ShaderPassRenderer;
+  readonly postprocessingRenderer: EffectRenderer;
   readonly pickingReadbackRing: GPUReadbackRing;
   readonly panels: ExamplePanelManager;
   readonly graphInspector = new GPUCommandGraphInspector({
@@ -339,11 +339,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.contextModel = this.createModel('context');
     this.model = this.createModel('selection');
     this.pickingModel = this.createModel('picking');
-    this.postprocessingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [
-        createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
-        toneMapping
-      ],
+    this.postprocessingRenderer = new EffectRenderer(device, {
+      effects: [configureEffect(hdrBloom, {colorFormat: this.sceneColorFormat}), toneMappingEffect],
       colorFormat: this.sceneColorFormat
     });
     this.pickingReadbackRing = new GPUReadbackRing(device, {

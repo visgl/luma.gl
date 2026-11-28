@@ -2,9 +2,9 @@
 
 > **CompositeShaderPass**<`TargetNameT`> = `object`
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L41)
+Defined in: [lib/shader-module/composite-shader-pass.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L44)
 
-Declarative composition of shader passes with owned targets and optional compute execution.
+Composition format accepted by ShaderPassRenderer. Use EffectDefinition from @luma.gl/engine to author new fullscreen effect chains.
 
 ## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
 
@@ -18,7 +18,7 @@ Declarative composition of shader passes with owned targets and optional compute
 
 > `optional` **compute?**: [`CompositeShaderPassComputeOptimization`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/CompositeShaderPassComputeOptimization.md)<`TargetNameT`>
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L51)
+Defined in: [lib/shader-module/composite-shader-pass.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L54)
 
 Optional fused WebGPU dispatch; existing fragment steps remain the portable fallback.
 
@@ -28,7 +28,7 @@ Optional fused WebGPU dispatch; existing fragment steps remain the portable fall
 
 > `optional` **initialPasses?**: `object`
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L45)
+Defined in: [lib/shader-module/composite-shader-pass.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L48)
 
 Selects an implementation for the initial stage before running shared steps.
 
@@ -46,7 +46,7 @@ Selects an implementation for the initial stage before running shared steps.
 
 > **name**: `string`
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L42)
+Defined in: [lib/shader-module/composite-shader-pass.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L45)
 
 ***
 
@@ -54,7 +54,7 @@ Defined in: [lib/shader-module/composite-shader-pass.ts:42](https://github.com/v
 
 > `optional` **renderTargets?**: `Record`<`TargetNameT`, [`ShaderPassRenderTarget`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPassRenderTarget.md)>
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L43)
+Defined in: [lib/shader-module/composite-shader-pass.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L46)
 
 ***
 
@@ -62,4 +62,4 @@ Defined in: [lib/shader-module/composite-shader-pass.ts:43](https://github.com/v
 
 > **steps**: [`CompositeShaderPassStep`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/CompositeShaderPassStep.md)<`TargetNameT`>\[]
 
-Defined in: [lib/shader-module/composite-shader-pass.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L49)
+Defined in: [lib/shader-module/composite-shader-pass.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/composite-shader-pass.ts#L52)
