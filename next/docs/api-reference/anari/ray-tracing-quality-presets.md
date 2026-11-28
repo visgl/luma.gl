@@ -167,3 +167,7 @@ The benchmark runs Chart Motion and a glossy variant that animates emissive mark
 For the glossy scene, the final checkpoint includes a comparison of temporal reprojection with the control at the same new sample count. Pass `--maximum-glossy-rmse-ratio 1.1` to make the run fail if temporal HDR RMSE exceeds 110% of the control. The report is written before the error so both captures remain available for diagnosis.
 
 PBR bounce history accumulates directly at stationary poses to avoid clipping bright, noisy reflections around the latest sample. During movement, glossy metal, clearcoat and transmission guides discard history whose secondary hits cannot be checked by the primary visibility buffer.
+
+Each scene also reports `matchedGpuCost` for both target-pose recovery and the complete capture including the motion prefix. It interpolates HDR RMSE only within GPU budgets measured by both modes. If either mode lacks two valid timings or the ranges do not overlap, that comparison is marked unavailable.
+
+The HDR comparisons report the 95th and 99th percentiles of per-pixel RGB RMSE, plus RMSE across the worst 1% of pixels. Use the worst-pixel statistic alongside whole-frame RMSE to catch localized silhouettes or highlights. None of these RGB metrics incorporates the history confidence stored in alpha.
