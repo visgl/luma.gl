@@ -271,6 +271,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         sceneDescription.renderer.samplingSeed = seed;
       if (parameters.get('quality') === 'still')
         Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
+      const batchPhases = Number(parameters.get('batchPhases'));
+      if (batchPhases === 1 || batchPhases === 2 || batchPhases === 4 || batchPhases === 8) {
+        sceneDescription.renderer.rayBatchPhaseCount = batchPhases;
+        // Compare the same direct-light estimator on every batch.
+        sceneDescription.renderer.shadowSamplesPerFrame = 0;
+      }
       const temporal = parameters.get('temporal');
       if (temporal === 'on' || temporal === 'off')
         sceneDescription.renderer.temporalReprojection = temporal === 'on';

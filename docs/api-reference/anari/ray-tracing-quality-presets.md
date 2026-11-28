@@ -354,6 +354,23 @@ acceleration refit, and trace graph costs. The trace graph contains history carr
 ray tracing, and presentation. Pass times are available on timestamp-capable
 devices and exclude queue latency, startup, and readback.
 
+For an equal-sample comparison of full and sparse updates, use a fixed scene
+and resolution, with a full first frame followed by eight complete sweeps:
+
+```sh
+node scripts/playwright/chart-baseline-capture.mjs --gpu-timing --linear-hdr \
+  --temporal off --resolution 1 --width 640 --height 480 \
+  --batch-phases 1 --frames 9 --output /tmp/anari-full
+node scripts/playwright/chart-baseline-capture.mjs --gpu-timing --linear-hdr \
+  --temporal off --resolution 1 --width 640 --height 480 \
+  --batch-phases 4 --frames 33 --output /tmp/anari-sparse
+```
+
+The capture checks that both runs complete the expected samples. Compare the
+sum of `trace-rays` and `carry-ray-tracing-history` over the measured sweeps.
+Report presentation separately because the sparse run submits more frames.
+The schedules can use different random sequences despite equal sample counts.
+
 Run the traversal capture separately to avoid measuring the instrumented shader:
 
 ```sh

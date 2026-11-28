@@ -564,7 +564,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('lowDiscrepancyOffset');
     expect(RAY_TRACING_SCENE_SHADER).toContain('fn makeGuideCameraRay');
     expect(RAY_TRACING_SCENE_SHADER).toContain('vec2<f32>(0.5)');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('let guideRay = makeGuideCameraRay(pixel)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('guideRay = makeGuideCameraRay(pixel)');
     expect(RAY_TRACING_SCENE_SHADER).toContain(
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
@@ -589,9 +589,7 @@ describe('graph-accelerated ray tracing shaders', () => {
   test('traces radiance samples independently from the centered temporal guide', () => {
     const mainStart = RAY_TRACING_SCENE_SHADER.indexOf('@compute @workgroup_size(8, 8, 1)');
     const mainSource = RAY_TRACING_SCENE_SHADER.slice(mainStart);
-    const guideHitIndex = mainSource.indexOf(
-      'let guideHit = intersectScene(guideRay, RAY_INFINITY)'
-    );
+    const guideHitIndex = mainSource.indexOf('guideHit = intersectScene(guideRay, RAY_INFINITY)');
     const loopIndex = mainSource.indexOf(
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
@@ -830,7 +828,7 @@ test('guided presentation adds only a sampled metadata binding', () => {
 });
 
 test('primary-hit diagnostics keep presentation within sampled-texture bindings', () => {
-  for (const debugView of ['normal', 'cameraDistance', 'identity', 'history'] as const) {
+  for (const debugView of ['normal', 'cameraDistance', 'identity'] as const) {
     const reflection = new WgslReflect(
       getRayTracingScenePresentationShader({toneMapMode: 2, outputEncoding: 1, debugView})
     );
@@ -841,6 +839,15 @@ test('primary-hit diagnostics keep presentation within sampled-texture bindings'
     expect(reflection.storage).toEqual([]);
     expect(reflection.uniforms).toEqual([]);
   }
+});
+
+test('history confidence presentation only samples radiance', () => {
+  const reflection = new WgslReflect(
+    getRayTracingScenePresentationShader({toneMapMode: 2, outputEncoding: 1, debugView: 'history'})
+  );
+  expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
+    {name: 'image', binding: 0}
+  ]);
 });
 
 test('ray material texture budgets preserve opacity maps and prioritize existing maps', () => {
