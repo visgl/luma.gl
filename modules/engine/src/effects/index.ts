@@ -264,3 +264,9 @@ export type {
   GPUEffectEntries,
   GPUEffectOperationProps
 } from './graph/gpu-effect-operation';
+
+export {addGraphTAA} from './graph/gpu-effect-operation';
+export type {GraphTAAProps} from './graph/gpu-effect-operation';
+export {importTemporalGraphHistory} from './graph/temporal-graph-history';
+export type {TemporalGraphHistory} from './graph/temporal-graph-history';
+export type {TemporalFrame} from './passes/screen-space/temporal-frame';

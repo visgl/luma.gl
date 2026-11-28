@@ -6,6 +6,7 @@ import {assert, Texture, type TextureFormatColor} from '@luma.gl/core';
 import {
   GPURenderInputs,
   GPURenderOperation,
+  type GPUCommandGraph,
   type GPUCommandGraphComputeNode,
   type GPURenderCommandNode,
   type GPURenderOperationResources,
@@ -23,8 +24,15 @@ import {
   type CompositeShaderPass,
   type ShaderPassRenderTarget
 } from '@luma.gl/shaders';
+import {taa, taaResolve} from '../passes/screen-space/temporal-antialiasing';
+import type {TemporalFrame} from '../passes/screen-space/temporal-frame';
+import type {TemporalGraphHistory} from './temporal-graph-history';
 import {copyPass} from '../passes/screen-space/copy-pass';
-import {resolveEffectEntries, type EffectEntries} from '../../passes/effect-renderer';
+import {
+  resolveEffect,
+  resolveEffectEntries,
+  type EffectEntries
+} from '../../passes/effect-renderer';
 import {
   calculateTextureScale,
   FullscreenComputePass,
@@ -238,9 +246,87 @@ export function createEffectRenderOperation<Options extends readonly unknown[]>(
   });
 }
 
+/** Command graph inputs and retained targets for same-resolution TAA. */
+export type GraphTAAProps = {
+  /** Scope for the generated render passes. */
+  id: string;
+  /** Single-sample color input and output at the render resolution. */
+  input: GraphTextureView<TextureFormatColor>;
+  output: GraphTextureView<TextureFormatColor>;
+  /** Hardware depth from the same render view. */
+  depth: GraphTextureView;
+  /** Motion XY in unjittered top-left UV units, current minus previous. */
+  velocity: GraphTextureView;
+  /** Resolved color and packed hardware depth from prior frames. */
+  colorHistory: TemporalGraphHistory<TextureFormatColor>;
+  depthHistory: TemporalGraphHistory<'rgba16float'>;
+  /** Optional tuning overrides for the reused TAA shader. */
+  historyWeight?: number;
+  depthThreshold?: number;
+};
+
+/**
+ * Adds the shared velocity TAA effect to a WebGPU command graph. Supply frame jitter on each
+ * encoding and set resetHistory for the first frame and whenever the history is invalidated.
+ */
+export function addGraphTAA<Frame extends TemporalFrame>(
+  graph: GPUCommandGraph<Frame>,
+  props: GraphTAAProps
+): void {
+  assert(graph.device.type === 'webgpu');
+  const {id, input, output, depth, velocity, colorHistory, depthHistory} = props;
+  for (const view of [
+    input,
+    output,
+    depth,
+    velocity,
+    colorHistory.previous,
+    colorHistory.current,
+    depthHistory.previous,
+    depthHistory.current
+  ]) {
+    assert(
+      view.width === input.width &&
+        view.height === input.height &&
+        view.dimension === '2d' &&
+        view.texture.samples === 1
+    );
+  }
+  assert(
+    colorHistory.previous.format === output.format && colorHistory.current.format === output.format
+  );
+  const nodes = buildEffectNodes<GraphTextureView, Frame>(graph, {
+    id: graph.getUniqueResourceId(id),
+    source: input,
+    output,
+    resolveTexture: view => view,
+    bindings: {depthTexture: depth, velocityTexture: velocity},
+    effects: [{definition: resolveEffect(taa)}],
+    history: {taaHistoryColor: colorHistory, taaHistoryDepth: depthHistory},
+    uniforms: {
+      taaResolve: {
+        depthThreshold: props.depthThreshold ?? taaResolve.propTypes.depthThreshold.value
+      }
+    },
+    getFrameUniforms: ({currentJitter, previousJitter, resetHistory}) => ({
+      taaResolve: {
+        currentJitter,
+        previousJitter,
+        historyWeight: resetHistory
+          ? 0
+          : (props.historyWeight ?? taaResolve.propTypes.historyWeight.value)
+      }
+    })
+  });
+  for (const node of nodes) {
+    if (node.type === 'render') graph.addRenderPass(node);
+    else graph.addComputePass(node);
+  }
+}
+
 /** Creates the same concrete render commands for either graph entry point. */
-function buildEffectNodes<TextureBinding>(
-  graph: GPURenderOperationResources<void>,
+function buildEffectNodes<TextureBinding, Frame = void>(
+  graph: GPURenderOperationResources<Frame>,
   props: {
     id: string;
     source: GraphTextureView<TextureFormatColor>;
@@ -251,14 +337,16 @@ function buildEffectNodes<TextureBinding>(
     uniforms?: Readonly<Record<string, Record<string, unknown>>>;
     flipY?: boolean;
     allowCompute?: boolean;
+    history?: Readonly<Record<string, TemporalGraphHistory>>;
+    getFrameUniforms?: (frame: Frame) => Readonly<Record<string, Record<string, unknown>>>;
   }
-): (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] {
+): (GPURenderCommandNode<Frame> | GPUCommandGraphComputeNode<Frame>)[] {
   const source: Target = {view: props.source};
   const output: Target = {view: props.output};
   const colorFormat = props.output.format;
   const flipY = props.flipY ?? graph.device.type === 'webgpu';
   assert(source.view.dimension === '2d' && source.view.texture.samples === 1);
-  const nodes: (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] = [];
+  const nodes: (GPURenderCommandNode<Frame> | GPUCommandGraphComputeNode<Frame>)[] = [];
   let index = 0;
   const nextId = (name: string) => props.id + '/' + index++ + '-' + name;
   const resolveBindings = (bindings: Readonly<Record<string, TextureBinding>> = {}) =>
@@ -305,10 +393,14 @@ function buildEffectNodes<TextureBinding>(
     const targets: Record<string, Target> = Object.create(null);
     const written = new Set<GraphTextureView>();
     for (const [name, spec] of Object.entries(effect.renderTargets ?? {})) {
-      if (name === 'original' || name === 'previous' || spec.lifetime === 'history') {
-        throw new Error(effect.name + ': reserved target or unsupported history resource ' + name);
+      if (name === 'original' || name === 'previous') {
+        throw new Error(effect.name + ': reserved target ' + name);
       }
-      if (spec.aliasFor) {
+      if (spec.lifetime === 'history') {
+        const history = props.history?.[name];
+        if (!history) throw new Error(effect.name + ': missing history roles for ' + name);
+        targets[name] = {view: history.current, sampler: spec.sampler};
+      } else if (spec.aliasFor) {
         const target = targets[spec.aliasFor];
         const width = targetSize(output.view.width, spec.scale?.[0]);
         const height = targetSize(output.view.height, spec.scale?.[1]);
@@ -328,6 +420,10 @@ function buildEffectNodes<TextureBinding>(
       if (name === 'original') return source;
       if (name === 'previous') return previous;
       const target = targets[name];
+      if (target && !written.has(target.view)) {
+        const history = props.history?.[name];
+        if (history) return {view: history.previous, sampler: target.sampler};
+      }
       if (!target || !written.has(target.view)) {
         throw new Error(effect.name + ': unavailable input ' + name);
       }
@@ -481,7 +577,12 @@ function buildEffectNodes<TextureBinding>(
               commandEncoder: encoding.commandEncoder,
               bindings: {...textures, ...resolvedSamplers},
               textureScale: calculateTextureScale(sourceView, destination.view),
-              uniforms: {...pass.uniforms, ...props.uniforms?.[pass.shaderPass.name], ...uniforms}
+              uniforms: {
+                ...pass.uniforms,
+                ...props.uniforms?.[pass.shaderPass.name],
+                ...uniforms,
+                ...props.getFrameUniforms?.(encoding.parameters)[pass.shaderPass.name]
+              }
             });
           },
           encode: ({renderPass}) => executable.draw(renderPass),

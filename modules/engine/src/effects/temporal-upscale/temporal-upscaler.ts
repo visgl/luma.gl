@@ -19,7 +19,7 @@ import {
   encodeSceneCapturePass,
   type SceneCapturePassDefinition
 } from '../../passes/scene-capture-pass';
-import type {TemporalJitter} from '../passes/screen-space/temporal-frame';
+import type {TemporalFrame} from '../passes/screen-space/temporal-frame';
 import {DEFAULT_KERNEL_SHARPNESS, DEFAULT_RESPONSIVENESS} from './temporal-math';
 import type {TemporalVector2} from './temporal-math';
 import {
@@ -71,7 +71,10 @@ export type TemporalUpscalerProps = {
 };
 
 /** Per-frame inputs, all single-sampled, with top-left UVs and standard (not reversed) depth. */
-export type TemporalUpscalerRenderOptions = {
+export type TemporalUpscalerRenderOptions = Pick<
+  TemporalFrame,
+  'currentJitter' | 'resetHistory'
+> & {
   /** Jittered render-sized premultiplied RGBA, filterable float/unorm. */
   colorTexture: Texture;
   /** Render-sized device depth, zero near and one far. */
@@ -81,8 +84,6 @@ export type TemporalUpscalerRenderOptions = {
    * device depth, w = validity.
    */
   velocityTexture: Texture;
-  /** Projection jitter in top-left UV units at the render resolution. */
-  currentJitter: TemporalJitter;
   /** Output-sized framebuffer, or the current canvas framebuffer. Must not alias inputs/history. */
   target: Framebuffer | null;
   /** Sharpening strength in [0,1]; zero is an exact history copy (default). */
@@ -96,8 +97,6 @@ export type TemporalUpscalerRenderOptions = {
    * detail that is smaller than a render pixel.
    */
   responsiveness?: number;
-  /** Discard temporal history for this frame. */
-  resetHistory?: boolean;
   /** Maximum history contribution of a full-weight sample, default 0.95. */
   historyWeightMax?: number;
   /**
