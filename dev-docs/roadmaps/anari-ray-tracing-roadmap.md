@@ -110,6 +110,25 @@ The lightmap-baking example owns a separate UV-space lighting pipeline. Diagnose
 baked shadows by checking shadow-map projection/filtering and atlas texel density before
 changing ANARI's interactive ray tracer.
 
+### Performance plan
+
+Optimize for time to a usable preview during motion and GPU time to an HDR error
+target for stills. Keep render resolution, seed, and sample budgets fixed when
+comparing throughput. Use pose-matched references when comparing motion quality.
+Run the chart baseline, glossy motion, textured glTF, and a larger instanced
+scene on an integrated GPU and a discrete GPU before choosing numeric targets.
+
+| Order | Work | Acceptance |
+| --- | --- | --- |
+| P1 · Attribute GPU cost | Use GPU Command Graph timestamp reports to separate BLAS/TLAS build or refit, sparse history carry, trace, and presentation. Add opt-in sampled counters for primary, guide, shadow, and continuation rays and for TLAS/BLAS node and triangle visits. Keep browser startup and queue latency separate from GPU execution. | Publish warm/cold costs, p50/p95 frame times, GPU time versus pose-matched HDR error, and logical allocation size. Report timestamps as unavailable on unsupported devices. Run instrumented counters separately so they do not distort timing. |
+| P2 · Eliminate redundant work | The trace shader intersects a center guide ray before tracing jittered samples. Skip that traversal where history and presentation do not consume guides, or retain the guide while camera, geometry, visibility, and resolution are stable. Measure sparse history carry separately. It reads and writes untouched pixels even when pacing reduces tracing. Prototype tile-local history updates if carry becomes a material share of GPU time. | Preserve seeded radiance, history confidence, debug views, and sparse-batch behavior. Compare full-coverage and paced frames at equal effective sample counts. |
+| P3 · Reduce cost per ray | Test position-only triangle traversal and fetch full attributes for winning hits or alpha-tested candidates. The current packed triangle record is 224 bytes and includes shading data. Keep the existing CORE storage-binding budget. The analytic-light evaluator scans the light list per hit even when rotating shadow samples. Visit only the selected indices and keep ambient light separate. Evaluate weighted light selection for many-light scenes with matching PDFs. | Measure node/triangle visits, trace time, and HDR error at equal GPU cost. Preserve alpha visibility and picking. Compare lighting mean and variance against the all-lights reference. |
+| P4 · Improve hierarchy quality | Use P1 counters to identify poor Morton trees or refit degradation. Try quality-triggered rebuilds and a higher-quality static BLAS builder before changing traversal format. Evaluate a compact wide hierarchy if node traffic still dominates on large assets. | Report build, refit, and trace cost separately and find the number of reused frames needed to repay a more expensive build. [Parallel high-quality BVH construction](https://research.nvidia.com/publication/2013-07_fast-parallel-construction-high-quality-bounding-volume-hierarchies) |
+| P5 · Prototype a staged tracer | The current trace dispatch mixes primary traversal, shading, shadow visibility, and continuation loops. If P1–P4 still leave a material divergence cost, prototype a bounded shadow or continuation queue as GPU Command Graph passes. Retain the existing path as the benchmark control. | Include compaction, queue memory traffic, and pass overhead in time-to-quality comparisons. Adopt the staged path only for workloads where it improves end-to-end results. [Mapping path tracing to the GPU](https://pbr-book.org/4ed/Wavefront_Rendering_on_GPUs/Mapping_Path_Tracing_to_the_GPU) |
+
+The submission budget controller manages latency by pacing ray batches. Compare
+it at matched sample counts before attributing any throughput gain to it.
+
 ### Next implementation tranches
 
 | Tranche | Scope | Acceptance |
