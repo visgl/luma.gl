@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # HDR Auto Exposure
 
 Continuously meter scene luminance and adapt camera exposure entirely on the GPU.
-`createHDRAutoExposureCompositeShaderPass` uses a center-weighted logarithmic luminance pyramid,
+`hdrAutoExposure` uses a center-weighted logarithmic luminance pyramid,
 persistent exposure history, and independent brightening and darkening response speeds.
 
 <DeferredRenderingExample embedded showStats={false} />
@@ -12,7 +12,7 @@ persistent exposure history, and independent brightening and darkening response 
 
 | Property | Value |
 | --- | --- |
-| Export | `createHDRAutoExposureCompositeShaderPass` |
+| Export | `hdrAutoExposure` |
 | Backend | WebGPU |
 | Render passes | Seven: extraction, four reductions, adaptation, and application |
 | Persistent state | One GPU-owned exposure-history texture |
@@ -21,23 +21,24 @@ persistent exposure history, and independent brightening and darkening response 
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {
-  createBloomCompositeShaderPass,
-  createHDRAutoExposureCompositeShaderPass,
+  hdrBloom,
+  hdrAutoExposure,
   toneMapping
 } from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createHDRAutoExposureCompositeShaderPass({meteringScale: 0.25, initialExposure: 1}),
-    createBloomCompositeShaderPass({quality: 'high'}),
+  effects: [
+    {effect: hdrAutoExposure, options: {meteringScale: 0.25, initialExposure: 1}},
+    {effect: hdrBloom, options: {quality: 'high'}},
     toneMapping
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: hdrSceneTexture,
   uniforms: {
     hdrAutoExposureAdapt: {

@@ -200,7 +200,7 @@ export type {
   EffectRenderOptions,
   EffectRendererProps
 } from './passes/effect-renderer';
-export {configureEffect, EffectRenderer} from './passes/effect-renderer';
+export {EffectRenderer} from './passes/effect-renderer';
 export type {SceneCapturePassDefinition} from './passes/scene-capture-pass';
 export {encodeSceneCapturePass} from './passes/scene-capture-pass';
 

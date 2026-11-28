@@ -4,7 +4,7 @@
 
 import type {ConfigurableEffectDefinition} from '@luma.gl/engine';
 import type {Buffer} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 export type ABufferResolveCompositeShaderPassOptions = {
   /** Maximum captured fragments sorted for one pixel. */
@@ -184,11 +184,3 @@ export const aBufferResolveEffect = {
     };
   }
 } as const satisfies ConfigurableEffectDefinition<ABufferResolveCompositeShaderPassOptions, never>;
-
-/** @deprecated Use `aBufferResolveEffect` with `EffectRenderer`. */
-export function createABufferResolveCompositeShaderPass(
-  options: ABufferResolveCompositeShaderPassOptions
-): CompositeShaderPass {
-  const effect = aBufferResolveEffect.configure(options);
-  return {name: effect.name, steps: effect.passes};
-}

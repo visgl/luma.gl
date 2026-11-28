@@ -6,7 +6,7 @@ import {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   type EffectDefinition,
-  configureEffect,
+  type EffectRendererProps,
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
@@ -578,27 +578,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private createRenderer(): EffectRenderer {
     const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
-    const pipelines: EffectDefinition[] = [];
+    type Options =
+      | NonNullable<Parameters<typeof contactShadows.configure>[0]>
+      | NonNullable<Parameters<typeof ssr.configure>[0]>
+      | NonNullable<Parameters<typeof volumetricFog.configure>[0]>
+      | NonNullable<Parameters<typeof outlines.configure>[0]>
+      | Partial<typeof ssaoEffect.optionDefaults>;
+    const pipelines: EffectRendererProps<readonly Options[]>['effects'][number][] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);
     if (this.settings.contactShadowsEnabled) {
-      pipelines.push(configureEffect(contactShadows, {quality: this.settings.shadowQuality}));
+      pipelines.push({effect: contactShadows, options: {quality: this.settings.shadowQuality}});
     }
     if (!shadowDebugView && this.settings.ssaoEnabled) {
-      pipelines.push(
-        configureEffect(ssaoEffect, {normalSource: 'normal-texture', resolutionScale: scale})
-      );
+      pipelines.push({
+        effect: ssaoEffect,
+        options: {normalSource: 'normal-texture', resolutionScale: scale}
+      });
     }
     if (!shadowDebugView && this.settings.depthBlurEnabled) {
       pipelines.push(depthAwareBlurEffect);
     }
     if (!shadowDebugView && this.settings.ssrEnabled) {
-      pipelines.push(configureEffect(ssr, {resolutionScale: scale}));
+      pipelines.push({effect: ssr, options: {resolutionScale: scale}});
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(configureEffect(volumetricFog, {mode: this.settings.fogMode}));
+      pipelines.push({effect: volumetricFog, options: {mode: this.settings.fogMode}});
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
-      pipelines.push(configureEffect(outlines, {normalSource: 'normal-texture'}));
+      pipelines.push({effect: outlines, options: {normalSource: 'normal-texture'}});
     }
     if (!shadowDebugView && this.settings.taaEnabled) {
       pipelines.push(taa);
@@ -607,7 +614,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pipelines.push(motionBlur);
     }
     pipelines.push(displayPipeline);
-    return new EffectRenderer(this.device, {effects: pipelines, flipY: true});
+    return new EffectRenderer<readonly Options[]>(this.device, {effects: pipelines, flipY: true});
   }
 
   private rebuildRenderer(): void {

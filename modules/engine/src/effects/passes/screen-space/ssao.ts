@@ -3,8 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  configureEffect,
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
@@ -105,11 +103,6 @@ export const ssaoEvaluate = {
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
-
-/** @deprecated Use `ssaoEffect` with `EffectRenderer`. */
-export function createSSAOCompositeShaderPass(options: SSAOCompositeShaderPassOptions = {}) {
-  return resolveEffect(configureEffect(ssaoEffect, options));
-}
 
 export const ssaoComposite = {
   name: 'ssaoComposite',

@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
 
 /** Construction options for temporally stabilized diffuse screen-space global illumination. */
@@ -606,13 +605,4 @@ function configureSSGI(
       }
     ]
   };
-}
-
-/** @deprecated Use `ssgi` with `EffectRenderer`. */
-export function createSSGICompositeShaderPass(
-  options: SSGICompositeShaderPassOptions = {}
-): CompositeShaderPass<
-  'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
-> {
-  return resolveEffect(ssgi.configure(options));
 }

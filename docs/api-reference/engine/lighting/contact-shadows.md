@@ -110,7 +110,7 @@ input depth/normal textures, receiver models, and materials remain caller-owned.
 
 `@luma.gl/shaders` exports `contactShadowTrace`, `contactShadowBilateralBlur`, and
 `contactShadowComposite` with WGSL and GLSL implementations and generic texture bindings.
-`createContactShadowCompositeShaderPass` in engine lighting supplies a complete color
+`contactShadows` in engine lighting supplies a complete color
 composition chain when the caller already has an isolated directional-direct-light texture.
 That composite subtracts only the occluded part of the supplied direct contribution; it
 requires the matching direct-light input rather than multiplying the entire lit color.

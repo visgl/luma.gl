@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
 import type {Buffer, Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import {depthAwareBlur} from './depth-aware-blur';
 
@@ -804,17 +803,4 @@ function configureClusteredVolumetricLighting(
       }
     ]
   };
-}
-
-/** @deprecated Use `clusteredVolumetricLighting` with `EffectRenderer`. */
-export function createClusteredVolumetricLightingCompositeShaderPass(
-  options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
-): CompositeShaderPass<
-  | 'clusteredVolumeRaw'
-  | 'clusteredVolumeHistory'
-  | 'clusteredVolumeDepthHistory'
-  | 'clusteredVolumeScratch'
-  | 'clusteredVolumeScattering'
-> {
-  return resolveEffect(clusteredVolumetricLighting.configure(options));
 }

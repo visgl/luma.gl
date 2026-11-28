@@ -22,7 +22,7 @@ import type {
 } from '@luma.gl/engine/lighting';
 import type {Buffer} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
-import {clusteredLightGrid, type ShaderPass, type CompositeShaderPass} from '@luma.gl/shaders';
+import {clusteredLightGrid, type ShaderPass} from '@luma.gl/shaders';
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -348,11 +348,3 @@ export const clusteredDeferredLightingEffect = {
     }
   ]
 } as const satisfies EffectDefinition<never>;
-
-/** @deprecated Use `clusteredDeferredLightingEffect` with `EffectRenderer`. */
-export function createClusteredDeferredLightingCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: clusteredDeferredLightingEffect.name,
-    steps: clusteredDeferredLightingEffect.passes.map(pass => ({...pass}))
-  };
-}

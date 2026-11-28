@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # Screen-Space Reflections
 
 Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals,
-roughness, and temporal reprojection. `createSSRCompositeShaderPass` traces reflection rays through
+roughness, and temporal reprojection. `ssr` traces reflection rays through
 the current frame and resolves them into a stabilized specular contribution.
 
 <DeferredRenderingExample embedded showStats={false} />
@@ -12,7 +12,7 @@ the current frame and resolves them into a stabilized specular contribution.
 
 | Property | Value |
 | --- | --- |
-| Export | `createSSRCompositeShaderPass` |
+| Export | `ssr` |
 | Backend | WebGPU |
 | Render passes | Six with velocity history; seven with camera history (adds a normal-history copy) |
 | Required bindings | `depthTexture`, `normalTexture`; velocity mode also requires `velocityTexture` |
@@ -22,18 +22,19 @@ the current frame and resolves them into a stabilized specular contribution.
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createSSGICompositeShaderPass, createSSRCompositeShaderPass} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {ssgi, ssr} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createSSGICompositeShaderPass({resolutionScale: 0.5}),
-    createSSRCompositeShaderPass({resolutionScale: 0.5})
+  effects: [
+    {effect: ssgi, options: {resolutionScale: 0.5}},
+    {effect: ssr, options: {resolutionScale: 0.5}}
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: litSceneTexture,
   bindings: gBuffer.getShaderPassBindings(),
   uniforms: {
@@ -71,7 +72,7 @@ renderer.renderToScreen({
 ## Camera-only history
 
 For static geometry without a velocity attachment, use
-`createSSRCompositeShaderPass({reprojection: 'camera', quality: 'balanced'})`.
+`ssr({reprojection: 'camera', quality: 'balanced'})`.
 The factory composes `ssrCameraTemporal`, full-resolution packed depth and normal histories,
 and the existing tracing, denoising, and composition passes. Supply
 `currentClipToPreviousClip` (previous view-projection multiplied by inverse current view-projection,

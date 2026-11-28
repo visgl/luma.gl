@@ -117,8 +117,7 @@ Use `AmbientOcclusionPass` with PBR receiving when the material pipeline can app
 at light accumulation. It reuses the existing SSAO/GTAO evaluators and depth-aware blur;
 it does not introduce another AO algorithm. It has no temporal history or velocity input.
 
-Existing `createSSAOCompositeShaderPass` and `createGTAOCompositeShaderPass` exports in
-`@luma.gl/engine/effects` remain available for postprocessing. Multiplying complete scene
+Use `ssaoEffect` or `gtao` from `@luma.gl/engine/effects` for postprocessing. Multiplying complete scene
 color also darkens direct light and emission. GTAO's `composition: 'ambient-only'` avoids
 that by requiring a separately supplied ambient-light color texture. This is a different
 contract from a visibility mask bound to a PBR receiver.

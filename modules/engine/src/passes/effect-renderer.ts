@@ -73,6 +73,8 @@ export type EffectDefinition<TargetName extends string = string> = {
   passes: EffectPass<TargetName>[];
 };
 
+type EffectOptionKey<Options> = Options extends unknown ? Extract<keyof Options, string> : never;
+
 /**
  * A reusable effect whose resource descriptors or pass sequence depend on options.
  * Configure it when constructing the stack or when topology changes. Per-frame
@@ -89,24 +91,26 @@ export type ConfigurableEffectDefinition<Options, TargetName extends string = st
   | (EffectDefinition<TargetName> & {
       optionDefaults: Required<Options>;
       /** A numeric option used for both dimensions of the listed render targets. */
-      scaleResources?: {option: Extract<keyof Options, string>; targets: readonly TargetName[]};
+      scaleResources?: {option: EffectOptionKey<Options>; targets: readonly TargetName[]};
       /** Choose a pass sequence using the value of a declared option. */
       passVariants?: {
-        option: Extract<keyof Options, string>;
+        option: EffectOptionKey<Options>;
         values: Record<string, readonly EffectPass<TargetName>[]>;
       };
     });
 
-/** Resolves a configurable effect for use in an EffectRenderer chain. */
-export function configureEffect<Options, TargetName extends string>(
+/** @internal Resolves construction options into the executable effect. */
+export function resolveEffectOptions<Options, TargetName extends string>(
   effect: ConfigurableEffectDefinition<Options, TargetName>,
   options?: NoInfer<Options>
 ): EffectDefinition<TargetName> {
   if ('configure' in effect) return effect.configure(options);
   const {scaleResources, passVariants, optionDefaults} = effect;
+  const overrides = options as Partial<Record<EffectOptionKey<Options>, unknown>> | undefined;
+  const defaults = optionDefaults as Partial<Record<EffectOptionKey<Options>, unknown>>;
   const resources = {...effect.resources} as NonNullable<EffectDefinition<TargetName>['resources']>;
   if (scaleResources) {
-    const scale = options?.[scaleResources.option] ?? optionDefaults[scaleResources.option];
+    const scale = overrides?.[scaleResources.option] ?? defaults[scaleResources.option];
     if (typeof scale !== 'number' || !Number.isFinite(scale) || scale <= 0) {
       throw new Error(effect.name + ': resource scale must be a finite positive number');
     }
@@ -115,7 +119,7 @@ export function configureEffect<Options, TargetName extends string>(
     }
   }
   const variant =
-    passVariants && String(options?.[passVariants.option] ?? optionDefaults[passVariants.option]);
+    passVariants && String(overrides?.[passVariants.option] ?? defaults[passVariants.option]);
   const passes =
     variant && passVariants && Object.hasOwn(passVariants.values, variant)
       ? [...passVariants.values[variant]]
@@ -160,13 +164,11 @@ export type EffectRendererProps<Options extends readonly unknown[] = readonly un
       | EffectDefinition
       | {
           effect: ConfigurableEffectDefinition<Options[Index]>;
-          configuration?: NoInfer<Options[Index]>;
           options?: NoInfer<Options[Index]>;
         }
       | {
           effect: EffectDefinition & {configure?: never; optionDefaults?: never};
           options?: never;
-          configuration?: never;
         };
   };
 };
@@ -198,9 +200,9 @@ export class EffectRenderer<
         const {effect} = entry;
         if (('configure' in effect && effect.configure) || 'optionDefaults' in effect) {
           return resolveEffect(
-            configureEffect(
+            resolveEffectOptions(
               effect as ConfigurableEffectDefinition<Options[number]>,
-              entry.options ?? entry.configuration
+              entry.options
             )
           );
         }

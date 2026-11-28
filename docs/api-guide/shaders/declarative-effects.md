@@ -84,16 +84,13 @@ import {hdrBloom, ssaoEffect, ssr} from '@luma.gl/engine/effects';
 
 const renderer = new EffectRenderer(device, {
   effects: [
-    {effect: ssaoEffect, configuration: {normalSource: 'normal-texture', resolutionScale: 0.5}},
-    {effect: ssr, configuration: {reprojection: 'camera', quality: 'fast'}},
-    {effect: hdrBloom, configuration: {quality: 'ultra', downsample: 'auto'}}
+    {effect: ssaoEffect, options: {normalSource: 'normal-texture', resolutionScale: 0.5}},
+    {effect: ssr, options: {reprojection: 'camera', quality: 'fast'}},
+    {effect: hdrBloom, options: {quality: 'ultra', downsample: 'auto'}}
   ],
   colorFormat: 'rgba16float'
 });
 ```
-
-Use `configureEffect` to resolve a definition separately when you want to
-inspect or reuse its configured resources and passes.
 
 Supply each effect's scene bindings at render time. SSAO in normal-texture
 mode needs the normal texture in addition to depth. Camera-reprojected SSR
@@ -175,7 +172,7 @@ const litColor = lighting.renderToTexture({
 
 The scene renderer supplies and owns the G-buffer or transparency captures.
 The resolve samples those resources and writes the color result. For A-buffer
-resolve, use `{effect: aBufferResolveEffect, configuration: {maxFragmentsPerPixel}}`
+resolve, use `{effect: aBufferResolveEffect, options: {maxFragmentsPerPixel}}`
 and match the limit used to capture fragments. The higher-level A-buffer,
 weighted blended transparency, and deferred scene renderers wire their own
 inputs automatically.

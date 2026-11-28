@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core/types';
 import {temporalHelpers} from './screen-space-shader-helpers';
 import {
@@ -655,8 +654,6 @@ fn ssrComposite_sampleColor(
   SSRCompositeBindings
 >;
 
-type SSRRenderTarget = 'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection';
-
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
 export const ssr = {
   name: 'ssrCompositeShaderPass',
@@ -760,19 +757,4 @@ function configureSSR(options: SSRCompositeShaderPassOptions = {}): EffectDefini
       }
     ]
   };
-}
-
-/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
-export function createSSRCompositeShaderPass(
-  options: SSRCompositeShaderPassOptions & {reprojection: 'camera'}
-): CompositeShaderPass<SSRRenderTarget | 'ssrHistoryNormal'>;
-/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
-export function createSSRCompositeShaderPass(
-  options?: SSRCompositeShaderPassOptions
-): CompositeShaderPass<SSRRenderTarget>;
-/** @deprecated Use the `ssr` definition with the same reprojection options with `EffectRenderer`. */
-export function createSSRCompositeShaderPass(
-  options: SSRCompositeShaderPassOptions = {}
-): CompositeShaderPass {
-  return resolveEffect(ssr.configure(options));
 }

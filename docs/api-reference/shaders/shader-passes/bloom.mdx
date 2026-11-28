@@ -13,19 +13,19 @@ convolution renderer for measured or generated optical point-spread functions.
 | Implementation | Export | Backends | Suitable for |
 | --- | --- | --- | --- |
 | Compact bloom | `bloom` from `@luma.gl/engine/effects` | WebGPU and WebGL2 | A single inexpensive highlight-glow pass. |
-| Multiscale HDR bloom | `createBloomCompositeShaderPass` from `@luma.gl/engine/effects` | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
+| Multiscale HDR bloom | `hdrBloom` from `@luma.gl/engine/effects` | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
 | FFT optical convolution | `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects` | WebGPU | Full-image generated or measured RGB lens-response kernels. |
 
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createBloomCompositeShaderPass({
+  effects: [
+    {effect: hdrBloom, options: {
       quality: 'high',
       blurAlgorithm: 'dual-kawase',
       downsample: 'auto',
@@ -35,12 +35,13 @@ const renderer = new ShaderPassRenderer(device, {
       reconstruction: 'bicubic',
       temporalStability: 0.75,
       lens: {starburstIntensity: 0.3, ghostIntensity: 0.15, dirtIntensity: 0.2}
-    }),
-    toneMapping
+    }},
+    toneMappingEffect
   ]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: hdrSceneTexture,
   bindings: {lensDirtTexture}
 });

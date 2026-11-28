@@ -40,10 +40,10 @@ Use hyphenated projection subpaths such as
 - If application code draws a model’s retained pipeline directly, pass the model’s
   current draw parameters. Calls through `Model.draw()` do this automatically.
 
-- Built-in `create…CompositeShaderPass` effect factories are deprecated. Use the
-  corresponding definition with `EffectRenderer`, passing configuration inline
-  or through `configureEffect`. For custom effect composition, see the
-  [declarative effects guide](api-guide/shaders/declarative-effects.md).
+- The fullscreen effect factories and `configureEffect` were removed. Pass
+  the effect definition and its construction options inline as `{effect, options}`.
+  See the [declarative effects guide](api-guide/shaders/declarative-effects.md).
+
 
 ### Resources and assets
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {resolveEffect} from '../../../engine/src/passes/effect-renderer';
 import {expect, it} from 'vitest';
 import {
   Buffer,
@@ -13,7 +14,7 @@ import {
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   WBOITRenderer,
-  createWBOITResolveCompositeShaderPass,
+  wboitResolveEffect,
   getWBOITSupport,
   wboit,
   wboitPlugin,
@@ -35,7 +36,7 @@ it('wboit module exposes portable capture helpers', () => {
 });
 
 it('WBOIT resolve is packaged as a CompositeShaderPass', () => {
-  const pipeline = createWBOITResolveCompositeShaderPass();
+  const pipeline = resolveEffect(wboitResolveEffect);
   expect(pipeline.steps.length, 'resolve pipeline has one fullscreen step').toBe(1);
   expect(pipeline.steps[0].shaderPass, 'pipeline uses the exported resolve pass').toBe(
     wboitResolve

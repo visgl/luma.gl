@@ -230,9 +230,9 @@ process.stdout.write('Verified optional text subpaths and engine constructor ide
 // Effects are optional definitions sharing shader-pass identity with both module formats.
 const effectsApi = require('@luma.gl/engine/effects');
 const effectsEsm = await import('../modules/engine/dist/effects/index.js');
-for (const name of ['bloom', 'toneMapping', 'createGTAOCompositeShaderPass']) {
-  assert.equal(typeof effectsApi[name], name.startsWith('create') ? 'function' : 'object');
-  assert.equal(typeof effectsEsm[name], name.startsWith('create') ? 'function' : 'object');
+for (const name of ['bloom', 'toneMapping', 'gtao']) {
+  assert.equal(typeof effectsApi[name], 'object');
+  assert.equal(typeof effectsEsm[name], 'object');
   assert.equal(name in engineApi, false);
   assert.equal(name in engineEsm, false);
 }
@@ -368,8 +368,8 @@ assert.equal(lightingApi.ContactShadowPass, contactPassApi.ContactShadowPass);
 assert.equal(lightingEsm.ContactShadowPass, contactPassEsm.ContactShadowPass);
 const compatibleContactApi = require('../modules/anari/dist/shadows/contact-shadow.cjs');
 const compatibleContactEsm = await import('../modules/anari/dist/shadows/contact-shadow.js');
-assert.equal(compatibleContactApi.createContactShadowCompositeShaderPass, lightingApi.createContactShadowCompositeShaderPass);
-assert.equal(compatibleContactEsm.createContactShadowCompositeShaderPass, lightingEsm.createContactShadowCompositeShaderPass);
+assert.equal(compatibleContactApi.contactShadowTrace, shadersApi.contactShadowTrace);
+assert.equal(compatibleContactEsm.contactShadowTrace, shadersEsm.contactShadowTrace);
 for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactShadowComposite','pbrContactShadow']) {
   const path = name === 'pbrContactShadow' ? 'pbr-contact-shadow/pbr-contact-shadow' : 'contact-shadow/contact-shadow';
   assert.equal(shadersApi[name], require(`../modules/shaders/dist/modules/lighting/${path}.cjs`)[name]);

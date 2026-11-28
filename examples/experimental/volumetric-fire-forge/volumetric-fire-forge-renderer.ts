@@ -11,7 +11,7 @@ import {
   Texture
 } from '@luma.gl/core';
 import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
-import {configureEffect, CubeGeometry, Model, ShaderInputs, EffectRenderer} from '@luma.gl/engine';
+import {CubeGeometry, Model, ShaderInputs, EffectRenderer} from '@luma.gl/engine';
 import type {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 import {Matrix4} from '@math.gl/core/matrix';
 import {type NumberArray3} from '@math.gl/core/types';
@@ -151,7 +151,7 @@ export class VolumetricFireForgeRenderer {
       });
       postprocessingRenderer = new EffectRenderer(device, {
         effects: [
-          configureEffect(hdrBloom, {colorFormat: this.sceneColorFormat}),
+          {effect: hdrBloom, options: {colorFormat: this.sceneColorFormat}},
           toneMappingEffect
         ],
         colorFormat: this.sceneColorFormat

@@ -5,7 +5,7 @@
 import type {EffectDefinition} from '@luma.gl/engine';
 import type {Buffer, Texture} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 export const MAX_DEFERRED_POINT_LIGHTS = 64;
 
@@ -305,11 +305,3 @@ export const deferredLightingEffect = {
     }
   ]
 } as const satisfies EffectDefinition<never>;
-
-/** @deprecated Use `deferredLightingEffect` with `EffectRenderer`. */
-export function createDeferredLightingCompositeShaderPass(): CompositeShaderPass {
-  return {
-    name: deferredLightingEffect.name,
-    steps: deferredLightingEffect.passes.map(pass => ({...pass}))
-  };
-}

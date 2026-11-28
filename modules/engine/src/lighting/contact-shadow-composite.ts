@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  resolveEffect,
-  type ConfigurableEffectDefinition,
-  type EffectDefinition
-} from '../passes/effect-renderer';
-import type {CompositeShaderPass} from '@luma.gl/shaders';
+import {type ConfigurableEffectDefinition, type EffectDefinition} from '../passes/effect-renderer';
+
 import {
   contactShadowTrace,
   contactShadowBilateralBlur,
@@ -83,11 +79,4 @@ function configureContactShadow(
       }
     ]
   };
-}
-
-/** @deprecated Use `contactShadows` with `EffectRenderer`. */
-export function createContactShadowCompositeShaderPass(
-  options: ContactShadowCompositeShaderPassOptions = {}
-): CompositeShaderPass<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {
-  return resolveEffect(contactShadows.configure(options));
 }

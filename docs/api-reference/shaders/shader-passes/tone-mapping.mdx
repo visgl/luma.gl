@@ -20,15 +20,16 @@ explicit controls for scene exposure and supported display luminance.
 ## Usage
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {EffectRenderer} from '@luma.gl/engine';
+import {hdrBloom, toneMappingEffect} from '@luma.gl/engine/effects';
 
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [createBloomCompositeShaderPass(), toneMapping]
+  effects: [{effect: hdrBloom}, toneMappingEffect]
 });
 
-renderer.renderToScreen({
+renderer.render({
+  target: null,
   sourceTexture: hdrSceneTexture,
   uniforms: {toneMapping: {exposure: 1.2, maximumLuminance: 1}}
 });

@@ -79,16 +79,16 @@ surface attachments without owning scene traversal or material shading. Multiple
 | named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 import {
-  createBloomCompositeShaderPass,
-  createMotionBlurCompositeShaderPass,
-  createGTAOCompositeShaderPass,
-  createHDRAutoExposureCompositeShaderPass,
-  createSSGICompositeShaderPass,
-  createSSRCompositeShaderPass,
-  createTAACompositeShaderPass,
-  toneMapping
+  hdrBloom,
+  motionBlur,
+  gtao,
+  hdrAutoExposure,
+  ssgi,
+  ssr,
+  taa,
+  toneMappingEffect
 } from '@luma.gl/engine/effects';
 import {GBuffer} from '@luma.gl/anari';
 
@@ -107,21 +107,22 @@ const scenePass = device.beginRenderPass({
 sceneModel.draw(scenePass);
 scenePass.end();
 
-const effects = new ShaderPassRenderer(device, {
+const effects = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createGTAOCompositeShaderPass(),
-    createSSGICompositeShaderPass(),
-    createSSRCompositeShaderPass(),
-    createTAACompositeShaderPass(),
-    createMotionBlurCompositeShaderPass(),
-    createHDRAutoExposureCompositeShaderPass(),
-    createBloomCompositeShaderPass(),
-    toneMapping
+  effects: [
+    {effect: gtao},
+    {effect: ssgi},
+    {effect: ssr},
+    taa,
+    motionBlur,
+    {effect: hdrAutoExposure},
+    {effect: hdrBloom},
+    toneMappingEffect
   ]
 });
 
-effects.renderToScreen({
+effects.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: gBuffer.getShaderPassBindings()
 });
@@ -133,17 +134,17 @@ extras plus depth and normal-roughness, reconstructs view position, and writes a
 lighting result into the same ordered color chain:
 
 ```ts
-const renderer = new ShaderPassRenderer(device, {
+const renderer = new EffectRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [
-    createDeferredLightingCompositeShaderPass(),
-    createGTAOCompositeShaderPass(),
-    createSSGICompositeShaderPass(),
-    createSSRCompositeShaderPass(),
-    createTAACompositeShaderPass(),
-    createHDRAutoExposureCompositeShaderPass(),
-    createBloomCompositeShaderPass(),
-    toneMapping
+  effects: [
+    deferredLightingEffect,
+    {effect: gtao},
+    {effect: ssgi},
+    {effect: ssr},
+    taa,
+    {effect: hdrAutoExposure},
+    {effect: hdrBloom},
+    toneMappingEffect
   ]
 });
 ```
@@ -155,13 +156,13 @@ GTAO defaults to its backward-compatible full-color composite. Deferred applicat
 isolate ambient light should request the physically accurate ambient-only mode instead:
 
 ```ts
-import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
-import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
+import {gtao} from '@luma.gl/engine/effects';
+import {deferredAmbientLightingEffect, deferredLightingEffect} from '@luma.gl/anari';
 
-const ambientRenderer = new ShaderPassRenderer(device, {
-  shaderPasses: [createDeferredAmbientLightingCompositeShaderPass()]
+const ambientRenderer = new EffectRenderer(device, {
+  effects: [deferredAmbientLightingEffect]
 });
-const ambientLightingTexture = ambientRenderer.renderToTexture({
+const ambientLightingTexture = ambientRenderer.render({
   sourceTexture: gBuffer.colorTexture,
   bindings: {
     depthTexture: gBuffer.depthTexture,
@@ -171,14 +172,15 @@ const ambientLightingTexture = ambientRenderer.renderToTexture({
   uniforms: {deferredAmbientLighting: {ambientColor: [0.04, 0.04, 0.05]}}
 });
 
-const effects = new ShaderPassRenderer(device, {
-  shaderPasses: [
-    createDeferredLightingCompositeShaderPass(),
-    createGTAOCompositeShaderPass({composition: 'ambient-only'})
+const effects = new EffectRenderer(device, {
+  effects: [
+    deferredLightingEffect,
+    {effect: gtao, options: {composition: 'ambient-only'}}
   ]
 });
 
-effects.renderToScreen({
+effects.render({
+  target: null,
   sourceTexture: gBuffer.colorTexture,
   bindings: {...gBuffer.getShaderPassBindings(), ambientLightingTexture}
 });
@@ -195,7 +197,7 @@ transparency, blur, and temporal effects, see
 
 ### Screen-space diffuse global illumination
 
-`createSSGICompositeShaderPass()` gathers already-lit scene radiance from the hemisphere above
+`ssgi` gathers already-lit scene radiance from the hemisphere above
 each visible surface. Its stages mirror the reusable temporal render-stack contract:
 
 1. Trace cosine-weighted hemisphere rays through the shared scene depth and view normals.
@@ -214,7 +216,7 @@ the newly bounced illumination.
 
 ### Screen-space reflection composition
 
-`createSSRCompositeShaderPass()` consumes the already-lit `previous` color plus the shared depth,
+`ssr` consumes the already-lit `previous` color plus the shared depth,
 normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex
 effect remains one `CompositeShaderPass`:
 
@@ -235,7 +237,7 @@ screen-edge confidence fades reduce the resulting discontinuities.
 
 ### Clustered volumetric lighting
 
-`createClusteredVolumetricLightingCompositeShaderPass()` turns the same clustered point-light
+`clusteredVolumetricLighting` turns the same clustered point-light
 storage buffers used by deferred shading into actual participating-media illumination:
 
 1. March configurable-resolution view rays through exponential world-height density.
@@ -251,7 +253,7 @@ storage buffers used by deferred shading into actual participating-media illumin
 7. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance
    diagnostics.
 
-This is the higher-fidelity alternative to `createVolumetricFogCompositeShaderPass()`, whose
+This is the higher-fidelity alternative to `volumetricFog`, whose
 compact height fog does not evaluate the real scene-light storage buffers. Both remain composable
 ordered composite passes; normally choose one atmospheric implementation rather than stacking both.
 
@@ -272,14 +274,14 @@ to explicitly trade edge quality for fewer shaded pixels and smaller history tex
 
 ### Adaptive HDR exposure and cinematic bloom
 
-`createHDRAutoExposureCompositeShaderPass()` meters and adapts scene brightness entirely on the GPU:
+`hdrAutoExposure` meters and adapts scene brightness entirely on the GPU:
 
 1. Extract center-weighted logarithmic luminance from floating-point scene color.
 2. Reduce four successively smaller luminance-pyramid levels into a near-global geometric mean.
 3. Adapt persistent exposure history with independent brightening and darkening response rates.
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
-Pair it with `createBloomCompositeShaderPass()`, which extracts HDR highlights at half resolution,
+Pair it with `hdrBloom`, which extracts HDR highlights at half resolution,
 then progressively filters and reconstructs two to five `rgba16float` pyramid levels.
 `quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire
 pyramid without clamping highlight radiance to 8-bit normalized color. The composite pass supports:
@@ -375,7 +377,7 @@ through `original`, and a stylized stack may place display-space effects earlier
 
 ### Temporal history and resize
 
-`CompositeShaderPass` objects with persistent history targets keep those textures inside `ShaderPassRenderer`.
+`CompositeShaderPass` objects with persistent history targets keep those textures inside `EffectRenderer`.
 Call `renderer.resetHistory()` after a camera cut, a discontinuous animation jump, or a semantic
 change in the G-buffer. When the drawing size changes, call both `gBuffer.resize()` and
 `renderer.resize()`; resizing invalidates history because old pixels no longer describe the same
@@ -415,10 +417,10 @@ fragment pipeline.
 ## Minimal Shape
 
 ```typescript
-import {ShaderPassRenderer} from '@luma.gl/engine';
+import {EffectRenderer} from '@luma.gl/engine';
 
-const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [myShaderPass, myCompositeShaderPass]
+const renderer = new EffectRenderer(device, {
+  effects: [myShaderPass, myCompositeShaderPass]
 });
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
@@ -426,20 +428,20 @@ const outputTexture = renderer.renderToTexture({sourceTexture});
 
 For descriptor fields, see [`ShaderPass`](/docs/api-reference/shaders/shader-pass).
 For execution methods and routing details, see
-[`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).
+[`EffectRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).
 The current built-in effect catalog is under
 [Shader Pass Catalog](/docs/api-reference/shaders/shader-passes/image-processing).
 
 ### Analytic height fog
 
-`createVolumetricFogCompositeShaderPass({mode: 'height'})` selects an analytic, single-pass
+`volumetricFog({mode: 'height'})` selects an analytic, single-pass
 height-fog mode in WebGPU or WebGL2. The factory's default remains the existing stylized
 screen-space fog and its history graph. The analytic mode uses `heightFogFunctions`, the same
 extinction calculation used by the `heightFog` material shader module, and allocates no history.
 
 ```ts
-const fog = createVolumetricFogCompositeShaderPass({mode: 'height'});
-const renderer = new ShaderPassRenderer(device, {shaderPasses: [fog]});
+const fog = volumetricFog({mode: 'height'});
+const renderer = new EffectRenderer(device, {effects: [fog]});
 renderer.resize([width, height]);
 renderer.renderToScreen({
   sourceTexture: sceneColor,

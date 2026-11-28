@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core/matrix';
 import {depthAwareBlur} from './depth-aware-blur';
 
@@ -591,13 +590,4 @@ function configureGTAO(
       }
     ]
   };
-}
-
-/** @deprecated Use `gtao` with `EffectRenderer`. */
-export function createGTAOCompositeShaderPass(
-  options: GTAOCompositeShaderPassOptions = {}
-): CompositeShaderPass<
-  'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
-> {
-  return resolveEffect(gtao.configure(options));
 }

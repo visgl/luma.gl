@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {resolveEffect, type EffectDefinition} from '../../../passes/effect-renderer';
+import {type EffectDefinition} from '../../../passes/effect-renderer';
 
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shaders';
@@ -236,8 +236,3 @@ export const cameraReprojectionTaa = {
 } as const satisfies EffectDefinition<
   'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
 >;
-
-/** @deprecated Use `cameraReprojectionTaa` with `EffectRenderer`. */
-export function createCameraReprojectionTAACompositeShaderPass() {
-  return resolveEffect(cameraReprojectionTaa);
-}

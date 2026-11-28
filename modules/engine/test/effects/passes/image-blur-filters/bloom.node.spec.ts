@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {configureEffect} from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, hdrBloom} from '@luma.gl/engine/effects';
+import {resolveEffect} from '../../../../src/passes/effect-renderer';
+import {hdrBloom as hdrBloomDefinition} from '@luma.gl/engine/effects';
 import {WgslReflect} from 'wgsl_reflect';
 import {expect, it} from 'vitest';
 
@@ -16,7 +16,7 @@ it('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', () =
   ] as const;
 
   for (const {quality, levelCount} of qualityLevels) {
-    const pipeline = createBloomCompositeShaderPass({quality, downsample: 'auto'});
+    const pipeline = inspectBloom({quality, downsample: 'auto'});
     const optimization = pipeline.compute;
 
     expect(Boolean(optimization), `${quality} includes a portable fused-compute optimization`).toBe(
@@ -51,7 +51,7 @@ it('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', () =
     ).toBe(true);
   }
 
-  const portablePipeline = createBloomCompositeShaderPass({downsample: 'render'});
+  const portablePipeline = inspectBloom({downsample: 'render'});
   expect(portablePipeline.compute, 'render-only mode omits the compute stage').toBe(undefined);
   expect(
     Boolean(Object.values(portablePipeline.renderTargets || {}).every(target => !target.storage)),
@@ -61,12 +61,12 @@ it('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', () =
 });
 
 it('HDR bloom shares expired targets without overwriting live lens highlights', () => {
-  const reusedPipeline = createBloomCompositeShaderPass({quality: 'ultra'});
-  const dedicatedPipeline = createBloomCompositeShaderPass({
+  const reusedPipeline = inspectBloom({quality: 'ultra'});
+  const dedicatedPipeline = inspectBloom({
     quality: 'ultra',
     reuseRenderTargets: false
   });
-  const opticalPipeline = createBloomCompositeShaderPass({
+  const opticalPipeline = inspectBloom({
     quality: 'ultra',
     lens: {starburstIntensity: 1}
   });
@@ -93,7 +93,7 @@ it('HDR bloom shares expired targets without overwriting live lens highlights', 
 });
 
 it('HDR bloom supports exposure-aware extraction and four-fetch bicubic reconstruction', () => {
-  const pipeline = createBloomCompositeShaderPass({
+  const pipeline = inspectBloom({
     threshold: 1.5,
     exposure: 2,
     exposureCompensation: -1,
@@ -133,8 +133,8 @@ it('HDR bloom supports exposure-aware extraction and four-fetch bicubic reconstr
 });
 
 it('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid', () => {
-  const gaussian = createBloomCompositeShaderPass({quality: 'ultra'});
-  const dualKawase = createBloomCompositeShaderPass({
+  const gaussian = inspectBloom({quality: 'ultra'});
+  const dualKawase = inspectBloom({
     quality: 'ultra',
     blurAlgorithm: 'dual-kawase'
   });
@@ -157,7 +157,7 @@ it('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid'
 });
 
 it('HDR bloom reprojects depth-validated history without another history target', () => {
-  const pipeline = createBloomCompositeShaderPass({
+  const pipeline = inspectBloom({
     temporalStability: 0.8,
     temporalReprojection: true,
     temporalDepthThreshold: 0.025,
@@ -188,7 +188,7 @@ it('HDR bloom reprojects depth-validated history without another history target'
 });
 
 it('HDR bloom can scatter every source pixel without additive energy duplication', () => {
-  const pipeline = createBloomCompositeShaderPass({
+  const pipeline = inspectBloom({
     threshold: 3,
     intensity: 0.4,
     energyConserving: true
@@ -207,12 +207,27 @@ it('HDR bloom can scatter every source pixel without additive energy duplication
 });
 
 it('declares the same pyramid outputs for compute and fragment HDR bloom', () => {
-  const effect = configureEffect(hdrBloom, {quality: 'ultra', temporalStability: 0.6});
+  const effect = hdrBloomDefinition.configure({quality: 'ultra', temporalStability: 0.6});
   const initialPasses = effect.initialPasses;
   expect(initialPasses?.fragment.map(pass => pass.output)).toEqual(
     Object.values(initialPasses?.compute?.outputs ?? {})
   );
   expect(initialPasses?.fragment).toHaveLength(5);
   expect(effect.resources['bloomGlowHistory'].lifetime).toBe('history');
-  expect(configureEffect(hdrBloom, {downsample: 'render'}).initialPasses?.compute).toBeUndefined();
+  expect(
+    hdrBloomDefinition.configure({downsample: 'render'}).initialPasses?.compute
+  ).toBeUndefined();
 });
+
+function inspectBloom(options?: Parameters<typeof hdrBloomDefinition.configure>[0]) {
+  const resolved = resolveEffect(hdrBloomDefinition.configure(options));
+  const initial = resolved.initialPasses;
+  return {
+    ...resolved,
+    steps: [...(initial?.fragment ?? []), ...resolved.steps],
+    compute: initial?.compute && {
+      ...initial.compute,
+      replacedPasses: [...new Set(initial.fragment.map(step => step.shaderPass.name))]
+    }
+  };
+}

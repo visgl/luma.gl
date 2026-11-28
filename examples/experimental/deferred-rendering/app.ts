@@ -6,7 +6,7 @@ import {Buffer, Device, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   type EffectDefinition,
-  configureEffect,
+  type EffectRendererProps,
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
@@ -872,38 +872,51 @@ function shouldUseVolumetricPipeline(settings: DeferredRenderingSettings): boole
 }
 
 function createRenderer(device: Device, settings: DeferredRenderingSettings): EffectRenderer {
-  const effects: EffectDefinition[] = [
+  type Options =
+    | NonNullable<Parameters<typeof gtao.configure>[0]>
+    | NonNullable<Parameters<typeof ssgi.configure>[0]>
+    | NonNullable<Parameters<typeof ssr.configure>[0]>
+    | NonNullable<Parameters<typeof clusteredVolumetricLighting.configure>[0]>
+    | NonNullable<Parameters<typeof hdrAutoExposure.configure>[0]>
+    | NonNullable<Parameters<typeof hdrBloom.configure>[0]>;
+  const effects: EffectRendererProps<readonly Options[]>['effects'] = [
     clusteredDeferredLightingEffect,
     ...(shouldUseAmbientOcclusionPipeline(settings)
       ? [
-          configureEffect(gtao, {
-            composition: 'ambient-only',
-            resolutionScale: settings.ambientOcclusionResolution
-          })
+          {
+            effect: gtao,
+            options: {
+              composition: 'ambient-only' as const,
+              resolutionScale: settings.ambientOcclusionResolution
+            }
+          }
         ]
       : []),
     ...(shouldUseGlobalIlluminationPipeline(settings)
-      ? [configureEffect(ssgi, {resolutionScale: settings.globalIlluminationResolution})]
+      ? [{effect: ssgi, options: {resolutionScale: settings.globalIlluminationResolution}}]
       : []),
     ...(shouldUseReflectionPipeline(settings)
-      ? [configureEffect(ssr, {resolutionScale: settings.reflectionResolution})]
+      ? [{effect: ssr, options: {resolutionScale: settings.reflectionResolution}}]
       : []),
     ...(shouldUseVolumetricPipeline(settings)
       ? [
-          configureEffect(clusteredVolumetricLighting, {
-            resolutionScale: settings.atmosphereResolution
-          })
+          {
+            effect: clusteredVolumetricLighting,
+            options: {
+              resolutionScale: settings.atmosphereResolution
+            }
+          }
         ]
       : []),
     ...(settings.autoExposureEnabled || settings.debugView === 'HDR Luminance'
-      ? [configureEffect(hdrAutoExposure, {initialExposure: settings.minimumExposure})]
+      ? [{effect: hdrAutoExposure, options: {initialExposure: settings.minimumExposure}}]
       : []),
     ...(settings.bloomEnabled
-      ? [configureEffect(hdrBloom, {resolutionScale: settings.bloomResolution})]
+      ? [{effect: hdrBloom, options: {resolutionScale: settings.bloomResolution}}]
       : []),
     deferredDisplayPipeline
   ];
-  return new EffectRenderer(device, {
+  return new EffectRenderer<readonly Options[]>(device, {
     effects,
     colorFormat: 'rgba16float',
     flipY: true

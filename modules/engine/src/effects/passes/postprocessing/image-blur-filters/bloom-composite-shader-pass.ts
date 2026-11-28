@@ -9,12 +9,7 @@ import type {
 } from '../../../../passes/effect-renderer';
 
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
-import type {
-  ShaderPass,
-  CompositeShaderPass,
-  CompositeShaderPassStep,
-  ShaderPassRenderTarget
-} from '@luma.gl/shaders';
+import type {ShaderPass, CompositeShaderPassStep, ShaderPassRenderTarget} from '@luma.gl/shaders';
 import type {BloomProps, BloomUniforms} from './bloom';
 import {createBloomComputePyramid} from './bloom-compute-pyramid';
 import {
@@ -961,13 +956,6 @@ export const multiscaleBloomEffect = {
   ]
 } as const satisfies EffectDefinition<BloomTargetName>;
 
-/** @deprecated Use `multiscaleBloomEffect` with `EffectRenderer`. */
-export const bloomCompositeShaderPass = {
-  name: multiscaleBloomEffect.name,
-  renderTargets: multiscaleBloomEffect.resources,
-  steps: multiscaleBloomEffect.passes
-} as const satisfies CompositeShaderPass<BloomTargetName>;
-
 const bloomLowExtractionUniforms = {
   threshold: 0.8,
   softKnee: 0.5,
@@ -1136,7 +1124,7 @@ export const bloomLow = {
  * optional history and lens stages, and the initial compute or fragment path.
  */
 export const hdrBloom = {
-  name: bloomCompositeShaderPass.name,
+  name: multiscaleBloomEffect.name,
   configure(options = {}) {
     const {name, renderTargets, steps, extractionSteps, compute} = buildBloomPyramid(options);
     const initialPasses = {
@@ -1153,15 +1141,6 @@ export const hdrBloom = {
 
 function toBloomEffectPass(step: CompositeShaderPassStep): EffectPass {
   return {...step, kind: 'fullscreen'};
-}
-
-/** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
-/** @deprecated Use `hdrBloom` with `EffectRenderer`. */
-export function createBloomCompositeShaderPass(
-  options: BloomCompositeShaderPassOptions = {}
-): CompositeShaderPass {
-  const {name, renderTargets, steps, compute} = buildBloomPyramid(options);
-  return {name, renderTargets, steps, ...(compute ? {compute} : {})};
 }
 
 function buildBloomPyramid(options: BloomCompositeShaderPassOptions) {
@@ -1360,7 +1339,7 @@ function buildBloomPyramid(options: BloomCompositeShaderPassOptions) {
   }
 
   return {
-    name: bloomCompositeShaderPass.name,
+    name: multiscaleBloomEffect.name,
     renderTargets,
     steps,
     extractionSteps,

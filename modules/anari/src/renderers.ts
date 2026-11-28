@@ -63,10 +63,7 @@ export type {
   ABufferResolveProps,
   ABufferResolveCompositeShaderPassOptions
 } from './oit/a-buffer-resolve-composite-shader-pass';
-export {
-  aBufferResolveEffect,
-  createABufferResolveCompositeShaderPass
-} from './oit/a-buffer-resolve-composite-shader-pass';
+export {aBufferResolveEffect} from './oit/a-buffer-resolve-composite-shader-pass';
 export type {
   ABufferCaptureContext,
   ABufferRenderOptions,
@@ -83,11 +80,7 @@ export {
 export type {WBOITPass, WBOITShaderModuleProps, WBOITShaderModuleUniforms} from './oit/wboit';
 export {wboit, wboitPlugin} from './oit/wboit';
 export type {WBOITResolveBindings} from './oit/wboit-resolve-composite-shader-pass';
-export {
-  createWBOITResolveCompositeShaderPass,
-  wboitResolveEffect,
-  wboitResolve
-} from './oit/wboit-resolve-composite-shader-pass';
+export {wboitResolveEffect, wboitResolve} from './oit/wboit-resolve-composite-shader-pass';
 export type {
   WBOITCapture,
   WBOITCaptureContext,
@@ -111,7 +104,7 @@ export type {
 export {ShadowMapRenderer} from '@luma.gl/engine/lighting';
 export {shadow} from '@luma.gl/shaders';
 export type {ContactShadowProps} from './shadows/contact-shadow';
-export {createContactShadowCompositeShaderPass} from './shadows/contact-shadow';
+
 export type {
   GBufferExtraColorAttachment,
   GBufferProps,
@@ -120,13 +113,11 @@ export type {
 export {GBuffer} from './rendering/g-buffer';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
-  createDeferredAmbientLightingCompositeShaderPass,
   deferredAmbientLightingEffect,
   deferredAmbientLighting
 } from './rendering/deferred-ambient-lighting';
 export type {DeferredLightingProps, DeferredPointLight} from './rendering/deferred-lighting';
 export {
-  createDeferredLightingCompositeShaderPass,
   deferredLightingEffect,
   deferredLighting,
   makeDeferredPointLightBufferData,
@@ -142,7 +133,6 @@ export type {
 export {
   ClusteredLightGrid,
   clusteredDeferredLighting,
-  createClusteredDeferredLightingCompositeShaderPass,
   clusteredDeferredLightingEffect,
   DEFAULT_CLUSTER_DIMENSIONS,
   DEFAULT_MAX_LIGHTS_PER_CLUSTER,

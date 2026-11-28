@@ -12,16 +12,10 @@ import {
   contactShadowBilateralBlur,
   contactShadowComposite
 } from '@luma.gl/shaders';
-import {
-  createContactShadowCompositeShaderPass,
-  PBR_MODEL_WGSL_SHADER
-} from '@luma.gl/engine/lighting';
+import {PBR_MODEL_WGSL_SHADER} from '@luma.gl/engine/lighting';
 import {getFragmentShaderForRenderPass} from '../../src/passes/get-fragment-shader';
 import {textureTransform} from '../../src/passes/texture-transform-module';
-import {
-  contactShadowTrace as compatibleTrace,
-  createContactShadowCompositeShaderPass as compatibleComposite
-} from '../../../anari/src/shadows/contact-shadow';
+import {contactShadowTrace as compatibleTrace} from '../../../anari/src/shadows/contact-shadow';
 
 const platformInfo = {
   type: 'webgpu' as const,
@@ -50,7 +44,6 @@ test('contact trace, blur and separated-light composite reflect portable binding
     expect(shaderPass.fs).toContain(`${shaderPass.name}_sampleColor`);
   }
   expect(compatibleTrace).toBe(contactShadowTrace);
-  expect(compatibleComposite).toBe(createContactShadowCompositeShaderPass);
 });
 
 test('PBR contact receiving compiles alone and with ordinary shadow maps', () => {

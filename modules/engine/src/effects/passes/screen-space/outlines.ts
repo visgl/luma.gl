@@ -3,11 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  resolveEffect,
   type ConfigurableEffectDefinition,
   type EffectDefinition
 } from '../../../passes/effect-renderer';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
+import type {ShaderPass} from '@luma.gl/shaders';
 import {depthHelpers} from './screen-space-shader-helpers';
 
 export type OutlineCompositeShaderPassOptions = {
@@ -219,10 +218,3 @@ vec4 imageOutline_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
-
-/** @deprecated Use `outlines` with `EffectRenderer`. */
-export function createOutlineCompositeShaderPass(
-  options: OutlineCompositeShaderPassOptions = {}
-): CompositeShaderPass {
-  return resolveEffect(outlines.configure(options));
-}
