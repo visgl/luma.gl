@@ -4,11 +4,13 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUGraph, gpuGraph} from '@luma.gl/graph';
+import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 import {EffectRenderer} from '@luma.gl/engine';
 import {
   GPUEffectOperation,
+  createEffectRenderOperation,
   effectOperationLowering,
   hdrBloom,
   sepiaEffect
@@ -22,6 +24,9 @@ it.each([
   if (!device) return context.skip();
   const width = 9;
   const height = 7;
+  const canvas = device.getCanvasContext();
+  const previousSize = canvas.getDrawingBufferSize();
+  canvas.setDrawingBufferSize(width, height);
   const data = new Uint8Array(width * height * 4);
   for (let index = 0; index < width * height; index++) {
     data[index * 4] = index % 7 === 0 ? 255 : 0;
@@ -90,6 +95,9 @@ it.each([
       expected.readAsync(),
       actual.readAsync()
     ]);
+    expect(expectedBytes[3]).toBe(255);
+    expect(actualBytes[3]).toBe(255);
+    expect(actualBytes.some((value, index) => index % 4 === 0 && value > 0)).toBe(true);
     for (let row = 0; row < height; row++) {
       for (let columnByte = 0; columnByte < width * 4; columnByte++) {
         const offset = row * layout.bytesPerRow + columnByte;
@@ -100,6 +108,7 @@ it.each([
       }
     }
   } finally {
+    canvas.setDrawingBufferSize(...previousSize);
     execution.destroy();
     execution.outputs.result.destroy();
     compiled.destroy();
@@ -108,5 +117,62 @@ it.each([
     source.destroy();
     expected.destroy();
     actual.destroy();
+  }
+});
+
+it('runs compatible effects in GPUSimpleGraph on WebGL', async context => {
+  const device = await getWebGLTestDevice();
+  if (!device) return context.skip();
+  const source = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.COPY_DST,
+    data: new Uint8Array([255, 0, 0, 255])
+  });
+  const target = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const graph = new GPUSimpleGraph(device);
+  graph.addRenderOperation(
+    createEffectRenderOperation({
+      id: 'webgl-sepia',
+      input: source,
+      output: target,
+      effects: [sepiaEffect]
+    })
+  );
+  const compiled = graph.compile();
+  const encoder = device.createCommandEncoder();
+  const layout = target.computeMemoryLayout();
+  const readback = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    await compiled.run();
+    encoder.copyTextureToBuffer({
+      sourceTexture: target,
+      destinationBuffer: readback,
+      bytesPerRow: layout.bytesPerRow,
+      width: 1,
+      height: 1
+    });
+    device.submit(encoder.finish());
+    const bytes = await readback.readAsync();
+    expect(bytes[0]).toBeCloseTo(178, -1);
+    expect(bytes[1]).toBeCloseTo(44, -1);
+    expect(bytes[3]).toBe(255);
+  } finally {
+    readback.destroy();
+    encoder.destroy();
+    compiled.destroy();
+    expect(source.destroyed).toBe(false);
+    expect(target.destroyed).toBe(false);
+    target.destroy();
+    source.destroy();
   }
 });

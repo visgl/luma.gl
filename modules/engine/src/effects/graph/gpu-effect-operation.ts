@@ -5,6 +5,10 @@
 import {assert, Texture, type TextureFormatColor} from '@luma.gl/core';
 import {
   GPURenderInputs,
+  GPURenderOperation,
+  type GPUCommandGraphComputeNode,
+  type GPURenderCommandNode,
+  type GPURenderOperationResources,
   gpuGraph,
   type GPUGraphTextureDescriptor,
   type GPUOperation,
@@ -105,26 +109,120 @@ function lowerEffectOperation(
 ): void {
   const {graph} = context;
   const {props} = operation;
-  const source: Target = {view: context.resolveTextureView(props.input)};
-  const output: Target = {view: context.resolveTextureView(props.output)};
-  const colorFormat = operation.outputDescriptor.format;
-  const flipY = props.flipY ?? true;
+  const nodes = buildEffectNodes(graph, {
+    ...props,
+    id: graph.getUniqueResourceId(operation.id),
+    effects: operation.effects,
+    source: context.resolveTextureView<TextureFormatColor>(props.input),
+    output: context.resolveTextureView<TextureFormatColor>(props.output),
+    resolveTexture: name => context.resolveTextureView(name),
+    bindings: operation.bindings,
+    allowCompute: true
+  });
+  for (const node of nodes) {
+    if (node.type === 'compute') graph.addComputePass(node);
+    else graph.addRenderPass(node);
+  }
+}
+
+/** Borrowed textures for a portable SimpleGraph effect stack. */
+export type EffectRenderOperationProps<Options extends readonly unknown[]> = Pick<
+  GPUEffectOperationProps<Options>,
+  'effects' | 'uniforms' | 'flipY'
+> & {
+  /** Operation and resource namespace. */
+  id: string;
+  /** The borrowed input color and destination textures. */
+  input: Texture;
+  output: Texture;
+  /** Other borrowed textures keyed by shader binding. */
+  bindings?: Readonly<Record<string, Texture>>;
+};
+
+/** Builds a portable render operation using the fragment implementations of the effects. */
+export function createEffectRenderOperation<Options extends readonly unknown[]>(
+  props: EffectRenderOperationProps<Options>
+): GPURenderOperation<void> {
+  const {id, input, output, bindings, uniforms, flipY} = props;
+  const effects = resolveEffectEntries(props.effects);
+  return new GPURenderOperation({
+    id,
+    createNodes: graph => {
+      const borrowed = new Map<Texture, GraphTextureView>();
+      const importTexture = (texture: Texture, name: string) => {
+        let view = borrowed.get(texture);
+        if (view) return view;
+        view = graph.createTextureView(
+          graph.importTexture(
+            {
+              id: id + '/borrowed-' + name,
+              format: texture.format,
+              width: texture.width,
+              height: texture.height,
+              depth: texture.depth,
+              dimension: texture.dimension,
+              mipLevels: texture.mipLevels,
+              samples: texture.props.samples,
+              usage: texture.props.usage
+            },
+            texture
+          )
+        );
+        borrowed.set(texture, view);
+        return view;
+      };
+      return buildEffectNodes(graph, {
+        id,
+        source: importTexture(input, 'source') as GraphTextureView<TextureFormatColor>,
+        output: importTexture(output, 'output') as GraphTextureView<TextureFormatColor>,
+        resolveTexture: name => importTexture(bindings![name], 'binding-' + name),
+        bindings: Object.fromEntries(Object.keys(bindings ?? {}).map(name => [name, name])),
+        effects,
+        uniforms,
+        flipY
+      }).filter(node => node.type === 'render');
+    }
+  });
+}
+
+/** Creates the same concrete render commands for either graph entry point. */
+function buildEffectNodes(
+  graph: GPURenderOperationResources<void>,
+  props: {
+    id: string;
+    source: GraphTextureView<TextureFormatColor>;
+    output: GraphTextureView<TextureFormatColor>;
+    resolveTexture: (name: string) => GraphTextureView;
+    bindings: Readonly<Record<string, string>>;
+    effects: readonly CompositeShaderPass[];
+    uniforms?: Readonly<Record<string, Record<string, unknown>>>;
+    flipY?: boolean;
+    allowCompute?: boolean;
+  }
+): (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] {
+  const source: Target = {view: props.source};
+  const output: Target = {view: props.output};
+  const colorFormat = props.output.format;
+  const flipY = props.flipY ?? graph.device.type === 'webgpu';
   assert(source.view.dimension === '2d' && source.view.texture.samples === 1);
-  const scope = graph.getUniqueResourceId(operation.id);
+  const nodes: (GPURenderCommandNode | GPUCommandGraphComputeNode<void>)[] = [];
   let index = 0;
-  const nextId = (name: string) => scope + '/' + index++ + '-' + name;
+  const nextId = (name: string) => props.id + '/' + index++ + '-' + name;
   const sharedBindings = Object.fromEntries(
-    Object.entries(operation.bindings).map(([name, value]) => [
+    Object.entries(props.bindings).map(([name, value]) => [
       name,
-      {view: context.resolveTextureView(value)}
+      {view: props.resolveTexture(value)}
     ])
   );
-  const plans = operation.effects.map(effect => ({
+  const plans = props.effects.map(effect => ({
     effect,
-    ...planFullscreenPasses(graph.device, effect, {allowCompute: flipY, colorFormat})
+    ...planFullscreenPasses(graph.device, effect, {
+      allowCompute: props.allowCompute === true && flipY,
+      colorFormat
+    })
   }));
   const copy = {
-    ownerName: operation.id,
+    ownerName: props.id,
     shaderPass: copyPass,
     subPass: copyPass.passes[0]
   };
@@ -183,7 +281,8 @@ function lowerEffectOperation(
         step => step.shaderPass.name === compute.uniformModule
       )?.shaderPass;
       if (shader) initializeShaderModule(shader);
-      graph.addComputePass({
+      nodes.push({
+        type: 'compute',
         id: nextId(compute.name),
         resources: [
           {texture: input.view, usage: 'sampled'},
@@ -247,7 +346,8 @@ function lowerEffectOperation(
       if (name === 'previous') previous = destination;
     }
   }
-  if (previous !== output) emitRender(copy, {sourceTexture: previous}, output, true);
+  if (previous !== output) emitRender(copy, {sourceTexture: previous}, output, flipY);
+  return nodes;
 
   function createTarget(name: string, spec: ShaderPassRenderTarget = {}): Target {
     const format = spec.format ?? colorFormat;
@@ -279,7 +379,8 @@ function lowerEffectOperation(
         Object.entries(bindings).map(([name, target]) => [name, {source: target.view}])
       )
     });
-    graph.addRenderPass({
+    nodes.push({
+      type: 'render',
       id: nextId(pass.shaderPass.name),
       inputs,
       attachments: {colorAttachments: [destination.view]},

@@ -696,6 +696,7 @@ export class SubPassRenderer {
   flipY: boolean;
 
   constructor(device: Device, shaderPass: ShaderPass, subPass: ShaderSubPass, flipY: boolean) {
+    initializeShaderModule(shaderPass);
     this.shaderPass = shaderPass;
     this.subPass = subPass;
     this.flipY = flipY;

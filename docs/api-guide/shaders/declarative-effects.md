@@ -377,3 +377,10 @@ same plan as `EffectRenderer`. The graph tracks each draw and dispatch with its
 texture uses, so effect-local scratch textures can be reused across passes
 when lifetimes allow. Effects with retained frame history still use
 `EffectRenderer`.
+
+For WebGL, use `createEffectRenderOperation` from `@luma.gl/engine/effects`
+with the device-bound `GPUSimpleGraph`. Give it caller-owned input and
+output textures and register it with `graph.addRenderOperation`. This path
+uses the same fullscreen plan and fragment fallback as the WebGPU graph.
+Choose effects with GLSL implementations. The graph owns any transient
+scratch textures and borrows the input, output, and optional shader bindings.
