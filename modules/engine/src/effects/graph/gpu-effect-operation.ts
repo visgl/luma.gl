@@ -108,15 +108,18 @@ export class GPUEffectOperation<Options extends readonly unknown[] = readonly un
   get contract(): GPUOperationContract {
     return {
       values: [
-        ...Array.from(new Set([
-          this.props.input,
-          ...Object.values(this.bindings),
-          ...this.effects.flatMap(entry => Object.values(entry.bindings ?? {}))
-        ]), value => ({
-          value,
-          access: 'read' as const,
-          textureUsage: 'sampled' as const
-        })),
+        ...Array.from(
+          new Set([
+            this.props.input,
+            ...Object.values(this.bindings),
+            ...this.effects.flatMap(entry => Object.values(entry.bindings ?? {}))
+          ]),
+          value => ({
+            value,
+            access: 'read' as const,
+            textureUsage: 'sampled' as const
+          })
+        ),
         {value: this.props.output, access: 'write', textureUsage: 'render-attachment'}
       ],
       outputs: {[this.props.output]: this.outputDescriptor}
@@ -281,7 +284,10 @@ function buildEffectNodes(
     emitRender(copy, {sourceTexture: source}, previous, flipY);
   }
 
-  for (const [planIndex, {effect, bindings: effectBindings, uniforms, compute, passes}] of plans.entries()) {
+  for (const [
+    planIndex,
+    {effect, bindings: effectBindings, uniforms, compute, passes}
+  ] of plans.entries()) {
     const targets: Record<string, Target> = Object.create(null);
     const written = new Set<GraphTextureView>();
     for (const [name, spec] of Object.entries(effect.renderTargets ?? {})) {
